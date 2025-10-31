@@ -106,6 +106,249 @@ const emit = defineEmits<Emits>()
 
 const editorContent = ref<HTMLDivElement | null>(null)
 
+const ALLOWED_TAGS = new Set([
+  'A',
+  'B',
+  'BLOCKQUOTE',
+  'BR',
+  'CODE',
+  'EM',
+  'H1',
+  'H2',
+  'H3',
+  'HR',
+  'I',
+  'IMG',
+  'LI',
+  'OL',
+  'P',
+  'PRE',
+  'S',
+  'SPAN',
+  'STRONG',
+  'SUB',
+  'SUP',
+  'U',
+  'UL'
+])
+
+const GLOBAL_ALLOWED_ATTRIBUTES = new Set(['title'])
+
+const UNWRAP_TAGS = new Set(['DIV'])
+
+const ELEMENT_ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
+  a: new Set(['href', 'rel', 'target', 'title']),
+  img: new Set(['alt', 'src', 'title'])
+}
+
+const SAFE_URL_PATTERN = /^(?:(?:https?|mailto|tel):|\/\/|\/|#)/i
+const SAFE_DATA_IMAGE_PATTERN = /^data:image\/(?:[a-z0-9.+-]+);base64,/i
+
+const sanitizeHtml = (input?: string | null): string => {
+  const value = input ?? ''
+
+  if (!value.trim()) {
+    return ''
+  }
+
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return value
+  }
+
+  const workingDocument = document.implementation.createHTMLDocument('sanitizer')
+  workingDocument.body.innerHTML = value
+
+  const sanitizeTree = (root: HTMLElement) => {
+    let child: ChildNode | null = root.firstChild
+
+    while (child) {
+      const next = child.nextSibling
+
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const element = child as HTMLElement
+
+        if (!ALLOWED_TAGS.has(element.tagName)) {
+          if (UNWRAP_TAGS.has(element.tagName)) {
+            unwrapElement(element)
+          } else {
+            element.remove()
+          }
+        } else {
+          sanitizeAttributes(element)
+          sanitizeTree(element)
+        }
+      }
+
+      child = next
+    }
+  }
+
+  const sanitizeAttributes = (element: HTMLElement) => {
+    const allowed = new Set(GLOBAL_ALLOWED_ATTRIBUTES)
+    const elementSpecific = ELEMENT_ALLOWED_ATTRIBUTES[element.tagName.toLowerCase()]
+
+    if (elementSpecific) {
+      elementSpecific.forEach((attr) => allowed.add(attr))
+    }
+
+    Array.from(element.attributes).forEach((attribute) => {
+      const attributeName = attribute.name.toLowerCase()
+
+      if (!allowed.has(attributeName)) {
+        element.removeAttribute(attribute.name)
+        return
+      }
+
+      const attributeValue = attribute.value.trim()
+
+      if (attributeName === 'href') {
+        if (!SAFE_URL_PATTERN.test(attributeValue)) {
+          element.removeAttribute(attribute.name)
+        }
+      } else if (attributeName === 'src') {
+        if (!SAFE_URL_PATTERN.test(attributeValue) && !SAFE_DATA_IMAGE_PATTERN.test(attributeValue)) {
+          element.removeAttribute(attribute.name)
+        }
+      } else if (attributeName === 'target') {
+        if (attributeValue !== '_blank' && attributeValue !== '_self') {
+          element.setAttribute(attribute.name, '_self')
+        }
+      }
+    })
+
+    if (element.tagName === 'A') {
+      if (element.hasAttribute('href')) {
+        const rel = element.getAttribute('rel') ?? ''
+        const relTokens = new Set(rel.split(/\s+/).filter(Boolean))
+        relTokens.add('noopener')
+        relTokens.add('noreferrer')
+        element.setAttribute('rel', Array.from(relTokens).join(' '))
+      } else {
+        element.removeAttribute('target')
+        element.removeAttribute('rel')
+      }
+    }
+  }
+
+  const unwrapElement = (element: HTMLElement) => {
+    const parent = element.parentNode
+
+    if (!parent) {
+      return
+    }
+
+    while (element.firstChild) {
+      parent.insertBefore(element.firstChild, element)
+    }
+
+    parent.removeChild(element)
+  }
+
+  const wrapOrphanTextNodes = (root: HTMLElement) => {
+    const nodes = Array.from(root.childNodes)
+
+    nodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const textContent = node.textContent ?? ''
+
+        if (!textContent.trim()) {
+          root.removeChild(node)
+          return
+        }
+
+        const paragraph = workingDocument.createElement('p')
+        paragraph.textContent = textContent.trim()
+        root.replaceChild(paragraph, node)
+      }
+    })
+  }
+
+  const convertDivsToParagraphs = (root: HTMLElement) => {
+    const divs = Array.from(root.querySelectorAll('div'))
+
+    divs.forEach((div) => {
+      const paragraph = workingDocument.createElement('p')
+
+      while (div.firstChild) {
+        paragraph.appendChild(div.firstChild)
+      }
+
+      if (!paragraph.innerHTML.trim()) {
+        paragraph.innerHTML = '<br>'
+      }
+
+      div.replaceWith(paragraph)
+    })
+  }
+
+  const normalizeLists = (root: HTMLElement) => {
+    const lists = Array.from(root.querySelectorAll('ul, ol'))
+
+    lists.forEach((list) => {
+      const children = Array.from(list.childNodes)
+
+      children.forEach((child) => {
+        if (child.nodeType === Node.TEXT_NODE) {
+          const textContent = child.textContent?.trim() ?? ''
+
+          if (textContent) {
+            const listItem = workingDocument.createElement('li')
+            listItem.textContent = textContent
+            list.replaceChild(listItem, child)
+          } else {
+            list.removeChild(child)
+          }
+        } else if (child.nodeType === Node.ELEMENT_NODE) {
+          const childElement = child as HTMLElement
+
+          if (childElement.tagName !== 'LI') {
+            const listItem = workingDocument.createElement('li')
+            childElement.replaceWith(listItem)
+            listItem.appendChild(childElement)
+          }
+        }
+      })
+
+      Array.from(list.querySelectorAll('li')).forEach((listItem) => {
+        if (!listItem.innerHTML.trim()) {
+          listItem.innerHTML = '<br>'
+        }
+      })
+    })
+  }
+
+  const ensureBlockLineBreaks = (root: HTMLElement) => {
+    const blocks = root.querySelectorAll('p, li')
+
+    blocks.forEach((block) => {
+      if (!block.innerHTML.trim()) {
+        block.innerHTML = '<br>'
+      }
+    })
+  }
+
+  sanitizeTree(workingDocument.body)
+  wrapOrphanTextNodes(workingDocument.body)
+  convertDivsToParagraphs(workingDocument.body)
+  normalizeLists(workingDocument.body)
+  ensureBlockLineBreaks(workingDocument.body)
+  workingDocument.body.normalize()
+
+  return workingDocument.body.innerHTML
+}
+
+const applySanitizedContent = (value?: string | null) => {
+  const sanitized = sanitizeHtml(value)
+
+  if (sanitized !== (value ?? '')) {
+    emit('update:modelValue', sanitized)
+  }
+
+  if (editorContent.value && editorContent.value.innerHTML !== sanitized) {
+    editorContent.value.innerHTML = sanitized
+  }
+}
+
 const formatActions = [
   { command: 'bold', title: 'Bold (Ctrl+B)', icon: '<strong>B</strong>', value: undefined },
   { command: 'italic', title: 'Italic (Ctrl+I)', icon: '<em>I</em>', value: undefined },
@@ -153,9 +396,12 @@ const clearFormatting = () => {
 }
 
 const onInput = () => {
-  if (editorContent.value) {
-    emit('update:modelValue', editorContent.value.innerHTML)
+  if (!editorContent.value) {
+    return
   }
+
+  const sanitized = sanitizeHtml(editorContent.value.innerHTML)
+  emit('update:modelValue', sanitized)
 }
 
 const onFocus = () => {
@@ -166,16 +412,15 @@ const onBlur = () => {
   emit('blur')
 }
 
-watch(() => props.modelValue, (newValue) => {
-  if (editorContent.value && editorContent.value.innerHTML !== newValue) {
-    editorContent.value.innerHTML = newValue
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    applySanitizedContent(newValue)
   }
-})
+)
 
 onMounted(() => {
-  if (editorContent.value && props.modelValue) {
-    editorContent.value.innerHTML = props.modelValue
-  }
+  applySanitizedContent(props.modelValue)
 })
 </script>
 
