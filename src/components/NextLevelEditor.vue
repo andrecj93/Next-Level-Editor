@@ -206,6 +206,22 @@
       @close="closeTableModal"
       @insert="handleInsertTable"
     />
+
+    <!-- Find & Replace Modal -->
+    <FindReplaceModal
+      :show="showFindReplaceModal"
+      :content="editorContent?.innerHTML || ''"
+      @close="closeFindReplaceModal"
+      @find="handleFind"
+      @replace="handleReplace"
+    />
+
+    <!-- Code Block Modal -->
+    <CodeBlockModal
+      :show="showCodeBlockModal"
+      @close="closeCodeBlockModal"
+      @insert="handleInsertCodeBlock"
+    />
   </div>
 </template>
 
@@ -249,6 +265,8 @@ import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
 import FontSizeSelector from './FontSizeSelector.vue'
 import TableModal from './TableModal.vue'
+import FindReplaceModal from './FindReplaceModal.vue'
+import CodeBlockModal from './CodeBlockModal.vue'
 
 interface Props {
   modelValue?: string
@@ -306,6 +324,12 @@ const fontSize = ref('normal')
 
 // Table modal state
 const showTableModal = ref(false)
+
+// Find & Replace modal state
+const showFindReplaceModal = ref(false)
+
+// Code block modal state
+const showCodeBlockModal = ref(false)
 
 // Floating toolbar state
 const showFloatingToolbar = ref(false)
@@ -617,6 +641,73 @@ const handleInsertTable = (data: { rows: number; cols: number; includeHeader: bo
   performWithSelection((root) => insertTableUtil(root, data.rows, data.cols, data.includeHeader))
 }
 
+// Find & Replace actions
+const openFindReplaceModal = () => {
+  showFindReplaceModal.value = true
+}
+
+const closeFindReplaceModal = () => {
+  showFindReplaceModal.value = false
+}
+
+const handleFind = (data: { findText: string; direction: 'next' | 'previous' }) => {
+  // Basic find implementation - highlight matching text
+  if (!editorContent.value) return
+  
+  const selection = window.getSelection()
+  if (!selection) return
+  
+  // For now, we'll just select the first match
+  // A more advanced implementation would track position
+  window.find(data.findText, false, data.direction === 'previous', false, false, true, false)
+}
+
+const handleReplace = (data: { findText: string; replaceText: string; options: { caseSensitive: boolean; wholeWord: boolean } }) => {
+  if (!editorContent.value) return
+  
+  const html = editorContent.value.innerHTML
+  const newHtml = searchAndReplace(html, data.findText, data.replaceText, data.options)
+  editorContent.value.innerHTML = newHtml
+  captureSnapshot()
+}
+
+// Code block actions
+const openCodeBlockModal = () => {
+  showCodeBlockModal.value = true
+}
+
+const closeCodeBlockModal = () => {
+  showCodeBlockModal.value = false
+}
+
+const handleInsertCodeBlock = (data: { code: string; language: string }) => {
+  performWithSelection((root) => {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+
+    const range = selection.getRangeAt(0)
+    
+    const pre = document.createElement('pre')
+    pre.style.margin = '16px 0'
+    
+    const code = document.createElement('code')
+    code.className = `language-${data.language}`
+    code.textContent = data.code
+    
+    pre.appendChild(code)
+    
+    range.deleteContents()
+    range.insertNode(pre)
+    
+    // Move cursor after code block
+    const newRange = document.createRange()
+    newRange.setStartAfter(pre)
+    newRange.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(newRange)
+  })
+}
+
 // Export actions
 const handleExportHtml = () => {
   if (!editorContent.value) return
@@ -806,6 +897,20 @@ const alignmentActions: ToolbarAction[] = [
 
 const advancedActions: ToolbarAction[] = [
   {
+    id: 'code-block',
+    label: 'Code',
+    icon: '</> ',
+    tooltip: 'Insert code block',
+    onClick: openCodeBlockModal,
+  },
+  {
+    id: 'find-replace',
+    label: 'Find',
+    icon: '🔍',
+    tooltip: 'Find & Replace (Ctrl+F)',
+    onClick: openFindReplaceModal,
+  },
+  {
     id: 'hr',
     label: 'Divider',
     icon: '—',
@@ -866,7 +971,7 @@ const toolbarSections = [
   {
     id: 'advanced',
     label: 'Advanced',
-    description: 'HR, Export',
+    description: 'Code, Find, Export',
     actions: advancedActions,
   },
   {
@@ -1120,7 +1225,7 @@ const commandOptions = [
     id: 'slash-code',
     label: 'Code Block',
     description: 'Insert code with syntax highlighting',
-    action: insertCodeBlock,
+    action: openCodeBlockModal,
   },
   {
     id: 'slash-link',
@@ -1174,6 +1279,12 @@ const handleKeydown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault()
     insertLink()
+    return
+  }
+
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+    event.preventDefault()
+    openFindReplaceModal()
     return
   }
 
