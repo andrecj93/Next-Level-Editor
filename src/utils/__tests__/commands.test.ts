@@ -22,7 +22,7 @@ describe('commands utility', () => {
   })
 
   describe('getCharacterCount', () => {
-    it('should count characters correctly', () => {
+    it('should count characters correctly including spaces', () => {
       expect(getCharacterCount('<p>Hello</p>')).toBe(5)
       expect(getCharacterCount('<p>Hello world</p>')).toBe(11)
     })
@@ -34,6 +34,10 @@ describe('commands utility', () => {
     it('should handle empty content', () => {
       expect(getCharacterCount('<p></p>')).toBe(0)
       expect(getCharacterCount('')).toBe(0)
+    })
+
+    it('should include spaces in count', () => {
+      expect(getCharacterCount('<p>a b c</p>')).toBe(5) // 'a b c' = 5 chars with spaces
     })
   })
 

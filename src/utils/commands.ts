@@ -25,9 +25,9 @@ export function getWordCount(html: string): number {
 }
 
 /**
- * Get character count from HTML content (excluding whitespace)
+ * Get character count from HTML content (including spaces)
  * @param html - HTML content
- * @returns Character count
+ * @returns Character count with spaces
  */
 export function getCharacterCount(html: string): number {
   const temp = document.createElement('div')
@@ -37,15 +37,15 @@ export function getCharacterCount(html: string): number {
 }
 
 /**
- * Get character count including spaces
+ * Get character count excluding spaces
  * @param html - HTML content
- * @returns Character count with spaces
+ * @returns Character count without spaces
  */
-export function getCharacterCountWithSpaces(html: string): number {
+export function getCharacterCountWithoutSpaces(html: string): number {
   const temp = document.createElement('div')
   temp.innerHTML = html
   const text = temp.textContent || ''
-  return text.length
+  return text.replace(/\s/g, '').length
 }
 
 /**
