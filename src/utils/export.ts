@@ -52,24 +52,27 @@ export function htmlToMarkdown(html: string): string {
           return `\`\`\`\n${children}\n\`\`\`\n\n`
         case 'blockquote':
           return `> ${children}\n\n`
-        case 'a':
+        case 'a': {
           const href = element.getAttribute('href') || ''
           return `[${children}](${href})`
-        case 'img':
+        }
+        case 'img': {
           const src = element.getAttribute('src') || ''
           const alt = element.getAttribute('alt') || ''
           return `![${alt}](${src})\n\n`
+        }
         case 'ul':
           return `${children}\n`
         case 'ol':
           return `${children}\n`
-        case 'li':
+        case 'li': {
           const parent = element.parentElement
           if (parent?.tagName.toLowerCase() === 'ol') {
             const index = Array.from(parent.children).indexOf(element) + 1
             return `${index}. ${children}\n`
           }
           return `- ${children}\n`
+        }
         case 'hr':
           return '---\n\n'
         case 'br':

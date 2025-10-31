@@ -42,6 +42,40 @@
         </transition>
       </div>
 
+      <!-- Color Pickers Section -->
+      <div class="toolbar-section color-section">
+        <button
+          class="toolbar-section-toggle"
+          @click="toggleGroup('colors')"
+        >
+          <span class="section-label">Colors</span>
+          <span class="section-description">Text & background</span>
+          <span
+            class="chevron"
+            :class="{ open: !collapsedGroups.colors }"
+          >⌄</span>
+        </button>
+        <transition name="toolbar-collapse">
+          <div
+            v-show="!collapsedGroups.colors"
+            class="toolbar-section-body"
+          >
+            <ColorPicker
+              v-model="textColor"
+              label="Text Color"
+              icon="A"
+              @update:model-value="handleTextColor"
+            />
+            <ColorPicker
+              v-model="backgroundColor"
+              label="Highlight"
+              icon="◼"
+              @update:model-value="handleBackgroundColor"
+            />
+          </div>
+        </transition>
+      </div>
+
       <div class="toolbar-section theme-switcher">
         <button
           class="toolbar-section-toggle"
@@ -125,6 +159,19 @@
       @input="onInput"
       @blur="onBlur"
       @focus="onFocus"
+      @mouseup="onMouseUp"
+    />
+
+    <!-- Word Count Footer -->
+    <div class="editor-footer">
+      <span class="word-count">{{ wordCount }} words</span>
+      <span class="char-count">{{ characterCount }} characters</span>
+    </div>
+
+    <!-- Floating Toolbar -->
+    <FloatingToolbar
+      :show="showFloatingToolbar"
+      :actions="floatingActions"
     />
   </div>
 </template>
@@ -153,6 +200,18 @@ import {
   toggleList,
   getSelectionRange,
 } from '../utils/formatting'
+import {
+  applyTextAlignment,
+  applyTextColor,
+  applyBackgroundColor,
+  insertHorizontalRule,
+  getWordCount,
+  getCharacterCount,
+} from '../utils/commands'
+import { exportAsHtml, exportAsMarkdown } from '../utils/export'
+import { useTheme } from '../composables/useTheme'
+import ColorPicker from './ColorPicker.vue'
+import FloatingToolbar from './FloatingToolbar.vue'
 
 interface Props {
   modelValue?: string
@@ -186,16 +245,38 @@ const emit = defineEmits<Emits>()
 const editorContent = ref<HTMLDivElement | null>(null)
 const savedRange = ref<Range | null>(null)
 
-// Theme and UI state
-const theme = ref<'light' | 'dark'>('light')
+// Theme and UI state using composable
+const { theme, toggleTheme: toggleThemeComposable } = useTheme()
 const collapsedGroups = reactive<Record<string, boolean>>({
   text: false,
   structure: false,
   inserts: false,
   cleanup: false,
+  colors: false,
+  alignment: false,
+  advanced: false,
 })
 
 const themeClass = computed(() => (theme.value === 'dark' ? 'theme-dark' : 'theme-light'))
+
+// Color picker state
+const textColor = ref('#000000')
+const backgroundColor = ref('#ffff00')
+
+// Floating toolbar state
+const showFloatingToolbar = ref(false)
+const floatingToolbarTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+
+// Word count state
+const wordCount = computed(() => {
+  if (!editorContent.value) return 0
+  return getWordCount(editorContent.value.innerHTML)
+})
+
+const characterCount = computed(() => {
+  if (!editorContent.value) return 0
+  return getCharacterCount(editorContent.value.innerHTML)
+})
 
 // History state
 const history = ref<HistoryEntry[]>([])
@@ -452,7 +533,55 @@ const clearFormatting = () => {
 }
 
 const toggleTheme = () => {
-  theme.value = theme.value === 'light' ? 'dark' : 'light'
+  toggleThemeComposable()
+}
+
+// Text alignment actions
+const handleTextAlignment = (alignment: 'left' | 'center' | 'right' | 'justify') => {
+  performWithSelection((root) => applyTextAlignment(root, alignment))
+}
+
+// Color actions
+const handleTextColor = (color: string) => {
+  performWithSelection((root) => applyTextColor(root, color))
+}
+
+const handleBackgroundColor = (color: string) => {
+  performWithSelection((root) => applyBackgroundColor(root, color))
+}
+
+// Insert horizontal rule
+const handleInsertHR = () => {
+  performWithSelection((root) => insertHorizontalRule(root))
+}
+
+// Export actions
+const handleExportHtml = () => {
+  if (!editorContent.value) return
+  exportAsHtml(editorContent.value.innerHTML)
+}
+
+const handleExportMarkdown = () => {
+  if (!editorContent.value) return
+  exportAsMarkdown(editorContent.value.innerHTML)
+}
+
+// Floating toolbar management
+const updateFloatingToolbar = () => {
+  const selection = window.getSelection()
+  if (selection && selection.toString().trim().length > 0 && !selection.isCollapsed) {
+    if (floatingToolbarTimer.value) {
+      clearTimeout(floatingToolbarTimer.value)
+    }
+    floatingToolbarTimer.value = setTimeout(() => {
+      showFloatingToolbar.value = true
+    }, 100)
+  } else {
+    showFloatingToolbar.value = false
+    if (floatingToolbarTimer.value) {
+      clearTimeout(floatingToolbarTimer.value)
+    }
+  }
 }
 
 // Active state detection
@@ -575,6 +704,61 @@ const insertActions: ToolbarAction[] = [
   },
 ]
 
+const alignmentActions: ToolbarAction[] = [
+  {
+    id: 'align-left',
+    label: 'Align Left',
+    icon: '⬅',
+    tooltip: 'Align left',
+    onClick: () => handleTextAlignment('left'),
+  },
+  {
+    id: 'align-center',
+    label: 'Align Center',
+    icon: '↔',
+    tooltip: 'Align center',
+    onClick: () => handleTextAlignment('center'),
+  },
+  {
+    id: 'align-right',
+    label: 'Align Right',
+    icon: '➡',
+    tooltip: 'Align right',
+    onClick: () => handleTextAlignment('right'),
+  },
+  {
+    id: 'align-justify',
+    label: 'Justify',
+    icon: '⬌',
+    tooltip: 'Justify',
+    onClick: () => handleTextAlignment('justify'),
+  },
+]
+
+const advancedActions: ToolbarAction[] = [
+  {
+    id: 'hr',
+    label: 'Divider',
+    icon: '—',
+    tooltip: 'Insert horizontal rule',
+    onClick: handleInsertHR,
+  },
+  {
+    id: 'export-html',
+    label: 'HTML',
+    icon: '📄',
+    tooltip: 'Export as HTML',
+    onClick: handleExportHtml,
+  },
+  {
+    id: 'export-md',
+    label: 'MD',
+    icon: '📝',
+    tooltip: 'Export as Markdown',
+    onClick: handleExportMarkdown,
+  },
+]
+
 const cleanupActions: ToolbarAction[] = [
   {
     id: 'clear',
@@ -599,10 +783,22 @@ const toolbarSections = [
     actions: headingActions,
   },
   {
+    id: 'alignment',
+    label: 'Alignment',
+    description: 'Text alignment',
+    actions: alignmentActions,
+  },
+  {
     id: 'inserts',
     label: 'Insert',
     description: 'Lists, links, media',
     actions: insertActions,
+  },
+  {
+    id: 'advanced',
+    label: 'Advanced',
+    description: 'HR, Export',
+    actions: advancedActions,
   },
   {
     id: 'cleanup',
@@ -611,6 +807,41 @@ const toolbarSections = [
     actions: cleanupActions,
   },
 ]
+
+// Floating toolbar actions (subset of main toolbar)
+const floatingActions = computed<ToolbarAction[]>(() => [
+  {
+    id: 'bold',
+    label: 'Bold',
+    icon: '<strong>B</strong>',
+    tooltip: 'Bold (Ctrl+B)',
+    onClick: () => handleInlineAction('strong'),
+    isActive: () => isInlineActionActive('strong'),
+  },
+  {
+    id: 'italic',
+    label: 'Italic',
+    icon: '<em>I</em>',
+    tooltip: 'Italic (Ctrl+I)',
+    onClick: () => handleInlineAction('em'),
+    isActive: () => isInlineActionActive('em'),
+  },
+  {
+    id: 'underline',
+    label: 'Underline',
+    icon: '<u>U</u>',
+    tooltip: 'Underline (Ctrl+U)',
+    onClick: () => handleInlineAction('u'),
+    isActive: () => isInlineActionActive('u'),
+  },
+  {
+    id: 'link',
+    label: 'Link',
+    icon: '🔗',
+    tooltip: 'Insert link',
+    onClick: insertLink,
+  },
+])
 
 const toggleGroup = (id: string) => {
   collapsedGroups[id] = !collapsedGroups[id]
@@ -765,32 +996,80 @@ const commandOptions = [
   {
     id: 'slash-h1',
     label: 'Heading 1',
-    description: 'Transform block into level 1 heading',
+    description: 'Large section heading',
     action: () => handleBlockAction('h1'),
   },
   {
     id: 'slash-h2',
     label: 'Heading 2',
-    description: 'Intermediate heading',
+    description: 'Medium section heading',
     action: () => handleBlockAction('h2'),
   },
   {
     id: 'slash-h3',
     label: 'Heading 3',
-    description: 'Subheading',
+    description: 'Small section heading',
     action: () => handleBlockAction('h3'),
+  },
+  {
+    id: 'slash-paragraph',
+    label: 'Paragraph',
+    description: 'Regular text paragraph',
+    action: () => handleBlockAction('p'),
+  },
+  {
+    id: 'slash-bold',
+    label: 'Bold',
+    description: 'Make text bold',
+    action: () => handleInlineAction('strong'),
+  },
+  {
+    id: 'slash-italic',
+    label: 'Italic',
+    description: 'Make text italic',
+    action: () => handleInlineAction('em'),
+  },
+  {
+    id: 'slash-bullet',
+    label: 'Bullet List',
+    description: 'Create an unordered list',
+    action: () => handleListAction('ul'),
+  },
+  {
+    id: 'slash-numbered',
+    label: 'Numbered List',
+    description: 'Create an ordered list',
+    action: () => handleListAction('ol'),
   },
   {
     id: 'slash-quote',
     label: 'Quote',
-    description: 'Highlight a passage as a quote',
+    description: 'Insert a blockquote',
     action: insertBlockquote,
   },
   {
     id: 'slash-code',
     label: 'Code Block',
-    description: 'Insert a preformatted block',
+    description: 'Insert code with syntax highlighting',
     action: insertCodeBlock,
+  },
+  {
+    id: 'slash-link',
+    label: 'Link',
+    description: 'Insert a hyperlink',
+    action: insertLink,
+  },
+  {
+    id: 'slash-image',
+    label: 'Image',
+    description: 'Insert an image',
+    action: insertImage,
+  },
+  {
+    id: 'slash-divider',
+    label: 'Divider',
+    description: 'Insert horizontal rule',
+    action: handleInsertHR,
   },
 ]
 
@@ -861,6 +1140,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 // Event handlers
 const onInput = () => {
   captureSnapshot()
+  updateFloatingToolbar()
 }
 
 const onFocus = () => {
@@ -869,7 +1149,19 @@ const onFocus = () => {
 }
 
 const onBlur = () => {
+  // Delay hiding floating toolbar to allow clicks
+  setTimeout(() => {
+    showFloatingToolbar.value = false
+  }, 200)
   emit('blur')
+}
+
+const onMouseUp = () => {
+  updateFloatingToolbar()
+}
+
+const onSelectionChange = () => {
+  updateFloatingToolbar()
 }
 
 // Lifecycle and watchers
@@ -898,6 +1190,7 @@ onMounted(() => {
   }
   document.addEventListener('click', handleDocumentClick)
   document.addEventListener('keydown', handleEscape)
+  document.addEventListener('selectionchange', onSelectionChange)
 })
 
 onBeforeUnmount(() => {
@@ -906,6 +1199,10 @@ onBeforeUnmount(() => {
   }
   document.removeEventListener('click', handleDocumentClick)
   document.removeEventListener('keydown', handleEscape)
+  document.removeEventListener('selectionchange', onSelectionChange)
+  if (floatingToolbarTimer.value) {
+    clearTimeout(floatingToolbarTimer.value)
+  }
 })
 </script>
 
@@ -1329,4 +1626,42 @@ onBeforeUnmount(() => {
   opacity: 0;
   transform: translateY(-6px);
 }
+
+/* Editor Footer */
+.editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--editor-border);
+  background: var(--toolbar-bg);
+  font-size: 12px;
+  color: var(--toolbar-text);
+  opacity: 0.7;
+}
+
+.word-count,
+.char-count {
+  font-weight: 500;
+}
+
+/* Color Section */
+.color-section .toolbar-section-body {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Horizontal Rule Styles */
+.editor-content :deep(hr) {
+  border: none;
+  border-top: 2px solid var(--editor-border);
+  margin: 24px 0;
+  opacity: 0.5;
+}
+
+.theme-dark .editor-content :deep(hr) {
+  opacity: 0.3;
+}
 </style>
+

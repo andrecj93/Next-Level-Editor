@@ -19,7 +19,10 @@
           :title="action.tooltip"
           @click="action.onClick"
         >
-          <span v-if="action.icon" v-html="action.icon" />
+          <span
+            v-if="action.icon"
+            v-html="action.icon"
+          />
           <span v-else>{{ action.label }}</span>
         </button>
       </div>

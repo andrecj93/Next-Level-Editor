@@ -3,8 +3,8 @@
     <button
       class="color-button"
       :style="{ backgroundColor: modelValue || '#000000' }"
-      @click="togglePicker"
       :aria-label="label"
+      @click="togglePicker"
     >
       <span class="color-icon">{{ icon }}</span>
     </button>
@@ -15,7 +15,9 @@
         class="color-palette"
         @click.stop
       >
-        <div class="palette-header">{{ label }}</div>
+        <div class="palette-header">
+          {{ label }}
+        </div>
         <div class="palette-colors">
           <button
             v-for="color in colors"
@@ -31,9 +33,9 @@
           <input
             type="color"
             :value="modelValue || '#000000'"
-            @input="onCustomColor"
             aria-label="Custom color picker"
-          />
+            @input="onCustomColor"
+          >
           <span class="custom-label">Custom</span>
         </div>
       </div>
