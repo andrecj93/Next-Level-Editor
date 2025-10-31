@@ -76,6 +76,32 @@
         </transition>
       </div>
 
+      <!-- Font Size Section -->
+      <div class="toolbar-section">
+        <button
+          class="toolbar-section-toggle"
+          @click="toggleGroup('formatting')"
+        >
+          <span class="section-label">Formatting</span>
+          <span class="section-description">Font size</span>
+          <span
+            class="chevron"
+            :class="{ open: !collapsedGroups.formatting }"
+          >⌄</span>
+        </button>
+        <transition name="toolbar-collapse">
+          <div
+            v-show="!collapsedGroups.formatting"
+            class="toolbar-section-body"
+          >
+            <FontSizeSelector
+              v-model="fontSize"
+              @update:model-value="handleFontSize"
+            />
+          </div>
+        </transition>
+      </div>
+
       <div class="toolbar-section theme-switcher">
         <button
           class="toolbar-section-toggle"
@@ -173,6 +199,13 @@
       :show="showFloatingToolbar"
       :actions="floatingActions"
     />
+
+    <!-- Table Modal -->
+    <TableModal
+      :show="showTableModal"
+      @close="closeTableModal"
+      @insert="handleInsertTable"
+    />
   </div>
 </template>
 
@@ -204,7 +237,9 @@ import {
   applyTextAlignment,
   applyTextColor,
   applyBackgroundColor,
+  applyFontSize,
   insertHorizontalRule,
+  insertTable as insertTableUtil,
   getWordCount,
   getCharacterCount,
 } from '../utils/commands'
@@ -212,6 +247,8 @@ import { exportAsHtml, exportAsMarkdown } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
 import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
+import FontSizeSelector from './FontSizeSelector.vue'
+import TableModal from './TableModal.vue'
 
 interface Props {
   modelValue?: string
@@ -255,6 +292,7 @@ const collapsedGroups = reactive<Record<string, boolean>>({
   colors: false,
   alignment: false,
   advanced: false,
+  formatting: false,
 })
 
 const themeClass = computed(() => (theme.value === 'dark' ? 'theme-dark' : 'theme-light'))
@@ -262,6 +300,12 @@ const themeClass = computed(() => (theme.value === 'dark' ? 'theme-dark' : 'them
 // Color picker state
 const textColor = ref('#000000')
 const backgroundColor = ref('#ffff00')
+
+// Font size state
+const fontSize = ref('normal')
+
+// Table modal state
+const showTableModal = ref(false)
 
 // Floating toolbar state
 const showFloatingToolbar = ref(false)
@@ -550,9 +594,27 @@ const handleBackgroundColor = (color: string) => {
   performWithSelection((root) => applyBackgroundColor(root, color))
 }
 
+// Font size action
+const handleFontSize = (size: 'small' | 'normal' | 'large' | 'huge') => {
+  performWithSelection((root) => applyFontSize(root, size))
+}
+
 // Insert horizontal rule
 const handleInsertHR = () => {
   performWithSelection((root) => insertHorizontalRule(root))
+}
+
+// Table actions
+const openTableModal = () => {
+  showTableModal.value = true
+}
+
+const closeTableModal = () => {
+  showTableModal.value = false
+}
+
+const handleInsertTable = (data: { rows: number; cols: number; includeHeader: boolean }) => {
+  performWithSelection((root) => insertTableUtil(root, data.rows, data.cols, data.includeHeader))
 }
 
 // Export actions
@@ -687,6 +749,13 @@ const insertActions: ToolbarAction[] = [
     tooltip: 'Numbered list',
     onClick: () => handleListAction('ol'),
     isActive: () => isListActionActive('ol'),
+  },
+  {
+    id: 'table',
+    label: 'Table',
+    icon: '⊞',
+    tooltip: 'Insert table',
+    onClick: openTableModal,
   },
   {
     id: 'link',
@@ -1064,6 +1133,12 @@ const commandOptions = [
     label: 'Image',
     description: 'Insert an image',
     action: insertImage,
+  },
+  {
+    id: 'slash-table',
+    label: 'Table',
+    description: 'Insert a table',
+    action: openTableModal,
   },
   {
     id: 'slash-divider',
@@ -1603,6 +1678,38 @@ onBeforeUnmount(() => {
 
 .theme-dark .editor-content :deep(blockquote) {
   background: rgba(59, 130, 246, 0.12);
+}
+
+.editor-content :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.95em;
+}
+
+.editor-content :deep(table th) {
+  background: rgba(59, 130, 246, 0.08);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--editor-border);
+}
+
+.theme-dark .editor-content :deep(table th) {
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.editor-content :deep(table td) {
+  padding: 8px 12px;
+  border: 1px solid var(--editor-border);
+}
+
+.editor-content :deep(table tr:hover) {
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.theme-dark .editor-content :deep(table tr:hover) {
+  background: rgba(96, 165, 250, 0.05);
 }
 
 .toolbar-collapse-enter-active,
