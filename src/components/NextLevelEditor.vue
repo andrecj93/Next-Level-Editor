@@ -4,11 +4,11 @@
       <div class="toolbar-group">
         <button
           v-for="action in formatActions"
-          :key="action.command"
-          :class="['toolbar-btn', { active: isActive(action.command) }]"
+          :key="action.key"
+          :class="['toolbar-btn', { active: isInlineActionActive(action) }]"
           :title="action.title"
-          @mousedown.prevent
-          @click="execCommand(action.command, action.value)"
+          @mousedown.prevent="rememberSelection"
+          @click="handleInlineAction(action)"
         >
           <span v-html="action.icon" />
         </button>
@@ -17,11 +17,11 @@
       <div class="toolbar-group">
         <button
           v-for="heading in headingActions"
-          :key="heading.command"
-          :class="['toolbar-btn', { active: isActive(heading.tag) }]"
+          :key="heading.key"
+          :class="['toolbar-btn', { active: isBlockActionActive(heading) }]"
           :title="heading.title"
-          @mousedown.prevent
-          @click="execCommand('formatBlock', heading.tag)"
+          @mousedown.prevent="rememberSelection"
+          @click="handleHeadingAction(heading)"
         >
           <span v-html="heading.icon" />
         </button>
@@ -30,11 +30,11 @@
       <div class="toolbar-group">
         <button
           v-for="list in listActions"
-          :key="list.command"
-          :class="['toolbar-btn', { active: isActive(list.command) }]"
+          :key="list.key"
+          :class="['toolbar-btn', { active: isListActionActive(list) }]"
           :title="list.title"
-          @mousedown.prevent
-          @click="execCommand(list.command)"
+          @mousedown.prevent="rememberSelection"
+          @click="handleListAction(list)"
         >
           <span v-html="list.icon" />
         </button>
@@ -44,7 +44,7 @@
         <button
           class="toolbar-btn"
           title="Insert Link"
-          @mousedown.prevent
+          @mousedown.prevent="rememberSelection"
           @click="insertLink"
         >
           <span v-html="'🔗'" />
@@ -52,7 +52,7 @@
         <button
           class="toolbar-btn"
           title="Insert Image"
-          @mousedown.prevent
+          @mousedown.prevent="rememberSelection"
           @click="insertImage"
         >
           <span v-html="'🖼️'" />
@@ -63,7 +63,7 @@
         <button
           class="toolbar-btn"
           title="Clear Formatting"
-          @mousedown.prevent
+          @mousedown.prevent="rememberSelection"
           @click="clearFormatting"
         >
           <span v-html="'🧹'" />
@@ -85,6 +85,19 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import {
+  applyInlineStyle,
+  clearFormatting as clearFormattingUtil,
+  insertImage as insertImageUtil,
+  insertLink as insertLinkUtil,
+  isBlockActive,
+  isInlineStyleActive,
+  isListActive,
+  restoreSelection,
+  saveSelection,
+  toggleBlock,
+  toggleList,
+} from '../utils/formatting'
 
 interface Props {
   modelValue?: string
@@ -97,6 +110,28 @@ interface Emits {
   (e: 'blur'): void
 }
 
+interface InlineAction {
+  key: string
+  title: string
+  icon: string
+  tag: string
+}
+
+interface HeadingAction {
+  key: string
+  title: string
+  icon: string
+  tag: string
+  fallback?: string
+}
+
+interface ListAction {
+  key: string
+  title: string
+  icon: string
+  tag: 'ul' | 'ol'
+}
+
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
   placeholder: 'Start typing...'
@@ -105,51 +140,93 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const editorContent = ref<HTMLDivElement | null>(null)
+const savedRange = ref<Range | null>(null)
 
-const formatActions = [
-  { command: 'bold', title: 'Bold (Ctrl+B)', icon: '<strong>B</strong>', value: undefined },
-  { command: 'italic', title: 'Italic (Ctrl+I)', icon: '<em>I</em>', value: undefined },
-  { command: 'underline', title: 'Underline (Ctrl+U)', icon: '<u>U</u>', value: undefined },
-  { command: 'strikeThrough', title: 'Strikethrough', icon: '<s>S</s>', value: undefined }
+const formatActions: InlineAction[] = [
+  { key: 'bold', title: 'Bold (Ctrl+B)', icon: '<strong>B</strong>', tag: 'strong' },
+  { key: 'italic', title: 'Italic (Ctrl+I)', icon: '<em>I</em>', tag: 'em' },
+  { key: 'underline', title: 'Underline (Ctrl+U)', icon: '<u>U</u>', tag: 'u' },
+  { key: 'strikeThrough', title: 'Strikethrough', icon: '<s>S</s>', tag: 's' }
 ]
 
-const headingActions = [
-  { command: 'formatBlock', tag: 'h1', title: 'Heading 1', icon: '<strong>H1</strong>' },
-  { command: 'formatBlock', tag: 'h2', title: 'Heading 2', icon: '<strong>H2</strong>' },
-  { command: 'formatBlock', tag: 'h3', title: 'Heading 3', icon: '<strong>H3</strong>' },
-  { command: 'formatBlock', tag: 'p', title: 'Paragraph', icon: 'P' }
+const headingActions: HeadingAction[] = [
+  { key: 'h1', tag: 'h1', title: 'Heading 1', icon: '<strong>H1</strong>', fallback: 'p' },
+  { key: 'h2', tag: 'h2', title: 'Heading 2', icon: '<strong>H2</strong>', fallback: 'p' },
+  { key: 'h3', tag: 'h3', title: 'Heading 3', icon: '<strong>H3</strong>', fallback: 'p' },
+  { key: 'p', tag: 'p', title: 'Paragraph', icon: 'P', fallback: 'p' }
 ]
 
-const listActions = [
-  { command: 'insertUnorderedList', title: 'Bullet List', icon: '• List' },
-  { command: 'insertOrderedList', title: 'Numbered List', icon: '1. List' }
+const listActions: ListAction[] = [
+  { key: 'unordered', title: 'Bullet List', icon: '• List', tag: 'ul' },
+  { key: 'ordered', title: 'Numbered List', icon: '1. List', tag: 'ol' }
 ]
 
-const execCommand = (command: string, value?: string) => {
-  document.execCommand(command, false, value)
-  editorContent.value?.focus()
+const rememberSelection = () => {
+  savedRange.value = saveSelection()
 }
 
-const isActive = (command: string): boolean => {
-  return document.queryCommandState(command)
+const performWithSelection = (action: (root: HTMLElement) => void) => {
+  const root = editorContent.value
+  if (!root) return
+
+  if (savedRange.value) {
+    restoreSelection(savedRange.value)
+  }
+
+  try {
+    action(root)
+  } catch (error) {
+    console.warn('Formatting action failed', error)
+  }
+
+  savedRange.value = saveSelection()
+  root.focus()
+  emit('update:modelValue', root.innerHTML)
+}
+
+const handleInlineAction = (action: InlineAction) => {
+  performWithSelection((root) => applyInlineStyle(root, action.tag))
+}
+
+const handleHeadingAction = (action: HeadingAction) => {
+  performWithSelection((root) => toggleBlock(root, action.tag, action.fallback))
+}
+
+const handleListAction = (action: ListAction) => {
+  performWithSelection((root) => toggleList(root, action.tag))
 }
 
 const insertLink = () => {
   const url = prompt('Enter the URL:')
   if (url) {
-    execCommand('createLink', url)
+    performWithSelection((root) => insertLinkUtil(root, url))
   }
 }
 
 const insertImage = () => {
   const url = prompt('Enter the image URL:')
   if (url) {
-    execCommand('insertImage', url)
+    performWithSelection((root) => insertImageUtil(root, url))
   }
 }
 
 const clearFormatting = () => {
-  execCommand('removeFormat')
+  performWithSelection((root) => clearFormattingUtil(root))
+}
+
+const isInlineActionActive = (action: InlineAction): boolean => {
+  if (!editorContent.value) return false
+  return isInlineStyleActive(editorContent.value, action.tag)
+}
+
+const isBlockActionActive = (action: HeadingAction): boolean => {
+  if (!editorContent.value) return false
+  return isBlockActive(editorContent.value, action.tag)
+}
+
+const isListActionActive = (action: ListAction): boolean => {
+  if (!editorContent.value) return false
+  return isListActive(editorContent.value, action.tag)
 }
 
 const onInput = () => {
@@ -159,6 +236,7 @@ const onInput = () => {
 }
 
 const onFocus = () => {
+  savedRange.value = saveSelection()
   emit('focus')
 }
 
