@@ -5,8 +5,10 @@
         <button
           v-for="action in formatActions"
           :key="action.command"
-          :class="['toolbar-btn', { active: isActive(action.command) }]"
+          :class="['toolbar-btn', { active: isInlineStyleActive(action.command) }]"
           :title="action.title"
+          :aria-pressed="isInlineStyleActive(action.command)"
+          :aria-label="`${action.title}${isInlineStyleActive(action.command) ? ' (active)' : ''}`"
           @mousedown.prevent
           @click="execCommand(action.command, action.value)"
         >
@@ -18,8 +20,10 @@
         <button
           v-for="heading in headingActions"
           :key="heading.command"
-          :class="['toolbar-btn', { active: isActive(heading.tag) }]"
+          :class="['toolbar-btn', { active: isBlockActive(heading.tag) }]"
           :title="heading.title"
+          :aria-pressed="isBlockActive(heading.tag)"
+          :aria-label="`${heading.title}${isBlockActive(heading.tag) ? ' (active)' : ''}`"
           @mousedown.prevent
           @click="execCommand('formatBlock', heading.tag)"
         >
@@ -31,8 +35,10 @@
         <button
           v-for="list in listActions"
           :key="list.command"
-          :class="['toolbar-btn', { active: isActive(list.command) }]"
+          :class="['toolbar-btn', { active: isListCommandActive(list.command) }]"
           :title="list.title"
+          :aria-pressed="isListCommandActive(list.command)"
+          :aria-label="`${list.title}${isListCommandActive(list.command) ? ' (active)' : ''}`"
           @mousedown.prevent
           @click="execCommand(list.command)"
         >
@@ -84,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, reactive } from 'vue'
 
 interface Props {
   modelValue?: string
@@ -125,13 +131,78 @@ const listActions = [
   { command: 'insertOrderedList', title: 'Numbered List', icon: '1. List' }
 ]
 
+type ListType = 'ordered' | 'unordered' | ''
+
+const selectionState = reactive<{ block: string; inlineStyles: string[]; listType: ListType }>(
+  {
+    block: 'p',
+    inlineStyles: [],
+    listType: '',
+  }
+)
+
+const updateSelectionState = () => {
+  const selection = window.getSelection()
+  const content = editorContent.value
+
+  if (!selection || selection.rangeCount === 0 || !content) {
+    selectionState.block = 'p'
+    selectionState.inlineStyles = []
+    selectionState.listType = ''
+    return
+  }
+
+  const anchorNode = selection.anchorNode
+  const anchorElement =
+    anchorNode?.nodeType === Node.TEXT_NODE
+      ? anchorNode.parentElement
+      : (anchorNode as HTMLElement | null)
+
+  if (!anchorElement || !content.contains(anchorElement)) {
+    selectionState.block = 'p'
+    selectionState.inlineStyles = []
+    selectionState.listType = ''
+    return
+  }
+
+  const blockValue = document.queryCommandValue('formatBlock')
+  selectionState.block = typeof blockValue === 'string'
+    ? blockValue.replace(/[<>]/g, '').toLowerCase()
+    : 'p'
+
+  selectionState.inlineStyles = formatActions
+    .filter((action) => document.queryCommandState(action.command))
+    .map((action) => action.command)
+
+  if (document.queryCommandState('insertOrderedList')) {
+    selectionState.listType = 'ordered'
+  } else if (document.queryCommandState('insertUnorderedList')) {
+    selectionState.listType = 'unordered'
+  } else {
+    selectionState.listType = ''
+  }
+}
+
 const execCommand = (command: string, value?: string) => {
   document.execCommand(command, false, value)
   editorContent.value?.focus()
+  updateSelectionState()
 }
 
-const isActive = (command: string): boolean => {
-  return document.queryCommandState(command)
+const isInlineStyleActive = (command: string) => selectionState.inlineStyles.includes(command)
+
+const isBlockActive = (tag: string) => selectionState.block === tag
+
+const isListCommandActive = (command: string) => {
+  if (command === 'insertOrderedList') {
+    return selectionState.listType === 'ordered'
+  }
+
+  if (command === 'insertUnorderedList') {
+    return selectionState.listType === 'unordered'
+  }
+
+  return false
 }
 
 const insertLink = () => {
@@ -169,6 +240,7 @@ const onBlur = () => {
 watch(() => props.modelValue, (newValue) => {
   if (editorContent.value && editorContent.value.innerHTML !== newValue) {
     editorContent.value.innerHTML = newValue
+    updateSelectionState()
   }
 })
 
@@ -176,6 +248,12 @@ onMounted(() => {
   if (editorContent.value && props.modelValue) {
     editorContent.value.innerHTML = props.modelValue
   }
+  document.addEventListener('selectionchange', updateSelectionState)
+  updateSelectionState()
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('selectionchange', updateSelectionState)
 })
 </script>
 
