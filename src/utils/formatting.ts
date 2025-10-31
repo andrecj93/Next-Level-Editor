@@ -60,6 +60,26 @@ const unwrapElement = (element: HTMLElement) => {
   parent.removeChild(element)
 }
 
+const collectFragmentNodes = (fragment: DocumentFragment): Node[] => {
+  const nodes: Node[] = []
+  let current = fragment.firstChild
+  while (current) {
+    nodes.push(current)
+    current = current.nextSibling
+  }
+  return nodes
+}
+
+const wrapNodes = (nodes: Node[], tagName: string, attributes: Record<string, string>) => {
+  if (nodes.length === 0) return null
+  const wrapper = document.createElement(tagName)
+  Object.entries(attributes).forEach(([key, value]) => {
+    wrapper.setAttribute(key, value)
+  })
+  nodes.forEach((node) => wrapper.appendChild(node))
+  return wrapper
+}
+
 const replaceTag = (element: HTMLElement, tagName: string): HTMLElement => {
   if (element.tagName.toLowerCase() === tagName.toLowerCase()) {
     return element
@@ -119,19 +139,142 @@ export const wrapSelection = (
   }
 }
 
-export const applyInlineStyle = (root: HTMLElement, tagName: string, attributes: Record<string, string> = {}) => {
-  const range = getSelectionRange()
-  if (!range) return
-  ensureRangeWithinRoot(range, root)
+const isRangeFullyStyled = (range: Range, tagName: string, root: HTMLElement): boolean => {
+  const walker = document.createTreeWalker(
+    range.commonAncestorContainer,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: (node) => {
+        if (!range.intersectsNode(node)) {
+          return NodeFilter.FILTER_SKIP
+        }
+        return node.textContent ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
+      },
+    }
+  )
 
+  let encountered = false
+  while (walker.nextNode()) {
+    encountered = true
+    const closest = getClosestElement(
+      walker.currentNode,
+      (element) => element.tagName.toLowerCase() === tagName.toLowerCase(),
+      root
+    )
+    if (!closest) {
+      return false
+    }
+  }
+
+  return encountered
+}
+
+const removeInlineStyleFromRange = (range: Range, tagName: string, root: HTMLElement) => {
+  const fragment = range.extractContents()
+
+  const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_ELEMENT)
+  const toUnwrap: HTMLElement[] = []
+  let current = walker.currentNode
+  while (current) {
+    if (
+      current instanceof HTMLElement &&
+      current.tagName.toLowerCase() === tagName.toLowerCase()
+    ) {
+      toUnwrap.push(current)
+    }
+    current = walker.nextNode()
+  }
+  toUnwrap.forEach((node) => unwrapElement(node))
+
+  const nodes = collectFragmentNodes(fragment)
+  const selection = getSelection()
+
+  range.insertNode(fragment)
+
+  if (selection && nodes.length > 0) {
+    const newRange = document.createRange()
+    newRange.setStartBefore(nodes[0])
+    newRange.setEndAfter(nodes[nodes.length - 1])
+    selection.removeAllRanges()
+    selection.addRange(newRange)
+  }
+}
+
+const removeInlineStyleAtCaret = (
+  range: Range,
+  tagName: string,
+  attributes: Record<string, string>,
+  root: HTMLElement
+) => {
   const existing = getClosestElement(
     range.startContainer,
     (element) => element.tagName.toLowerCase() === tagName.toLowerCase(),
     root
   )
 
-  if (existing) {
-    unwrapElement(existing)
+  if (!existing) {
+    wrapSelection(root, tagName, attributes)
+    return
+  }
+
+  const parent = existing.parentNode
+  if (!parent) {
+    return
+  }
+
+  const referenceNode = existing.nextSibling
+
+  const beforeRange = document.createRange()
+  beforeRange.setStart(existing, 0)
+  beforeRange.setEnd(range.startContainer, range.startOffset)
+  const beforeFragment = beforeRange.cloneContents()
+
+  const afterRange = document.createRange()
+  afterRange.setStart(range.startContainer, range.startOffset)
+  afterRange.setEnd(existing, existing.childNodes.length)
+  const afterFragment = afterRange.cloneContents()
+
+  parent.removeChild(existing)
+
+  const beforeWrapper = wrapNodes(collectFragmentNodes(beforeFragment), tagName, attributes)
+  const afterWrapper = wrapNodes(collectFragmentNodes(afterFragment), tagName, attributes)
+
+  if (beforeWrapper) {
+    parent.insertBefore(beforeWrapper, referenceNode)
+  }
+
+  if (afterWrapper) {
+    parent.insertBefore(afterWrapper, referenceNode)
+  }
+
+  const selection = getSelection()
+  if (selection) {
+    const newRange = document.createRange()
+    if (afterWrapper) {
+      newRange.setStartBefore(afterWrapper)
+    } else if (referenceNode) {
+      newRange.setStartBefore(referenceNode)
+    } else {
+      newRange.setStart(parent, parent.childNodes.length)
+    }
+    newRange.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(newRange)
+  }
+}
+
+export const applyInlineStyle = (root: HTMLElement, tagName: string, attributes: Record<string, string> = {}) => {
+  const range = getSelectionRange()
+  if (!range) return
+  ensureRangeWithinRoot(range, root)
+
+  if (range.collapsed) {
+    removeInlineStyleAtCaret(range, tagName, attributes, root)
+    return
+  }
+
+  if (isRangeFullyStyled(range, tagName, root)) {
+    removeInlineStyleFromRange(range, tagName, root)
     return
   }
 
