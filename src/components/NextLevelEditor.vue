@@ -1,5 +1,5 @@
 <template>
-  <div :class="['next-level-editor', themeClass]">
+  <div :class="['next-level-editor', themeClass, { fullscreen: isFullScreen }]">
     <div class="editor-toolbar">
       <div
         v-for="group in toolbarSections"
@@ -222,6 +222,21 @@
       @close="closeCodeBlockModal"
       @insert="handleInsertCodeBlock"
     />
+
+    <!-- Emoji Picker -->
+    <div class="emoji-picker-container" v-if="showEmojiPicker">
+      <EmojiPicker
+        :show="showEmojiPicker"
+        @select="handleInsertEmoji"
+        @close="showEmojiPicker = false"
+      />
+    </div>
+
+    <!-- Auto-save Indicator -->
+    <div v-if="isSaving || lastSaved" class="auto-save-indicator">
+      <span v-if="isSaving" class="saving">💾 Saving...</span>
+      <span v-else-if="lastSaved" class="saved">✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
+    </div>
   </div>
 </template>
 
@@ -261,12 +276,14 @@ import {
 } from '../utils/commands'
 import { exportAsHtml, exportAsMarkdown } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
+import { useAutoSave } from '../composables/useAutoSave'
 import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
 import FontSizeSelector from './FontSizeSelector.vue'
 import TableModal from './TableModal.vue'
 import FindReplaceModal from './FindReplaceModal.vue'
 import CodeBlockModal from './CodeBlockModal.vue'
+import EmojiPicker from './EmojiPicker.vue'
 
 interface Props {
   modelValue?: string
@@ -331,9 +348,25 @@ const showFindReplaceModal = ref(false)
 // Code block modal state
 const showCodeBlockModal = ref(false)
 
+// Emoji picker state
+const showEmojiPicker = ref(false)
+
+// Full screen state
+const isFullScreen = ref(false)
+
 // Floating toolbar state
 const showFloatingToolbar = ref(false)
 const floatingToolbarTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+
+// Auto-save
+const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
+  async (content) => {
+    // Emit the content for parent to save
+    emit('update:modelValue', content)
+    console.log('Auto-saved at:', new Date().toLocaleTimeString())
+  },
+  2000 // 2 second delay
+)
 
 // Word count state
 const wordCount = computed(() => {
@@ -719,6 +752,43 @@ const handleExportMarkdown = () => {
   exportAsMarkdown(editorContent.value.innerHTML)
 }
 
+// Emoji picker actions
+const toggleEmojiPicker = () => {
+  showEmojiPicker.value = !showEmojiPicker.value
+}
+
+const handleInsertEmoji = (emoji: string) => {
+  performWithSelection((root) => {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+
+    const range = selection.getRangeAt(0)
+    const textNode = document.createTextNode(emoji)
+    
+    range.deleteContents()
+    range.insertNode(textNode)
+    
+    // Move cursor after emoji
+    range.setStartAfter(textNode)
+    range.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(range)
+  })
+  
+  showEmojiPicker.value = false
+}
+
+// Full screen actions
+const toggleFullScreen = () => {
+  isFullScreen.value = !isFullScreen.value
+  
+  if (isFullScreen.value) {
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = ''
+  }
+}
+
 // Floating toolbar management
 const updateFloatingToolbar = () => {
   const selection = window.getSelection()
@@ -911,6 +981,20 @@ const advancedActions: ToolbarAction[] = [
     onClick: openFindReplaceModal,
   },
   {
+    id: 'emoji',
+    label: 'Emoji',
+    icon: '😀',
+    tooltip: 'Insert emoji',
+    onClick: toggleEmojiPicker,
+  },
+  {
+    id: 'fullscreen',
+    label: 'Fullscreen',
+    icon: '⛶',
+    tooltip: 'Toggle fullscreen mode',
+    onClick: toggleFullScreen,
+  },
+  {
     id: 'hr',
     label: 'Divider',
     icon: '—',
@@ -971,7 +1055,7 @@ const toolbarSections = [
   {
     id: 'advanced',
     label: 'Advanced',
-    description: 'Code, Find, Export',
+    description: 'Code, Find, Emoji, Fullscreen',
     actions: advancedActions,
   },
   {
@@ -1366,6 +1450,16 @@ watch(
     }
   },
   { immediate: true }
+)
+
+// Watch for content changes and trigger auto-save
+watch(
+  () => editorContent.value?.innerHTML,
+  (newContent) => {
+    if (newContent && !isApplyingHistory.value) {
+      triggerAutoSave(newContent)
+    }
+  }
 )
 
 onMounted(() => {
@@ -1880,6 +1974,64 @@ onBeforeUnmount(() => {
 
 .theme-dark .editor-content :deep(hr) {
   opacity: 0.3;
+}
+
+/* Fullscreen Mode */
+.next-level-editor.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: var(--editor-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.next-level-editor.fullscreen .editor-content {
+  flex: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 48px 24px;
+}
+
+/* Emoji Picker Container */
+.emoji-picker-container {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 1000;
+}
+
+/* Auto-save Indicator */
+.auto-save-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+  z-index: 100;
+  transition: opacity var(--transition-fast, 150ms) ease;
+}
+
+.theme-dark .auto-save-indicator {
+  background: #1f2937;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+.auto-save-indicator .saving {
+  color: #3b82f6;
+}
+
+.auto-save-indicator .saved {
+  color: #10b981;
 }
 </style>
 
