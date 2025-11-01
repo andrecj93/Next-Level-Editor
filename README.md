@@ -12,31 +12,51 @@ A beautiful and feature-rich WYSIWYG editor for Vue.js 3 with advanced capabilit
 
 ## ✨ Features
 
-### Core Editing
-- ✏️ **Rich Text Formatting** - Bold, italic, underline, strikethrough
-- 📝 **Headings** - H1, H2, H3, and paragraph styles
-- 📋 **Lists** - Ordered and unordered lists
-- 🔗 **Links & Images** - Easy media insertion
-- 🎨 **Color Pickers** - Text and background colors
-- 📐 **Text Alignment** - Left, center, right, justify
-- 🧹 **Clear Formatting** - Remove all formatting
+### 🎨 Modern UI
+- **CKEditor-Inspired Toolbar** - Professional horizontal toolbar with dropdown menus
+- **Responsive Design** - Adapts seamlessly from desktop to mobile
+- **Dark Mode** - Beautiful dark theme with smooth transitions and localStorage persistence
+- **Floating Toolbar** - Medium-style context menu appears on text selection
+- **Visual Feedback** - Hover effects, active states, and smooth animations
 
-### Advanced Features
-- 🌓 **Dark Mode** - Beautiful dark theme with localStorage persistence
-- 💬 **Floating Toolbar** - Context menu on text selection (like Medium)
-- ⌨️ **Slash Commands** - Type `/` for quick actions (13+ commands)
-- 📊 **Word & Character Count** - Live statistics in footer
-- 📤 **Export** - Download as HTML or Markdown
-- ↩️ **Undo/Redo** - Full history with Ctrl+Z/Ctrl+Shift+Z
-- 💾 **HTML Sanitization** - Secure content handling
-- 📱 **Responsive Design** - Works great on all screen sizes
+### ✏️ Rich Text Editing
+- **Text Formatting** - Bold, italic, underline, strikethrough
+- **Headings** - H1, H2, H3, and paragraph styles with keyboard shortcuts
+- **Lists** - Ordered and unordered lists with nested support
+- **Text Alignment** - Left, center, right, justify for all elements
+- **Color Pickers** - Text and background colors with 25 presets + custom selector
+- **Font Sizes** - 4 preset sizes (small, normal, large, huge)
+- **Clear Formatting** - Remove all formatting with one click
 
-### Developer Experience
-- 🎯 **TypeScript** - Full TypeScript support with strict mode
-- 🧪 **Well Tested** - 24+ unit tests with Vitest
-- 📦 **Lightweight** - ~44KB ES module (~11KB gzipped)
-- 🔌 **Extensible** - Clean component architecture
-- 🎨 **Themeable** - CSS variables for easy customization
+### 💻 Code & Media
+- **Syntax Highlighting** - Code blocks with Prism.js for 22 programming languages
+  - JavaScript, TypeScript, Python, Java, C++, Go, Rust, PHP, Ruby, SQL, and more
+- **Image Upload** - URL input or file upload with live preview and alt text for accessibility
+- **Video Embeds** - Auto-detect and embed YouTube and Vimeo videos with responsive iframes
+- **Emoji Picker** - 100+ emojis across 7 categories with search functionality
+- **Tables** - Create custom tables with header rows and configurable columns
+
+### ⚡ Power Features
+- **Slash Commands** - Type `/` to access 14+ quick actions
+- **Find & Replace** - Full-featured search with case-sensitive and whole-word options (Ctrl+F)
+- **Auto-Save** - 2-second debounced auto-save with visual status indicator
+- **Export** - Download as HTML or Markdown with one click
+- **Full-Screen Mode** - Distraction-free writing with centered content layout
+- **Word & Character Count** - Live statistics in footer
+- **Undo/Redo** - Full history management with Ctrl+Z/Ctrl+Shift+Z
+
+### 🔐 Security & Quality
+- **HTML Sanitization** - Secure content handling prevents XSS attacks
+- **TypeScript Strict Mode** - Full type safety throughout
+- **43 Unit Tests** - Comprehensive test coverage with Vitest
+- **0 Security Vulnerabilities** - CodeQL verified
+- **GitHub Actions CI/CD** - Automated testing and deployment
+
+### 📦 Bundle Size
+- **ES Module** - 231.63 KB (58.73 KB gzipped)
+- **UMD** - 147.74 KB (44.15 KB gzipped)
+- **CSS** - 41.91 KB (6.89 KB gzipped)
+- Includes Prism.js (22 languages), emoji data, and all features
 
 ## Installation
 
@@ -105,31 +125,50 @@ Then use it in your components:
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+B` | Bold |
-| `Ctrl+I` | Italic |
-| `Ctrl+U` | Underline |
-| `Ctrl+K` | Insert Link |
-| `Ctrl+Z` | Undo |
-| `Ctrl+Shift+Z` | Redo |
-| `Ctrl+Alt+1` | Heading 1 |
-| `Ctrl+Alt+2` | Heading 2 |
-| `Ctrl+Alt+3` | Heading 3 |
-| `/` | Open slash commands |
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Ctrl+B` | **Bold** | Make selected text bold |
+| `Ctrl+I` | **Italic** | Make selected text italic |
+| `Ctrl+U` | **Underline** | Underline selected text |
+| `Ctrl+K` | **Insert Link** | Add a hyperlink |
+| `Ctrl+F` | **Find & Replace** | Open search modal |
+| `Ctrl+Z` | **Undo** | Undo last action |
+| `Ctrl+Shift+Z` | **Redo** | Redo last undone action |
+| `Ctrl+Alt+0` | **Paragraph** | Convert to paragraph |
+| `Ctrl+Alt+1` | **Heading 1** | Convert to H1 |
+| `Ctrl+Alt+2` | **Heading 2** | Convert to H2 |
+| `Ctrl+Alt+3` | **Heading 3** | Convert to H3 |
+| `/` | **Slash Commands** | Open quick actions menu |
 
-## 💬 Slash Commands
+## ⚡ Slash Commands
 
-Type `/` to open the quick actions menu:
+Type `/` anywhere in the editor to open the quick actions menu with 14+ commands:
 
-- `/heading1`, `/heading2`, `/heading3` - Insert headings
-- `/paragraph` - Convert to paragraph
-- `/bold`, `/italic` - Text formatting
-- `/bullet-list`, `/numbered-list` - Create lists
-- `/quote` - Insert blockquote
-- `/code` - Insert code block
-- `/link`, `/image` - Insert media
-- `/divider` - Insert horizontal rule
+### Structure
+- `/heading1` - Large heading (H1)
+- `/heading2` - Medium heading (H2)
+- `/heading3` - Small heading (H3)
+- `/paragraph` - Regular paragraph
+
+### Formatting
+- `/bold` - Bold text
+- `/italic` - Italic text
+
+### Lists
+- `/bullet-list` - Bulleted list
+- `/numbered-list` - Numbered list
+
+### Content Blocks
+- `/quote` - Block quote
+- `/code` - Code block with syntax highlighting
+- `/table` - Insert table with custom dimensions
+
+### Media
+- `/link` - Insert hyperlink
+- `/image` - Upload or insert image with preview
+
+### Elements
+- `/divider` - Horizontal rule separator
 
 ## 🎨 Theming
 
@@ -173,9 +212,14 @@ npm run test:coverage
 
 The library is built in multiple formats:
 
-- **ES Module** - `dist/next-level-editor.es.js` (44.24 KB, 10.85 KB gzipped)
-- **UMD** - `dist/next-level-editor.umd.js` (31.38 KB, 9.58 KB gzipped)
-- **CSS** - `dist/next-level-editor.css` (11.58 KB, 2.71 KB gzipped)
+- **ES Module** - `dist/next-level-editor.es.js` (231.63 KB, 58.73 KB gzipped)
+- **UMD** - `dist/next-level-editor.umd.js` (147.74 KB, 44.15 KB gzipped)
+- **CSS** - `dist/next-level-editor.css` (41.91 KB, 6.89 KB gzipped)
+
+The bundle includes:
+- Core editor (~15KB gzipped)
+- Prism.js syntax highlighting for 22 languages (~40KB gzipped)
+- All features: tables, emojis, modals, toolbar system (~4KB gzipped)
 
 ## 🛠️ Development
 
@@ -185,7 +229,7 @@ The library is built in multiple formats:
 # Install dependencies
 npm install
 
-# Run development server with demo
+# Run development server with enhanced demo
 npm run dev
 
 # Build library
@@ -197,6 +241,9 @@ npm run lint
 # Run tests
 npm test
 
+# Run tests with UI
+npm run test:ui
+
 # Run tests with coverage
 npm run test:coverage
 ```
@@ -206,19 +253,32 @@ npm run test:coverage
 ```
 src/
 ├── components/
-│   ├── NextLevelEditor.vue      # Main editor component
-│   ├── ColorPicker.vue          # Color selection component
-│   └── FloatingToolbar.vue      # Selection context menu
+│   ├── NextLevelEditor.vue      # Main editor with modern toolbar
+│   ├── ToolbarDropdown.vue      # Reusable dropdown component
+│   ├── ColorPicker.vue          # Color selection with palette
+│   ├── FloatingToolbar.vue      # Selection context menu
+│   ├── FontSizeSelector.vue     # Font size dropdown
+│   ├── TableModal.vue           # Table insertion modal
+│   ├── CodeBlockModal.vue       # Code block with syntax highlighting
+│   ├── FindReplaceModal.vue     # Search and replace
+│   ├── EmojiPicker.vue          # Emoji selector
+│   ├── ImageUploadModal.vue     # Image upload with preview
+│   └── EmbedModal.vue           # Video embed (YouTube/Vimeo)
 ├── composables/
-│   └── useTheme.ts              # Theme management
+│   ├── useTheme.ts              # Theme management with localStorage
+│   └── useAutoSave.ts           # Auto-save with debouncing
 ├── utils/
 │   ├── formatting.ts            # Text formatting utilities
 │   ├── commands.ts              # Editor commands & operations
 │   ├── export.ts                # Export to HTML/Markdown
-│   └── __tests__/               # Unit tests
+│   ├── embed.ts                 # Video URL detection and embedding
+│   └── __tests__/               # 43 unit tests
 ├── styles/
 │   ├── variables.css            # CSS custom properties
-│   └── animations.css           # Animation utilities
+│   └── animations.css           # Smooth animations
+├── demo/
+│   ├── App.vue                  # Enhanced demo with tabs
+│   └── FeatureShowcase.vue      # Feature cards and documentation
 └── types/                       # TypeScript definitions
 ```
 
@@ -256,12 +316,14 @@ MIT © [andrecj93](https://github.com/andrecj93)
 
 ## 🙏 Acknowledgments
 
-Inspired by:
-- [Notion](https://notion.so) - Slash commands
-- [Medium](https://medium.com) - Floating toolbar
-- [CKEditor](https://ckeditor.com) - Feature set
-- [TipTap](https://tiptap.dev) - Architecture
-- [Quill](https://quilljs.com) - Modular design
+Inspired by industry-leading editors:
+- [CKEditor](https://ckeditor.com) - Modern horizontal toolbar design with dropdown menus
+- [Notion](https://notion.so) - Slash commands and modern UX patterns
+- [Medium](https://medium.com) - Floating toolbar on text selection
+- [TinyMCE](https://www.tiny.cloud) - Professional feature organization
+- [TipTap](https://tiptap.dev) - Clean component architecture
+- [Quill](https://quilljs.com) - Modular design principles
+- [Prism.js](https://prismjs.com) - Beautiful syntax highlighting
 
 ## 🔗 Links
 
