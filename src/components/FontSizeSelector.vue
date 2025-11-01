@@ -2,8 +2,8 @@
   <div class="font-size-selector">
     <button
       class="font-size-button"
-      @click="toggleDropdown"
       :aria-label="`Font size: ${currentSizeLabel}`"
+      @click="toggleDropdown"
     >
       <span class="size-icon">{{ currentSizeLabel }}</span>
       <span class="dropdown-arrow">▼</span>
@@ -15,7 +15,9 @@
         class="size-dropdown"
         @click.stop
       >
-        <div class="dropdown-header">Font Size</div>
+        <div class="dropdown-header">
+          Font Size
+        </div>
         <button
           v-for="size in fontSizes"
           :key="size.value"
@@ -24,7 +26,10 @@
           @click="selectSize(size.value)"
         >
           <span class="size-label">{{ size.label }}</span>
-          <span class="size-preview" :style="{ fontSize: size.preview }">Aa</span>
+          <span
+            class="size-preview"
+            :style="{ fontSize: size.preview }"
+          >Aa</span>
         </button>
       </div>
     </transition>

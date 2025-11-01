@@ -224,7 +224,10 @@
     />
 
     <!-- Emoji Picker -->
-    <div class="emoji-picker-container" v-if="showEmojiPicker">
+    <div
+      v-if="showEmojiPicker"
+      class="emoji-picker-container"
+    >
       <EmojiPicker
         :show="showEmojiPicker"
         @select="handleInsertEmoji"
@@ -232,10 +235,33 @@
       />
     </div>
 
+    <!-- Image Upload Modal -->
+    <ImageUploadModal
+      :is-open="showImageUploadModal"
+      @close="closeImageUploadModal"
+      @insert="handleInsertImage"
+    />
+
+    <!-- Embed Modal -->
+    <EmbedModal
+      :is-open="showEmbedModal"
+      @close="closeEmbedModal"
+      @insert="handleInsertEmbed"
+    />
+
     <!-- Auto-save Indicator -->
-    <div v-if="isSaving || lastSaved" class="auto-save-indicator">
-      <span v-if="isSaving" class="saving">💾 Saving...</span>
-      <span v-else-if="lastSaved" class="saved">✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
+    <div
+      v-if="isSaving || lastSaved"
+      class="auto-save-indicator"
+    >
+      <span
+        v-if="isSaving"
+        class="saving"
+      >💾 Saving...</span>
+      <span
+        v-else-if="lastSaved"
+        class="saved"
+      >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
     </div>
   </div>
 </template>
@@ -284,6 +310,8 @@ import TableModal from './TableModal.vue'
 import FindReplaceModal from './FindReplaceModal.vue'
 import CodeBlockModal from './CodeBlockModal.vue'
 import EmojiPicker from './EmojiPicker.vue'
+import ImageUploadModal from './ImageUploadModal.vue'
+import EmbedModal from './EmbedModal.vue'
 
 interface Props {
   modelValue?: string
@@ -347,6 +375,12 @@ const showFindReplaceModal = ref(false)
 
 // Code block modal state
 const showCodeBlockModal = ref(false)
+
+// Image upload modal state
+const showImageUploadModal = ref(false)
+
+// Embed modal state
+const showEmbedModal = ref(false)
 
 // Emoji picker state
 const showEmojiPicker = ref(false)
@@ -623,10 +657,52 @@ const insertLink = () => {
 }
 
 const insertImage = () => {
-  const url = prompt('Enter the image URL:')
-  if (url) {
-    performWithSelection((root) => insertImageUtil(root, url))
-  }
+  showImageUploadModal.value = true
+}
+
+const handleInsertImage = (url: string, alt: string) => {
+  performWithSelection((root) => insertImageUtil(root, url, alt))
+  showImageUploadModal.value = false
+}
+
+const closeImageUploadModal = () => {
+  showImageUploadModal.value = false
+}
+
+const openEmbedModal = () => {
+  showEmbedModal.value = true
+}
+
+const handleInsertEmbed = (html: string) => {
+  if (!editorContent.value) return
+  performWithSelection(() => {
+    const selection = window.getSelection()
+    if (!selection || !selection.rangeCount) return
+    
+    const range = selection.getRangeAt(0)
+    range.deleteContents()
+    
+    // Create a temporary container to parse the HTML
+    const temp = document.createElement('div')
+    temp.innerHTML = html
+    
+    // Insert the content
+    const fragment = document.createDocumentFragment()
+    while (temp.firstChild) {
+      fragment.appendChild(temp.firstChild)
+    }
+    range.insertNode(fragment)
+    
+    // Move cursor after inserted content
+    range.collapse(false)
+    selection.removeAllRanges()
+    selection.addRange(range)
+  })
+  showEmbedModal.value = false
+}
+
+const closeEmbedModal = () => {
+  showEmbedModal.value = false
 }
 
 const clearFormatting = () => {
@@ -932,6 +1008,13 @@ const insertActions: ToolbarAction[] = [
     tooltip: 'Insert image',
     onClick: insertImage,
   },
+  {
+    id: 'embed',
+    label: 'Video',
+    icon: '🎬',
+    tooltip: 'Embed YouTube/Vimeo video',
+    onClick: openEmbedModal,
+  },
 ]
 
 const alignmentActions: ToolbarAction[] = [
@@ -1049,7 +1132,7 @@ const toolbarSections = [
   {
     id: 'inserts',
     label: 'Insert',
-    description: 'Lists, links, media',
+    description: 'Lists, links, media, videos',
     actions: insertActions,
   },
   {

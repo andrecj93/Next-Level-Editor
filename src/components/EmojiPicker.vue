@@ -1,12 +1,15 @@
 <template>
-  <div class="emoji-picker" v-if="show">
+  <div
+    v-if="show"
+    class="emoji-picker"
+  >
     <div class="emoji-picker-header">
       <input
         v-model="searchQuery"
         type="text"
         class="emoji-search"
         placeholder="Search emoji..."
-      />
+      >
     </div>
     
     <div class="emoji-categories">
@@ -14,8 +17,8 @@
         v-for="category in categories"
         :key="category.id"
         :class="['category-btn', { active: activeCategory === category.id }]"
-        @click="activeCategory = category.id"
         :title="category.name"
+        @click="activeCategory = category.id"
       >
         {{ category.icon }}
       </button>
@@ -26,13 +29,16 @@
         v-for="emoji in filteredEmojis"
         :key="emoji.code"
         class="emoji-btn"
-        @click="selectEmoji(emoji)"
         :title="emoji.name"
+        @click="selectEmoji(emoji)"
       >
         {{ emoji.emoji }}
       </button>
       
-      <div v-if="filteredEmojis.length === 0" class="no-results">
+      <div
+        v-if="filteredEmojis.length === 0"
+        class="no-results"
+      >
         No emoji found
       </div>
     </div>

@@ -14,8 +14,8 @@
             <h3>Insert Table</h3>
             <button
               class="close-btn"
-              @click="close"
               aria-label="Close modal"
+              @click="close"
             >
               ✕
             </button>
@@ -31,7 +31,7 @@
                 min="1"
                 max="20"
                 class="number-input"
-              />
+              >
             </div>
             
             <div class="input-group">
@@ -43,7 +43,7 @@
                 min="1"
                 max="10"
                 class="number-input"
-              />
+              >
             </div>
             
             <div class="checkbox-group">
@@ -51,14 +51,19 @@
                 <input
                   v-model="includeHeader"
                   type="checkbox"
-                />
+                >
                 <span>Include header row</span>
               </label>
             </div>
             
             <div class="table-preview">
-              <div class="preview-label">Preview:</div>
-              <div class="preview-grid" :style="gridStyle">
+              <div class="preview-label">
+                Preview:
+              </div>
+              <div
+                class="preview-grid"
+                :style="gridStyle"
+              >
                 <div
                   v-for="i in totalCells"
                   :key="i"

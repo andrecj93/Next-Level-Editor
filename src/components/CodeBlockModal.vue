@@ -14,8 +14,8 @@
             <h3>Insert Code Block</h3>
             <button
               class="close-btn"
-              @click="close"
               aria-label="Close modal"
+              @click="close"
             >
               ✕
             </button>
@@ -52,10 +52,18 @@
               />
             </div>
             
-            <div class="preview-section" v-if="code">
-              <div class="preview-label">Preview:</div>
+            <div
+              v-if="code"
+              class="preview-section"
+            >
+              <div class="preview-label">
+                Preview:
+              </div>
               <div class="code-preview">
-                <pre><code :class="`language-${selectedLanguage}`" v-html="highlightedCode"></code></pre>
+                <pre><code
+:class="`language-${selectedLanguage}`"
+                           v-html="highlightedCode"
+                /></pre>
               </div>
             </div>
           </div>

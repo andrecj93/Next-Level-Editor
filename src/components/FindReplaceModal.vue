@@ -14,8 +14,8 @@
             <h3>Find & Replace</h3>
             <button
               class="close-btn"
-              @click="close"
               aria-label="Close modal"
+              @click="close"
             >
               ✕
             </button>
@@ -33,10 +33,13 @@
                 placeholder="Search text..."
                 @keydown.enter="findNext"
                 @keydown.esc="close"
-              />
+              >
               <div class="search-info">
                 <span v-if="matches > 0">{{ currentMatch }} of {{ matches }}</span>
-                <span v-else-if="findText && matches === 0" class="no-matches">No matches</span>
+                <span
+                  v-else-if="findText && matches === 0"
+                  class="no-matches"
+                >No matches</span>
               </div>
             </div>
             
@@ -50,7 +53,7 @@
                 placeholder="Replacement text..."
                 @keydown.enter="replaceOne"
                 @keydown.esc="close"
-              />
+              >
             </div>
             
             <div class="options-group">
@@ -58,7 +61,7 @@
                 <input
                   v-model="caseSensitive"
                   type="checkbox"
-                />
+                >
                 <span>Case sensitive</span>
               </label>
               
@@ -66,7 +69,7 @@
                 <input
                   v-model="wholeWord"
                   type="checkbox"
-                />
+                >
                 <span>Whole word</span>
               </label>
             </div>
