@@ -1,117 +1,163 @@
 <template>
   <div :class="['next-level-editor', themeClass, { fullscreen: isFullScreen }]">
-    <div class="editor-toolbar">
-      <div
-        v-for="group in toolbarSections"
-        :key="group.id"
-        :class="['toolbar-section', { collapsed: collapsedGroups[group.id] }]"
-      >
+    <!-- Modern Horizontal Toolbar -->
+    <div class="editor-toolbar-modern">
+      <!-- Format Dropdown -->
+      <ToolbarDropdown
+        label="Format"
+        icon="¶"
+        tooltip="Paragraph format"
+        :items="formatDropdownItems"
+      />
+
+      <!-- Text Formatting (Inline Buttons) -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-group">
         <button
-          class="toolbar-section-toggle"
-          @click="toggleGroup(group.id)"
+          v-for="action in inlineFormatActions"
+          :key="action.id"
+          :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
+          :data-tooltip="action.tooltip"
+          :aria-label="action.label"
+          :aria-pressed="action.isActive?.() || false"
+          @mousedown.prevent="rememberSelection"
+          @click="action.onClick"
         >
-          <span class="section-label">{{ group.label }}</span>
-          <span class="section-description">{{ group.description }}</span>
-          <span
-            class="chevron"
-            :class="{ open: !collapsedGroups[group.id] }"
-          >⌄</span>
+          <span v-html="action.icon" />
         </button>
-        <transition name="toolbar-collapse">
+      </div>
+
+      <!-- Alignment Dropdown -->
+      <div class="toolbar-divider" />
+      <ToolbarDropdown
+        label="Align"
+        icon="☰"
+        tooltip="Text alignment"
+        :items="alignmentDropdownItems"
+      />
+
+      <!-- Lists (Inline Buttons) -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-group">
+        <button
+          v-for="action in listActions"
+          :key="action.id"
+          :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
+          :data-tooltip="action.tooltip"
+          :aria-label="action.label"
+          :aria-pressed="action.isActive?.() || false"
+          @mousedown.prevent="rememberSelection"
+          @click="action.onClick"
+        >
+          <span v-html="action.icon" />
+        </button>
+      </div>
+
+      <!-- Insert Dropdown -->
+      <div class="toolbar-divider" />
+      <ToolbarDropdown
+        label="Insert"
+        icon="+"
+        tooltip="Insert content"
+        :items="insertDropdownItems"
+      />
+
+      <!-- Colors Dropdown -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-dropdown">
+        <button
+          class="dropdown-trigger"
+          :class="{ open: showColorsDropdown }"
+          data-tooltip="Text & background colors"
+          @click.stop="showColorsDropdown = !showColorsDropdown"
+        >
+          <span class="dropdown-icon">🎨</span>
+          <span class="dropdown-label">Colors</span>
+          <span class="dropdown-arrow">▼</span>
+        </button>
+        <transition name="dropdown-fade">
           <div
-            v-show="!collapsedGroups[group.id]"
-            class="toolbar-section-body"
+            v-if="showColorsDropdown"
+            class="dropdown-menu colors-menu"
+            @click.stop
           >
-            <button
-              v-for="action in group.actions"
-              :key="action.id"
-              :class="['toolbar-btn', { active: action.isActive ? action.isActive() : false }]"
-              :data-tooltip="action.tooltip"
-              :aria-pressed="action.isActive ? action.isActive() : false"
-              :aria-label="`${action.label}${action.isActive && action.isActive() ? ' (active)' : ''}`"
-              @mousedown.prevent="rememberSelection"
-              @click="action.onClick"
-            >
-              <span
-                v-if="action.icon"
-                v-html="action.icon"
+            <div class="color-picker-wrapper">
+              <ColorPicker
+                v-model="textColor"
+                label="Text Color"
+                icon="A"
+                @update:model-value="handleTextColor"
               />
-              <span v-else>{{ action.label }}</span>
-            </button>
+            </div>
+            <div class="color-picker-wrapper">
+              <ColorPicker
+                v-model="backgroundColor"
+                label="Highlight"
+                icon="◼"
+                @update:model-value="handleBackgroundColor"
+              />
+            </div>
           </div>
         </transition>
       </div>
 
-      <!-- Color Pickers Section -->
-      <div class="toolbar-section color-section">
+      <!-- Font Size Dropdown -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-dropdown">
         <button
-          class="toolbar-section-toggle"
-          @click="toggleGroup('colors')"
+          class="dropdown-trigger"
+          :class="{ open: showFontSizeDropdown }"
+          data-tooltip="Font size"
+          @click.stop="showFontSizeDropdown = !showFontSizeDropdown"
         >
-          <span class="section-label">Colors</span>
-          <span class="section-description">Text & background</span>
-          <span
-            class="chevron"
-            :class="{ open: !collapsedGroups.colors }"
-          >⌄</span>
+          <span class="dropdown-icon">Aa</span>
+          <span class="dropdown-label">Size</span>
+          <span class="dropdown-arrow">▼</span>
         </button>
-        <transition name="toolbar-collapse">
+        <transition name="dropdown-fade">
           <div
-            v-show="!collapsedGroups.colors"
-            class="toolbar-section-body"
+            v-if="showFontSizeDropdown"
+            class="dropdown-menu"
+            @click.stop
           >
-            <ColorPicker
-              v-model="textColor"
-              label="Text Color"
-              icon="A"
-              @update:model-value="handleTextColor"
-            />
-            <ColorPicker
-              v-model="backgroundColor"
-              label="Highlight"
-              icon="◼"
-              @update:model-value="handleBackgroundColor"
-            />
+            <div class="font-size-wrapper">
+              <FontSizeSelector
+                v-model="fontSize"
+                @update:model-value="handleFontSize"
+              />
+            </div>
           </div>
         </transition>
       </div>
 
-      <!-- Font Size Section -->
-      <div class="toolbar-section">
+      <!-- Tools (Inline Buttons) -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-group">
         <button
-          class="toolbar-section-toggle"
-          @click="toggleGroup('formatting')"
+          v-for="action in toolActions"
+          :key="action.id"
+          :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
+          :data-tooltip="action.tooltip"
+          :aria-label="action.label"
+          :aria-pressed="action.isActive?.() || false"
+          @mousedown.prevent="rememberSelection"
+          @click="action.onClick"
         >
-          <span class="section-label">Formatting</span>
-          <span class="section-description">Font size</span>
-          <span
-            class="chevron"
-            :class="{ open: !collapsedGroups.formatting }"
-          >⌄</span>
+          <span v-html="action.icon" />
         </button>
-        <transition name="toolbar-collapse">
-          <div
-            v-show="!collapsedGroups.formatting"
-            class="toolbar-section-body"
-          >
-            <FontSizeSelector
-              v-model="fontSize"
-              @update:model-value="handleFontSize"
-            />
-          </div>
-        </transition>
       </div>
 
-      <div class="toolbar-section theme-switcher">
-        <button
-          class="toolbar-section-toggle"
-          @click="toggleTheme"
-        >
-          <span class="section-label">Theme</span>
-          <span class="section-description">Toggle light/dark</span>
-          <span class="chevron open">🌓</span>
-        </button>
-      </div>
+      <!-- Theme Toggle -->
+      <div class="toolbar-divider" />
+      <button
+        class="toolbar-btn-modern theme-toggle"
+        data-tooltip="Toggle theme"
+        aria-label="Toggle dark/light theme"
+        @click="toggleTheme"
+      >
+        <span v-if="theme === 'dark'">☀️</span>
+        <span v-else>🌙</span>
+      </button>
     </div>
 
     <transition name="command-menu">
@@ -312,6 +358,7 @@ import CodeBlockModal from './CodeBlockModal.vue'
 import EmojiPicker from './EmojiPicker.vue'
 import ImageUploadModal from './ImageUploadModal.vue'
 import EmbedModal from './EmbedModal.vue'
+import ToolbarDropdown from './ToolbarDropdown.vue'
 
 interface Props {
   modelValue?: string
@@ -391,6 +438,10 @@ const isFullScreen = ref(false)
 // Floating toolbar state
 const showFloatingToolbar = ref(false)
 const floatingToolbarTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+
+// Dropdown states for modern toolbar
+const showColorsDropdown = ref(false)
+const showFontSizeDropdown = ref(false)
 
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
@@ -1109,6 +1160,202 @@ const cleanupActions: ToolbarAction[] = [
     onClick: clearFormatting,
   },
 ]
+
+// Modern toolbar dropdown configurations
+const formatDropdownItems = computed(() => [
+  {
+    id: 'paragraph',
+    label: 'Paragraph',
+    icon: '¶',
+    onClick: () => handleBlockAction('p'),
+    isActive: () => isBlockActionActive('p'),
+  },
+  { divider: true },
+  {
+    id: 'h1',
+    label: 'Heading 1',
+    icon: 'H1',
+    shortcut: 'Ctrl+Alt+1',
+    onClick: () => handleBlockAction('h1'),
+    isActive: () => isBlockActionActive('h1'),
+  },
+  {
+    id: 'h2',
+    label: 'Heading 2',
+    icon: 'H2',
+    shortcut: 'Ctrl+Alt+2',
+    onClick: () => handleBlockAction('h2'),
+    isActive: () => isBlockActionActive('h2'),
+  },
+  {
+    id: 'h3',
+    label: 'Heading 3',
+    icon: 'H3',
+    shortcut: 'Ctrl+Alt+3',
+    onClick: () => handleBlockAction('h3'),
+    isActive: () => isBlockActionActive('h3'),
+  },
+])
+
+const inlineFormatActions = computed(() => [
+  {
+    id: 'bold',
+    label: 'Bold',
+    icon: '<strong>B</strong>',
+    tooltip: 'Bold (Ctrl+B)',
+    onClick: () => handleInlineAction('strong'),
+    isActive: () => isInlineActionActive('strong'),
+  },
+  {
+    id: 'italic',
+    label: 'Italic',
+    icon: '<em>I</em>',
+    tooltip: 'Italic (Ctrl+I)',
+    onClick: () => handleInlineAction('em'),
+    isActive: () => isInlineActionActive('em'),
+  },
+  {
+    id: 'underline',
+    label: 'Underline',
+    icon: '<u>U</u>',
+    tooltip: 'Underline (Ctrl+U)',
+    onClick: () => handleInlineAction('u'),
+    isActive: () => isInlineActionActive('u'),
+  },
+  {
+    id: 'strike',
+    label: 'Strikethrough',
+    icon: '<s>S</s>',
+    tooltip: 'Strikethrough',
+    onClick: () => handleInlineAction('s'),
+    isActive: () => isInlineActionActive('s'),
+  },
+])
+
+const alignmentDropdownItems = computed(() => [
+  {
+    id: 'align-left',
+    label: 'Align Left',
+    icon: '⬅',
+    onClick: () => handleTextAlignment('left'),
+  },
+  {
+    id: 'align-center',
+    label: 'Center',
+    icon: '↔',
+    onClick: () => handleTextAlignment('center'),
+  },
+  {
+    id: 'align-right',
+    label: 'Align Right',
+    icon: '➡',
+    onClick: () => handleTextAlignment('right'),
+  },
+  {
+    id: 'align-justify',
+    label: 'Justify',
+    icon: '⬌',
+    onClick: () => handleTextAlignment('justify'),
+  },
+])
+
+const listActions = computed(() => [
+  {
+    id: 'bullet-list',
+    label: 'Bullet List',
+    icon: '• List',
+    tooltip: 'Bullet list',
+    onClick: () => handleListAction('ul'),
+    isActive: () => isListActionActive('ul'),
+  },
+  {
+    id: 'numbered-list',
+    label: 'Numbered List',
+    icon: '1. List',
+    tooltip: 'Numbered list',
+    onClick: () => handleListAction('ol'),
+    isActive: () => isListActionActive('ol'),
+  },
+])
+
+const insertDropdownItems = computed(() => [
+  {
+    id: 'link',
+    label: 'Link',
+    icon: '🔗',
+    shortcut: 'Ctrl+K',
+    onClick: insertLink,
+  },
+  {
+    id: 'image',
+    label: 'Image',
+    icon: '🖼️',
+    onClick: insertImage,
+  },
+  {
+    id: 'video',
+    label: 'Video',
+    icon: '🎬',
+    onClick: openEmbedModal,
+  },
+  { divider: true },
+  {
+    id: 'table',
+    label: 'Table',
+    icon: '⊞',
+    onClick: openTableModal,
+  },
+  {
+    id: 'code',
+    label: 'Code Block',
+    icon: '</>',
+    onClick: openCodeBlockModal,
+  },
+  {
+    id: 'hr',
+    label: 'Horizontal Rule',
+    icon: '—',
+    onClick: handleInsertHR,
+  },
+  {
+    id: 'emoji',
+    label: 'Emoji',
+    icon: '😀',
+    onClick: toggleEmojiPicker,
+  },
+])
+
+const toolActions = computed(() => [
+  {
+    id: 'find',
+    label: 'Find & Replace',
+    icon: '🔍',
+    tooltip: 'Find & Replace (Ctrl+F)',
+    onClick: openFindReplaceModal,
+  },
+  {
+    id: 'export-html',
+    label: 'Export HTML',
+    icon: '📄',
+    tooltip: 'Export as HTML',
+    onClick: handleExportHtml,
+  },
+  {
+    id: 'export-md',
+    label: 'Export Markdown',
+    icon: '📝',
+    tooltip: 'Export as Markdown',
+    onClick: handleExportMarkdown,
+  },
+  {
+    id: 'fullscreen',
+    label: 'Fullscreen',
+    icon: '⛶',
+    tooltip: 'Toggle fullscreen',
+    onClick: toggleFullScreen,
+    isActive: () => isFullScreen.value,
+  },
+])
 
 const toolbarSections = [
   {
@@ -2115,6 +2362,211 @@ onBeforeUnmount(() => {
 
 .auto-save-indicator .saved {
   color: #10b981;
+}
+
+/* Modern Toolbar Styles */
+.editor-toolbar-modern {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--editor-border);
+  min-height: 48px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--editor-border);
+  margin: 0 4px;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.toolbar-btn-modern {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--toolbar-text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.toolbar-btn-modern:hover {
+  background: var(--toolbar-hover);
+  border-color: var(--toolbar-accent);
+}
+
+.toolbar-btn-modern.active {
+  background: var(--toolbar-hover);
+  color: var(--toolbar-accent);
+  border-color: var(--toolbar-accent);
+}
+
+.toolbar-btn-modern:focus {
+  outline: 2px solid var(--toolbar-accent);
+  outline-offset: 2px;
+}
+
+/* Tooltips for modern toolbar */
+.toolbar-btn-modern[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.toolbar-btn-modern[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* Theme toggle specific styles */
+.toolbar-btn-modern.theme-toggle {
+  font-size: 18px;
+}
+
+/* Dropdown styles for embedded pickers */
+.toolbar-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--editor-border);
+  background: var(--editor-bg);
+  color: var(--toolbar-text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  min-height: 32px;
+}
+
+.dropdown-trigger:hover {
+  background: var(--toolbar-hover);
+  border-color: var(--toolbar-accent);
+}
+
+.dropdown-trigger.open {
+  background: var(--toolbar-hover);
+  border-color: var(--toolbar-accent);
+  color: var(--toolbar-accent);
+}
+
+.dropdown-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.dropdown-label {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+
+.dropdown-trigger.open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: var(--editor-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  padding: 8px;
+  min-width: 200px;
+}
+
+.dropdown-menu.colors-menu {
+  min-width: 280px;
+}
+
+.color-picker-wrapper {
+  margin-bottom: 8px;
+}
+
+.color-picker-wrapper:last-child {
+  margin-bottom: 0;
+}
+
+.font-size-wrapper {
+  padding: 4px;
+}
+
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.dropdown-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .editor-toolbar-modern {
+    gap: 2px;
+    padding: 6px 8px;
+  }
+  
+  .toolbar-divider {
+    display: none;
+  }
+  
+  .dropdown-label {
+    display: none;
+  }
+  
+  .toolbar-btn-modern {
+    min-width: 36px;
+    height: 36px;
+  }
 }
 </style>
 
