@@ -1,57 +1,163 @@
 <template>
-  <div :class="['next-level-editor', themeClass]">
-    <div class="editor-toolbar">
-      <div
-        v-for="group in toolbarSections"
-        :key="group.id"
-        :class="['toolbar-section', { collapsed: collapsedGroups[group.id] }]"
-      >
+  <div :class="['next-level-editor', themeClass, { fullscreen: isFullScreen }]">
+    <!-- Modern Horizontal Toolbar -->
+    <div class="editor-toolbar-modern">
+      <!-- Format Dropdown -->
+      <ToolbarDropdown
+        label="Format"
+        icon="¶"
+        tooltip="Paragraph format"
+        :items="formatDropdownItems"
+      />
+
+      <!-- Text Formatting (Inline Buttons) -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-group">
         <button
-          class="toolbar-section-toggle"
-          @click="toggleGroup(group.id)"
+          v-for="action in inlineFormatActions"
+          :key="action.id"
+          :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
+          :data-tooltip="action.tooltip"
+          :aria-label="action.label"
+          :aria-pressed="action.isActive?.() || false"
+          @mousedown.prevent="rememberSelection"
+          @click="action.onClick"
         >
-          <span class="section-label">{{ group.label }}</span>
-          <span class="section-description">{{ group.description }}</span>
-          <span
-            class="chevron"
-            :class="{ open: !collapsedGroups[group.id] }"
-          >⌄</span>
+          <span v-html="action.icon" />
         </button>
-        <transition name="toolbar-collapse">
+      </div>
+
+      <!-- Alignment Dropdown -->
+      <div class="toolbar-divider" />
+      <ToolbarDropdown
+        label="Align"
+        icon="☰"
+        tooltip="Text alignment"
+        :items="alignmentDropdownItems"
+      />
+
+      <!-- Lists (Inline Buttons) -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-group">
+        <button
+          v-for="action in listActions"
+          :key="action.id"
+          :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
+          :data-tooltip="action.tooltip"
+          :aria-label="action.label"
+          :aria-pressed="action.isActive?.() || false"
+          @mousedown.prevent="rememberSelection"
+          @click="action.onClick"
+        >
+          <span v-html="action.icon" />
+        </button>
+      </div>
+
+      <!-- Insert Dropdown -->
+      <div class="toolbar-divider" />
+      <ToolbarDropdown
+        label="Insert"
+        icon="+"
+        tooltip="Insert content"
+        :items="insertDropdownItems"
+      />
+
+      <!-- Colors Dropdown -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-dropdown">
+        <button
+          class="dropdown-trigger"
+          :class="{ open: showColorsDropdown }"
+          data-tooltip="Text & background colors"
+          @click.stop="showColorsDropdown = !showColorsDropdown"
+        >
+          <span class="dropdown-icon">🎨</span>
+          <span class="dropdown-label">Colors</span>
+          <span class="dropdown-arrow">▼</span>
+        </button>
+        <transition name="dropdown-fade">
           <div
-            v-show="!collapsedGroups[group.id]"
-            class="toolbar-section-body"
+            v-if="showColorsDropdown"
+            class="dropdown-menu colors-menu"
+            @click.stop
           >
-            <button
-              v-for="action in group.actions"
-              :key="action.id"
-              :class="['toolbar-btn', { active: action.isActive ? action.isActive() : false }]"
-              :data-tooltip="action.tooltip"
-              :aria-pressed="action.isActive ? action.isActive() : false"
-              :aria-label="`${action.label}${action.isActive && action.isActive() ? ' (active)' : ''}`"
-              @mousedown.prevent="rememberSelection"
-              @click="action.onClick"
-            >
-              <span
-                v-if="action.icon"
-                v-html="action.icon"
+            <div class="color-picker-wrapper">
+              <ColorPicker
+                v-model="textColor"
+                label="Text Color"
+                icon="A"
+                @update:model-value="handleTextColor"
               />
-              <span v-else>{{ action.label }}</span>
-            </button>
+            </div>
+            <div class="color-picker-wrapper">
+              <ColorPicker
+                v-model="backgroundColor"
+                label="Highlight"
+                icon="◼"
+                @update:model-value="handleBackgroundColor"
+              />
+            </div>
           </div>
         </transition>
       </div>
 
-      <div class="toolbar-section theme-switcher">
+      <!-- Font Size Dropdown -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-dropdown">
         <button
-          class="toolbar-section-toggle"
-          @click="toggleTheme"
+          class="dropdown-trigger"
+          :class="{ open: showFontSizeDropdown }"
+          data-tooltip="Font size"
+          @click.stop="showFontSizeDropdown = !showFontSizeDropdown"
         >
-          <span class="section-label">Theme</span>
-          <span class="section-description">Toggle light/dark</span>
-          <span class="chevron open">🌓</span>
+          <span class="dropdown-icon">Aa</span>
+          <span class="dropdown-label">Size</span>
+          <span class="dropdown-arrow">▼</span>
+        </button>
+        <transition name="dropdown-fade">
+          <div
+            v-if="showFontSizeDropdown"
+            class="dropdown-menu"
+            @click.stop
+          >
+            <div class="font-size-wrapper">
+              <FontSizeSelector
+                v-model="fontSize"
+                @update:model-value="handleFontSize"
+              />
+            </div>
+          </div>
+        </transition>
+      </div>
+
+      <!-- Tools (Inline Buttons) -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-group">
+        <button
+          v-for="action in toolActions"
+          :key="action.id"
+          :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
+          :data-tooltip="action.tooltip"
+          :aria-label="action.label"
+          :aria-pressed="action.isActive?.() || false"
+          @mousedown.prevent="rememberSelection"
+          @click="action.onClick"
+        >
+          <span v-html="action.icon" />
         </button>
       </div>
+
+      <!-- Theme Toggle -->
+      <div class="toolbar-divider" />
+      <button
+        class="toolbar-btn-modern theme-toggle"
+        data-tooltip="Toggle theme"
+        aria-label="Toggle dark/light theme"
+        @click="toggleTheme"
+      >
+        <span v-if="theme === 'dark'">☀️</span>
+        <span v-else>🌙</span>
+      </button>
     </div>
 
     <transition name="command-menu">
@@ -125,7 +231,84 @@
       @input="onInput"
       @blur="onBlur"
       @focus="onFocus"
+      @mouseup="onMouseUp"
     />
+
+    <!-- Word Count Footer -->
+    <div class="editor-footer">
+      <span class="word-count">{{ wordCount }} words</span>
+      <span class="char-count">{{ characterCount }} characters</span>
+    </div>
+
+    <!-- Floating Toolbar -->
+    <FloatingToolbar
+      :show="showFloatingToolbar"
+      :actions="floatingActions"
+    />
+
+    <!-- Table Modal -->
+    <TableModal
+      :show="showTableModal"
+      @close="closeTableModal"
+      @insert="handleInsertTable"
+    />
+
+    <!-- Find & Replace Modal -->
+    <FindReplaceModal
+      :show="showFindReplaceModal"
+      :content="editorContent?.innerHTML || ''"
+      @close="closeFindReplaceModal"
+      @find="handleFind"
+      @replace="handleReplace"
+    />
+
+    <!-- Code Block Modal -->
+    <CodeBlockModal
+      :show="showCodeBlockModal"
+      @close="closeCodeBlockModal"
+      @insert="handleInsertCodeBlock"
+    />
+
+    <!-- Emoji Picker -->
+    <div
+      v-if="showEmojiPicker"
+      class="emoji-picker-container"
+    >
+      <EmojiPicker
+        :show="showEmojiPicker"
+        @select="handleInsertEmoji"
+        @close="showEmojiPicker = false"
+      />
+    </div>
+
+    <!-- Image Upload Modal -->
+    <ImageUploadModal
+      :is-open="showImageUploadModal"
+      @close="closeImageUploadModal"
+      @insert="handleInsertImage"
+    />
+
+    <!-- Embed Modal -->
+    <EmbedModal
+      :is-open="showEmbedModal"
+      @close="closeEmbedModal"
+      @insert="handleInsertEmbed"
+    />
+
+    <!-- Auto-save Indicator -->
+    <div
+      v-if="isSaving || lastSaved"
+      class="auto-save-indicator"
+    >
+      <span
+        v-if="isSaving"
+        class="saving"
+      >💾 Saving...</span>
+      <span
+        v-else-if="lastSaved"
+        class="saved"
+      >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
+    </div>
   </div>
 </template>
 
@@ -153,6 +336,29 @@ import {
   toggleList,
   getSelectionRange,
 } from '../utils/formatting'
+import {
+  applyTextAlignment,
+  applyTextColor,
+  applyBackgroundColor,
+  applyFontSize,
+  insertHorizontalRule,
+  insertTable as insertTableUtil,
+  getWordCount,
+  getCharacterCount,
+} from '../utils/commands'
+import { exportAsHtml, exportAsMarkdown } from '../utils/export'
+import { useTheme } from '../composables/useTheme'
+import { useAutoSave } from '../composables/useAutoSave'
+import ColorPicker from './ColorPicker.vue'
+import FloatingToolbar from './FloatingToolbar.vue'
+import FontSizeSelector from './FontSizeSelector.vue'
+import TableModal from './TableModal.vue'
+import FindReplaceModal from './FindReplaceModal.vue'
+import CodeBlockModal from './CodeBlockModal.vue'
+import EmojiPicker from './EmojiPicker.vue'
+import ImageUploadModal from './ImageUploadModal.vue'
+import EmbedModal from './EmbedModal.vue'
+import ToolbarDropdown from './ToolbarDropdown.vue'
 
 interface Props {
   modelValue?: string
@@ -186,16 +392,77 @@ const emit = defineEmits<Emits>()
 const editorContent = ref<HTMLDivElement | null>(null)
 const savedRange = ref<Range | null>(null)
 
-// Theme and UI state
-const theme = ref<'light' | 'dark'>('light')
+// Theme and UI state using composable
+const { theme, toggleTheme: toggleThemeComposable } = useTheme()
 const collapsedGroups = reactive<Record<string, boolean>>({
   text: false,
   structure: false,
   inserts: false,
   cleanup: false,
+  colors: false,
+  alignment: false,
+  advanced: false,
+  formatting: false,
 })
 
 const themeClass = computed(() => (theme.value === 'dark' ? 'theme-dark' : 'theme-light'))
+
+// Color picker state
+const textColor = ref('#000000')
+const backgroundColor = ref('#ffff00')
+
+// Font size state
+const fontSize = ref('normal')
+
+// Table modal state
+const showTableModal = ref(false)
+
+// Find & Replace modal state
+const showFindReplaceModal = ref(false)
+
+// Code block modal state
+const showCodeBlockModal = ref(false)
+
+// Image upload modal state
+const showImageUploadModal = ref(false)
+
+// Embed modal state
+const showEmbedModal = ref(false)
+
+// Emoji picker state
+const showEmojiPicker = ref(false)
+
+// Full screen state
+const isFullScreen = ref(false)
+
+// Floating toolbar state
+const showFloatingToolbar = ref(false)
+const floatingToolbarTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+
+// Dropdown states for modern toolbar
+const showColorsDropdown = ref(false)
+const showFontSizeDropdown = ref(false)
+
+// Auto-save
+const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
+  async (content) => {
+    // Emit the content for parent to save
+    emit('update:modelValue', content)
+    console.log('Auto-saved at:', new Date().toLocaleTimeString())
+  },
+  2000 // 2 second delay
+)
+
+// Word count state
+const wordCount = computed(() => {
+  if (!editorContent.value) return 0
+  return getWordCount(editorContent.value.innerHTML)
+})
+
+const characterCount = computed(() => {
+  if (!editorContent.value) return 0
+  return getCharacterCount(editorContent.value.innerHTML)
+})
 
 // History state
 const history = ref<HistoryEntry[]>([])
@@ -441,10 +708,52 @@ const insertLink = () => {
 }
 
 const insertImage = () => {
-  const url = prompt('Enter the image URL:')
-  if (url) {
-    performWithSelection((root) => insertImageUtil(root, url))
-  }
+  showImageUploadModal.value = true
+}
+
+const handleInsertImage = (url: string, alt: string) => {
+  performWithSelection((root) => insertImageUtil(root, url, alt))
+  showImageUploadModal.value = false
+}
+
+const closeImageUploadModal = () => {
+  showImageUploadModal.value = false
+}
+
+const openEmbedModal = () => {
+  showEmbedModal.value = true
+}
+
+const handleInsertEmbed = (html: string) => {
+  if (!editorContent.value) return
+  performWithSelection(() => {
+    const selection = window.getSelection()
+    if (!selection || !selection.rangeCount) return
+    
+    const range = selection.getRangeAt(0)
+    range.deleteContents()
+    
+    // Create a temporary container to parse the HTML
+    const temp = document.createElement('div')
+    temp.innerHTML = html
+    
+    // Insert the content
+    const fragment = document.createDocumentFragment()
+    while (temp.firstChild) {
+      fragment.appendChild(temp.firstChild)
+    }
+    range.insertNode(fragment)
+    
+    // Move cursor after inserted content
+    range.collapse(false)
+    selection.removeAllRanges()
+    selection.addRange(range)
+  })
+  showEmbedModal.value = false
+}
+
+const closeEmbedModal = () => {
+  showEmbedModal.value = false
 }
 
 const clearFormatting = () => {
@@ -452,7 +761,177 @@ const clearFormatting = () => {
 }
 
 const toggleTheme = () => {
-  theme.value = theme.value === 'light' ? 'dark' : 'light'
+  toggleThemeComposable()
+}
+
+// Text alignment actions
+const handleTextAlignment = (alignment: 'left' | 'center' | 'right' | 'justify') => {
+  performWithSelection((root) => applyTextAlignment(root, alignment))
+}
+
+// Color actions
+const handleTextColor = (color: string) => {
+  performWithSelection((root) => applyTextColor(root, color))
+}
+
+const handleBackgroundColor = (color: string) => {
+  performWithSelection((root) => applyBackgroundColor(root, color))
+}
+
+// Font size action
+const handleFontSize = (size: 'small' | 'normal' | 'large' | 'huge') => {
+  performWithSelection((root) => applyFontSize(root, size))
+}
+
+// Insert horizontal rule
+const handleInsertHR = () => {
+  performWithSelection((root) => insertHorizontalRule(root))
+}
+
+// Table actions
+const openTableModal = () => {
+  showTableModal.value = true
+}
+
+const closeTableModal = () => {
+  showTableModal.value = false
+}
+
+const handleInsertTable = (data: { rows: number; cols: number; includeHeader: boolean }) => {
+  performWithSelection((root) => insertTableUtil(root, data.rows, data.cols, data.includeHeader))
+}
+
+// Find & Replace actions
+const openFindReplaceModal = () => {
+  showFindReplaceModal.value = true
+}
+
+const closeFindReplaceModal = () => {
+  showFindReplaceModal.value = false
+}
+
+const handleFind = (data: { findText: string; direction: 'next' | 'previous' }) => {
+  // Basic find implementation - highlight matching text
+  if (!editorContent.value) return
+  
+  const selection = window.getSelection()
+  if (!selection) return
+  
+  // For now, we'll just select the first match
+  // A more advanced implementation would track position
+  window.find(data.findText, false, data.direction === 'previous', false, false, true, false)
+}
+
+const handleReplace = (data: { findText: string; replaceText: string; options: { caseSensitive: boolean; wholeWord: boolean } }) => {
+  if (!editorContent.value) return
+  
+  const html = editorContent.value.innerHTML
+  const newHtml = searchAndReplace(html, data.findText, data.replaceText, data.options)
+  editorContent.value.innerHTML = newHtml
+  captureSnapshot()
+}
+
+// Code block actions
+const openCodeBlockModal = () => {
+  showCodeBlockModal.value = true
+}
+
+const closeCodeBlockModal = () => {
+  showCodeBlockModal.value = false
+}
+
+const handleInsertCodeBlock = (data: { code: string; language: string }) => {
+  performWithSelection((root) => {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+
+    const range = selection.getRangeAt(0)
+    
+    const pre = document.createElement('pre')
+    pre.style.margin = '16px 0'
+    
+    const code = document.createElement('code')
+    code.className = `language-${data.language}`
+    code.textContent = data.code
+    
+    pre.appendChild(code)
+    
+    range.deleteContents()
+    range.insertNode(pre)
+    
+    // Move cursor after code block
+    const newRange = document.createRange()
+    newRange.setStartAfter(pre)
+    newRange.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(newRange)
+  })
+}
+
+// Export actions
+const handleExportHtml = () => {
+  if (!editorContent.value) return
+  exportAsHtml(editorContent.value.innerHTML)
+}
+
+const handleExportMarkdown = () => {
+  if (!editorContent.value) return
+  exportAsMarkdown(editorContent.value.innerHTML)
+}
+
+// Emoji picker actions
+const toggleEmojiPicker = () => {
+  showEmojiPicker.value = !showEmojiPicker.value
+}
+
+const handleInsertEmoji = (emoji: string) => {
+  performWithSelection((root) => {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+
+    const range = selection.getRangeAt(0)
+    const textNode = document.createTextNode(emoji)
+    
+    range.deleteContents()
+    range.insertNode(textNode)
+    
+    // Move cursor after emoji
+    range.setStartAfter(textNode)
+    range.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(range)
+  })
+  
+  showEmojiPicker.value = false
+}
+
+// Full screen actions
+const toggleFullScreen = () => {
+  isFullScreen.value = !isFullScreen.value
+  
+  if (isFullScreen.value) {
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = ''
+  }
+}
+
+// Floating toolbar management
+const updateFloatingToolbar = () => {
+  const selection = window.getSelection()
+  if (selection && selection.toString().trim().length > 0 && !selection.isCollapsed) {
+    if (floatingToolbarTimer.value) {
+      clearTimeout(floatingToolbarTimer.value)
+    }
+    floatingToolbarTimer.value = setTimeout(() => {
+      showFloatingToolbar.value = true
+    }, 100)
+  } else {
+    showFloatingToolbar.value = false
+    if (floatingToolbarTimer.value) {
+      clearTimeout(floatingToolbarTimer.value)
+    }
+  }
 }
 
 // Active state detection
@@ -560,6 +1039,13 @@ const insertActions: ToolbarAction[] = [
     isActive: () => isListActionActive('ol'),
   },
   {
+    id: 'table',
+    label: 'Table',
+    icon: '⊞',
+    tooltip: 'Insert table',
+    onClick: openTableModal,
+  },
+  {
     id: 'link',
     label: 'Link',
     icon: '🔗',
@@ -573,6 +1059,96 @@ const insertActions: ToolbarAction[] = [
     tooltip: 'Insert image',
     onClick: insertImage,
   },
+  {
+    id: 'embed',
+    label: 'Video',
+    icon: '🎬',
+    tooltip: 'Embed YouTube/Vimeo video',
+    onClick: openEmbedModal,
+  },
+]
+
+const alignmentActions: ToolbarAction[] = [
+  {
+    id: 'align-left',
+    label: 'Align Left',
+    icon: '⬅',
+    tooltip: 'Align left',
+    onClick: () => handleTextAlignment('left'),
+  },
+  {
+    id: 'align-center',
+    label: 'Align Center',
+    icon: '↔',
+    tooltip: 'Align center',
+    onClick: () => handleTextAlignment('center'),
+  },
+  {
+    id: 'align-right',
+    label: 'Align Right',
+    icon: '➡',
+    tooltip: 'Align right',
+    onClick: () => handleTextAlignment('right'),
+  },
+  {
+    id: 'align-justify',
+    label: 'Justify',
+    icon: '⬌',
+    tooltip: 'Justify',
+    onClick: () => handleTextAlignment('justify'),
+  },
+]
+
+const advancedActions: ToolbarAction[] = [
+  {
+    id: 'code-block',
+    label: 'Code',
+    icon: '</> ',
+    tooltip: 'Insert code block',
+    onClick: openCodeBlockModal,
+  },
+  {
+    id: 'find-replace',
+    label: 'Find',
+    icon: '🔍',
+    tooltip: 'Find & Replace (Ctrl+F)',
+    onClick: openFindReplaceModal,
+  },
+  {
+    id: 'emoji',
+    label: 'Emoji',
+    icon: '😀',
+    tooltip: 'Insert emoji',
+    onClick: toggleEmojiPicker,
+  },
+  {
+    id: 'fullscreen',
+    label: 'Fullscreen',
+    icon: '⛶',
+    tooltip: 'Toggle fullscreen mode',
+    onClick: toggleFullScreen,
+  },
+  {
+    id: 'hr',
+    label: 'Divider',
+    icon: '—',
+    tooltip: 'Insert horizontal rule',
+    onClick: handleInsertHR,
+  },
+  {
+    id: 'export-html',
+    label: 'HTML',
+    icon: '📄',
+    tooltip: 'Export as HTML',
+    onClick: handleExportHtml,
+  },
+  {
+    id: 'export-md',
+    label: 'MD',
+    icon: '📝',
+    tooltip: 'Export as Markdown',
+    onClick: handleExportMarkdown,
+  },
 ]
 
 const cleanupActions: ToolbarAction[] = [
@@ -584,6 +1160,202 @@ const cleanupActions: ToolbarAction[] = [
     onClick: clearFormatting,
   },
 ]
+
+// Modern toolbar dropdown configurations
+const formatDropdownItems = computed(() => [
+  {
+    id: 'paragraph',
+    label: 'Paragraph',
+    icon: '¶',
+    onClick: () => handleBlockAction('p'),
+    isActive: () => isBlockActionActive('p'),
+  },
+  { divider: true },
+  {
+    id: 'h1',
+    label: 'Heading 1',
+    icon: 'H1',
+    shortcut: 'Ctrl+Alt+1',
+    onClick: () => handleBlockAction('h1'),
+    isActive: () => isBlockActionActive('h1'),
+  },
+  {
+    id: 'h2',
+    label: 'Heading 2',
+    icon: 'H2',
+    shortcut: 'Ctrl+Alt+2',
+    onClick: () => handleBlockAction('h2'),
+    isActive: () => isBlockActionActive('h2'),
+  },
+  {
+    id: 'h3',
+    label: 'Heading 3',
+    icon: 'H3',
+    shortcut: 'Ctrl+Alt+3',
+    onClick: () => handleBlockAction('h3'),
+    isActive: () => isBlockActionActive('h3'),
+  },
+])
+
+const inlineFormatActions = computed(() => [
+  {
+    id: 'bold',
+    label: 'Bold',
+    icon: '<strong>B</strong>',
+    tooltip: 'Bold (Ctrl+B)',
+    onClick: () => handleInlineAction('strong'),
+    isActive: () => isInlineActionActive('strong'),
+  },
+  {
+    id: 'italic',
+    label: 'Italic',
+    icon: '<em>I</em>',
+    tooltip: 'Italic (Ctrl+I)',
+    onClick: () => handleInlineAction('em'),
+    isActive: () => isInlineActionActive('em'),
+  },
+  {
+    id: 'underline',
+    label: 'Underline',
+    icon: '<u>U</u>',
+    tooltip: 'Underline (Ctrl+U)',
+    onClick: () => handleInlineAction('u'),
+    isActive: () => isInlineActionActive('u'),
+  },
+  {
+    id: 'strike',
+    label: 'Strikethrough',
+    icon: '<s>S</s>',
+    tooltip: 'Strikethrough',
+    onClick: () => handleInlineAction('s'),
+    isActive: () => isInlineActionActive('s'),
+  },
+])
+
+const alignmentDropdownItems = computed(() => [
+  {
+    id: 'align-left',
+    label: 'Align Left',
+    icon: '⬅',
+    onClick: () => handleTextAlignment('left'),
+  },
+  {
+    id: 'align-center',
+    label: 'Center',
+    icon: '↔',
+    onClick: () => handleTextAlignment('center'),
+  },
+  {
+    id: 'align-right',
+    label: 'Align Right',
+    icon: '➡',
+    onClick: () => handleTextAlignment('right'),
+  },
+  {
+    id: 'align-justify',
+    label: 'Justify',
+    icon: '⬌',
+    onClick: () => handleTextAlignment('justify'),
+  },
+])
+
+const listActions = computed(() => [
+  {
+    id: 'bullet-list',
+    label: 'Bullet List',
+    icon: '• List',
+    tooltip: 'Bullet list',
+    onClick: () => handleListAction('ul'),
+    isActive: () => isListActionActive('ul'),
+  },
+  {
+    id: 'numbered-list',
+    label: 'Numbered List',
+    icon: '1. List',
+    tooltip: 'Numbered list',
+    onClick: () => handleListAction('ol'),
+    isActive: () => isListActionActive('ol'),
+  },
+])
+
+const insertDropdownItems = computed(() => [
+  {
+    id: 'link',
+    label: 'Link',
+    icon: '🔗',
+    shortcut: 'Ctrl+K',
+    onClick: insertLink,
+  },
+  {
+    id: 'image',
+    label: 'Image',
+    icon: '🖼️',
+    onClick: insertImage,
+  },
+  {
+    id: 'video',
+    label: 'Video',
+    icon: '🎬',
+    onClick: openEmbedModal,
+  },
+  { divider: true },
+  {
+    id: 'table',
+    label: 'Table',
+    icon: '⊞',
+    onClick: openTableModal,
+  },
+  {
+    id: 'code',
+    label: 'Code Block',
+    icon: '</>',
+    onClick: openCodeBlockModal,
+  },
+  {
+    id: 'hr',
+    label: 'Horizontal Rule',
+    icon: '—',
+    onClick: handleInsertHR,
+  },
+  {
+    id: 'emoji',
+    label: 'Emoji',
+    icon: '😀',
+    onClick: toggleEmojiPicker,
+  },
+])
+
+const toolActions = computed(() => [
+  {
+    id: 'find',
+    label: 'Find & Replace',
+    icon: '🔍',
+    tooltip: 'Find & Replace (Ctrl+F)',
+    onClick: openFindReplaceModal,
+  },
+  {
+    id: 'export-html',
+    label: 'Export HTML',
+    icon: '📄',
+    tooltip: 'Export as HTML',
+    onClick: handleExportHtml,
+  },
+  {
+    id: 'export-md',
+    label: 'Export Markdown',
+    icon: '📝',
+    tooltip: 'Export as Markdown',
+    onClick: handleExportMarkdown,
+  },
+  {
+    id: 'fullscreen',
+    label: 'Fullscreen',
+    icon: '⛶',
+    tooltip: 'Toggle fullscreen',
+    onClick: toggleFullScreen,
+    isActive: () => isFullScreen.value,
+  },
+])
 
 const toolbarSections = [
   {
@@ -599,10 +1371,22 @@ const toolbarSections = [
     actions: headingActions,
   },
   {
+    id: 'alignment',
+    label: 'Alignment',
+    description: 'Text alignment',
+    actions: alignmentActions,
+  },
+  {
     id: 'inserts',
     label: 'Insert',
-    description: 'Lists, links, media',
+    description: 'Lists, links, media, videos',
     actions: insertActions,
+  },
+  {
+    id: 'advanced',
+    label: 'Advanced',
+    description: 'Code, Find, Emoji, Fullscreen',
+    actions: advancedActions,
   },
   {
     id: 'cleanup',
@@ -611,6 +1395,41 @@ const toolbarSections = [
     actions: cleanupActions,
   },
 ]
+
+// Floating toolbar actions (subset of main toolbar)
+const floatingActions = computed<ToolbarAction[]>(() => [
+  {
+    id: 'bold',
+    label: 'Bold',
+    icon: '<strong>B</strong>',
+    tooltip: 'Bold (Ctrl+B)',
+    onClick: () => handleInlineAction('strong'),
+    isActive: () => isInlineActionActive('strong'),
+  },
+  {
+    id: 'italic',
+    label: 'Italic',
+    icon: '<em>I</em>',
+    tooltip: 'Italic (Ctrl+I)',
+    onClick: () => handleInlineAction('em'),
+    isActive: () => isInlineActionActive('em'),
+  },
+  {
+    id: 'underline',
+    label: 'Underline',
+    icon: '<u>U</u>',
+    tooltip: 'Underline (Ctrl+U)',
+    onClick: () => handleInlineAction('u'),
+    isActive: () => isInlineActionActive('u'),
+  },
+  {
+    id: 'link',
+    label: 'Link',
+    icon: '🔗',
+    tooltip: 'Insert link',
+    onClick: insertLink,
+  },
+])
 
 const toggleGroup = (id: string) => {
   collapsedGroups[id] = !collapsedGroups[id]
@@ -765,32 +1584,86 @@ const commandOptions = [
   {
     id: 'slash-h1',
     label: 'Heading 1',
-    description: 'Transform block into level 1 heading',
+    description: 'Large section heading',
     action: () => handleBlockAction('h1'),
   },
   {
     id: 'slash-h2',
     label: 'Heading 2',
-    description: 'Intermediate heading',
+    description: 'Medium section heading',
     action: () => handleBlockAction('h2'),
   },
   {
     id: 'slash-h3',
     label: 'Heading 3',
-    description: 'Subheading',
+    description: 'Small section heading',
     action: () => handleBlockAction('h3'),
+  },
+  {
+    id: 'slash-paragraph',
+    label: 'Paragraph',
+    description: 'Regular text paragraph',
+    action: () => handleBlockAction('p'),
+  },
+  {
+    id: 'slash-bold',
+    label: 'Bold',
+    description: 'Make text bold',
+    action: () => handleInlineAction('strong'),
+  },
+  {
+    id: 'slash-italic',
+    label: 'Italic',
+    description: 'Make text italic',
+    action: () => handleInlineAction('em'),
+  },
+  {
+    id: 'slash-bullet',
+    label: 'Bullet List',
+    description: 'Create an unordered list',
+    action: () => handleListAction('ul'),
+  },
+  {
+    id: 'slash-numbered',
+    label: 'Numbered List',
+    description: 'Create an ordered list',
+    action: () => handleListAction('ol'),
   },
   {
     id: 'slash-quote',
     label: 'Quote',
-    description: 'Highlight a passage as a quote',
+    description: 'Insert a blockquote',
     action: insertBlockquote,
   },
   {
     id: 'slash-code',
     label: 'Code Block',
-    description: 'Insert a preformatted block',
-    action: insertCodeBlock,
+    description: 'Insert code with syntax highlighting',
+    action: openCodeBlockModal,
+  },
+  {
+    id: 'slash-link',
+    label: 'Link',
+    description: 'Insert a hyperlink',
+    action: insertLink,
+  },
+  {
+    id: 'slash-image',
+    label: 'Image',
+    description: 'Insert an image',
+    action: insertImage,
+  },
+  {
+    id: 'slash-table',
+    label: 'Table',
+    description: 'Insert a table',
+    action: openTableModal,
+  },
+  {
+    id: 'slash-divider',
+    label: 'Divider',
+    description: 'Insert horizontal rule',
+    action: handleInsertHR,
   },
 ]
 
@@ -820,6 +1693,12 @@ const handleKeydown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault()
     insertLink()
+    return
+  }
+
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+    event.preventDefault()
+    openFindReplaceModal()
     return
   }
 
@@ -861,6 +1740,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 // Event handlers
 const onInput = () => {
   captureSnapshot()
+  updateFloatingToolbar()
 }
 
 const onFocus = () => {
@@ -869,7 +1749,19 @@ const onFocus = () => {
 }
 
 const onBlur = () => {
+  // Delay hiding floating toolbar to allow clicks
+  setTimeout(() => {
+    showFloatingToolbar.value = false
+  }, 200)
   emit('blur')
+}
+
+const onMouseUp = () => {
+  updateFloatingToolbar()
+}
+
+const onSelectionChange = () => {
+  updateFloatingToolbar()
 }
 
 // Lifecycle and watchers
@@ -890,6 +1782,16 @@ watch(
   { immediate: true }
 )
 
+// Watch for content changes and trigger auto-save
+watch(
+  () => editorContent.value?.innerHTML,
+  (newContent) => {
+    if (newContent && !isApplyingHistory.value) {
+      triggerAutoSave(newContent)
+    }
+  }
+)
+
 onMounted(() => {
   if (editorContent.value) {
     applySanitizedContent(props.modelValue)
@@ -898,6 +1800,7 @@ onMounted(() => {
   }
   document.addEventListener('click', handleDocumentClick)
   document.addEventListener('keydown', handleEscape)
+  document.addEventListener('selectionchange', onSelectionChange)
 })
 
 onBeforeUnmount(() => {
@@ -906,6 +1809,10 @@ onBeforeUnmount(() => {
   }
   document.removeEventListener('click', handleDocumentClick)
   document.removeEventListener('keydown', handleEscape)
+  document.removeEventListener('selectionchange', onSelectionChange)
+  if (floatingToolbarTimer.value) {
+    clearTimeout(floatingToolbarTimer.value)
+  }
 })
 </script>
 
@@ -1308,6 +2215,38 @@ onBeforeUnmount(() => {
   background: rgba(59, 130, 246, 0.12);
 }
 
+.editor-content :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.95em;
+}
+
+.editor-content :deep(table th) {
+  background: rgba(59, 130, 246, 0.08);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--editor-border);
+}
+
+.theme-dark .editor-content :deep(table th) {
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.editor-content :deep(table td) {
+  padding: 8px 12px;
+  border: 1px solid var(--editor-border);
+}
+
+.editor-content :deep(table tr:hover) {
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.theme-dark .editor-content :deep(table tr:hover) {
+  background: rgba(96, 165, 250, 0.05);
+}
+
 .toolbar-collapse-enter-active,
 .toolbar-collapse-leave-active {
   transition: all 0.2s ease;
@@ -1329,4 +2268,305 @@ onBeforeUnmount(() => {
   opacity: 0;
   transform: translateY(-6px);
 }
+
+/* Editor Footer */
+.editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--editor-border);
+  background: var(--toolbar-bg);
+  font-size: 12px;
+  color: var(--toolbar-text);
+  opacity: 0.7;
+}
+
+.word-count,
+.char-count {
+  font-weight: 500;
+}
+
+/* Color Section */
+.color-section .toolbar-section-body {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Horizontal Rule Styles */
+.editor-content :deep(hr) {
+  border: none;
+  border-top: 2px solid var(--editor-border);
+  margin: 24px 0;
+  opacity: 0.5;
+}
+
+.theme-dark .editor-content :deep(hr) {
+  opacity: 0.3;
+}
+
+/* Fullscreen Mode */
+.next-level-editor.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: var(--editor-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.next-level-editor.fullscreen .editor-content {
+  flex: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 48px 24px;
+}
+
+/* Emoji Picker Container */
+.emoji-picker-container {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 1000;
+}
+
+/* Auto-save Indicator */
+.auto-save-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+  z-index: 100;
+  transition: opacity var(--transition-fast, 150ms) ease;
+}
+
+.theme-dark .auto-save-indicator {
+  background: #1f2937;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+.auto-save-indicator .saving {
+  color: #3b82f6;
+}
+
+.auto-save-indicator .saved {
+  color: #10b981;
+}
+
+/* Modern Toolbar Styles */
+.editor-toolbar-modern {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--editor-border);
+  min-height: 48px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--editor-border);
+  margin: 0 4px;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.toolbar-btn-modern {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--toolbar-text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.toolbar-btn-modern:hover {
+  background: var(--toolbar-hover);
+  border-color: var(--toolbar-accent);
+}
+
+.toolbar-btn-modern.active {
+  background: var(--toolbar-hover);
+  color: var(--toolbar-accent);
+  border-color: var(--toolbar-accent);
+}
+
+.toolbar-btn-modern:focus {
+  outline: 2px solid var(--toolbar-accent);
+  outline-offset: 2px;
+}
+
+/* Tooltips for modern toolbar */
+.toolbar-btn-modern[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.toolbar-btn-modern[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* Theme toggle specific styles */
+.toolbar-btn-modern.theme-toggle {
+  font-size: 18px;
+}
+
+/* Dropdown styles for embedded pickers */
+.toolbar-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--editor-border);
+  background: var(--editor-bg);
+  color: var(--toolbar-text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  min-height: 32px;
+}
+
+.dropdown-trigger:hover {
+  background: var(--toolbar-hover);
+  border-color: var(--toolbar-accent);
+}
+
+.dropdown-trigger.open {
+  background: var(--toolbar-hover);
+  border-color: var(--toolbar-accent);
+  color: var(--toolbar-accent);
+}
+
+.dropdown-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.dropdown-label {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+
+.dropdown-trigger.open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: var(--editor-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  padding: 8px;
+  min-width: 200px;
+}
+
+.dropdown-menu.colors-menu {
+  min-width: 280px;
+}
+
+.color-picker-wrapper {
+  margin-bottom: 8px;
+}
+
+.color-picker-wrapper:last-child {
+  margin-bottom: 0;
+}
+
+.font-size-wrapper {
+  padding: 4px;
+}
+
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.dropdown-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .editor-toolbar-modern {
+    gap: 2px;
+    padding: 6px 8px;
+  }
+  
+  .toolbar-divider {
+    display: none;
+  }
+  
+  .dropdown-label {
+    display: none;
+  }
+  
+  .toolbar-btn-modern {
+    min-width: 36px;
+    height: 36px;
+  }
+}
 </style>
+

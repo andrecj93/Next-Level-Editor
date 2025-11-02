@@ -446,12 +446,17 @@ export const insertLink = (root: HTMLElement, url: string) => {
   })
 }
 
-export const insertImage = (root: HTMLElement, url: string) => {
+export const insertImage = (root: HTMLElement, url: string, alt: string = '') => {
   const range = getSelectionRange()
   if (!range) return
   ensureRangeWithinRoot(range, root)
   const image = document.createElement('img')
   image.src = url
+  if (alt) {
+    image.alt = alt
+  }
+  image.style.maxWidth = '100%'
+  image.style.height = 'auto'
   range.insertNode(image)
   const selection = getSelection()
   if (selection) {
