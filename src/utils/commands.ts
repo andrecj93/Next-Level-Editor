@@ -53,7 +53,7 @@ export function getCharacterCountWithoutSpaces(html: string): number {
  * @param root - Editor root element
  * @param size - Font size (small, normal, large, huge)
  */
-export function applyFontSize(root: HTMLElement, size: 'small' | 'normal' | 'large' | 'huge') {
+export function applyFontSize(_root: HTMLElement, size: 'small' | 'normal' | 'large' | 'huge') {
   const sizeMap = {
     small: '0.875em',
     normal: '1em',
@@ -116,7 +116,7 @@ export function applyTextAlignment(root: HTMLElement, alignment: 'left' | 'cente
  * @param root - Editor root element
  * @param color - Color value (hex, rgb, etc.)
  */
-export function applyTextColor(root: HTMLElement, color: string) {
+export function applyTextColor(_root: HTMLElement, color: string) {
   const selection = window.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
@@ -147,7 +147,7 @@ export function applyTextColor(root: HTMLElement, color: string) {
  * @param root - Editor root element
  * @param color - Color value (hex, rgb, etc.)
  */
-export function applyBackgroundColor(root: HTMLElement, color: string) {
+export function applyBackgroundColor(_root: HTMLElement, color: string) {
   const selection = window.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
@@ -175,7 +175,7 @@ export function applyBackgroundColor(root: HTMLElement, color: string) {
  * Insert horizontal rule
  * @param root - Editor root element
  */
-export function insertHorizontalRule(root: HTMLElement) {
+export function insertHorizontalRule(_root: HTMLElement) {
   const selection = window.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
@@ -199,7 +199,7 @@ export function insertHorizontalRule(root: HTMLElement) {
  * @param cols - Number of columns
  * @param includeHeader - Whether to include a header row
  */
-export function insertTable(root: HTMLElement, rows: number, cols: number, includeHeader: boolean) {
+export function insertTable(_root: HTMLElement, rows: number, cols: number, includeHeader: boolean) {
   const selection = window.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
@@ -233,7 +233,6 @@ export function insertTable(root: HTMLElement, rows: number, cols: number, inclu
   
   // Create body rows
   const tbody = document.createElement('tbody')
-  const startRow = includeHeader ? 0 : 0
   const totalRows = includeHeader ? rows - 1 : rows
   
   for (let i = 0; i < totalRows; i++) {

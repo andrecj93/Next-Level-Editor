@@ -39,18 +39,20 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
+type FontSizeValue = 'small' | 'normal' | 'large' | 'huge'
+
 interface FontSize {
   label: string
-  value: string
+  value: FontSizeValue
   preview: string
 }
 
 interface Props {
-  modelValue?: string
+  modelValue?: FontSizeValue
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: string): void
+  (e: 'update:modelValue', value: FontSizeValue): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -77,7 +79,7 @@ const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
 }
 
-const selectSize = (value: string) => {
+const selectSize = (value: FontSizeValue) => {
   emit('update:modelValue', value)
   showDropdown.value = false
 }

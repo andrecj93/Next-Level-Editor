@@ -28,7 +28,10 @@
     
     <main class="demo-main">
       <!-- Editor Tab -->
-      <div v-if="activeTab === 'editor'" class="tab-content">
+      <div
+        v-if="activeTab === 'editor'"
+        class="tab-content"
+      >
         <div class="editor-section">
           <h2>🎯 Interactive Demo</h2>
           <p class="section-description">
@@ -62,12 +65,18 @@
       </div>
       
       <!-- Features Tab -->
-      <div v-if="activeTab === 'features'" class="tab-content">
+      <div
+        v-if="activeTab === 'features'"
+        class="tab-content"
+      >
         <FeatureShowcase />
       </div>
       
       <!-- Documentation Tab -->
-      <div v-if="activeTab === 'docs'" class="tab-content">
+      <div
+        v-if="activeTab === 'docs'"
+        class="tab-content"
+      >
         <div class="docs-section">
           <h2>📚 Documentation</h2>
           
@@ -176,8 +185,14 @@ const content = ref('&lt;p&gt;Hello World!&lt;/p&gt;')
     <footer class="demo-footer">
       <p>
         Made with ❤️ by Next Level Editor Team | 
-        <a href="https://github.com/andrecj93/next-level-editor-jordan" target="_blank">GitHub</a> | 
-        <a href="https://www.npmjs.com/package/next-level-editor" target="_blank">npm</a>
+        <a
+          href="https://github.com/andrecj93/next-level-editor-jordan"
+          target="_blank"
+        >GitHub</a> | 
+        <a
+          href="https://www.npmjs.com/package/next-level-editor"
+          target="_blank"
+        >npm</a>
       </p>
     </footer>
   </div>

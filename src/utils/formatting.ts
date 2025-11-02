@@ -169,12 +169,12 @@ const isRangeFullyStyled = (range: Range, tagName: string, root: HTMLElement): b
   return encountered
 }
 
-const removeInlineStyleFromRange = (range: Range, tagName: string, root: HTMLElement) => {
+const removeInlineStyleFromRange = (range: Range, tagName: string, _root: HTMLElement) => {
   const fragment = range.extractContents()
 
   const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_ELEMENT)
   const toUnwrap: HTMLElement[] = []
-  let current = walker.currentNode
+  let current: Node | null = walker.currentNode
   while (current) {
     if (
       current instanceof HTMLElement &&

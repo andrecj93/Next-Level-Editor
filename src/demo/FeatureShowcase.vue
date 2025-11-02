@@ -8,10 +8,19 @@
         class="feature-card"
         :class="{ highlighted: feature.highlighted }"
       >
-        <div class="feature-icon">{{ feature.icon }}</div>
-        <h3 class="feature-title">{{ feature.title }}</h3>
-        <p class="feature-description">{{ feature.description }}</p>
-        <div v-if="feature.tags" class="feature-tags">
+        <div class="feature-icon">
+          {{ feature.icon }}
+        </div>
+        <h3 class="feature-title">
+          {{ feature.title }}
+        </h3>
+        <p class="feature-description">
+          {{ feature.description }}
+        </p>
+        <div
+          v-if="feature.tags"
+          class="feature-tags"
+        >
           <span
             v-for="tag in feature.tags"
             :key="tag"
@@ -31,7 +40,10 @@
           class="shortcut-item"
         >
           <div class="shortcut-keys">
-            <kbd v-for="(key, index) in shortcut.keys" :key="index">{{ key }}</kbd>
+            <kbd
+              v-for="(key, index) in shortcut.keys"
+              :key="index"
+            >{{ key }}</kbd>
           </div>
           <span class="shortcut-description">{{ shortcut.description }}</span>
         </div>
@@ -41,7 +53,9 @@
     <!-- Slash Commands Section -->
     <div class="commands-section">
       <h2>⚡ Slash Commands</h2>
-      <p class="section-subtitle">Type <code>/</code> in the editor to access quick actions</p>
+      <p class="section-subtitle">
+        Type <code>/</code> in the editor to access quick actions
+      </p>
       <div class="commands-grid">
         <div
           v-for="command in slashCommands"

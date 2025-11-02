@@ -315,7 +315,6 @@
 <script setup lang="ts">
 import {
   ref,
-  reactive,
   computed,
   watch,
   onMounted,
@@ -324,7 +323,6 @@ import {
 } from 'vue'
 import {
   applyInlineStyle,
-  clearFormatting as clearFormattingUtil,
   insertImage as insertImageUtil,
   insertLink as insertLinkUtil,
   isBlockActive,
@@ -345,6 +343,7 @@ import {
   insertTable as insertTableUtil,
   getWordCount,
   getCharacterCount,
+  searchAndReplace,
 } from '../utils/commands'
 import { exportAsHtml, exportAsMarkdown } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
@@ -394,16 +393,17 @@ const savedRange = ref<Range | null>(null)
 
 // Theme and UI state using composable
 const { theme, toggleTheme: toggleThemeComposable } = useTheme()
-const collapsedGroups = reactive<Record<string, boolean>>({
-  text: false,
-  structure: false,
-  inserts: false,
-  cleanup: false,
-  colors: false,
-  alignment: false,
-  advanced: false,
-  formatting: false,
-})
+// Group collapse state for future grouped toolbar UI
+// const collapsedGroups = reactive<Record<string, boolean>>({
+//   text: false,
+//   structure: false,
+//   inserts: false,
+//   cleanup: false,
+//   colors: false,
+//   alignment: false,
+//   advanced: false,
+//   formatting: false,
+// })
 
 const themeClass = computed(() => (theme.value === 'dark' ? 'theme-dark' : 'theme-light'))
 
@@ -412,7 +412,7 @@ const textColor = ref('#000000')
 const backgroundColor = ref('#ffff00')
 
 // Font size state
-const fontSize = ref('normal')
+const fontSize = ref<'small' | 'normal' | 'large' | 'huge'>('normal')
 
 // Table modal state
 const showTableModal = ref(false)
@@ -756,9 +756,10 @@ const closeEmbedModal = () => {
   showEmbedModal.value = false
 }
 
-const clearFormatting = () => {
-  performWithSelection((root) => clearFormattingUtil(root))
-}
+// Clear formatting function (for future cleanup toolbar)
+// const clearFormatting = () => {
+//   performWithSelection((root) => clearFormattingUtil(root))
+// }
 
 const toggleTheme = () => {
   toggleThemeComposable()
@@ -819,6 +820,7 @@ const handleFind = (data: { findText: string; direction: 'next' | 'previous' }) 
   
   // For now, we'll just select the first match
   // A more advanced implementation would track position
+  // Using non-standard window.find() - widely supported but deprecated
   window.find(data.findText, false, data.direction === 'previous', false, false, true, false)
 }
 
@@ -841,7 +843,7 @@ const closeCodeBlockModal = () => {
 }
 
 const handleInsertCodeBlock = (data: { code: string; language: string }) => {
-  performWithSelection((root) => {
+  performWithSelection((_root) => {
     const selection = window.getSelection()
     if (!selection || selection.rangeCount === 0) return
 
@@ -885,7 +887,7 @@ const toggleEmojiPicker = () => {
 }
 
 const handleInsertEmoji = (emoji: string) => {
-  performWithSelection((root) => {
+  performWithSelection((_root) => {
     const selection = window.getSelection()
     if (!selection || selection.rangeCount === 0) return
 
@@ -950,216 +952,6 @@ const isListActionActive = (tag: 'ul' | 'ol'): boolean => {
   return isListActive(editorContent.value, tag)
 }
 
-// Toolbar configuration
-const formatActions: ToolbarAction[] = [
-  {
-    id: 'bold',
-    label: 'Bold',
-    icon: '<strong>B</strong>',
-    tooltip: 'Bold (Ctrl+B)',
-    onClick: () => handleInlineAction('strong'),
-    isActive: () => isInlineActionActive('strong'),
-  },
-  {
-    id: 'italic',
-    label: 'Italic',
-    icon: '<em>I</em>',
-    tooltip: 'Italic (Ctrl+I)',
-    onClick: () => handleInlineAction('em'),
-    isActive: () => isInlineActionActive('em'),
-  },
-  {
-    id: 'underline',
-    label: 'Underline',
-    icon: '<u>U</u>',
-    tooltip: 'Underline (Ctrl+U)',
-    onClick: () => handleInlineAction('u'),
-    isActive: () => isInlineActionActive('u'),
-  },
-  {
-    id: 'strike',
-    label: 'Strikethrough',
-    icon: '<s>S</s>',
-    tooltip: 'Strikethrough',
-    onClick: () => handleInlineAction('s'),
-    isActive: () => isInlineActionActive('s'),
-  },
-]
-
-const headingActions: ToolbarAction[] = [
-  {
-    id: 'h1',
-    label: 'H1',
-    icon: '<strong>H1</strong>',
-    tooltip: 'Heading 1 (Ctrl+Alt+1)',
-    onClick: () => handleBlockAction('h1'),
-    isActive: () => isBlockActionActive('h1'),
-  },
-  {
-    id: 'h2',
-    label: 'H2',
-    icon: '<strong>H2</strong>',
-    tooltip: 'Heading 2 (Ctrl+Alt+2)',
-    onClick: () => handleBlockAction('h2'),
-    isActive: () => isBlockActionActive('h2'),
-  },
-  {
-    id: 'h3',
-    label: 'H3',
-    icon: '<strong>H3</strong>',
-    tooltip: 'Heading 3 (Ctrl+Alt+3)',
-    onClick: () => handleBlockAction('h3'),
-    isActive: () => isBlockActionActive('h3'),
-  },
-  {
-    id: 'paragraph',
-    label: 'Paragraph',
-    icon: 'P',
-    tooltip: 'Convert to paragraph',
-    onClick: () => handleBlockAction('p'),
-    isActive: () => isBlockActionActive('p'),
-  },
-]
-
-const insertActions: ToolbarAction[] = [
-  {
-    id: 'unordered-list',
-    label: 'Bullet List',
-    icon: '• List',
-    tooltip: 'Bullet list',
-    onClick: () => handleListAction('ul'),
-    isActive: () => isListActionActive('ul'),
-  },
-  {
-    id: 'ordered-list',
-    label: 'Numbered List',
-    icon: '1. List',
-    tooltip: 'Numbered list',
-    onClick: () => handleListAction('ol'),
-    isActive: () => isListActionActive('ol'),
-  },
-  {
-    id: 'table',
-    label: 'Table',
-    icon: '⊞',
-    tooltip: 'Insert table',
-    onClick: openTableModal,
-  },
-  {
-    id: 'link',
-    label: 'Link',
-    icon: '🔗',
-    tooltip: 'Insert link (Ctrl+K)',
-    onClick: insertLink,
-  },
-  {
-    id: 'image',
-    label: 'Image',
-    icon: '🖼️',
-    tooltip: 'Insert image',
-    onClick: insertImage,
-  },
-  {
-    id: 'embed',
-    label: 'Video',
-    icon: '🎬',
-    tooltip: 'Embed YouTube/Vimeo video',
-    onClick: openEmbedModal,
-  },
-]
-
-const alignmentActions: ToolbarAction[] = [
-  {
-    id: 'align-left',
-    label: 'Align Left',
-    icon: '⬅',
-    tooltip: 'Align left',
-    onClick: () => handleTextAlignment('left'),
-  },
-  {
-    id: 'align-center',
-    label: 'Align Center',
-    icon: '↔',
-    tooltip: 'Align center',
-    onClick: () => handleTextAlignment('center'),
-  },
-  {
-    id: 'align-right',
-    label: 'Align Right',
-    icon: '➡',
-    tooltip: 'Align right',
-    onClick: () => handleTextAlignment('right'),
-  },
-  {
-    id: 'align-justify',
-    label: 'Justify',
-    icon: '⬌',
-    tooltip: 'Justify',
-    onClick: () => handleTextAlignment('justify'),
-  },
-]
-
-const advancedActions: ToolbarAction[] = [
-  {
-    id: 'code-block',
-    label: 'Code',
-    icon: '</> ',
-    tooltip: 'Insert code block',
-    onClick: openCodeBlockModal,
-  },
-  {
-    id: 'find-replace',
-    label: 'Find',
-    icon: '🔍',
-    tooltip: 'Find & Replace (Ctrl+F)',
-    onClick: openFindReplaceModal,
-  },
-  {
-    id: 'emoji',
-    label: 'Emoji',
-    icon: '😀',
-    tooltip: 'Insert emoji',
-    onClick: toggleEmojiPicker,
-  },
-  {
-    id: 'fullscreen',
-    label: 'Fullscreen',
-    icon: '⛶',
-    tooltip: 'Toggle fullscreen mode',
-    onClick: toggleFullScreen,
-  },
-  {
-    id: 'hr',
-    label: 'Divider',
-    icon: '—',
-    tooltip: 'Insert horizontal rule',
-    onClick: handleInsertHR,
-  },
-  {
-    id: 'export-html',
-    label: 'HTML',
-    icon: '📄',
-    tooltip: 'Export as HTML',
-    onClick: handleExportHtml,
-  },
-  {
-    id: 'export-md',
-    label: 'MD',
-    icon: '📝',
-    tooltip: 'Export as Markdown',
-    onClick: handleExportMarkdown,
-  },
-]
-
-const cleanupActions: ToolbarAction[] = [
-  {
-    id: 'clear',
-    label: 'Clear',
-    icon: '🧹',
-    tooltip: 'Remove formatting',
-    onClick: clearFormatting,
-  },
-]
 
 // Modern toolbar dropdown configurations
 const formatDropdownItems = computed(() => [
@@ -1357,44 +1149,45 @@ const toolActions = computed(() => [
   },
 ])
 
-const toolbarSections = [
-  {
-    id: 'text',
-    label: 'Text',
-    description: 'Inline styles',
-    actions: formatActions,
-  },
-  {
-    id: 'structure',
-    label: 'Structure',
-    description: 'Headings and paragraphs',
-    actions: headingActions,
-  },
-  {
-    id: 'alignment',
-    label: 'Alignment',
-    description: 'Text alignment',
-    actions: alignmentActions,
-  },
-  {
-    id: 'inserts',
-    label: 'Insert',
-    description: 'Lists, links, media, videos',
-    actions: insertActions,
-  },
-  {
-    id: 'advanced',
-    label: 'Advanced',
-    description: 'Code, Find, Emoji, Fullscreen',
-    actions: advancedActions,
-  },
-  {
-    id: 'cleanup',
-    label: 'Cleanup',
-    description: 'Normalize content',
-    actions: cleanupActions,
-  },
-]
+// Toolbar sections organized by category (for future grouped toolbar UI)
+// const toolbarSections = [
+//   {
+//     id: 'text',
+//     label: 'Text',
+//     description: 'Inline styles',
+//     actions: _formatActions,
+//   },
+//   {
+//     id: 'structure',
+//     label: 'Structure',
+//     description: 'Headings and paragraphs',
+//     actions: _headingActions,
+//   },
+//   {
+//     id: 'alignment',
+//     label: 'Alignment',
+//     description: 'Text alignment',
+//     actions: _alignmentActions,
+//   },
+//   {
+//     id: 'inserts',
+//     label: 'Insert',
+//     description: 'Lists, links, media, videos',
+//     actions: _insertActions,
+//   },
+//   {
+//     id: 'advanced',
+//     label: 'Advanced',
+//     description: 'Code, Find, Emoji, Fullscreen',
+//     actions: _advancedActions,
+//   },
+//   {
+//     id: 'cleanup',
+//     label: 'Cleanup',
+//     description: 'Normalize content',
+//     actions: _cleanupActions,
+//   },
+// ]
 
 // Floating toolbar actions (subset of main toolbar)
 const floatingActions = computed<ToolbarAction[]>(() => [
@@ -1431,9 +1224,10 @@ const floatingActions = computed<ToolbarAction[]>(() => [
   },
 ])
 
-const toggleGroup = (id: string) => {
-  collapsedGroups[id] = !collapsedGroups[id]
-}
+// Toggle group collapse state (for future grouped toolbar UI)
+// const toggleGroup = (id: string) => {
+//   collapsedGroups[id] = !collapsedGroups[id]
+// }
 
 // History management (from PR #7)
 const buildPreview = (html: string) => {
@@ -1515,20 +1309,21 @@ const insertBlockquote = () => {
   })
 }
 
-const insertCodeBlock = () => {
-  performWithSelection((root) => {
-    const range = getSelectionRange()
-    if (!range || !root.contains(range.commonAncestorContainer)) return
-    const pre = document.createElement('pre')
-    const code = document.createElement('code')
-    const content = range.cloneContents()
-    const text = content.textContent || ''
-    code.textContent = text || 'console.log("Hello World")'
-    pre.appendChild(code)
-    range.deleteContents()
-    range.insertNode(pre)
-  })
-}
+// Alternative code block insertion (currently using modal for better UX)
+// const insertCodeBlock = () => {
+//   performWithSelection((root) => {
+//     const range = getSelectionRange()
+//     if (!range || !root.contains(range.commonAncestorContainer)) return
+//     const pre = document.createElement('pre')
+//     const code = document.createElement('code')
+//     const content = range.cloneContents()
+//     const text = content.textContent || ''
+//     code.textContent = text || 'console.log("Hello World")'
+//     pre.appendChild(code)
+//     range.deleteContents()
+//     range.insertNode(pre)
+//   })
+// }
 
 const removeSlashTrigger = () => {
   const selection = window.getSelection()

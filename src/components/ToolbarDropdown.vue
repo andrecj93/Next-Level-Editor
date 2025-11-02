@@ -66,7 +66,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 
 interface DropdownItem {
   id?: string
-  label: string
+  label?: string
   icon?: string
   shortcut?: string
   onClick?: () => void

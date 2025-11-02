@@ -122,7 +122,7 @@ export function autoEmbedVideos(html: string): string {
 
   // Find all link tags with video URLs
   const linkPattern = /<a[^>]+href=["']([^"']+)["'][^>]*>([^<]*)<\/a>/gi
-  result = result.replace(linkPattern, (match, url, text) => {
+  result = result.replace(linkPattern, (match, url, _text) => {
     const embedHtml = getVideoEmbedHtml(url)
     if (embedHtml) {
       return embedHtml
@@ -132,12 +132,12 @@ export function autoEmbedVideos(html: string): string {
 
   // Find standalone video URLs (not in links)
   const youtubePattern = /(?:^|\s)(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11}))(?:\s|$)/g
-  result = result.replace(youtubePattern, (match, url, videoId) => {
+  result = result.replace(youtubePattern, (_match, _url, videoId) => {
     return getYouTubeEmbedHtml(videoId)
   })
 
   const vimeoPattern = /(?:^|\s)(https?:\/\/(?:www\.)?vimeo\.com\/(\d+))(?:\s|$)/g
-  result = result.replace(vimeoPattern, (match, url, videoId) => {
+  result = result.replace(vimeoPattern, (_match, _url, videoId) => {
     return getVimeoEmbedHtml(videoId)
   })
 
