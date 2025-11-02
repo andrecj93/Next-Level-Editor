@@ -412,7 +412,7 @@ const textColor = ref('#000000')
 const backgroundColor = ref('#ffff00')
 
 // Font size state
-const fontSize = ref('normal')
+const fontSize = ref<'small' | 'normal' | 'large' | 'huge'>('normal')
 
 // Table modal state
 const showTableModal = ref(false)
@@ -780,10 +780,8 @@ const handleBackgroundColor = (color: string) => {
 }
 
 // Font size action
-const handleFontSize = (size: string) => {
-  if (size === 'small' || size === 'normal' || size === 'large' || size === 'huge') {
-    performWithSelection((root) => applyFontSize(root, size))
-  }
+const handleFontSize = (size: 'small' | 'normal' | 'large' | 'huge') => {
+  performWithSelection((root) => applyFontSize(root, size))
 }
 
 // Insert horizontal rule
@@ -822,7 +820,7 @@ const handleFind = (data: { findText: string; direction: 'next' | 'previous' }) 
   
   // For now, we'll just select the first match
   // A more advanced implementation would track position
-  // @ts-ignore - window.find is non-standard but widely supported
+  // Using non-standard window.find() - widely supported but deprecated
   window.find(data.findText, false, data.direction === 'previous', false, false, true, false)
 }
 
