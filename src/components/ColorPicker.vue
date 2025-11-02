@@ -56,7 +56,7 @@ interface Emits {
   (e: 'update:modelValue', value: string): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   modelValue: '#000000',
   label: 'Color',
   icon: '🎨'

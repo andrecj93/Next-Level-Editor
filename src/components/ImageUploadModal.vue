@@ -54,7 +54,7 @@
             <button
               type="button"
               class="upload-button"
-              @click="$refs.fileInput.click()"
+              @click="fileInput?.click()"
             >
               📁 Choose Image File
             </button>
