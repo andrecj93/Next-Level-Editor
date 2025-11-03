@@ -19,6 +19,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && copyfiles -f src/index.d.ts dist",
+    "build:demo": "vite build --config vite.demo.config.ts",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "test": "vitest",
