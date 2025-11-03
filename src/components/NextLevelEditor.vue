@@ -1671,7 +1671,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       // Extract content after the cursor
       const afterRange = document.createRange()
       afterRange.setStart(range.startContainer, range.startOffset)
-      afterRange.setEndAfter(currentBlock.lastChild || currentBlock)
+      afterRange.setEnd(currentBlock, currentBlock.childNodes.length)
       const afterContent = afterRange.extractContents()
       
       // If the current block is now empty, add a <br> to keep it visible
