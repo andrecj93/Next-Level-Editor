@@ -668,6 +668,17 @@ const rememberSelection = () => {
   savedRange.value = saveSelection()
 }
 
+const createFallbackSelection = (root: HTMLElement) => {
+  const selection = window.getSelection()
+  if (selection) {
+    const range = document.createRange()
+    range.selectNodeContents(root)
+    range.collapse(false) // Collapse to end
+    selection.removeAllRanges()
+    selection.addRange(range)
+  }
+}
+
 const performWithSelection = (action: (root: HTMLElement) => void) => {
   const root = editorContent.value
   if (!root) return
@@ -683,26 +694,12 @@ const performWithSelection = (action: (root: HTMLElement) => void) => {
         restoreSelection(savedRange.value)
       } else {
         // If saved range is invalid, create a new range at the end of content
-        const selection = window.getSelection()
-        if (selection) {
-          const range = document.createRange()
-          range.selectNodeContents(root)
-          range.collapse(false) // Collapse to end
-          selection.removeAllRanges()
-          selection.addRange(range)
-        }
+        createFallbackSelection(root)
       }
     } catch (error) {
-      console.warn('Failed to restore selection, creating new range', error)
+      console.warn('Failed to restore saved selection, falling back to end of editor', error)
       // Create a fallback selection at the end of the editor
-      const selection = window.getSelection()
-      if (selection) {
-        const range = document.createRange()
-        range.selectNodeContents(root)
-        range.collapse(false)
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      createFallbackSelection(root)
     }
   }
 
