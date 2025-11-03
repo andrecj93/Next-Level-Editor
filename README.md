@@ -182,12 +182,15 @@ Then use it anywhere in your components:
 Full TypeScript definitions included:
 
 ```typescript
-import type { NextLevelEditor } from 'next-level-editor'
+import { NextLevelEditor } from 'next-level-editor'
+import type { Ref } from 'vue'
 
-// Component props are fully typed
-const props: ComponentProps<typeof NextLevelEditor> = {
-  modelValue: '<p>Content</p>',
-  placeholder: 'Enter text...'
+// Use with typed refs
+const content: Ref<string> = ref('<p>Content</p>')
+
+// Component emits are fully typed
+const handleUpdate = (newContent: string) => {
+  console.log('Content updated:', newContent)
 }
 ```
 
