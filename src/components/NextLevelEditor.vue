@@ -8,6 +8,7 @@
         icon="¶"
         tooltip="Paragraph format"
         :items="formatDropdownItems"
+        @mousedown.native.prevent="rememberSelection"
       />
 
       <!-- Text Formatting (Inline Buttons) -->
@@ -34,6 +35,7 @@
         icon="☰"
         tooltip="Text alignment"
         :items="alignmentDropdownItems"
+        @mousedown.native.prevent="rememberSelection"
       />
 
       <!-- Lists (Inline Buttons) -->
@@ -60,6 +62,7 @@
         icon="+"
         tooltip="Insert content"
         :items="insertDropdownItems"
+        @mousedown.native.prevent="rememberSelection"
       />
 
       <!-- Colors Dropdown -->
@@ -69,6 +72,7 @@
           class="dropdown-trigger"
           :class="{ open: showColorsDropdown }"
           data-tooltip="Text & background colors"
+          @mousedown.prevent="rememberSelection"
           @click.stop="showColorsDropdown = !showColorsDropdown"
         >
           <span class="dropdown-icon">🎨</span>
@@ -108,6 +112,7 @@
           class="dropdown-trigger"
           :class="{ open: showFontSizeDropdown }"
           data-tooltip="Font size"
+          @mousedown.prevent="rememberSelection"
           @click.stop="showFontSizeDropdown = !showFontSizeDropdown"
         >
           <span class="dropdown-icon">Aa</span>
