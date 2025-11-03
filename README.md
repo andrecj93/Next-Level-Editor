@@ -49,7 +49,8 @@ A beautiful and feature-rich WYSIWYG editor for Vue.js 3 with advanced capabilit
 ### 🔐 Security & Quality
 - **HTML Sanitization** - Secure content handling prevents XSS attacks
 - **TypeScript Strict Mode** - Full type safety throughout
-- **96 Unit Tests** - Comprehensive test coverage with 90% code coverage
+- **125 Unit Tests** - Comprehensive test coverage with 81% code coverage
+- **23 E2E Tests** - Full end-to-end testing with Playwright
 - **0 Security Vulnerabilities** - CodeQL verified
 - **GitHub Actions CI/CD** - Automated testing and deployment
 
@@ -198,34 +199,60 @@ The editor uses CSS variables for easy customization:
 
 ## 🧪 Testing
 
-The project has comprehensive test coverage of **90%** across all core functionality.
+The project has comprehensive test coverage with both **unit tests** and **end-to-end tests**.
 
 ```bash
-# Run tests
+# Run unit tests
 npm test
 
-# Run tests with UI
+# Run unit tests with UI
 npm run test:ui
 
 # Generate coverage report
 npm run test:coverage
+
+# Run end-to-end tests
+npm run test:e2e
+
+# Run E2E tests with UI (interactive)
+npm run test:e2e:ui
+
+# Run E2E tests in headed mode (see browser)
+npm run test:e2e:headed
+
+# Debug E2E tests
+npm run test:e2e:debug
 ```
 
 ### Test Coverage
 
 | File Type | Statements | Branches | Functions | Lines |
 |-----------|-----------|----------|-----------|-------|
-| **Overall** | **90%** | **82%** | **81%** | **92%** |
+| **Overall** | **81%** | **69%** | **84%** | **83%** |
 | Components | 65% | 57% | 50% | 67% |
-| Utils | 92% | 85% | 89% | 94% |
+| Utils | 81% | 70% | 88% | 84% |
 
 ### Test Suites
 
+**Unit Tests (125 tests)**
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
 - **Commands** (29 tests) - Text alignment, tables, horizontal rules, search/replace
-- **Export** (25 tests) - HTML to Markdown conversion, file exports
+- **Export** (27 tests) - HTML to Markdown conversion, file exports
 - **Embed** (23 tests) - YouTube/Vimeo URL detection and embedding
+- **Formatting** (27 tests) - Bold, italic, underline, lists, headings, links
+
+**End-to-End Tests (23 tests with Playwright)**
+- **Basic Functionality** - Editor loading, typing, word count
+- **Formatting** - Bold, italic, underline, toggle formatting
+- **Headings** - H1, H2, H3 creation
+- **Lists** - Bullet lists, numbered lists
+- **Undo/Redo** - Undo changes, redo changes, button states
+- **Context Menu** - Right-click menu, cut/copy/paste options
+- **Floating Toolbar** - Selection-based toolbar appearance
+- **Theme Toggle** - Light/dark theme switching
+- **Font Size** - Font size changes
+- **Enter Key** - Paragraph creation, cursor position
 
 ## 📦 Build Output
 

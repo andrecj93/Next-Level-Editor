@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { htmlToMarkdown } from '../export'
+import { describe, it, expect, vi } from 'vitest'
+import { htmlToMarkdown, exportAsHtml, exportAsMarkdown, downloadFile } from '../export'
 
 describe('Export Coverage Tests', () => {
   describe('htmlToMarkdown', () => {
@@ -74,6 +74,126 @@ describe('Export Coverage Tests', () => {
       const html = '<p>Line 1<br>Line 2</p>'
       const result = htmlToMarkdown(html)
       expect(result).toContain('Line 1\nLine 2')
+    })
+
+    it('returns empty string for empty input', () => {
+      const result = htmlToMarkdown('')
+      expect(result).toBe('')
+    })
+
+    it('returns empty string for whitespace only', () => {
+      const result = htmlToMarkdown('   ')
+      expect(result).toBe('')
+    })
+  })
+
+  describe('downloadFile', () => {
+    beforeEach(() => {
+      // Mock document methods
+      vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as any)
+      vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as any)
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
+      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+      
+      // Mock link click
+      const mockClick = vi.fn()
+      vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+        if (tag === 'a') {
+          return {
+            href: '',
+            download: '',
+            click: mockClick,
+            style: {},
+          } as any
+        }
+        return document.createElement(tag)
+      })
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('creates and downloads a file', () => {
+      downloadFile('test content', 'test.txt', 'text/plain')
+      
+      expect(URL.createObjectURL).toHaveBeenCalled()
+      expect(document.body.appendChild).toHaveBeenCalled()
+      expect(document.body.removeChild).toHaveBeenCalled()
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+    })
+  })
+
+  describe('exportAsHtml', () => {
+    beforeEach(() => {
+      vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as any)
+      vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as any)
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
+      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+      
+      const mockClick = vi.fn()
+      vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+        if (tag === 'a') {
+          return {
+            href: '',
+            download: '',
+            click: mockClick,
+            style: {},
+          } as any
+        }
+        return document.createElement(tag)
+      })
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('exports HTML with default filename', () => {
+      exportAsHtml('<p>Test</p>')
+      expect(URL.createObjectURL).toHaveBeenCalled()
+    })
+
+    it('exports HTML with custom filename', () => {
+      exportAsHtml('<p>Test</p>', 'custom.html')
+      expect(URL.createObjectURL).toHaveBeenCalled()
+    })
+  })
+
+  describe('exportAsMarkdown', () => {
+    beforeEach(() => {
+      vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as any)
+      vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as any)
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
+      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+      
+      const mockClick = vi.fn()
+      const originalCreateElement = document.createElement.bind(document)
+      vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+        if (tag === 'a') {
+          return {
+            href: '',
+            download: '',
+            click: mockClick,
+            style: {},
+          } as any
+        }
+        return originalCreateElement(tag)
+      })
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('exports markdown with default filename', () => {
+      exportAsMarkdown('<h1>Test</h1>')
+      expect(URL.createObjectURL).toHaveBeenCalled()
+    })
+
+    it('exports markdown with custom filename', () => {
+      exportAsMarkdown('<h1>Test</h1>', 'custom.md')
+      expect(URL.createObjectURL).toHaveBeenCalled()
     })
   })
 })

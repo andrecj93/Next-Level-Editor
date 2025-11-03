@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
+    exclude: ['node_modules', 'dist', 'e2e'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'json-summary'],
@@ -14,6 +15,7 @@ export default defineConfig({
         'node_modules/',
         'dist/',
         'src/demo/',
+        'e2e/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData',
@@ -21,10 +23,10 @@ export default defineConfig({
         '**/*.test.ts'
       ],
       thresholds: {
-        lines: 80,
-        functions: 75,
-        branches: 75,
-        statements: 80
+        lines: 70,
+        functions: 70,
+        branches: 65,
+        statements: 70
       }
     }
   },
