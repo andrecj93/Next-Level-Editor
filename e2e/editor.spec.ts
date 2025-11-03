@@ -8,7 +8,7 @@ test.describe('Next Level Editor - Basic Functionality', () => {
 
   test('should load the editor', async ({ page }) => {
     await expect(page.locator('.editor-content')).toBeVisible()
-    await expect(page.locator('.toolbar')).toBeVisible()
+    await expect(page.locator('.editor-toolbar-modern')).toBeVisible()
   })
 
   test('should allow typing in the editor', async ({ page }) => {
