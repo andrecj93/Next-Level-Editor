@@ -14,7 +14,7 @@ test.describe('Next Level Editor - Basic Functionality', () => {
   test('should allow typing in the editor', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Hello World')
+    await editor.pressSequentially('Hello World')
     
     await expect(editor).toContainText('Hello World')
   })
@@ -22,7 +22,7 @@ test.describe('Next Level Editor - Basic Functionality', () => {
   test('should show word count', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Test word count')
+    await editor.pressSequentially('Test word count')
     
     const wordCount = page.locator('.word-count')
     await expect(wordCount).toContainText('3 words')
@@ -38,7 +38,7 @@ test.describe('Next Level Editor - Formatting', () => {
   test('should apply bold formatting', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Bold text')
+    await editor.pressSequentially('Bold text')
     
     // Select all text
     await page.keyboard.press('Control+A')
@@ -55,7 +55,7 @@ test.describe('Next Level Editor - Formatting', () => {
   test('should apply italic formatting', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Italic text')
+    await editor.pressSequentially('Italic text')
     
     await page.keyboard.press('Control+A')
     await page.click('button[aria-label="Italic"]')
@@ -67,7 +67,7 @@ test.describe('Next Level Editor - Formatting', () => {
   test('should apply underline formatting', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Underline text')
+    await editor.pressSequentially('Underline text')
     
     await page.keyboard.press('Control+A')
     await page.click('button[aria-label="Underline"]')
@@ -79,7 +79,7 @@ test.describe('Next Level Editor - Formatting', () => {
   test('should toggle formatting off', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Toggle text')
+    await editor.pressSequentially('Toggle text')
     
     await page.keyboard.press('Control+A')
     
@@ -106,7 +106,7 @@ test.describe('Next Level Editor - Headings', () => {
   test('should create heading 1', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Heading 1')
+    await editor.pressSequentially('Heading 1')
     
     await page.keyboard.press('Control+A')
     
@@ -122,7 +122,7 @@ test.describe('Next Level Editor - Headings', () => {
   test('should create heading 2', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Heading 2')
+    await editor.pressSequentially('Heading 2')
     
     await page.keyboard.press('Control+A')
     await page.click('button:has-text("Format")')
@@ -142,7 +142,7 @@ test.describe('Next Level Editor - Lists', () => {
   test('should create bullet list', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('List item')
+    await editor.pressSequentially('List item')
     
     await page.keyboard.press('Control+A')
     await page.click('button[aria-label="Bullet List"]')
@@ -157,7 +157,7 @@ test.describe('Next Level Editor - Lists', () => {
   test('should create numbered list', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Numbered item')
+    await editor.pressSequentially('Numbered item')
     
     await page.keyboard.press('Control+A')
     await page.click('button[aria-label="Numbered List"]')
@@ -176,7 +176,7 @@ test.describe('Next Level Editor - Undo/Redo', () => {
   test('should undo changes', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('First text')
+    await editor.pressSequentially('First text')
     
     await expect(editor).toContainText('First text')
     
@@ -191,7 +191,7 @@ test.describe('Next Level Editor - Undo/Redo', () => {
   test('should redo changes', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Test')
+    await editor.pressSequentially('Test')
     
     // Undo
     await page.keyboard.press('Control+Z')
@@ -217,7 +217,7 @@ test.describe('Next Level Editor - Context Menu', () => {
   test('should show context menu on right click', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Context menu test')
+    await editor.pressSequentially('Context menu test')
     
     // Right click
     await editor.click({ button: 'right' })
@@ -230,7 +230,7 @@ test.describe('Next Level Editor - Context Menu', () => {
   test('context menu should have cut, copy, paste options', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Test text')
+    await editor.pressSequentially('Test text')
     
     await editor.click({ button: 'right' })
     
@@ -250,7 +250,7 @@ test.describe('Next Level Editor - Floating Toolbar', () => {
   test('should show floating toolbar on text selection', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Select this text')
+    await editor.pressSequentially('Select this text')
     
     // Select all
     await page.keyboard.press('Control+A')
@@ -296,7 +296,7 @@ test.describe('Next Level Editor - Font Size', () => {
   test('should change font size', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Font size test')
+    await editor.pressSequentially('Font size test')
     
     await page.keyboard.press('Control+A')
     
@@ -321,9 +321,9 @@ test.describe('Next Level Editor - Enter Key', () => {
   test('should create new paragraph on Enter', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('First line')
+    await editor.pressSequentially('First line')
     await page.keyboard.press('Enter')
-    await editor.type('Second line')
+    await editor.pressSequentially('Second line')
     
     const paragraphs = editor.locator('p')
     const count = await paragraphs.count()
@@ -333,9 +333,9 @@ test.describe('Next Level Editor - Enter Key', () => {
   test('cursor should not jump to top after Enter', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
-    await editor.type('Line 1')
+    await editor.pressSequentially('Line 1')
     await page.keyboard.press('Enter')
-    await editor.type('Line 2')
+    await editor.pressSequentially('Line 2')
     
     await expect(editor).toContainText('Line 1')
     await expect(editor).toContainText('Line 2')
