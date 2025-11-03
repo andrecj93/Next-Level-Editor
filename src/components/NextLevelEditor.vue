@@ -1632,16 +1632,80 @@ const handleKeydown = (event: KeyboardEvent) => {
     
     const range = selection.getRangeAt(0)
     
-    // Insert a new paragraph
-    const p = document.createElement('p')
-    p.innerHTML = '<br>' // Ensure the paragraph is visible
+    // Delete any selected content first
+    if (!range.collapsed) {
+      range.deleteContents()
+    }
     
-    range.deleteContents()
-    range.insertNode(p)
+    // Find the current block element (p, h1, h2, etc.)
+    let currentBlock: HTMLElement | null = null
+    let node: Node | null = range.startContainer
     
-    // Move cursor to the new paragraph
+    while (node && node !== editorContent.value) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement
+        const tagName = element.tagName.toLowerCase()
+        if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote'].includes(tagName)) {
+          currentBlock = element
+          break
+        }
+      }
+      node = node.parentNode
+    }
+    
+    // If we're in a list item, use default behavior (browser handles it well)
+    if (currentBlock && currentBlock.tagName.toLowerCase() === 'li') {
+      // Let the browser handle list item splitting
+      document.execCommand('insertParagraph')
+      if (editorContent.value) {
+        editorContent.value.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+      return
+    }
+    
+    // Create a new paragraph for the content after the cursor
+    const newParagraph = document.createElement('p')
+    
+    if (currentBlock) {
+      // We're inside a block element - split it
+      // Extract content after the cursor
+      const afterRange = document.createRange()
+      afterRange.setStart(range.startContainer, range.startOffset)
+      afterRange.setEndAfter(currentBlock.lastChild || currentBlock)
+      const afterContent = afterRange.extractContents()
+      
+      // If the current block is now empty, add a <br> to keep it visible
+      if (!currentBlock.textContent?.trim()) {
+        currentBlock.innerHTML = '<br>'
+      }
+      
+      // Add the extracted content to the new paragraph
+      // If there's no content after cursor, add a <br> to keep new paragraph visible
+      if (!afterContent.textContent?.trim() && afterContent.childNodes.length === 0) {
+        newParagraph.innerHTML = '<br>'
+      } else {
+        newParagraph.appendChild(afterContent)
+        // Ensure the new paragraph has at least a <br> if it becomes empty
+        if (!newParagraph.textContent?.trim() && !newParagraph.querySelector('br')) {
+          newParagraph.innerHTML = '<br>'
+        }
+      }
+      
+      // Insert the new paragraph after the current block
+      if (currentBlock.nextSibling) {
+        currentBlock.parentNode?.insertBefore(newParagraph, currentBlock.nextSibling)
+      } else {
+        currentBlock.parentNode?.appendChild(newParagraph)
+      }
+    } else {
+      // No block element found - insert a new paragraph at cursor position
+      newParagraph.innerHTML = '<br>'
+      range.insertNode(newParagraph)
+    }
+    
+    // Move cursor to the beginning of the new paragraph
     const newRange = document.createRange()
-    newRange.setStart(p, 0)
+    newRange.setStart(newParagraph, 0)
     newRange.collapse(true)
     selection.removeAllRanges()
     selection.addRange(newRange)
