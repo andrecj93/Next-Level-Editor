@@ -3,12 +3,14 @@
     <!-- Modern Horizontal Toolbar -->
     <div class="editor-toolbar-modern">
       <!-- Format Dropdown -->
-      <ToolbarDropdown
-        label="Format"
-        icon="¶"
-        tooltip="Paragraph format"
-        :items="formatDropdownItems"
-      />
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Format"
+          icon="¶"
+          tooltip="Paragraph format"
+          :items="formatDropdownItems"
+        />
+      </div>
 
       <!-- Text Formatting (Inline Buttons) -->
       <div class="toolbar-divider" />
@@ -29,12 +31,14 @@
 
       <!-- Alignment Dropdown -->
       <div class="toolbar-divider" />
-      <ToolbarDropdown
-        label="Align"
-        icon="☰"
-        tooltip="Text alignment"
-        :items="alignmentDropdownItems"
-      />
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Align"
+          icon="☰"
+          tooltip="Text alignment"
+          :items="alignmentDropdownItems"
+        />
+      </div>
 
       <!-- Lists (Inline Buttons) -->
       <div class="toolbar-divider" />
@@ -55,12 +59,14 @@
 
       <!-- Insert Dropdown -->
       <div class="toolbar-divider" />
-      <ToolbarDropdown
-        label="Insert"
-        icon="+"
-        tooltip="Insert content"
-        :items="insertDropdownItems"
-      />
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Insert"
+          icon="+"
+          tooltip="Insert content"
+          :items="insertDropdownItems"
+        />
+      </div>
 
       <!-- Colors Dropdown -->
       <div class="toolbar-divider" />
@@ -69,6 +75,7 @@
           class="dropdown-trigger"
           :class="{ open: showColorsDropdown }"
           data-tooltip="Text & background colors"
+          @mousedown.prevent="rememberSelection"
           @click.stop="showColorsDropdown = !showColorsDropdown"
         >
           <span class="dropdown-icon">🎨</span>
@@ -108,6 +115,7 @@
           class="dropdown-trigger"
           :class="{ open: showFontSizeDropdown }"
           data-tooltip="Font size"
+          @mousedown.prevent="rememberSelection"
           @click.stop="showFontSizeDropdown = !showFontSizeDropdown"
         >
           <span class="dropdown-icon">Aa</span>
@@ -664,9 +672,54 @@ const applySanitizedContent = (value?: string | null) => {
   }
 }
 
+// Constants for block-level elements
+const BLOCK_ELEMENT_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote']
+
 // Selection management
 const rememberSelection = () => {
   savedRange.value = saveSelection()
+}
+
+/**
+ * Checks if an element or document fragment has no meaningful text content.
+ * @param element - The HTMLElement or DocumentFragment to check
+ * @returns true if the element contains only whitespace or no content
+ */
+const isEmptyContent = (element: HTMLElement | DocumentFragment): boolean => {
+  let content: string | null | undefined
+  
+  if (element instanceof DocumentFragment) {
+    content = Array.from(element.childNodes).map(n => n.textContent).join('')
+  } else {
+    content = element.textContent
+  }
+  
+  return !content?.trim()
+}
+
+/**
+ * Ensures an element is visible in the editor by adding a <br> tag if it's empty.
+ * This is necessary because empty block elements collapse and become invisible.
+ * @param element - The HTMLElement to make visible
+ */
+const ensureVisibleElement = (element: HTMLElement) => {
+  if (isEmptyContent(element) && !element.querySelector('br')) {
+    element.innerHTML = '<br>'
+  }
+}
+
+/**
+ * Populates a new element with extracted content, ensuring it remains visible.
+ * @param element - The element to populate
+ * @param content - The DocumentFragment containing extracted content
+ */
+const populateNewElement = (element: HTMLElement, content: DocumentFragment) => {
+  if (content.childNodes.length === 0) {
+    element.innerHTML = '<br>'
+  } else {
+    element.appendChild(content)
+    ensureVisibleElement(element)
+  }
 }
 
 const createFallbackSelection = (root: HTMLElement) => {
@@ -1632,16 +1685,96 @@ const handleKeydown = (event: KeyboardEvent) => {
     
     const range = selection.getRangeAt(0)
     
-    // Insert a new paragraph
-    const p = document.createElement('p')
-    p.innerHTML = '<br>' // Ensure the paragraph is visible
+    // Delete any selected content first
+    if (!range.collapsed) {
+      range.deleteContents()
+    }
     
-    range.deleteContents()
-    range.insertNode(p)
+    // Find the current block element (p, h1, h2, etc.)
+    let currentBlock: HTMLElement | null = null
+    let currentBlockTag = ''
+    let node: Node | null = range.startContainer
     
-    // Move cursor to the new paragraph
+    while (node && node !== editorContent.value) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement
+        const tagName = element.tagName.toLowerCase()
+        if (BLOCK_ELEMENT_TAGS.includes(tagName)) {
+          currentBlock = element
+          currentBlockTag = tagName
+          break
+        }
+      }
+      node = node.parentNode
+    }
+    
+    // If we're in a list item, handle it specially
+    if (currentBlock && currentBlockTag === 'li') {
+      // Split the list item
+      const afterRange = document.createRange()
+      afterRange.setStart(range.startContainer, range.startOffset)
+      afterRange.setEnd(currentBlock, currentBlock.childNodes.length)
+      const afterContent = afterRange.extractContents()
+      
+      // Create new list item and populate it
+      const newLi = document.createElement('li')
+      populateNewElement(newLi, afterContent)
+      
+      // Ensure current list item is visible
+      ensureVisibleElement(currentBlock)
+      
+      // Insert new list item after current one
+      if (currentBlock.nextSibling) {
+        currentBlock.parentNode?.insertBefore(newLi, currentBlock.nextSibling)
+      } else {
+        currentBlock.parentNode?.appendChild(newLi)
+      }
+      
+      // Move cursor to new list item
+      const newRange = document.createRange()
+      newRange.setStart(newLi, 0)
+      newRange.collapse(true)
+      selection.removeAllRanges()
+      selection.addRange(newRange)
+      
+      if (editorContent.value) {
+        editorContent.value.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+      return
+    }
+    
+    // Create a new paragraph for the content after the cursor
+    const newParagraph = document.createElement('p')
+    
+    if (currentBlock) {
+      // We're inside a block element - split it
+      // Extract content after the cursor
+      const afterRange = document.createRange()
+      afterRange.setStart(range.startContainer, range.startOffset)
+      afterRange.setEnd(currentBlock, currentBlock.childNodes.length)
+      const afterContent = afterRange.extractContents()
+      
+      // Ensure current block is visible
+      ensureVisibleElement(currentBlock)
+      
+      // Add the extracted content to the new paragraph
+      populateNewElement(newParagraph, afterContent)
+      
+      // Insert the new paragraph after the current block
+      if (currentBlock.nextSibling) {
+        currentBlock.parentNode?.insertBefore(newParagraph, currentBlock.nextSibling)
+      } else {
+        currentBlock.parentNode?.appendChild(newParagraph)
+      }
+    } else {
+      // No block element found - insert a new paragraph at cursor position
+      newParagraph.innerHTML = '<br>'
+      range.insertNode(newParagraph)
+    }
+    
+    // Move cursor to the beginning of the new paragraph
     const newRange = document.createRange()
-    newRange.setStart(p, 0)
+    newRange.setStart(newParagraph, 0)
     newRange.collapse(true)
     selection.removeAllRanges()
     selection.addRange(newRange)
