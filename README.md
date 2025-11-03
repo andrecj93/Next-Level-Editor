@@ -2,6 +2,7 @@
 
 [![CI/CD](https://github.com/andrecj93/next-level-editor-jordan/actions/workflows/ci.yml/badge.svg)](https://github.com/andrecj93/next-level-editor-jordan/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/next-level-editor.svg)](https://www.npmjs.com/package/next-level-editor)
+[![codecov](https://codecov.io/gh/andrecj93/next-level-editor-jordan/branch/main/graph/badge.svg)](https://codecov.io/gh/andrecj93/next-level-editor-jordan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A beautiful and feature-rich WYSIWYG editor for Vue.js 3 with advanced capabilities rivaling Notion and CKEditor.
@@ -48,7 +49,7 @@ A beautiful and feature-rich WYSIWYG editor for Vue.js 3 with advanced capabilit
 ### 🔐 Security & Quality
 - **HTML Sanitization** - Secure content handling prevents XSS attacks
 - **TypeScript Strict Mode** - Full type safety throughout
-- **43 Unit Tests** - Comprehensive test coverage with Vitest
+- **96 Unit Tests** - Comprehensive test coverage with 90% code coverage
 - **0 Security Vulnerabilities** - CodeQL verified
 - **GitHub Actions CI/CD** - Automated testing and deployment
 
@@ -197,6 +198,8 @@ The editor uses CSS variables for easy customization:
 
 ## 🧪 Testing
 
+The project has comprehensive test coverage of **90%** across all core functionality.
+
 ```bash
 # Run tests
 npm test
@@ -207,6 +210,22 @@ npm run test:ui
 # Generate coverage report
 npm run test:coverage
 ```
+
+### Test Coverage
+
+| File Type | Statements | Branches | Functions | Lines |
+|-----------|-----------|----------|-----------|-------|
+| **Overall** | **90%** | **82%** | **81%** | **92%** |
+| Components | 65% | 57% | 50% | 67% |
+| Utils | 92% | 85% | 89% | 94% |
+
+### Test Suites
+
+- **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
+- **Selection Management** (10 tests) - Font size, text color, background color
+- **Commands** (29 tests) - Text alignment, tables, horizontal rules, search/replace
+- **Export** (25 tests) - HTML to Markdown conversion, file exports
+- **Embed** (23 tests) - YouTube/Vimeo URL detection and embedding
 
 ## 📦 Build Output
 
