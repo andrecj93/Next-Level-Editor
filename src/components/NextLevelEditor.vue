@@ -3,13 +3,14 @@
     <!-- Modern Horizontal Toolbar -->
     <div class="editor-toolbar-modern">
       <!-- Format Dropdown -->
-      <ToolbarDropdown
-        label="Format"
-        icon="¶"
-        tooltip="Paragraph format"
-        :items="formatDropdownItems"
-        @mousedown.native.prevent="rememberSelection"
-      />
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Format"
+          icon="¶"
+          tooltip="Paragraph format"
+          :items="formatDropdownItems"
+        />
+      </div>
 
       <!-- Text Formatting (Inline Buttons) -->
       <div class="toolbar-divider" />
@@ -30,13 +31,14 @@
 
       <!-- Alignment Dropdown -->
       <div class="toolbar-divider" />
-      <ToolbarDropdown
-        label="Align"
-        icon="☰"
-        tooltip="Text alignment"
-        :items="alignmentDropdownItems"
-        @mousedown.native.prevent="rememberSelection"
-      />
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Align"
+          icon="☰"
+          tooltip="Text alignment"
+          :items="alignmentDropdownItems"
+        />
+      </div>
 
       <!-- Lists (Inline Buttons) -->
       <div class="toolbar-divider" />
@@ -57,13 +59,14 @@
 
       <!-- Insert Dropdown -->
       <div class="toolbar-divider" />
-      <ToolbarDropdown
-        label="Insert"
-        icon="+"
-        tooltip="Insert content"
-        :items="insertDropdownItems"
-        @mousedown.native.prevent="rememberSelection"
-      />
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Insert"
+          icon="+"
+          tooltip="Insert content"
+          :items="insertDropdownItems"
+        />
+      </div>
 
       <!-- Colors Dropdown -->
       <div class="toolbar-divider" />
@@ -672,6 +675,21 @@ const applySanitizedContent = (value?: string | null) => {
 // Selection management
 const rememberSelection = () => {
   savedRange.value = saveSelection()
+}
+
+// Helper function to check if element is empty
+const isEmptyContent = (element: HTMLElement | DocumentFragment): boolean => {
+  const content = element instanceof DocumentFragment ? 
+    Array.from(element.childNodes).map(n => n.textContent).join('') : 
+    element.textContent
+  return !content?.trim()
+}
+
+// Helper function to ensure element is visible with a <br> if empty
+const ensureVisibleElement = (element: HTMLElement) => {
+  if (isEmptyContent(element) && !element.querySelector('br')) {
+    element.innerHTML = '<br>'
+  }
 }
 
 const createFallbackSelection = (root: HTMLElement) => {
@@ -1668,19 +1686,15 @@ const handleKeydown = (event: KeyboardEvent) => {
       
       // Create new list item
       const newLi = document.createElement('li')
-      if (!afterContent.textContent?.trim() && afterContent.childNodes.length === 0) {
+      if (isEmptyContent(afterContent) && afterContent.childNodes.length === 0) {
         newLi.innerHTML = '<br>'
       } else {
         newLi.appendChild(afterContent)
-        if (!newLi.textContent?.trim() && !newLi.querySelector('br')) {
-          newLi.innerHTML = '<br>'
-        }
+        ensureVisibleElement(newLi)
       }
       
-      // If current list item is now empty, add a <br>
-      if (!currentBlock.textContent?.trim()) {
-        currentBlock.innerHTML = '<br>'
-      }
+      // Ensure current list item is visible
+      ensureVisibleElement(currentBlock)
       
       // Insert new list item after current one
       if (currentBlock.nextSibling) {
@@ -1713,21 +1727,16 @@ const handleKeydown = (event: KeyboardEvent) => {
       afterRange.setEnd(currentBlock, currentBlock.childNodes.length)
       const afterContent = afterRange.extractContents()
       
-      // If the current block is now empty, add a <br> to keep it visible
-      if (!currentBlock.textContent?.trim()) {
-        currentBlock.innerHTML = '<br>'
-      }
+      // Ensure current block is visible
+      ensureVisibleElement(currentBlock)
       
       // Add the extracted content to the new paragraph
       // If there's no content after cursor, add a <br> to keep new paragraph visible
-      if (!afterContent.textContent?.trim() && afterContent.childNodes.length === 0) {
+      if (isEmptyContent(afterContent) && afterContent.childNodes.length === 0) {
         newParagraph.innerHTML = '<br>'
       } else {
         newParagraph.appendChild(afterContent)
-        // Ensure the new paragraph has at least a <br> if it becomes empty
-        if (!newParagraph.textContent?.trim() && !newParagraph.querySelector('br')) {
-          newParagraph.innerHTML = '<br>'
-        }
+        ensureVisibleElement(newParagraph)
       }
       
       // Insert the new paragraph after the current block
