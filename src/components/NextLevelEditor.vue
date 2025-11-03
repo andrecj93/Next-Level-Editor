@@ -1692,6 +1692,7 @@ const handleKeydown = (event: KeyboardEvent) => {
     
     // Find the current block element (p, h1, h2, etc.)
     let currentBlock: HTMLElement | null = null
+    let currentBlockTag = ''
     let node: Node | null = range.startContainer
     
     while (node && node !== editorContent.value) {
@@ -1700,6 +1701,7 @@ const handleKeydown = (event: KeyboardEvent) => {
         const tagName = element.tagName.toLowerCase()
         if (BLOCK_ELEMENT_TAGS.includes(tagName)) {
           currentBlock = element
+          currentBlockTag = tagName
           break
         }
       }
@@ -1707,7 +1709,7 @@ const handleKeydown = (event: KeyboardEvent) => {
     }
     
     // If we're in a list item, handle it specially
-    if (currentBlock && currentBlock.tagName.toLowerCase() === 'li') {
+    if (currentBlock && currentBlockTag === 'li') {
       // Split the list item
       const afterRange = document.createRange()
       afterRange.setStart(range.startContainer, range.startOffset)
