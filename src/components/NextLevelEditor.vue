@@ -1327,12 +1327,7 @@ const redo = () => {
   applyHistoryEntry(history.value[historyIndex.value])
 }
 
-// Removed jumpToHistory - no longer used with new compact history UI
-// const jumpToHistory = (index: number) => {
-//   if (index < 0 || index >= history.value.length) return
-//   historyIndex.value = index
-//   applyHistoryEntry(history.value[index])
-// }
+
 
 // Command menu (from PR #7)
 const insertBlockquote = () => {
@@ -1522,8 +1517,15 @@ const contextMenuItems = computed<ContextMenuItem[]>(() => {
       icon: '✂️',
       shortcut: 'Ctrl+X',
       disabled: !hasSelection,
-      onClick: () => {
-        document.execCommand('cut')
+      onClick: async () => {
+        try {
+          const text = selection.toString()
+          await navigator.clipboard.writeText(text)
+          document.execCommand('delete')
+        } catch (error) {
+          // Fallback to execCommand for older browsers
+          document.execCommand('cut')
+        }
       },
     },
     {
@@ -1532,8 +1534,14 @@ const contextMenuItems = computed<ContextMenuItem[]>(() => {
       icon: '📋',
       shortcut: 'Ctrl+C',
       disabled: !hasSelection,
-      onClick: () => {
-        document.execCommand('copy')
+      onClick: async () => {
+        try {
+          const text = selection.toString()
+          await navigator.clipboard.writeText(text)
+        } catch (error) {
+          // Fallback to execCommand for older browsers
+          document.execCommand('copy')
+        }
       },
     },
     {
@@ -1544,9 +1552,14 @@ const contextMenuItems = computed<ContextMenuItem[]>(() => {
       onClick: async () => {
         try {
           const text = await navigator.clipboard.readText()
-          document.execCommand('insertText', false, text)
+          // Insert text at current position
+          const range = window.getSelection()?.getRangeAt(0)
+          if (range) {
+            range.deleteContents()
+            range.insertNode(document.createTextNode(text))
+          }
         } catch (error) {
-          console.warn('Failed to paste from clipboard', error)
+          console.warn('Failed to paste from clipboard. This may require clipboard permissions.', error)
         }
       },
     },

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { applyFontSize, applyTextColor, applyBackgroundColor } from '../commands'
 
 describe('Selection Management', () => {
