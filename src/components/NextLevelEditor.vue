@@ -1519,7 +1519,7 @@ const contextMenuItems = computed<ContextMenuItem[]>(() => {
       disabled: !hasSelection,
       onClick: async () => {
         try {
-          const text = selection.toString()
+          const text = selection?.toString() ?? ''
           await navigator.clipboard.writeText(text)
           document.execCommand('delete')
         } catch (error) {
@@ -1536,7 +1536,7 @@ const contextMenuItems = computed<ContextMenuItem[]>(() => {
       disabled: !hasSelection,
       onClick: async () => {
         try {
-          const text = selection.toString()
+          const text = selection?.toString() ?? ''
           await navigator.clipboard.writeText(text)
         } catch (error) {
           // Fallback to execCommand for older browsers
