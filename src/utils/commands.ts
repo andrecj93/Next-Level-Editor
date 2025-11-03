@@ -83,6 +83,12 @@ export function applyFontSize(_root: HTMLElement, size: 'small' | 'normal' | 'la
     const contents = range.extractContents()
     span.appendChild(contents)
     range.insertNode(span)
+    
+    // Restore selection to include the newly created span
+    const newRange = document.createRange()
+    newRange.selectNodeContents(span)
+    selection.removeAllRanges()
+    selection.addRange(newRange)
   }
 }
 
@@ -139,6 +145,12 @@ export function applyTextColor(_root: HTMLElement, color: string) {
     const contents = range.extractContents()
     span.appendChild(contents)
     range.insertNode(span)
+    
+    // Restore selection to include the newly created span
+    const newRange = document.createRange()
+    newRange.selectNodeContents(span)
+    selection.removeAllRanges()
+    selection.addRange(newRange)
   }
 }
 
@@ -168,14 +180,19 @@ export function applyBackgroundColor(_root: HTMLElement, color: string) {
     const contents = range.extractContents()
     span.appendChild(contents)
     range.insertNode(span)
+    
+    // Restore selection to include the newly created span
+    const newRange = document.createRange()
+    newRange.selectNodeContents(span)
+    selection.removeAllRanges()
+    selection.addRange(newRange)
   }
 }
 
 /**
  * Insert horizontal rule
- * @param root - Editor root element
  */
-export function insertHorizontalRule(_root: HTMLElement) {
+export function insertHorizontalRule() {
   const selection = window.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
