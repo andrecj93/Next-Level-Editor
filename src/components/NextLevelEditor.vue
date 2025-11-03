@@ -1658,10 +1658,44 @@ const handleKeydown = (event: KeyboardEvent) => {
       node = node.parentNode
     }
     
-    // If we're in a list item, use default behavior (browser handles it well)
+    // If we're in a list item, handle it specially
     if (currentBlock && currentBlock.tagName.toLowerCase() === 'li') {
-      // Let the browser handle list item splitting
-      document.execCommand('insertParagraph')
+      // Split the list item
+      const afterRange = document.createRange()
+      afterRange.setStart(range.startContainer, range.startOffset)
+      afterRange.setEnd(currentBlock, currentBlock.childNodes.length)
+      const afterContent = afterRange.extractContents()
+      
+      // Create new list item
+      const newLi = document.createElement('li')
+      if (!afterContent.textContent?.trim() && afterContent.childNodes.length === 0) {
+        newLi.innerHTML = '<br>'
+      } else {
+        newLi.appendChild(afterContent)
+        if (!newLi.textContent?.trim() && !newLi.querySelector('br')) {
+          newLi.innerHTML = '<br>'
+        }
+      }
+      
+      // If current list item is now empty, add a <br>
+      if (!currentBlock.textContent?.trim()) {
+        currentBlock.innerHTML = '<br>'
+      }
+      
+      // Insert new list item after current one
+      if (currentBlock.nextSibling) {
+        currentBlock.parentNode?.insertBefore(newLi, currentBlock.nextSibling)
+      } else {
+        currentBlock.parentNode?.appendChild(newLi)
+      }
+      
+      // Move cursor to new list item
+      const newRange = document.createRange()
+      newRange.setStart(newLi, 0)
+      newRange.collapse(true)
+      selection.removeAllRanges()
+      selection.addRange(newRange)
+      
       if (editorContent.value) {
         editorContent.value.dispatchEvent(new Event('input', { bubbles: true }))
       }
