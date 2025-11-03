@@ -35,7 +35,6 @@ describe('Formatting Toggle Bug Reproduction', () => {
     let strong = root.querySelector('strong')
     expect(strong).toBeTruthy()
     expect(strong!.textContent).toBe('Hello')
-    console.log('After first apply:', root.innerHTML)
 
     // Now select the bold text again
     strong = root.querySelector('strong')!
@@ -47,12 +46,9 @@ describe('Formatting Toggle Bug Reproduction', () => {
     // Check if bold is active
     const isActive = isInlineStyleActive(root, 'strong')
     expect(isActive).toBe(true)
-    console.log('Is bold active before toggle:', isActive)
 
     // Toggle bold off - should remove <strong>
     applyInlineStyle(root, 'strong')
-    
-    console.log('After toggle off:', root.innerHTML)
     
     // Bold tag should be gone
     strong = root.querySelector('strong')
@@ -90,10 +86,81 @@ describe('Formatting Toggle Bug Reproduction', () => {
     // Now check if bold is active - it should NOT be
     // The selection should still be on the text "Hello"
     const isActive = isInlineStyleActive(root, 'strong')
-    console.log('Is bold active after toggle off:', isActive)
-    console.log('Current selection:', selection.toString())
-    console.log('HTML after toggle:', root.innerHTML)
     
     expect(isActive).toBe(false)
+  })
+
+  it('should toggle italic on and off completely', () => {
+    root.innerHTML = '<p>Hello World</p>'
+    const p = root.querySelector('p')!
+    
+    // Select "Hello"
+    const range = document.createRange()
+    range.setStart(p.firstChild!, 0)
+    range.setEnd(p.firstChild!, 5)
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+
+    // Apply italic
+    applyInlineStyle(root, 'em')
+    
+    let em = root.querySelector('em')
+    expect(em).toBeTruthy()
+    expect(em!.textContent).toBe('Hello')
+
+    // Select the italic text again
+    em = root.querySelector('em')!
+    const range2 = document.createRange()
+    range2.selectNodeContents(em)
+    selection.removeAllRanges()
+    selection.addRange(range2)
+
+    // Toggle italic off
+    applyInlineStyle(root, 'em')
+    
+    // Italic tag should be gone
+    em = root.querySelector('em')
+    expect(em).toBeFalsy()
+    
+    // Text should still be there
+    expect(root.textContent).toContain('Hello')
+  })
+
+  it('should toggle underline on and off completely', () => {
+    root.innerHTML = '<p>Hello World</p>'
+    const p = root.querySelector('p')!
+    
+    // Select "Hello"
+    const range = document.createRange()
+    range.setStart(p.firstChild!, 0)
+    range.setEnd(p.firstChild!, 5)
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+
+    // Apply underline
+    applyInlineStyle(root, 'u')
+    
+    let u = root.querySelector('u')
+    expect(u).toBeTruthy()
+    expect(u!.textContent).toBe('Hello')
+
+    // Select the underlined text again
+    u = root.querySelector('u')!
+    const range2 = document.createRange()
+    range2.selectNodeContents(u)
+    selection.removeAllRanges()
+    selection.addRange(range2)
+
+    // Toggle underline off
+    applyInlineStyle(root, 'u')
+    
+    // Underline tag should be gone
+    u = root.querySelector('u')
+    expect(u).toBeFalsy()
+    
+    // Text should still be there
+    expect(root.textContent).toContain('Hello')
   })
 })

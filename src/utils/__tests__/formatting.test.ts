@@ -132,8 +132,15 @@ describe('Formatting Tests', () => {
 
       applyInlineStyle(root, 'strong')
 
-      // The text should still be there, though formatting might change
+      // The text should still be there
       expect(root.textContent).toContain('Hello')
+      
+      // But the strong tag should be gone
+      const strongAfter = root.querySelector('strong')
+      expect(strongAfter).toBeFalsy()
+      
+      // And bold should no longer be active
+      expect(isInlineStyleActive(root, 'strong')).toBe(false)
     })
   })
 

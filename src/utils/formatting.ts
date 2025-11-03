@@ -170,8 +170,24 @@ const isRangeFullyStyled = (range: Range, tagName: string, root: HTMLElement): b
 }
 
 const removeInlineStyleFromRange = (range: Range, tagName: string) => {
+  // Before extracting, remember the styled parent if we're inside one
+  const commonAncestor = range.commonAncestorContainer
+  let styledParent: HTMLElement | null = null
+  
+  // Walk up from the common ancestor to find if we're inside a styled element
+  let node: Node | null = commonAncestor
+  while (node) {
+    if (isElement(node) && node.tagName.toLowerCase() === tagName.toLowerCase()) {
+      styledParent = node
+      break
+    }
+    node = node.parentNode
+  }
+
+  // Extract the contents
   const fragment = range.extractContents()
 
+  // Find and unwrap matching elements in the extracted fragment
   const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_ELEMENT)
   const toUnwrap: HTMLElement[] = []
   let current: Node | null = walker.currentNode
@@ -186,11 +202,35 @@ const removeInlineStyleFromRange = (range: Range, tagName: string) => {
   }
   toUnwrap.forEach((node) => unwrapElement(node))
 
+  // Collect the nodes to re-insert
   const nodes = collectFragmentNodes(fragment)
+
+  // If we were inside a styled element and it's now empty (because we extracted its contents),
+  // we need to replace the element itself rather than inserting back inside it
+  if (styledParent && styledParent.parentNode && !styledParent.textContent) {
+    // The styled element is empty, replace it with the unwrapped fragment
+    const parent = styledParent.parentNode
+    const nextSibling = styledParent.nextSibling
+    
+    // Remove the empty styled element
+    parent.removeChild(styledParent)
+    
+    // Insert the unwrapped fragment nodes at the position where the styled element was
+    const tempRange = document.createRange()
+    if (nextSibling) {
+      tempRange.setStartBefore(nextSibling)
+    } else {
+      tempRange.selectNodeContents(parent)
+      tempRange.collapse(false)
+    }
+    tempRange.insertNode(fragment)
+  } else {
+    // Normal case: insert the unwrapped fragment back at the range position
+    range.insertNode(fragment)
+  }
+
+  // Re-select the inserted content
   const selection = getSelection()
-
-  range.insertNode(fragment)
-
   if (selection && nodes.length > 0) {
     const newRange = document.createRange()
     newRange.setStartBefore(nodes[0])
