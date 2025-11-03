@@ -677,7 +677,11 @@ const rememberSelection = () => {
   savedRange.value = saveSelection()
 }
 
-// Helper function to check if element is empty
+/**
+ * Checks if an element or document fragment has no meaningful text content.
+ * @param element - The HTMLElement or DocumentFragment to check
+ * @returns true if the element contains only whitespace or no content
+ */
 const isEmptyContent = (element: HTMLElement | DocumentFragment): boolean => {
   const content = element instanceof DocumentFragment ? 
     Array.from(element.childNodes).map(n => n.textContent).join('') : 
@@ -685,7 +689,11 @@ const isEmptyContent = (element: HTMLElement | DocumentFragment): boolean => {
   return !content?.trim()
 }
 
-// Helper function to ensure element is visible with a <br> if empty
+/**
+ * Ensures an element is visible in the editor by adding a <br> tag if it's empty.
+ * This is necessary because empty block elements collapse and become invisible.
+ * @param element - The HTMLElement to make visible
+ */
 const ensureVisibleElement = (element: HTMLElement) => {
   if (isEmptyContent(element) && !element.querySelector('br')) {
     element.innerHTML = '<br>'
@@ -1686,7 +1694,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       
       // Create new list item
       const newLi = document.createElement('li')
-      if (isEmptyContent(afterContent) && afterContent.childNodes.length === 0) {
+      if (afterContent.childNodes.length === 0) {
         newLi.innerHTML = '<br>'
       } else {
         newLi.appendChild(afterContent)
@@ -1732,7 +1740,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       
       // Add the extracted content to the new paragraph
       // If there's no content after cursor, add a <br> to keep new paragraph visible
-      if (isEmptyContent(afterContent) && afterContent.childNodes.length === 0) {
+      if (afterContent.childNodes.length === 0) {
         newParagraph.innerHTML = '<br>'
       } else {
         newParagraph.appendChild(afterContent)
