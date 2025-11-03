@@ -672,6 +672,9 @@ const applySanitizedContent = (value?: string | null) => {
   }
 }
 
+// Constants for block-level elements
+const BLOCK_ELEMENT_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote']
+
 // Selection management
 const rememberSelection = () => {
   savedRange.value = saveSelection()
@@ -683,9 +686,14 @@ const rememberSelection = () => {
  * @returns true if the element contains only whitespace or no content
  */
 const isEmptyContent = (element: HTMLElement | DocumentFragment): boolean => {
-  const content = element instanceof DocumentFragment ? 
-    Array.from(element.childNodes).map(n => n.textContent).join('') : 
-    element.textContent
+  let content: string | null | undefined
+  
+  if (element instanceof DocumentFragment) {
+    content = Array.from(element.childNodes).map(n => n.textContent).join('')
+  } else {
+    content = element.textContent
+  }
+  
   return !content?.trim()
 }
 
@@ -697,6 +705,20 @@ const isEmptyContent = (element: HTMLElement | DocumentFragment): boolean => {
 const ensureVisibleElement = (element: HTMLElement) => {
   if (isEmptyContent(element) && !element.querySelector('br')) {
     element.innerHTML = '<br>'
+  }
+}
+
+/**
+ * Populates a new element with extracted content, ensuring it remains visible.
+ * @param element - The element to populate
+ * @param content - The DocumentFragment containing extracted content
+ */
+const populateNewElement = (element: HTMLElement, content: DocumentFragment) => {
+  if (content.childNodes.length === 0) {
+    element.innerHTML = '<br>'
+  } else {
+    element.appendChild(content)
+    ensureVisibleElement(element)
   }
 }
 
@@ -1676,7 +1698,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as HTMLElement
         const tagName = element.tagName.toLowerCase()
-        if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote'].includes(tagName)) {
+        if (BLOCK_ELEMENT_TAGS.includes(tagName)) {
           currentBlock = element
           break
         }
@@ -1692,14 +1714,9 @@ const handleKeydown = (event: KeyboardEvent) => {
       afterRange.setEnd(currentBlock, currentBlock.childNodes.length)
       const afterContent = afterRange.extractContents()
       
-      // Create new list item
+      // Create new list item and populate it
       const newLi = document.createElement('li')
-      if (afterContent.childNodes.length === 0) {
-        newLi.innerHTML = '<br>'
-      } else {
-        newLi.appendChild(afterContent)
-        ensureVisibleElement(newLi)
-      }
+      populateNewElement(newLi, afterContent)
       
       // Ensure current list item is visible
       ensureVisibleElement(currentBlock)
@@ -1739,13 +1756,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       ensureVisibleElement(currentBlock)
       
       // Add the extracted content to the new paragraph
-      // If there's no content after cursor, add a <br> to keep new paragraph visible
-      if (afterContent.childNodes.length === 0) {
-        newParagraph.innerHTML = '<br>'
-      } else {
-        newParagraph.appendChild(afterContent)
-        ensureVisibleElement(newParagraph)
-      }
+      populateNewElement(newParagraph, afterContent)
       
       // Insert the new paragraph after the current block
       if (currentBlock.nextSibling) {
