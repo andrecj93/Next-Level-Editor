@@ -672,8 +672,38 @@ const performWithSelection = (action: (root: HTMLElement) => void) => {
   const root = editorContent.value
   if (!root) return
 
+  // Focus the editor first to ensure proper selection context
+  root.focus()
+
+  // Try to restore the saved selection if it exists and is valid
   if (savedRange.value) {
-    restoreSelection(savedRange.value)
+    try {
+      // Verify the range is still valid and within the editor
+      if (savedRange.value.startContainer && root.contains(savedRange.value.startContainer)) {
+        restoreSelection(savedRange.value)
+      } else {
+        // If saved range is invalid, create a new range at the end of content
+        const selection = window.getSelection()
+        if (selection) {
+          const range = document.createRange()
+          range.selectNodeContents(root)
+          range.collapse(false) // Collapse to end
+          selection.removeAllRanges()
+          selection.addRange(range)
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to restore selection, creating new range', error)
+      // Create a fallback selection at the end of the editor
+      const selection = window.getSelection()
+      if (selection) {
+        const range = document.createRange()
+        range.selectNodeContents(root)
+        range.collapse(false)
+        selection.removeAllRanges()
+        selection.addRange(range)
+      }
+    }
   }
 
   try {
@@ -683,7 +713,6 @@ const performWithSelection = (action: (root: HTMLElement) => void) => {
   }
 
   savedRange.value = saveSelection()
-  root.focus()
   captureSnapshot()
 }
 
@@ -1544,6 +1573,8 @@ const onFocus = () => {
 }
 
 const onBlur = () => {
+  // Save the selection before losing focus
+  savedRange.value = saveSelection()
   // Delay hiding floating toolbar to allow clicks
   setTimeout(() => {
     showFloatingToolbar.value = false
