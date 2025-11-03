@@ -16,14 +16,14 @@
 <table>
   <tr>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/742cb64f-42ef-4428-83e6-73dc88fde5b7" alt="Light Mode" width="100%"/>
+      <img src="https://github.com/user-attachments/assets/386bb947-38c3-435b-bd35-6c819f9db4d8" alt="Light Mode" width="100%"/>
       <br />
       <em>Light Mode - Clean and professional</em>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/9e7c7361-2df5-4aa8-ab53-a78b8fc28643" alt="Dark Mode" width="100%"/>
+      <img src="https://github.com/user-attachments/assets/868e3112-3eb3-48cf-99c0-4949d771cacd" alt="Dark Mode" width="100%"/>
       <br />
       <em>Dark Mode - Easy on the eyes</em>
     </td>
