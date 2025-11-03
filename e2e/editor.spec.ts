@@ -38,6 +38,11 @@ test.describe('Next Level Editor - Formatting', () => {
   test('should apply bold formatting', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('Bold text')
     
     // Select all text
@@ -46,8 +51,8 @@ test.describe('Next Level Editor - Formatting', () => {
     // Click bold button
     await page.click('button[aria-label="Bold"]')
     
-    // Check if bold tag exists
-    const bold = editor.locator('strong')
+    // Check if bold tag exists with the new text
+    const bold = editor.locator('strong').filter({ hasText: 'Bold text' })
     await expect(bold).toBeVisible()
     await expect(bold).toContainText('Bold text')
   })
@@ -55,37 +60,52 @@ test.describe('Next Level Editor - Formatting', () => {
   test('should apply italic formatting', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('Italic text')
     
     await page.keyboard.press('Control+A')
     await page.click('button[aria-label="Italic"]')
     
-    const italic = editor.locator('em')
+    const italic = editor.locator('em').filter({ hasText: 'Italic text' })
     await expect(italic).toBeVisible()
   })
 
   test('should apply underline formatting', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('Underline text')
     
     await page.keyboard.press('Control+A')
     await page.click('button[aria-label="Underline"]')
     
-    const underline = editor.locator('u')
+    const underline = editor.locator('u').filter({ hasText: 'Underline text' })
     await expect(underline).toBeVisible()
   })
 
   test('should toggle formatting off', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('Toggle text')
     
     await page.keyboard.press('Control+A')
     
     // Apply bold
     await page.click('button[aria-label="Bold"]')
-    const bold = editor.locator('strong')
+    const bold = editor.locator('strong').filter({ hasText: 'Toggle text' })
     await expect(bold).toBeVisible()
     
     // Toggle bold off
@@ -106,6 +126,11 @@ test.describe('Next Level Editor - Headings', () => {
   test('should create heading 1', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('Heading 1')
     
     await page.keyboard.press('Control+A')
@@ -114,7 +139,7 @@ test.describe('Next Level Editor - Headings', () => {
     await page.click('button:has-text("Format")')
     await page.click('text=Heading 1')
     
-    const h1 = editor.locator('h1')
+    const h1 = editor.locator('h1').filter({ hasText: 'Heading 1' })
     await expect(h1).toBeVisible()
     await expect(h1).toContainText('Heading 1')
   })
@@ -122,13 +147,18 @@ test.describe('Next Level Editor - Headings', () => {
   test('should create heading 2', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('Heading 2')
     
     await page.keyboard.press('Control+A')
     await page.click('button:has-text("Format")')
     await page.click('text=Heading 2')
     
-    const h2 = editor.locator('h2')
+    const h2 = editor.locator('h2').filter({ hasText: 'Heading 2' })
     await expect(h2).toBeVisible()
   })
 })
@@ -142,27 +172,37 @@ test.describe('Next Level Editor - Lists', () => {
   test('should create bullet list', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('List item')
     
     await page.keyboard.press('Control+A')
     await page.click('button[aria-label="Bullet List"]')
     
-    const ul = editor.locator('ul')
+    const ul = editor.locator('ul').filter({ hasText: 'List item' })
     await expect(ul).toBeVisible()
     
-    const li = editor.locator('li')
+    const li = editor.locator('li').filter({ hasText: 'List item' })
     await expect(li).toContainText('List item')
   })
 
   test('should create numbered list', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('Numbered item')
     
     await page.keyboard.press('Control+A')
     await page.click('button[aria-label="Numbered List"]')
     
-    const ol = editor.locator('ol')
+    const ol = editor.locator('ol').filter({ hasText: 'Numbered item' })
     await expect(ol).toBeVisible()
   })
 })
@@ -296,6 +336,11 @@ test.describe('Next Level Editor - Font Size', () => {
   test('should change font size', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('Font size test')
     
     await page.keyboard.press('Control+A')
@@ -307,7 +352,7 @@ test.describe('Next Level Editor - Font Size', () => {
     await page.click('text=Large')
     
     // Check if span with font size exists
-    const span = editor.locator('span[style*="font-size"]')
+    const span = editor.locator('span[style*="font-size"]').filter({ hasText: 'Font size test' })
     await expect(span).toBeVisible()
   })
 })
@@ -321,6 +366,11 @@ test.describe('Next Level Editor - Enter Key', () => {
   test('should create new paragraph on Enter', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('First line')
     await page.keyboard.press('Enter')
     await editor.pressSequentially('Second line')
@@ -333,6 +383,11 @@ test.describe('Next Level Editor - Enter Key', () => {
   test('cursor should not jump to top after Enter', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('Line 1')
     await page.keyboard.press('Enter')
     await editor.pressSequentially('Line 2')
