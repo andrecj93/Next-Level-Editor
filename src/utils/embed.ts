@@ -122,7 +122,7 @@ export function autoEmbedVideos(html: string): string {
 
   // Find all link tags with video URLs
   const linkPattern = /<a[^>]+href=["']([^"']+)["'][^>]*>([^<]*)<\/a>/gi
-  result = result.replace(linkPattern, (match, url, _text) => {
+  result = result.replace(linkPattern, (match, url) => {
     const embedHtml = getVideoEmbedHtml(url)
     if (embedHtml) {
       return embedHtml

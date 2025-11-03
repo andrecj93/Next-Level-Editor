@@ -85,7 +85,7 @@ test.describe('Next Level Editor - Formatting', () => {
     
     // Apply bold
     await page.click('button[aria-label="Bold"]')
-    let bold = editor.locator('strong')
+    const bold = editor.locator('strong')
     await expect(bold).toBeVisible()
     
     // Toggle bold off

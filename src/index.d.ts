@@ -1,4 +1,4 @@
-import { App, Plugin } from 'vue'
+import { Plugin } from 'vue'
 import NextLevelEditor from './components/NextLevelEditor.vue'
 
 export { NextLevelEditor }

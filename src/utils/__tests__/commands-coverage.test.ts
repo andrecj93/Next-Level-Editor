@@ -128,7 +128,7 @@ describe('Additional Commands Coverage', () => {
       selection.removeAllRanges()
       selection.addRange(range)
 
-      insertHorizontalRule(root)
+      insertHorizontalRule()
 
       const hr = root.querySelector('hr')
       expect(hr).toBeTruthy()
@@ -145,7 +145,7 @@ describe('Additional Commands Coverage', () => {
       selection.removeAllRanges()
       selection.addRange(range)
 
-      insertHorizontalRule(root)
+      insertHorizontalRule()
 
       const newSelection = window.getSelection()!
       const newRange = newSelection.getRangeAt(0)

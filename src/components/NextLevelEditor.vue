@@ -827,7 +827,7 @@ const handleFontSize = (size: 'small' | 'normal' | 'large' | 'huge') => {
 
 // Insert horizontal rule
 const handleInsertHR = () => {
-  performWithSelection((root) => insertHorizontalRule(root))
+  performWithSelection(() => insertHorizontalRule())
 }
 
 // Table actions
@@ -884,7 +884,7 @@ const closeCodeBlockModal = () => {
 }
 
 const handleInsertCodeBlock = (data: { code: string; language: string }) => {
-  performWithSelection((_root) => {
+  performWithSelection(() => {
     const selection = window.getSelection()
     if (!selection || selection.rangeCount === 0) return
 
@@ -928,7 +928,7 @@ const toggleEmojiPicker = () => {
 }
 
 const handleInsertEmoji = (emoji: string) => {
-  performWithSelection((_root) => {
+  performWithSelection(() => {
     const selection = window.getSelection()
     if (!selection || selection.rangeCount === 0) return
 

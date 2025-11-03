@@ -191,9 +191,8 @@ export function applyBackgroundColor(_root: HTMLElement, color: string) {
 
 /**
  * Insert horizontal rule
- * @param root - Editor root element
  */
-export function insertHorizontalRule(_root: HTMLElement) {
+export function insertHorizontalRule() {
   const selection = window.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
