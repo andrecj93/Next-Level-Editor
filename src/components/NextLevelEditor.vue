@@ -130,6 +130,29 @@
         </transition>
       </div>
 
+      <!-- History Controls (Undo/Redo) -->
+      <div class="toolbar-divider" />
+      <div class="toolbar-group">
+        <button
+          class="toolbar-btn-modern"
+          data-tooltip="Undo (Ctrl+Z)"
+          aria-label="Undo"
+          :disabled="historyIndex <= 0"
+          @click="undo"
+        >
+          ⟲
+        </button>
+        <button
+          class="toolbar-btn-modern"
+          data-tooltip="Redo (Ctrl+Shift+Z)"
+          aria-label="Redo"
+          :disabled="historyIndex >= history.length - 1"
+          @click="redo"
+        >
+          ⟳
+        </button>
+      </div>
+
       <!-- Tools (Inline Buttons) -->
       <div class="toolbar-divider" />
       <div class="toolbar-group">
@@ -188,42 +211,6 @@
     </transition>
 
     <div
-      v-if="history.length > 1"
-      class="history-panel"
-    >
-      <div class="history-header">
-        <span>History</span>
-        <div class="history-controls">
-          <button
-            class="toolbar-btn"
-            data-tooltip="Undo (Ctrl+Z)"
-            @click="undo"
-          >
-            ⟲
-          </button>
-          <button
-            class="toolbar-btn"
-            data-tooltip="Redo (Ctrl+Shift+Z)"
-            @click="redo"
-          >
-            ⟳
-          </button>
-        </div>
-      </div>
-      <div class="history-timeline">
-        <button
-          v-for="(entry, index) in history"
-          :key="entry.id"
-          :class="['history-entry', { active: index === historyIndex }]"
-          @click="jumpToHistory(index)"
-        >
-          <span class="history-step">#{{ index + 1 }}</span>
-          <span class="history-snippet">{{ entry.preview }}</span>
-        </button>
-      </div>
-    </div>
-
-    <div
       ref="editorContent"
       class="editor-content"
       contenteditable="true"
@@ -232,6 +219,7 @@
       @blur="onBlur"
       @focus="onFocus"
       @mouseup="onMouseUp"
+      @contextmenu="handleContextMenu"
     />
 
     <!-- Word Count Footer -->
@@ -244,6 +232,14 @@
     <FloatingToolbar
       :show="showFloatingToolbar"
       :actions="floatingActions"
+    />
+
+    <!-- Context Menu -->
+    <ContextMenu
+      :show="showContextMenu"
+      :position="contextMenuPosition"
+      :items="contextMenuItems"
+      @close="closeContextMenu"
     />
 
     <!-- Table Modal -->
@@ -358,6 +354,7 @@ import EmojiPicker from './EmojiPicker.vue'
 import ImageUploadModal from './ImageUploadModal.vue'
 import EmbedModal from './EmbedModal.vue'
 import ToolbarDropdown from './ToolbarDropdown.vue'
+import ContextMenu, { type ContextMenuItem } from './ContextMenu.vue'
 
 interface Props {
   modelValue?: string
@@ -472,6 +469,10 @@ const isApplyingHistory = ref(false)
 // Command menu state
 const showCommandMenu = ref(false)
 const commandMenuPosition = ref({ top: 0, left: 0 })
+
+// Context menu state
+const showContextMenu = ref(false)
+const contextMenuPosition = ref({ top: 0, left: 0 })
 
 // HTML Sanitization (from PR #6)
 const ALLOWED_TAGS = new Set([
@@ -683,24 +684,37 @@ const performWithSelection = (action: (root: HTMLElement) => void) => {
   const root = editorContent.value
   if (!root) return
 
-  // Focus the editor first to ensure proper selection context
-  root.focus()
+  // Check if there's currently a selection in the editor
+  const currentSelection = window.getSelection()
+  const hasActiveSelection = currentSelection && 
+                             currentSelection.rangeCount > 0 && 
+                             !currentSelection.isCollapsed &&
+                             root.contains(currentSelection.anchorNode)
 
-  // Try to restore the saved selection if it exists and is valid
-  if (savedRange.value) {
+  // If there's an active selection in the editor, use it (don't restore saved)
+  // Otherwise, try to restore the saved selection
+  if (!hasActiveSelection && savedRange.value) {
     try {
       // Verify the range is still valid and within the editor
       if (savedRange.value.startContainer && root.contains(savedRange.value.startContainer)) {
         restoreSelection(savedRange.value)
       } else {
-        // If saved range is invalid, create a new range at the end of content
+        // If saved range is invalid, focus the editor at the end
+        root.focus()
         createFallbackSelection(root)
       }
     } catch (error) {
       console.warn('Failed to restore saved selection, falling back to end of editor', error)
-      // Create a fallback selection at the end of the editor
+      root.focus()
       createFallbackSelection(root)
     }
+  } else if (!hasActiveSelection) {
+    // No saved selection and no active selection, place cursor at end
+    root.focus()
+    createFallbackSelection(root)
+  } else {
+    // There's an active selection, just ensure editor has focus
+    root.focus()
   }
 
   try {
@@ -709,6 +723,7 @@ const performWithSelection = (action: (root: HTMLElement) => void) => {
     console.warn('Formatting action failed', error)
   }
 
+  // Save the new selection state after the action
   savedRange.value = saveSelection()
   captureSnapshot()
 }
@@ -1312,11 +1327,12 @@ const redo = () => {
   applyHistoryEntry(history.value[historyIndex.value])
 }
 
-const jumpToHistory = (index: number) => {
-  if (index < 0 || index >= history.value.length) return
-  historyIndex.value = index
-  applyHistoryEntry(history.value[index])
-}
+// Removed jumpToHistory - no longer used with new compact history UI
+// const jumpToHistory = (index: number) => {
+//   if (index < 0 || index >= history.value.length) return
+//   historyIndex.value = index
+//   applyHistoryEntry(history.value[index])
+// }
 
 // Command menu (from PR #7)
 const insertBlockquote = () => {
@@ -1494,8 +1510,136 @@ const handleCommandOption = (option: typeof commandOptions[number]) => {
   closeCommandMenu()
 }
 
+// Context menu
+const contextMenuItems = computed<ContextMenuItem[]>(() => {
+  const selection = window.getSelection()
+  const hasSelection = selection && !selection.isCollapsed && selection.toString().trim().length > 0
+  
+  return [
+    {
+      id: 'cut',
+      label: 'Cut',
+      icon: '✂️',
+      shortcut: 'Ctrl+X',
+      disabled: !hasSelection,
+      onClick: () => {
+        document.execCommand('cut')
+      },
+    },
+    {
+      id: 'copy',
+      label: 'Copy',
+      icon: '📋',
+      shortcut: 'Ctrl+C',
+      disabled: !hasSelection,
+      onClick: () => {
+        document.execCommand('copy')
+      },
+    },
+    {
+      id: 'paste',
+      label: 'Paste',
+      icon: '📄',
+      shortcut: 'Ctrl+V',
+      onClick: async () => {
+        try {
+          const text = await navigator.clipboard.readText()
+          document.execCommand('insertText', false, text)
+        } catch (error) {
+          console.warn('Failed to paste from clipboard', error)
+        }
+      },
+    },
+    { divider: true },
+    {
+      id: 'bold',
+      label: 'Bold',
+      icon: '𝐁',
+      shortcut: 'Ctrl+B',
+      disabled: !hasSelection,
+      onClick: () => handleInlineAction('strong'),
+    },
+    {
+      id: 'italic',
+      label: 'Italic',
+      icon: '𝐼',
+      shortcut: 'Ctrl+I',
+      disabled: !hasSelection,
+      onClick: () => handleInlineAction('em'),
+    },
+    {
+      id: 'underline',
+      label: 'Underline',
+      icon: 'U̲',
+      shortcut: 'Ctrl+U',
+      disabled: !hasSelection,
+      onClick: () => handleInlineAction('u'),
+    },
+    { divider: true },
+    {
+      id: 'link',
+      label: 'Insert Link',
+      icon: '🔗',
+      shortcut: 'Ctrl+K',
+      onClick: insertLink,
+    },
+    {
+      id: 'image',
+      label: 'Insert Image',
+      icon: '🖼️',
+      onClick: insertImage,
+    },
+  ]
+})
+
+const handleContextMenu = (event: MouseEvent) => {
+  event.preventDefault()
+  
+  // Save the current selection before showing the context menu
+  savedRange.value = saveSelection()
+  
+  showContextMenu.value = true
+  contextMenuPosition.value = {
+    top: event.clientY,
+    left: event.clientX,
+  }
+}
+
+const closeContextMenu = () => {
+  showContextMenu.value = false
+}
+
 // Keyboard shortcuts
 const handleKeydown = (event: KeyboardEvent) => {
+  // Handle Enter key to prevent cursor jumping
+  if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+    event.preventDefault()
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+    
+    const range = selection.getRangeAt(0)
+    
+    // Insert a new paragraph
+    const p = document.createElement('p')
+    p.innerHTML = '<br>' // Ensure the paragraph is visible
+    
+    range.deleteContents()
+    range.insertNode(p)
+    
+    // Move cursor to the new paragraph
+    const newRange = document.createRange()
+    newRange.setStart(p, 0)
+    newRange.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(newRange)
+    
+    // Trigger input event to capture history
+    if (editorContent.value) {
+      editorContent.value.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+    return
+  }
+  
   if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
     openCommandMenu()
     return
@@ -1856,76 +2000,6 @@ onBeforeUnmount(() => {
   color: var(--toolbar-text);
 }
 
-.history-panel {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--editor-border);
-  background: rgba(59, 130, 246, 0.04);
-}
-
-.history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  color: var(--toolbar-text);
-  font-weight: 600;
-}
-
-.history-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.history-controls .toolbar-btn {
-  min-width: 32px;
-  min-height: 32px;
-  font-size: 16px;
-}
-
-.history-timeline {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.history-entry {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 140px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  background: var(--history-bg);
-  color: var(--toolbar-text);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.2s ease, transform 0.2s ease;
-}
-
-.history-entry:hover {
-  border-color: var(--toolbar-accent);
-  transform: translateY(-2px);
-}
-
-.history-entry.active {
-  border-color: var(--history-active);
-  background: rgba(59, 130, 246, 0.18);
-}
-
-.history-step {
-  font-weight: 700;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.history-snippet {
-  font-size: 12px;
-  opacity: 0.75;
-}
-
 .editor-content {
   position: relative;
   min-height: 240px;
@@ -2244,6 +2318,12 @@ onBeforeUnmount(() => {
 .toolbar-btn-modern:focus {
   outline: 2px solid var(--toolbar-accent);
   outline-offset: 2px;
+}
+
+.toolbar-btn-modern:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* Tooltips for modern toolbar */
