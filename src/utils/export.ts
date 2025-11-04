@@ -104,6 +104,8 @@ export function downloadFile(content: string | Blob | Buffer, filename: string, 
     blob = content
   } else if (Buffer.isBuffer(content)) {
     // Convert Buffer to ArrayBuffer for Blob constructor
+    // Type assertion is necessary because Buffer.buffer is typed as ArrayBufferLike (ArrayBuffer | SharedArrayBuffer)
+    // but in practice it's always ArrayBuffer
     const arrayBuffer = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength) as ArrayBuffer
     blob = new Blob([arrayBuffer], { type: mimeType })
   } else {
