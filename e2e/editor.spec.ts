@@ -22,6 +22,11 @@ test.describe('Next Level Editor - Basic Functionality', () => {
   test('should show word count', async ({ page }) => {
     const editor = page.locator('.editor-content')
     await editor.click()
+    
+    // Clear existing content
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    
     await editor.pressSequentially('Test word count')
     
     const wordCount = page.locator('.word-count')
