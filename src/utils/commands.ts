@@ -462,9 +462,10 @@ export function addTableColumn(table: HTMLTableElement, atIndex?: number): void 
  * @param colIndex - Index of the column to remove
  */
 export function removeTableColumn(table: HTMLTableElement, colIndex: number): void {
-  // Check if we have at least 2 columns
-  const firstRow = Array.from(table.getElementsByTagName('tr'))[0]
-  if (!firstRow || firstRow.cells.length <= 1) return // Keep at least one column
+  // Check if we have at least 2 columns by finding max column count
+  const allRows = Array.from(table.getElementsByTagName('tr'))
+  const maxCols = Math.max(...allRows.map(row => row.cells.length))
+  if (maxCols <= 1) return // Keep at least one column
 
   // Remove from header
   if (table.tHead) {

@@ -362,9 +362,6 @@ import {
   getWordCount,
   getCharacterCount,
   searchAndReplace,
-} from '../utils/commands'
-import { exportAsHtml, exportAsMarkdown } from '../utils/export'
-import {
   getSelectedTable,
   getSelectedCell,
   addTableRow,
@@ -373,6 +370,7 @@ import {
   removeTableColumn,
   deleteTable
 } from '../utils/commands'
+import { exportAsHtml, exportAsMarkdown } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
 import { useAutoSave } from '../composables/useAutoSave'
 import ColorPicker from './ColorPicker.vue'
