@@ -79,6 +79,7 @@
     "vue-tsc": "^2.1.10"
   },
   "dependencies": {
+    "@cyhnkckali/vue3-color-picker": "^2.1.5",
     "html-docx-js-typescript": "^0.1.5",
     "html2canvas": "^1.4.1",
     "jsdom": "^27.1.0",
