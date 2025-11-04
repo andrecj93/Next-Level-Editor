@@ -103,7 +103,7 @@
         </button>
         <button 
           class="insert-button" 
-          :disabled="!previewUrl || imageError"
+          :disabled="!previewUrl"
           @click="insertImage"
         >
           Insert Image
@@ -168,7 +168,7 @@ const handleImageError = () => {
  * Insert the image
  */
 const insertImage = () => {
-  if (previewUrl.value && !imageError.value) {
+  if (previewUrl.value) {
     emit('insert', previewUrl.value, altText.value)
     resetForm()
   }
