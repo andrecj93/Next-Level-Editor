@@ -2,6 +2,10 @@
  * Export utility functions for converting editor content to different formats
  */
 
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
+import { asBlob } from 'html-docx-js-typescript'
+
 /**
  * Convert HTML to Markdown
  * @param html - HTML content to convert
@@ -165,4 +169,146 @@ ${html}
 export function exportAsMarkdown(html: string, filename: string = 'document.md') {
   const markdown = htmlToMarkdown(html)
   downloadFile(markdown, filename, 'text/markdown')
+}
+
+/**
+ * Download blob as a file
+ * @param blob - Blob to download
+ * @param filename - Name of the file
+ */
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+/**
+ * Export as PDF
+ * @param element - HTML element to export
+ * @param filename - Filename for export
+ */
+export async function exportAsPdf(element: HTMLElement, filename: string = 'document.pdf') {
+  try {
+    // Create a temporary container with the content
+    const tempDiv = document.createElement('div')
+    tempDiv.style.position = 'absolute'
+    tempDiv.style.left = '-9999px'
+    tempDiv.style.top = '0'
+    tempDiv.style.width = '800px'
+    tempDiv.style.padding = '20px'
+    tempDiv.style.backgroundColor = 'white'
+    tempDiv.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+    tempDiv.innerHTML = element.innerHTML
+    document.body.appendChild(tempDiv)
+
+    // Convert HTML to canvas
+    const canvas = await html2canvas(tempDiv, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff'
+    })
+
+    // Remove temporary div
+    document.body.removeChild(tempDiv)
+
+    // Calculate PDF dimensions
+    const imgWidth = 210 // A4 width in mm
+    const pageHeight = 297 // A4 height in mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+    let heightLeft = imgHeight
+
+    // Create PDF
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    let position = 0
+
+    // Add image to PDF (handle multiple pages if needed)
+    const imgData = canvas.toDataURL('image/png')
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    while (heightLeft >= 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+
+    // Save PDF
+    pdf.save(filename)
+  } catch (error) {
+    console.error('Error exporting PDF:', error)
+    throw error
+  }
+}
+
+/**
+ * Export as Word document
+ * @param html - HTML content to export
+ * @param filename - Filename for export
+ */
+export async function exportAsWord(html: string, filename: string = 'document.docx') {
+  try {
+    // Create a full HTML document for better Word conversion
+    const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Exported Document</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 12pt;
+      line-height: 1.6;
+    }
+    h1 { font-size: 24pt; margin: 12pt 0; }
+    h2 { font-size: 20pt; margin: 10pt 0; }
+    h3 { font-size: 16pt; margin: 8pt 0; }
+    h4 { font-size: 14pt; margin: 6pt 0; }
+    h5 { font-size: 12pt; margin: 4pt 0; }
+    h6 { font-size: 10pt; margin: 2pt 0; }
+    p { margin: 6pt 0; }
+    ul, ol { margin: 6pt 0; padding-left: 24pt; }
+    li { margin: 3pt 0; }
+    blockquote {
+      margin: 12pt 0;
+      padding-left: 12pt;
+      border-left: 3pt solid #3b82f6;
+      color: #666;
+    }
+    code {
+      font-family: 'Courier New', monospace;
+      background: #f5f5f5;
+      padding: 2pt 4pt;
+    }
+    pre {
+      font-family: 'Courier New', monospace;
+      background: #f5f5f5;
+      padding: 12pt;
+      margin: 6pt 0;
+    }
+    img {
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+${html}
+</body>
+</html>`
+
+    // Convert HTML to Word document blob
+    const blob = await asBlob(fullHtml)
+    
+    // Download the blob
+    downloadBlob(blob, filename)
+  } catch (error) {
+    console.error('Error exporting Word document:', error)
+    throw error
+  }
 }

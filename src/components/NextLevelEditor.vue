@@ -349,7 +349,7 @@ import {
   getCharacterCount,
   searchAndReplace,
 } from '../utils/commands'
-import { exportAsHtml, exportAsMarkdown } from '../utils/export'
+import { exportAsHtml, exportAsMarkdown, exportAsPdf, exportAsWord } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
 import { useAutoSave } from '../composables/useAutoSave'
 import ColorPicker from './ColorPicker.vue'
@@ -975,6 +975,24 @@ const handleExportMarkdown = () => {
   exportAsMarkdown(editorContent.value.innerHTML)
 }
 
+const handleExportPdf = async () => {
+  if (!editorContent.value) return
+  try {
+    await exportAsPdf(editorContent.value)
+  } catch (error) {
+    console.error('Failed to export PDF:', error)
+  }
+}
+
+const handleExportWord = async () => {
+  if (!editorContent.value) return
+  try {
+    await exportAsWord(editorContent.value.innerHTML)
+  } catch (error) {
+    console.error('Failed to export Word:', error)
+  }
+}
+
 // Emoji picker actions
 const toggleEmojiPicker = () => {
   showEmojiPicker.value = !showEmojiPicker.value
@@ -1232,6 +1250,20 @@ const toolActions = computed(() => [
     icon: '📝',
     tooltip: 'Export as Markdown',
     onClick: handleExportMarkdown,
+  },
+  {
+    id: 'export-pdf',
+    label: 'Export PDF',
+    icon: '📕',
+    tooltip: 'Export as PDF',
+    onClick: handleExportPdf,
+  },
+  {
+    id: 'export-word',
+    label: 'Export Word',
+    icon: '📘',
+    tooltip: 'Export as Word',
+    onClick: handleExportWord,
   },
   {
     id: 'fullscreen',
