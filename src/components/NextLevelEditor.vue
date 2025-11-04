@@ -110,32 +110,13 @@
 
       <!-- Font Size Dropdown -->
       <div class="toolbar-divider" />
-      <div class="toolbar-dropdown">
-        <button
-          class="dropdown-trigger"
-          :class="{ open: showFontSizeDropdown }"
-          data-tooltip="Font size"
-          @mousedown.prevent="rememberSelection"
-          @click.stop="showFontSizeDropdown = !showFontSizeDropdown"
-        >
-          <span class="dropdown-icon">Aa</span>
-          <span class="dropdown-label">Size</span>
-          <span class="dropdown-arrow">▼</span>
-        </button>
-        <transition name="dropdown-fade">
-          <div
-            v-if="showFontSizeDropdown"
-            class="dropdown-menu"
-            @click.stop
-          >
-            <div class="font-size-wrapper">
-              <FontSizeSelector
-                v-model="fontSize"
-                @update:model-value="handleFontSize"
-              />
-            </div>
-          </div>
-        </transition>
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Size"
+          icon="Aa"
+          tooltip="Font size"
+          :items="fontSizeDropdownItems"
+        />
       </div>
 
       <!-- History Controls (Undo/Redo) -->
@@ -339,6 +320,20 @@
       @insert="handleInsertCodeBlock"
     />
 
+    <!-- Table Designer -->
+    <TableDesigner
+      :show="showTableDesigner"
+      :x="tableDesignerPosition.x"
+      :y="tableDesignerPosition.y"
+      @add-row-above="handleAddRowAbove"
+      @add-row-below="handleAddRowBelow"
+      @add-column-left="handleAddColumnLeft"
+      @add-column-right="handleAddColumnRight"
+      @remove-row="handleRemoveRow"
+      @remove-column="handleRemoveColumn"
+      @delete-table="handleDeleteTable"
+    />
+
     <!-- Emoji Picker -->
     <div
       v-if="showEmojiPicker"
@@ -414,14 +409,21 @@ import {
   getWordCount,
   getCharacterCount,
   searchAndReplace,
+  getSelectedTable,
+  getSelectedCell,
+  addTableRow,
+  removeTableRow,
+  addTableColumn,
+  removeTableColumn,
+  deleteTable
 } from '../utils/commands'
-import { exportAsHtml, exportAsMarkdown, formatHtml } from '../utils/export'
+import { exportAsHtml, exportAsMarkdown, exportAsPdf, formatHtml, exportAsWord } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
 import { useAutoSave } from '../composables/useAutoSave'
 import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
-import FontSizeSelector from './FontSizeSelector.vue'
 import TableModal from './TableModal.vue'
+import TableDesigner from './TableDesigner.vue'
 import FindReplaceModal from './FindReplaceModal.vue'
 import CodeBlockModal from './CodeBlockModal.vue'
 import EmojiPicker from './EmojiPicker.vue'
@@ -488,6 +490,12 @@ const fontSize = ref<'small' | 'normal' | 'large' | 'huge'>('normal')
 // Table modal state
 const showTableModal = ref(false)
 
+// Table designer state
+const showTableDesigner = ref(false)
+const tableDesignerPosition = ref({ x: 0, y: 0 })
+const currentTable = ref<HTMLTableElement | null>(null)
+const currentCell = ref<HTMLTableCellElement | null>(null)
+
 // Find & Replace modal state
 const showFindReplaceModal = ref(false)
 
@@ -518,7 +526,6 @@ const floatingToolbarTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 // Dropdown states for modern toolbar
 const showColorsDropdown = ref(false)
-const showFontSizeDropdown = ref(false)
 
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
@@ -532,13 +539,13 @@ const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
 
 // Word count state
 const wordCount = computed(() => {
-  if (!editorContent.value) return 0
-  return getWordCount(editorContent.value.innerHTML)
+  const content = htmlContent.value || editorContent.value?.innerHTML || ''
+  return getWordCount(content)
 })
 
 const characterCount = computed(() => {
-  if (!editorContent.value) return 0
-  return getCharacterCount(editorContent.value.innerHTML)
+  const content = htmlContent.value || editorContent.value?.innerHTML || ''
+  return getCharacterCount(content)
 })
 
 // History state
@@ -968,6 +975,72 @@ const handleInsertTable = (data: { rows: number; cols: number; includeHeader: bo
   performWithSelection((root) => insertTableUtil(root, data.rows, data.cols, data.includeHeader))
 }
 
+// Table designer actions
+const handleAddRowAbove = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const row = currentCell.value.parentElement as HTMLTableRowElement
+  const tbody = row.parentElement
+  if (!tbody) return
+  
+  const rowIndex = Array.from(tbody.rows).indexOf(row)
+  addTableRow(currentTable.value, rowIndex)
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleAddRowBelow = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const row = currentCell.value.parentElement as HTMLTableRowElement
+  const tbody = row.parentElement
+  if (!tbody) return
+  
+  const rowIndex = Array.from(tbody.rows).indexOf(row)
+  addTableRow(currentTable.value, rowIndex + 1)
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleAddColumnLeft = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const cellIndex = Array.from(currentCell.value.parentElement?.children || []).indexOf(currentCell.value)
+  addTableColumn(currentTable.value, cellIndex)
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleAddColumnRight = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const cellIndex = Array.from(currentCell.value.parentElement?.children || []).indexOf(currentCell.value)
+  addTableColumn(currentTable.value, cellIndex + 1)
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleRemoveRow = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const row = currentCell.value.parentElement as HTMLTableRowElement
+  const tbody = row.parentElement
+  if (!tbody) return
+  
+  const rowIndex = Array.from(tbody.rows).indexOf(row)
+  removeTableRow(currentTable.value, rowIndex)
+  showTableDesigner.value = false
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleRemoveColumn = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const cellIndex = Array.from(currentCell.value.parentElement?.children || []).indexOf(currentCell.value)
+  removeTableColumn(currentTable.value, cellIndex)
+  showTableDesigner.value = false
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleDeleteTable = () => {
+  if (!currentTable.value) return
+  deleteTable(currentTable.value)
+  showTableDesigner.value = false
+  currentTable.value = null
+  currentCell.value = null
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
 // Find & Replace actions
 const openFindReplaceModal = () => {
   showFindReplaceModal.value = true
@@ -1054,6 +1127,24 @@ const handleFormatHtml = () => {
   editorContent.value.innerHTML = formatted
   htmlContent.value = formatted
   captureSnapshot()
+}
+
+const handleExportPdf = async () => {
+  if (!editorContent.value) return
+  try {
+    await exportAsPdf(editorContent.value)
+  } catch (error) {
+    console.error('Failed to export PDF:', error)
+  }
+}
+
+const handleExportWord = async () => {
+  if (!editorContent.value) return
+  try {
+    await exportAsWord(editorContent.value.innerHTML)
+  } catch (error) {
+    console.error('Failed to export Word:', error)
+  }
 }
 
 // Emoji picker actions
@@ -1226,6 +1317,33 @@ const alignmentDropdownItems = computed(() => [
   },
 ])
 
+const fontSizeDropdownItems = computed(() => [
+  {
+    id: 'size-small',
+    label: 'Small',
+    onClick: () => handleFontSize('small'),
+    isActive: () => fontSize.value === 'small',
+  },
+  {
+    id: 'size-normal',
+    label: 'Normal',
+    onClick: () => handleFontSize('normal'),
+    isActive: () => fontSize.value === 'normal',
+  },
+  {
+    id: 'size-large',
+    label: 'Large',
+    onClick: () => handleFontSize('large'),
+    isActive: () => fontSize.value === 'large',
+  },
+  {
+    id: 'size-huge',
+    label: 'Huge',
+    onClick: () => handleFontSize('huge'),
+    isActive: () => fontSize.value === 'huge',
+  },
+])
+
 const listActions = computed(() => [
   {
     id: 'bullet-list',
@@ -1313,6 +1431,20 @@ const toolActions = computed(() => [
     icon: '📝',
     tooltip: 'Export as Markdown',
     onClick: handleExportMarkdown,
+  },
+  {
+    id: 'export-pdf',
+    label: 'Export PDF',
+    icon: '📕',
+    tooltip: 'Export as PDF',
+    onClick: handleExportPdf,
+  },
+  {
+    id: 'export-word',
+    label: 'Export Word',
+    icon: '📘',
+    tooltip: 'Export as Word',
+    onClick: handleExportWord,
   },
   {
     id: 'fullscreen',
@@ -1849,9 +1981,42 @@ const handleKeydown = (event: KeyboardEvent) => {
         currentBlock.parentNode?.appendChild(newParagraph)
       }
     } else {
-      // No block element found - insert a new paragraph at cursor position
-      newParagraph.innerHTML = '<br>'
-      range.insertNode(newParagraph)
+      // No block element found - we need to wrap existing content and create a new paragraph
+      if (!editorContent.value) return
+      
+      try {
+        // Extract content before cursor
+        const beforeRange = document.createRange()
+        beforeRange.setStart(editorContent.value, 0)
+        beforeRange.setEnd(range.startContainer, range.startOffset)
+        const beforeContent = beforeRange.extractContents()
+        
+        // Extract content after cursor
+        const afterRange = document.createRange()
+        afterRange.setStart(range.startContainer, range.startOffset)
+        afterRange.setEnd(editorContent.value, editorContent.value.childNodes.length)
+        const afterContent = afterRange.extractContents()
+        
+        // Create first paragraph with content before cursor
+        const firstParagraph = document.createElement('p')
+        populateNewElement(firstParagraph, beforeContent)
+        
+        // Create second paragraph with content after cursor
+        populateNewElement(newParagraph, afterContent)
+        
+        // Insert both paragraphs
+        editorContent.value.appendChild(firstParagraph)
+        editorContent.value.appendChild(newParagraph)
+      } catch (error) {
+        // If range manipulation fails, fall back to simple paragraph insertion
+        console.error('Error handling Enter key:', error)
+        newParagraph.innerHTML = '<br>'
+        if (editorContent.value.lastChild) {
+          editorContent.value.insertBefore(newParagraph, editorContent.value.lastChild.nextSibling)
+        } else {
+          editorContent.value.appendChild(newParagraph)
+        }
+      }
     }
     
     // Move cursor to the beginning of the new paragraph
@@ -1953,10 +2118,38 @@ const onBlur = () => {
 
 const onMouseUp = () => {
   updateFloatingToolbar()
+  checkForTableSelection()
+}
+
+const checkForTableSelection = () => {
+  const table = getSelectedTable()
+  const cell = getSelectedCell()
+  
+  if (table && cell) {
+    currentTable.value = table
+    currentCell.value = cell
+    
+    // Position the designer near the table
+    const rect = table.getBoundingClientRect()
+    const editorRect = editorContent.value?.getBoundingClientRect()
+    
+    if (editorRect) {
+      tableDesignerPosition.value = {
+        x: rect.right - editorRect.left + 10,
+        y: rect.top - editorRect.top
+      }
+      showTableDesigner.value = true
+    }
+  } else {
+    showTableDesigner.value = false
+    currentTable.value = null
+    currentCell.value = null
+  }
 }
 
 const onSelectionChange = () => {
   updateFloatingToolbar()
+  checkForTableSelection()
 }
 
 // Lifecycle and watchers
@@ -2584,6 +2777,246 @@ onBeforeUnmount(() => {
   font-size: 18px;
 }
 
+/* View Mode Toggle Styles */
+.view-mode-group {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--editor-border);
+  border-radius: 6px;
+}
+
+.view-mode-btn {
+  min-width: 36px;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--toolbar-text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.view-mode-btn:hover {
+  background: var(--toolbar-hover);
+}
+
+.view-mode-btn.active {
+  background: var(--editor-bg);
+  color: var(--toolbar-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.view-mode-btn:focus {
+  outline: 2px solid var(--toolbar-accent);
+  outline-offset: 2px;
+}
+
+/* Tooltips for view mode buttons */
+.view-mode-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.view-mode-btn[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* Editor Container with Split View */
+.editor-container {
+  display: flex;
+  gap: 0;
+  position: relative;
+  border-top: 1px solid var(--editor-border);
+}
+
+.editor-container.view-mode-code {
+  display: block;
+}
+
+.editor-container.view-mode-split {
+  display: flex;
+}
+
+.editor-container.view-mode-preview {
+  display: block;
+}
+
+.editor-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.split-divider {
+  width: 1px;
+  background: var(--editor-border);
+  flex-shrink: 0;
+}
+
+.preview-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--editor-bg);
+}
+
+.preview-header {
+  padding: 8px 16px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--editor-border);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--toolbar-text);
+}
+
+.preview-content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--content-color);
+}
+
+.preview-content-wrapper .empty-preview {
+  color: var(--placeholder-color);
+  font-style: italic;
+}
+
+/* Preview content styling (matches editor content) */
+.preview-content-wrapper :deep(h1),
+.preview-content-wrapper :deep(h2),
+.preview-content-wrapper :deep(h3),
+.preview-content-wrapper :deep(h4),
+.preview-content-wrapper :deep(h5),
+.preview-content-wrapper :deep(h6) {
+  margin: 18px 0 10px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.preview-content-wrapper :deep(h1) {
+  font-size: 2.2em;
+}
+
+.preview-content-wrapper :deep(h2) {
+  font-size: 1.8em;
+}
+
+.preview-content-wrapper :deep(h3) {
+  font-size: 1.4em;
+}
+
+.preview-content-wrapper :deep(p) {
+  margin: 10px 0;
+}
+
+.preview-content-wrapper :deep(ul),
+.preview-content-wrapper :deep(ol) {
+  margin: 12px 0;
+  padding-left: 26px;
+}
+
+.preview-content-wrapper :deep(li) {
+  margin: 4px 0;
+}
+
+.preview-content-wrapper :deep(a) {
+  color: var(--toolbar-accent);
+  text-decoration: underline;
+}
+
+.preview-content-wrapper :deep(a):hover {
+  color: #1d4ed8;
+}
+
+.preview-content-wrapper :deep(img) {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 16px 0;
+  border-radius: 6px;
+}
+
+.preview-content-wrapper :deep(code) {
+  background: var(--code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+.preview-content-wrapper :deep(pre) {
+  background: var(--code-bg);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.preview-content-wrapper :deep(pre code) {
+  background: transparent;
+  padding: 0;
+}
+
+.preview-content-wrapper :deep(blockquote) {
+  margin: 16px 0;
+  padding: 12px 20px;
+  border-left: 4px solid var(--toolbar-accent);
+  background: rgba(59, 130, 246, 0.05);
+  font-style: italic;
+}
+
+.preview-content-wrapper :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+}
+
+.preview-content-wrapper :deep(table th),
+.preview-content-wrapper :deep(table td) {
+  border: 1px solid var(--editor-border);
+  padding: 10px;
+  text-align: left;
+}
+
+.preview-content-wrapper :deep(table th) {
+  background: var(--toolbar-bg);
+  font-weight: 600;
+}
+
+.preview-content-wrapper :deep(hr) {
+  border: none;
+  border-top: 2px solid var(--editor-border);
+  margin: 24px 0;
+}
+
+.toolbar-btn-modern.theme-toggle {
+  font-size: 18px;
+}
+
 /* Dropdown styles for embedded pickers */
 .toolbar-dropdown {
   position: relative;
@@ -2636,6 +3069,30 @@ onBeforeUnmount(() => {
   transform: rotate(180deg);
 }
 
+/* Tooltips for dropdown triggers */
+.dropdown-trigger[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.dropdown-trigger[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 4px);
@@ -2661,9 +3118,6 @@ onBeforeUnmount(() => {
   margin-bottom: 0;
 }
 
-.font-size-wrapper {
-  padding: 4px;
-}
 
 .dropdown-fade-enter-active,
 .dropdown-fade-leave-active {

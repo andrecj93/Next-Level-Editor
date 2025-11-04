@@ -196,6 +196,30 @@ watch(() => props.modelValue, (newVal) => {
   transform: rotate(180deg);
 }
 
+/* Tooltips for dropdown triggers */
+.dropdown-trigger[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: rgba(17, 24, 39, 0.92);
+  color: #f9fafb;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.dropdown-trigger[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 4px);
@@ -283,6 +307,11 @@ watch(() => props.modelValue, (newVal) => {
   --border-color: #444;
   --border-hover-color: #666;
   --text-color: #e0e0e0;
+}
+
+.dark .dropdown-trigger[data-tooltip]::after {
+  background: rgba(15, 23, 42, 0.95);
+  color: #e2e8f0;
 }
 
 .dark .dropdown-menu {
