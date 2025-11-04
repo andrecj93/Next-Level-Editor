@@ -7,9 +7,9 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/next-level-editor.es.js",
-      "require": "./dist/next-level-editor.umd.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/next-level-editor.umd.js"
     },
     "./dist/style.css": "./dist/style.css"
   },
