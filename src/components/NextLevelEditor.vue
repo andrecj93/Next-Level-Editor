@@ -2160,7 +2160,10 @@ watch(
   (newValue) => {
     if (!editorContent.value) return
     if (isApplyingHistory.value) return
-    if (editorContent.value.innerHTML !== newValue) {
+    // Compare sanitized versions to avoid unnecessary innerHTML updates that destroy cursor position
+    const currentSanitized = sanitizeHtml(editorContent.value.innerHTML)
+    const newSanitized = sanitizeHtml(newValue)
+    if (currentSanitized !== newSanitized) {
       isApplyingHistory.value = true
       applySanitizedContent(newValue)
       htmlContent.value = newValue // Update stored HTML
