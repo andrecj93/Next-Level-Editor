@@ -144,6 +144,15 @@
 
       <!-- Tools (Inline Buttons) -->
       <div class="toolbar-divider" />
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Tools"
+          icon="🛠️"
+          tooltip="Productivity tools"
+          :items="productivityDropdownItems"
+        />
+      </div>
+
       <div class="toolbar-group">
         <button
           v-for="action in toolActions"
@@ -360,6 +369,13 @@
       @insert="handleInsertEmbed"
     />
 
+    <!-- Template Modal -->
+    <TemplateModal
+      :show="showTemplateModal"
+      @close="closeTemplateModal"
+      @select="handleSelectTemplate"
+    />
+
     <!-- Auto-save Indicator -->
     <div
       v-if="isSaving || lastSaved"
@@ -420,6 +436,9 @@ import {
 import { exportAsHtml, exportAsMarkdown, exportAsPdf, formatHtml, exportAsWord } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
 import { useAutoSave } from '../composables/useAutoSave'
+import { copyFormat, pasteFormat, hasFormatCopied } from '../utils/formatPainter'
+import { insertPageBreak, insertTableOfContents, hasTableOfContents } from '../utils/pageManagement'
+import { toggleSpellCheck, isSpellCheckEnabled, enableSpellCheck } from '../utils/spellChecker'
 import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
 import TableModal from './TableModal.vue'
@@ -431,6 +450,7 @@ import ImageUploadModal from './ImageUploadModal.vue'
 import EmbedModal from './EmbedModal.vue'
 import ToolbarDropdown from './ToolbarDropdown.vue'
 import ContextMenu, { type ContextMenuItem } from './ContextMenu.vue'
+import TemplateModal from './TemplateModal.vue'
 
 interface Props {
   modelValue?: string
@@ -510,6 +530,15 @@ const showEmbedModal = ref(false)
 
 // Emoji picker state
 const showEmojiPicker = ref(false)
+
+// Template modal state
+const showTemplateModal = ref(false)
+
+// Format painter state
+const formatPainterActive = ref(false)
+
+// Spell check state
+const spellCheckEnabled = ref(true)
 
 // Full screen state
 const isFullScreen = ref(false)
@@ -955,6 +984,61 @@ const handleBackgroundColor = (color: string) => {
 // Font size action
 const handleFontSize = (size: 'small' | 'normal' | 'large' | 'huge') => {
   performWithSelection((root) => applyFontSize(root, size))
+}
+
+// Format Painter actions
+const handleCopyFormat = () => {
+  const selection = window.getSelection()
+  copyFormat(selection)
+  formatPainterActive.value = true
+}
+
+const handlePasteFormat = () => {
+  if (!editorContent.value) return
+  const selection = window.getSelection()
+  const success = pasteFormat(editorContent.value, selection)
+  if (success) {
+    formatPainterActive.value = false
+    updateContent()
+  }
+}
+
+// Template actions
+const openTemplateModal = () => {
+  showTemplateModal.value = true
+}
+
+const closeTemplateModal = () => {
+  showTemplateModal.value = false
+}
+
+const handleSelectTemplate = (template: any) => {
+  if (editorContent.value) {
+    editorContent.value.innerHTML = template.content
+    updateContent()
+  }
+}
+
+// Page management actions
+const handleInsertPageBreak = () => {
+  if (!editorContent.value) return
+  const selection = window.getSelection()
+  insertPageBreak(editorContent.value, selection)
+  updateContent()
+}
+
+const handleInsertTOC = () => {
+  if (!editorContent.value) return
+  const selection = window.getSelection()
+  insertTableOfContents(editorContent.value, selection)
+  updateContent()
+}
+
+// Spell check actions
+const handleToggleSpellCheck = () => {
+  if (!editorContent.value) return
+  const newState = toggleSpellCheck(editorContent.value)
+  spellCheckEnabled.value = newState
 }
 
 // Insert horizontal rule
@@ -1403,6 +1487,18 @@ const insertDropdownItems = computed(() => [
     onClick: handleInsertHR,
   },
   {
+    id: 'page-break',
+    label: 'Page Break',
+    icon: '📄',
+    onClick: handleInsertPageBreak,
+  },
+  {
+    id: 'toc',
+    label: 'Table of Contents',
+    icon: '📑',
+    onClick: handleInsertTOC,
+  },
+  {
     id: 'emoji',
     label: 'Emoji',
     icon: '😀',
@@ -1453,6 +1549,36 @@ const toolActions = computed(() => [
     tooltip: 'Toggle fullscreen',
     onClick: toggleFullScreen,
     isActive: () => isFullScreen.value,
+  },
+])
+
+const productivityDropdownItems = computed(() => [
+  {
+    id: 'format-painter-copy',
+    label: 'Copy Format',
+    icon: '🖌️',
+    onClick: handleCopyFormat,
+  },
+  {
+    id: 'format-painter-paste',
+    label: 'Paste Format',
+    icon: '📋',
+    onClick: handlePasteFormat,
+    disabled: !hasFormatCopied(),
+  },
+  { divider: true },
+  {
+    id: 'spell-check',
+    label: spellCheckEnabled.value ? 'Disable Spell Check' : 'Enable Spell Check',
+    icon: spellCheckEnabled.value ? '✓' : '✗',
+    onClick: handleToggleSpellCheck,
+  },
+  { divider: true },
+  {
+    id: 'templates',
+    label: 'Templates',
+    icon: '📚',
+    onClick: openTemplateModal,
   },
 ])
 
@@ -2186,6 +2312,9 @@ onMounted(() => {
     applySanitizedContent(props.modelValue)
     captureSnapshot(false)
     editorContent.value.addEventListener('keydown', handleKeydown)
+    // Enable spell check by default
+    enableSpellCheck(editorContent.value)
+    spellCheckEnabled.value = true
   }
   document.addEventListener('click', handleDocumentClick)
   document.addEventListener('keydown', handleEscape)
@@ -3416,6 +3545,94 @@ onBeforeUnmount(() => {
 
 .theme-dark .preview-content-wrapper :deep(hr) {
   opacity: 0.3;
+}
+
+/* Page Break Styles */
+.editor-content :deep(.page-break) {
+  margin: 24px 0;
+  padding: 12px;
+  border: 2px dashed var(--editor-border);
+  border-radius: var(--radius-md);
+  background: var(--toolbar-bg);
+  text-align: center;
+  user-select: none;
+  position: relative;
+}
+
+.editor-content :deep(.page-break-label) {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--toolbar-accent);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.editor-content :deep(.page-break-line) {
+  margin: 8px 0 0 0;
+  border: none;
+  border-top: 1px solid var(--editor-border);
+}
+
+@media print {
+  .editor-content :deep(.page-break) {
+    page-break-after: always;
+    border: none;
+    background: none;
+  }
+  
+  .editor-content :deep(.page-break-label) {
+    display: none;
+  }
+}
+
+/* Table of Contents Styles */
+.editor-content :deep(.table-of-contents) {
+  background: var(--toolbar-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.editor-content :deep(.table-of-contents h2) {
+  margin: 0 0 16px 0;
+  font-size: 1.25rem;
+  color: var(--content-color);
+  border-bottom: 2px solid var(--toolbar-accent);
+  padding-bottom: 8px;
+}
+
+.editor-content :deep(.table-of-contents ul) {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.editor-content :deep(.table-of-contents li) {
+  margin: 8px 0;
+}
+
+.editor-content :deep(.table-of-contents a) {
+  color: var(--toolbar-accent);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.editor-content :deep(.table-of-contents a:hover) {
+  background: var(--toolbar-hover);
+  transform: translateX(4px);
+}
+
+.theme-dark .editor-content :deep(.table-of-contents) {
+  background: rgba(30, 41, 59, 0.5);
 }
 </style>
 
