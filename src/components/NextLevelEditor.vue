@@ -954,6 +954,7 @@ const handleBackgroundColor = (color: string) => {
 
 // Font size action
 const handleFontSize = (size: 'small' | 'normal' | 'large' | 'huge') => {
+  fontSize.value = size
   performWithSelection((root) => applyFontSize(root, size))
 }
 
