@@ -1776,28 +1776,39 @@ const handleKeydown = (event: KeyboardEvent) => {
       // No block element found - we need to wrap existing content and create a new paragraph
       if (!editorContent.value) return
       
-      // Extract content before cursor
-      const beforeRange = document.createRange()
-      beforeRange.setStart(editorContent.value, 0)
-      beforeRange.setEnd(range.startContainer, range.startOffset)
-      const beforeContent = beforeRange.extractContents()
-      
-      // Extract content after cursor
-      const afterRange = document.createRange()
-      afterRange.setStart(range.startContainer, range.startOffset)
-      afterRange.setEnd(editorContent.value, editorContent.value.childNodes.length)
-      const afterContent = afterRange.extractContents()
-      
-      // Create first paragraph with content before cursor
-      const firstParagraph = document.createElement('p')
-      populateNewElement(firstParagraph, beforeContent)
-      
-      // Create second paragraph with content after cursor
-      populateNewElement(newParagraph, afterContent)
-      
-      // Insert both paragraphs
-      editorContent.value.appendChild(firstParagraph)
-      editorContent.value.appendChild(newParagraph)
+      try {
+        // Extract content before cursor
+        const beforeRange = document.createRange()
+        beforeRange.setStart(editorContent.value, 0)
+        beforeRange.setEnd(range.startContainer, range.startOffset)
+        const beforeContent = beforeRange.extractContents()
+        
+        // Extract content after cursor
+        const afterRange = document.createRange()
+        afterRange.setStart(range.startContainer, range.startOffset)
+        afterRange.setEnd(editorContent.value, editorContent.value.childNodes.length)
+        const afterContent = afterRange.extractContents()
+        
+        // Create first paragraph with content before cursor
+        const firstParagraph = document.createElement('p')
+        populateNewElement(firstParagraph, beforeContent)
+        
+        // Create second paragraph with content after cursor
+        populateNewElement(newParagraph, afterContent)
+        
+        // Insert both paragraphs
+        editorContent.value.appendChild(firstParagraph)
+        editorContent.value.appendChild(newParagraph)
+      } catch (error) {
+        // If range manipulation fails, fall back to simple paragraph insertion
+        console.error('Error handling Enter key:', error)
+        newParagraph.innerHTML = '<br>'
+        if (editorContent.value.lastChild) {
+          editorContent.value.insertBefore(newParagraph, editorContent.value.lastChild.nextSibling)
+        } else {
+          editorContent.value.appendChild(newParagraph)
+        }
+      }
     }
     
     // Move cursor to the beginning of the new paragraph
