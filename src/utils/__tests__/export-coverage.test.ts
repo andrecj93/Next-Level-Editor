@@ -132,6 +132,7 @@ describe('Export Coverage Tests', () => {
       vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
       
       const mockClick = vi.fn()
+      const originalCreateElement = document.createElement.bind(document)
       vi.spyOn(document, 'createElement').mockImplementation((tag) => {
         if (tag === 'a') {
           return {
@@ -141,7 +142,7 @@ describe('Export Coverage Tests', () => {
             style: {},
           } as any
         }
-        return document.createElement(tag)
+        return originalCreateElement(tag)
       })
     })
 

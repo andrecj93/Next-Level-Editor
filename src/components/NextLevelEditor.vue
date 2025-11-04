@@ -188,6 +188,17 @@
         </button>
       </div>
 
+      <!-- Format HTML Button (visible in code/split view) -->
+      <button
+        v-if="viewMode !== 'preview'"
+        class="toolbar-btn-modern"
+        data-tooltip="Format HTML (pretty-print)"
+        aria-label="Format HTML"
+        @click="handleFormatHtml"
+      >
+        ✨
+      </button>
+
       <!-- Theme Toggle -->
       <div class="toolbar-divider" />
       <button
@@ -406,7 +417,7 @@ import {
   removeTableColumn,
   deleteTable
 } from '../utils/commands'
-import { exportAsHtml, exportAsMarkdown, exportAsPdf, exportAsWord } from '../utils/export'
+import { exportAsHtml, exportAsMarkdown, exportAsPdf, formatHtml, exportAsWord } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
 import { useAutoSave } from '../composables/useAutoSave'
 import ColorPicker from './ColorPicker.vue'
@@ -1107,6 +1118,15 @@ const handleExportHtml = () => {
 const handleExportMarkdown = () => {
   if (!editorContent.value) return
   exportAsMarkdown(editorContent.value.innerHTML)
+}
+
+// Format HTML action
+const handleFormatHtml = () => {
+  if (!editorContent.value) return
+  const formatted = formatHtml(editorContent.value.innerHTML)
+  editorContent.value.innerHTML = formatted
+  htmlContent.value = formatted
+  captureSnapshot()
 }
 
 const handleExportPdf = async () => {
@@ -3133,6 +3153,269 @@ onBeforeUnmount(() => {
     min-width: 36px;
     height: 36px;
   }
+}
+
+/* View Mode Toggle Styles */
+.view-mode-group {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--editor-border);
+  border-radius: 6px;
+}
+
+.view-mode-btn {
+  min-width: 36px;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--toolbar-text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.view-mode-btn:hover {
+  background: var(--toolbar-hover);
+}
+
+.view-mode-btn.active {
+  background: var(--editor-bg);
+  color: var(--toolbar-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.view-mode-btn:focus {
+  outline: 2px solid var(--toolbar-accent);
+  outline-offset: 2px;
+}
+
+/* Tooltips for view mode buttons */
+.view-mode-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.view-mode-btn[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* Editor Container with Split View */
+.editor-container {
+  display: flex;
+  gap: 0;
+  position: relative;
+}
+
+.editor-container.view-mode-code {
+  display: block;
+}
+
+.editor-container.view-mode-split {
+  display: flex;
+}
+
+.editor-container.view-mode-preview {
+  display: block;
+}
+
+.editor-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.split-divider {
+  width: 1px;
+  background: var(--editor-border);
+  flex-shrink: 0;
+}
+
+.preview-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--editor-bg);
+}
+
+.preview-header {
+  padding: 8px 16px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--editor-border);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--toolbar-text);
+}
+
+.preview-content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--content-color);
+  min-height: 240px;
+  max-height: 640px;
+}
+
+.preview-content-wrapper .empty-preview {
+  color: var(--placeholder-color);
+  font-style: italic;
+}
+
+/* Preview content styling (matches editor content) */
+.preview-content-wrapper :deep(h1),
+.preview-content-wrapper :deep(h2),
+.preview-content-wrapper :deep(h3),
+.preview-content-wrapper :deep(h4),
+.preview-content-wrapper :deep(h5),
+.preview-content-wrapper :deep(h6) {
+  margin: 18px 0 10px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.preview-content-wrapper :deep(h1) {
+  font-size: 2.2em;
+}
+
+.preview-content-wrapper :deep(h2) {
+  font-size: 1.8em;
+}
+
+.preview-content-wrapper :deep(h3) {
+  font-size: 1.4em;
+}
+
+.preview-content-wrapper :deep(p) {
+  margin: 10px 0;
+}
+
+.preview-content-wrapper :deep(ul),
+.preview-content-wrapper :deep(ol) {
+  margin: 12px 0;
+  padding-left: 26px;
+}
+
+.preview-content-wrapper :deep(li) {
+  margin: 4px 0;
+}
+
+.preview-content-wrapper :deep(a) {
+  color: var(--toolbar-accent);
+  text-decoration: underline;
+}
+
+.preview-content-wrapper :deep(a):hover {
+  color: #1d4ed8;
+}
+
+.preview-content-wrapper :deep(img) {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 16px 0;
+  border-radius: 6px;
+}
+
+.preview-content-wrapper :deep(code) {
+  background: rgba(15, 23, 42, 0.08);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.92em;
+}
+
+.theme-dark .preview-content-wrapper :deep(code) {
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.preview-content-wrapper :deep(pre) {
+  background: rgba(15, 23, 42, 0.08);
+  padding: 16px;
+  border-radius: 10px;
+  overflow: auto;
+}
+
+.theme-dark .preview-content-wrapper :deep(pre) {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.preview-content-wrapper :deep(blockquote) {
+  border-left: 4px solid var(--toolbar-accent);
+  margin: 16px 0;
+  padding-left: 16px;
+  color: var(--toolbar-text);
+  font-style: italic;
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.theme-dark .preview-content-wrapper :deep(blockquote) {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.preview-content-wrapper :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.95em;
+}
+
+.preview-content-wrapper :deep(table th) {
+  background: rgba(59, 130, 246, 0.08);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--editor-border);
+}
+
+.theme-dark .preview-content-wrapper :deep(table th) {
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.preview-content-wrapper :deep(table td) {
+  padding: 8px 12px;
+  border: 1px solid var(--editor-border);
+}
+
+.preview-content-wrapper :deep(table tr:hover) {
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.theme-dark .preview-content-wrapper :deep(table tr:hover) {
+  background: rgba(96, 165, 250, 0.05);
+}
+
+.preview-content-wrapper :deep(hr) {
+  border: none;
+  border-top: 2px solid var(--editor-border);
+  margin: 24px 0;
+  opacity: 0.5;
+}
+
+.theme-dark .preview-content-wrapper :deep(hr) {
+  opacity: 0.3;
 }
 </style>
 
