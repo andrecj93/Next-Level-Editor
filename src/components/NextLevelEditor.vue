@@ -309,6 +309,20 @@
       @insert="handleInsertCodeBlock"
     />
 
+    <!-- Table Designer -->
+    <TableDesigner
+      :show="showTableDesigner"
+      :x="tableDesignerPosition.x"
+      :y="tableDesignerPosition.y"
+      @add-row-above="handleAddRowAbove"
+      @add-row-below="handleAddRowBelow"
+      @add-column-left="handleAddColumnLeft"
+      @add-column-right="handleAddColumnRight"
+      @remove-row="handleRemoveRow"
+      @remove-column="handleRemoveColumn"
+      @delete-table="handleDeleteTable"
+    />
+
     <!-- Emoji Picker -->
     <div
       v-if="showEmojiPicker"
@@ -384,6 +398,13 @@ import {
   getWordCount,
   getCharacterCount,
   searchAndReplace,
+  getSelectedTable,
+  getSelectedCell,
+  addTableRow,
+  removeTableRow,
+  addTableColumn,
+  removeTableColumn,
+  deleteTable
 } from '../utils/commands'
 import { exportAsHtml, exportAsMarkdown, exportAsPdf, exportAsWord } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
@@ -391,6 +412,7 @@ import { useAutoSave } from '../composables/useAutoSave'
 import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
 import TableModal from './TableModal.vue'
+import TableDesigner from './TableDesigner.vue'
 import FindReplaceModal from './FindReplaceModal.vue'
 import CodeBlockModal from './CodeBlockModal.vue'
 import EmojiPicker from './EmojiPicker.vue'
@@ -456,6 +478,12 @@ const fontSize = ref<'small' | 'normal' | 'large' | 'huge'>('normal')
 
 // Table modal state
 const showTableModal = ref(false)
+
+// Table designer state
+const showTableDesigner = ref(false)
+const tableDesignerPosition = ref({ x: 0, y: 0 })
+const currentTable = ref<HTMLTableElement | null>(null)
+const currentCell = ref<HTMLTableCellElement | null>(null)
 
 // Find & Replace modal state
 const showFindReplaceModal = ref(false)
@@ -934,6 +962,72 @@ const closeTableModal = () => {
 
 const handleInsertTable = (data: { rows: number; cols: number; includeHeader: boolean }) => {
   performWithSelection((root) => insertTableUtil(root, data.rows, data.cols, data.includeHeader))
+}
+
+// Table designer actions
+const handleAddRowAbove = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const row = currentCell.value.parentElement as HTMLTableRowElement
+  const tbody = row.parentElement
+  if (!tbody) return
+  
+  const rowIndex = Array.from(tbody.rows).indexOf(row)
+  addTableRow(currentTable.value, rowIndex)
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleAddRowBelow = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const row = currentCell.value.parentElement as HTMLTableRowElement
+  const tbody = row.parentElement
+  if (!tbody) return
+  
+  const rowIndex = Array.from(tbody.rows).indexOf(row)
+  addTableRow(currentTable.value, rowIndex + 1)
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleAddColumnLeft = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const cellIndex = Array.from(currentCell.value.parentElement?.children || []).indexOf(currentCell.value)
+  addTableColumn(currentTable.value, cellIndex)
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleAddColumnRight = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const cellIndex = Array.from(currentCell.value.parentElement?.children || []).indexOf(currentCell.value)
+  addTableColumn(currentTable.value, cellIndex + 1)
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleRemoveRow = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const row = currentCell.value.parentElement as HTMLTableRowElement
+  const tbody = row.parentElement
+  if (!tbody) return
+  
+  const rowIndex = Array.from(tbody.rows).indexOf(row)
+  removeTableRow(currentTable.value, rowIndex)
+  showTableDesigner.value = false
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleRemoveColumn = () => {
+  if (!currentTable.value || !currentCell.value) return
+  const cellIndex = Array.from(currentCell.value.parentElement?.children || []).indexOf(currentCell.value)
+  removeTableColumn(currentTable.value, cellIndex)
+  showTableDesigner.value = false
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+const handleDeleteTable = () => {
+  if (!currentTable.value) return
+  deleteTable(currentTable.value)
+  showTableDesigner.value = false
+  currentTable.value = null
+  currentCell.value = null
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
 }
 
 // Find & Replace actions
@@ -2004,10 +2098,38 @@ const onBlur = () => {
 
 const onMouseUp = () => {
   updateFloatingToolbar()
+  checkForTableSelection()
+}
+
+const checkForTableSelection = () => {
+  const table = getSelectedTable()
+  const cell = getSelectedCell()
+  
+  if (table && cell) {
+    currentTable.value = table
+    currentCell.value = cell
+    
+    // Position the designer near the table
+    const rect = table.getBoundingClientRect()
+    const editorRect = editorContent.value?.getBoundingClientRect()
+    
+    if (editorRect) {
+      tableDesignerPosition.value = {
+        x: rect.right - editorRect.left + 10,
+        y: rect.top - editorRect.top
+      }
+      showTableDesigner.value = true
+    }
+  } else {
+    showTableDesigner.value = false
+    currentTable.value = null
+    currentCell.value = null
+  }
 }
 
 const onSelectionChange = () => {
   updateFloatingToolbar()
+  checkForTableSelection()
 }
 
 // Lifecycle and watchers
