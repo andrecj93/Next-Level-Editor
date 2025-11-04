@@ -206,12 +206,23 @@ export function htmlToMarkdown(html: string): string {
 
 /**
  * Download content as a file
- * @param content - Content to download (string or Blob)
+ * @param content - Content to download (string, Blob, or Buffer)
  * @param filename - Name of the file
- * @param mimeType - MIME type of the file (only used when content is a string)
+ * @param mimeType - MIME type of the file (only used when content is a string or Buffer)
  */
-export function downloadFile(content: string | Blob, filename: string, mimeType: string = 'text/plain') {
-  const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType })
+export function downloadFile(content: string | Blob | Buffer, filename: string, mimeType: string = 'text/plain') {
+  let blob: Blob
+  if (content instanceof Blob) {
+    blob = content
+  } else if (Buffer.isBuffer(content)) {
+    // Convert Buffer to ArrayBuffer for Blob constructor
+    // Type assertion is necessary because Buffer.buffer is typed as ArrayBufferLike (ArrayBuffer | SharedArrayBuffer)
+    // but in practice it's always ArrayBuffer
+    const arrayBuffer = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength) as ArrayBuffer
+    blob = new Blob([arrayBuffer], { type: mimeType })
+  } else {
+    blob = new Blob([content], { type: mimeType })
+  }
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
