@@ -1,6 +1,10 @@
 <template>
   <transition name="modal-fade">
-    <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
+    <div
+      v-if="show"
+      class="modal-overlay"
+      @click.self="$emit('close')"
+    >
       <div class="modal-content template-modal">
         <div class="modal-header">
           <h3>📄 Choose a Template</h3>
@@ -34,7 +38,9 @@
               class="template-card"
               @click="selectTemplate(template)"
             >
-              <div class="template-icon">{{ template.icon }}</div>
+              <div class="template-icon">
+                {{ template.icon }}
+              </div>
               <div class="template-info">
                 <h4>{{ template.name }}</h4>
                 <p>{{ template.description }}</p>
