@@ -321,3 +321,181 @@ export function searchAndReplace(
   replaceInTextNodes(temp)
   return temp.innerHTML
 }
+
+/**
+ * Get the table element containing the current selection
+ * @returns The table element or null
+ */
+export function getSelectedTable(): HTMLTableElement | null {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) return null
+
+  let node = selection.anchorNode
+  while (node && node !== document.body) {
+    if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === 'TABLE') {
+      return node as HTMLTableElement
+    }
+    node = node.parentNode
+  }
+  return null
+}
+
+/**
+ * Get the table cell (td or th) containing the current selection
+ * @returns The cell element or null
+ */
+export function getSelectedCell(): HTMLTableCellElement | null {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) return null
+
+  let node = selection.anchorNode
+  while (node && node !== document.body) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement
+      if (element.tagName === 'TD' || element.tagName === 'TH') {
+        return element as HTMLTableCellElement
+      }
+    }
+    node = node.parentNode
+  }
+  return null
+}
+
+/**
+ * Add a row to a table at the specified position
+ * @param table - The table element
+ * @param atIndex - Index where to insert the row (default: end)
+ */
+export function addTableRow(table: HTMLTableElement, atIndex?: number): void {
+  const tbody = table.tBodies[0] || table.appendChild(document.createElement('tbody'))
+  const rows = Array.from(tbody.getElementsByTagName('tr'))
+  const existingRow = rows[0]
+  if (!existingRow) return
+
+  const cols = existingRow.cells.length
+  const newRow = document.createElement('tr')
+
+  for (let i = 0; i < cols; i++) {
+    const cell = document.createElement('td')
+    cell.style.border = '1px solid #d1d5db'
+    cell.style.padding = '8px 12px'
+    cell.textContent = '\u00A0' // Non-breaking space
+    newRow.appendChild(cell)
+  }
+  
+  if (atIndex !== undefined && atIndex < rows.length) {
+    tbody.insertBefore(newRow, rows[atIndex])
+  } else {
+    tbody.appendChild(newRow)
+  }
+}
+
+/**
+ * Remove a row from a table
+ * @param table - The table element
+ * @param rowIndex - Index of the row to remove
+ */
+export function removeTableRow(table: HTMLTableElement, rowIndex: number): void {
+  const tbody = table.tBodies[0]
+  if (!tbody) return
+  
+  const rows = Array.from(tbody.getElementsByTagName('tr'))
+  if (rows.length <= 1) return // Keep at least one row
+
+  if (rows[rowIndex]) {
+    tbody.removeChild(rows[rowIndex])
+  }
+}
+
+/**
+ * Add a column to a table
+ * @param table - The table element
+ * @param atIndex - Index where to insert the column (default: end)
+ */
+export function addTableColumn(table: HTMLTableElement, atIndex?: number): void {
+  // Add to header if exists
+  if (table.tHead) {
+    const headerRows = Array.from(table.tHead.getElementsByTagName('tr'))
+    if (headerRows.length > 0) {
+      const headerRow = headerRows[0]
+      const th = document.createElement('th')
+      th.style.border = '1px solid #d1d5db'
+      th.style.padding = '8px 12px'
+      th.style.backgroundColor = '#f3f4f6'
+      th.style.fontWeight = '600'
+      th.style.textAlign = 'left'
+      th.textContent = `Header ${(atIndex ?? headerRow.cells.length) + 1}`
+      
+      const cells = Array.from(headerRow.cells)
+      if (atIndex !== undefined && atIndex < cells.length) {
+        headerRow.insertBefore(th, cells[atIndex])
+      } else {
+        headerRow.appendChild(th)
+      }
+    }
+  }
+
+  // Add to body rows
+  const tbody = table.tBodies[0]
+  if (tbody) {
+    const bodyRows = Array.from(tbody.getElementsByTagName('tr'))
+    for (let i = 0; i < bodyRows.length; i++) {
+      const row = bodyRows[i]
+      const td = document.createElement('td')
+      td.style.border = '1px solid #d1d5db'
+      td.style.padding = '8px 12px'
+      td.textContent = '\u00A0' // Non-breaking space
+      
+      const cells = Array.from(row.cells)
+      if (atIndex !== undefined && atIndex < cells.length) {
+        row.insertBefore(td, cells[atIndex])
+      } else {
+        row.appendChild(td)
+      }
+    }
+  }
+}
+
+/**
+ * Remove a column from a table
+ * @param table - The table element
+ * @param colIndex - Index of the column to remove
+ */
+export function removeTableColumn(table: HTMLTableElement, colIndex: number): void {
+  // Check if we have at least 2 columns
+  const firstRow = Array.from(table.getElementsByTagName('tr'))[0]
+  if (!firstRow || firstRow.cells.length <= 1) return // Keep at least one column
+
+  // Remove from header
+  if (table.tHead) {
+    const headerRows = Array.from(table.tHead.getElementsByTagName('tr'))
+    if (headerRows.length > 0) {
+      const headerRow = headerRows[0]
+      const cells = Array.from(headerRow.cells)
+      if (cells[colIndex]) {
+        headerRow.removeChild(cells[colIndex])
+      }
+    }
+  }
+
+  // Remove from body rows
+  const tbody = table.tBodies[0]
+  if (tbody) {
+    const bodyRows = Array.from(tbody.getElementsByTagName('tr'))
+    for (let i = 0; i < bodyRows.length; i++) {
+      const row = bodyRows[i]
+      const cells = Array.from(row.cells)
+      if (cells[colIndex]) {
+        row.removeChild(cells[colIndex])
+      }
+    }
+  }
+}
+
+/**
+ * Delete the entire table
+ * @param table - The table element
+ */
+export function deleteTable(table: HTMLTableElement): void {
+  table.remove()
+}
