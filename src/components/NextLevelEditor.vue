@@ -1767,9 +1767,31 @@ const handleKeydown = (event: KeyboardEvent) => {
         currentBlock.parentNode?.appendChild(newParagraph)
       }
     } else {
-      // No block element found - insert a new paragraph at cursor position
-      newParagraph.innerHTML = '<br>'
-      range.insertNode(newParagraph)
+      // No block element found - we need to wrap existing content and create a new paragraph
+      if (!editorContent.value) return
+      
+      // Extract content before cursor
+      const beforeRange = document.createRange()
+      beforeRange.setStart(editorContent.value, 0)
+      beforeRange.setEnd(range.startContainer, range.startOffset)
+      const beforeContent = beforeRange.extractContents()
+      
+      // Extract content after cursor
+      const afterRange = document.createRange()
+      afterRange.setStart(range.startContainer, range.startOffset)
+      afterRange.setEnd(editorContent.value, editorContent.value.childNodes.length)
+      const afterContent = afterRange.extractContents()
+      
+      // Create first paragraph with content before cursor
+      const firstParagraph = document.createElement('p')
+      populateNewElement(firstParagraph, beforeContent)
+      
+      // Create second paragraph with content after cursor
+      populateNewElement(newParagraph, afterContent)
+      
+      // Insert both paragraphs
+      editorContent.value.appendChild(firstParagraph)
+      editorContent.value.appendChild(newParagraph)
     }
     
     // Move cursor to the beginning of the new paragraph
