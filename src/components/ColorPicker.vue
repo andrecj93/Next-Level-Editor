@@ -30,7 +30,6 @@
           :show-input-set="true"
           :show-picker-mode="false"
           :show-buttons="false"
-          @update:model-value="handleColorChange"
         />
       </div>
     </transition>
@@ -38,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { Vue3ColorPicker } from '@cyhnkckali/vue3-color-picker'
 
 interface Props {
@@ -62,6 +61,20 @@ const emit = defineEmits<Emits>()
 const showPicker = ref(false)
 const internalColor = ref(props.modelValue || '#000000')
 
+// Watch for external changes to modelValue
+watch(() => props.modelValue, (newValue) => {
+  if (newValue && newValue !== internalColor.value) {
+    internalColor.value = newValue
+  }
+})
+
+// Watch for internal color changes and emit
+watch(internalColor, (newColor) => {
+  if (newColor !== props.modelValue) {
+    emit('update:modelValue', newColor)
+  }
+})
+
 // Detect theme from the editor
 const theme = computed(() => {
   const editorElement = document.querySelector('.next-level-editor')
@@ -73,10 +86,6 @@ const togglePicker = () => {
   if (showPicker.value) {
     internalColor.value = props.modelValue || '#000000'
   }
-}
-
-const handleColorChange = (color: string) => {
-  emit('update:modelValue', color)
 }
 
 const handleClickOutside = (event: MouseEvent) => {
