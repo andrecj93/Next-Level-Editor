@@ -110,32 +110,13 @@
 
       <!-- Font Size Dropdown -->
       <div class="toolbar-divider" />
-      <div class="toolbar-dropdown">
-        <button
-          class="dropdown-trigger"
-          :class="{ open: showFontSizeDropdown }"
-          data-tooltip="Font size"
-          @mousedown.prevent="rememberSelection"
-          @click.stop="showFontSizeDropdown = !showFontSizeDropdown"
-        >
-          <span class="dropdown-icon">Aa</span>
-          <span class="dropdown-label">Size</span>
-          <span class="dropdown-arrow">▼</span>
-        </button>
-        <transition name="dropdown-fade">
-          <div
-            v-if="showFontSizeDropdown"
-            class="dropdown-menu"
-            @click.stop
-          >
-            <div class="font-size-wrapper">
-              <FontSizeSelector
-                v-model="fontSize"
-                @update:model-value="handleFontSize"
-              />
-            </div>
-          </div>
-        </transition>
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Size"
+          icon="Aa"
+          tooltip="Font size"
+          :items="fontSizeDropdownItems"
+        />
       </div>
 
       <!-- History Controls (Undo/Redo) -->
@@ -354,7 +335,6 @@ import { useTheme } from '../composables/useTheme'
 import { useAutoSave } from '../composables/useAutoSave'
 import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
-import FontSizeSelector from './FontSizeSelector.vue'
 import TableModal from './TableModal.vue'
 import FindReplaceModal from './FindReplaceModal.vue'
 import CodeBlockModal from './CodeBlockModal.vue'
@@ -446,7 +426,6 @@ const floatingToolbarTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 // Dropdown states for modern toolbar
 const showColorsDropdown = ref(false)
-const showFontSizeDropdown = ref(false)
 
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
@@ -1142,6 +1121,33 @@ const alignmentDropdownItems = computed(() => [
     label: 'Justify',
     icon: '⬌',
     onClick: () => handleTextAlignment('justify'),
+  },
+])
+
+const fontSizeDropdownItems = computed(() => [
+  {
+    id: 'size-small',
+    label: 'Small',
+    onClick: () => handleFontSize('small'),
+    isActive: () => fontSize.value === 'small',
+  },
+  {
+    id: 'size-normal',
+    label: 'Normal',
+    onClick: () => handleFontSize('normal'),
+    isActive: () => fontSize.value === 'normal',
+  },
+  {
+    id: 'size-large',
+    label: 'Large',
+    onClick: () => handleFontSize('large'),
+    isActive: () => fontSize.value === 'large',
+  },
+  {
+    id: 'size-huge',
+    label: 'Huge',
+    onClick: () => handleFontSize('huge'),
+    isActive: () => fontSize.value === 'huge',
   },
 ])
 
@@ -2600,9 +2606,6 @@ onBeforeUnmount(() => {
   margin-bottom: 0;
 }
 
-.font-size-wrapper {
-  padding: 4px;
-}
 
 .dropdown-fade-enter-active,
 .dropdown-fade-leave-active {
