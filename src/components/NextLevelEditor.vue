@@ -757,6 +757,8 @@ const BLOCK_ELEMENT_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'bloc
 // Selection management
 const rememberSelection = () => {
   savedRange.value = saveSelection()
+  // Hide floating toolbar when interacting with main toolbar to prevent pointer event interference
+  showFloatingToolbar.value = false
 }
 
 /**
@@ -806,7 +808,7 @@ const createFallbackSelection = (root: HTMLElement) => {
   if (selection) {
     const range = document.createRange()
     range.selectNodeContents(root)
-    range.collapse(false) // Collapse to end
+    range.collapse(true) // Collapse to start (not end)
     selection.removeAllRanges()
     selection.addRange(range)
   }
