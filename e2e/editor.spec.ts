@@ -350,8 +350,8 @@ test.describe('Next Level Editor - Font Size', () => {
     
     await page.keyboard.press('Control+A')
     
-    // Open size dropdown
-    await page.click('button:has-text("Size")')
+    // Open size dropdown using aria-label (button text changes based on selection)
+    await page.click('button[aria-label="Size"]')
     
     // Select large size
     await page.click('text=Large')
