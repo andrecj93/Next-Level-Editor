@@ -63,7 +63,7 @@
 - **Slash Commands** - Type `/` to access 14+ quick actions
 - **Find & Replace** - Full-featured search with case-sensitive and whole-word options (Ctrl+F)
 - **Auto-Save** - 2-second debounced auto-save with visual status indicator
-- **Export** - Download as HTML or Markdown with one click
+- **Export** - Download as HTML, Markdown, PDF, or Word document with one click
 - **Full-Screen Mode** - Distraction-free writing with centered content layout
 - **Word & Character Count** - Live statistics in footer
 - **Undo/Redo** - Full history management with Ctrl+Z/Ctrl+Shift+Z
