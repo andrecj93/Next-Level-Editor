@@ -808,7 +808,7 @@ const createFallbackSelection = (root: HTMLElement) => {
   if (selection) {
     const range = document.createRange()
     range.selectNodeContents(root)
-    range.collapse(true) // Collapse to start (not end)
+    range.collapse(false) // Collapse to end
     selection.removeAllRanges()
     selection.addRange(range)
   }
