@@ -979,7 +979,7 @@ const handleInsertTable = (data: { rows: number; cols: number; includeHeader: bo
 const handleAddRowAbove = () => {
   if (!currentTable.value || !currentCell.value) return
   const row = currentCell.value.parentElement as HTMLTableRowElement
-  const tbody = row.parentElement
+  const tbody = row.parentElement as HTMLTableSectionElement
   if (!tbody) return
   
   const rowIndex = Array.from(tbody.rows).indexOf(row)
@@ -990,7 +990,7 @@ const handleAddRowAbove = () => {
 const handleAddRowBelow = () => {
   if (!currentTable.value || !currentCell.value) return
   const row = currentCell.value.parentElement as HTMLTableRowElement
-  const tbody = row.parentElement
+  const tbody = row.parentElement as HTMLTableSectionElement
   if (!tbody) return
   
   const rowIndex = Array.from(tbody.rows).indexOf(row)
@@ -1015,7 +1015,7 @@ const handleAddColumnRight = () => {
 const handleRemoveRow = () => {
   if (!currentTable.value || !currentCell.value) return
   const row = currentCell.value.parentElement as HTMLTableRowElement
-  const tbody = row.parentElement
+  const tbody = row.parentElement as HTMLTableSectionElement
   if (!tbody) return
   
   const rowIndex = Array.from(tbody.rows).indexOf(row)
