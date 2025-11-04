@@ -757,6 +757,8 @@ const BLOCK_ELEMENT_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'bloc
 // Selection management
 const rememberSelection = () => {
   savedRange.value = saveSelection()
+  // Hide floating toolbar when interacting with main toolbar to prevent pointer event interference
+  showFloatingToolbar.value = false
 }
 
 /**
@@ -2158,7 +2160,10 @@ watch(
   (newValue) => {
     if (!editorContent.value) return
     if (isApplyingHistory.value) return
-    if (editorContent.value.innerHTML !== newValue) {
+    // Compare sanitized versions to avoid unnecessary innerHTML updates that destroy cursor position
+    const currentSanitized = sanitizeHtml(editorContent.value.innerHTML)
+    const newSanitized = sanitizeHtml(newValue)
+    if (currentSanitized !== newSanitized) {
       isApplyingHistory.value = true
       applySanitizedContent(newValue)
       htmlContent.value = newValue // Update stored HTML
