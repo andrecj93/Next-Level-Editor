@@ -178,6 +178,35 @@
         </button>
       </div>
 
+      <!-- View Mode Toggle -->
+      <div class="toolbar-divider" />
+      <div class="view-mode-group">
+        <button
+          :class="['view-mode-btn', { active: viewMode === 'code' }]"
+          data-tooltip="Code view"
+          aria-label="Code view"
+          @click="viewMode = 'code'"
+        >
+          💻
+        </button>
+        <button
+          :class="['view-mode-btn', { active: viewMode === 'split' }]"
+          data-tooltip="Split view"
+          aria-label="Split view"
+          @click="viewMode = 'split'"
+        >
+          ⚏
+        </button>
+        <button
+          :class="['view-mode-btn', { active: viewMode === 'preview' }]"
+          data-tooltip="Preview view"
+          aria-label="Preview view"
+          @click="viewMode = 'preview'"
+        >
+          👁️
+        </button>
+      </div>
+
       <!-- Theme Toggle -->
       <div class="toolbar-divider" />
       <button
@@ -218,17 +247,43 @@
       </div>
     </transition>
 
-    <div
-      ref="editorContent"
-      class="editor-content"
-      contenteditable="true"
-      :placeholder="placeholder"
-      @input="onInput"
-      @blur="onBlur"
-      @focus="onFocus"
-      @mouseup="onMouseUp"
-      @contextmenu="handleContextMenu"
-    />
+    <!-- Editor and Preview Container -->
+    <div :class="['editor-container', `view-mode-${viewMode}`]">
+      <div
+        v-if="viewMode === 'code' || viewMode === 'split'"
+        class="editor-panel"
+      >
+        <div
+          ref="editorContent"
+          class="editor-content"
+          contenteditable="true"
+          :placeholder="placeholder"
+          @input="onInput"
+          @blur="onBlur"
+          @focus="onFocus"
+          @mouseup="onMouseUp"
+          @contextmenu="handleContextMenu"
+        />
+      </div>
+
+      <div
+        v-if="viewMode === 'split'"
+        class="split-divider"
+      />
+
+      <div
+        v-if="viewMode === 'preview' || viewMode === 'split'"
+        class="preview-panel"
+      >
+        <div class="preview-header">
+          Preview
+        </div>
+        <div
+          class="preview-content-wrapper"
+          v-html="htmlContent || '<p class=\'empty-preview\'>Start typing to see preview...</p>'"
+        />
+      </div>
+    </div>
 
     <!-- Word Count Footer -->
     <div class="editor-footer">
@@ -440,6 +495,12 @@ const showEmojiPicker = ref(false)
 // Full screen state
 const isFullScreen = ref(false)
 
+// View mode state (code, split, preview)
+const viewMode = ref<'code' | 'split' | 'preview'>('code')
+
+// Store HTML content for preview when editor is not rendered
+const htmlContent = ref('')
+
 // Floating toolbar state
 const showFloatingToolbar = ref(false)
 const floatingToolbarTimer = ref<ReturnType<typeof setTimeout> | null>(null)
@@ -460,13 +521,13 @@ const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
 
 // Word count state
 const wordCount = computed(() => {
-  if (!editorContent.value) return 0
-  return getWordCount(editorContent.value.innerHTML)
+  const content = htmlContent.value || editorContent.value?.innerHTML || ''
+  return getWordCount(content)
 })
 
 const characterCount = computed(() => {
-  if (!editorContent.value) return 0
-  return getCharacterCount(editorContent.value.innerHTML)
+  const content = htmlContent.value || editorContent.value?.innerHTML || ''
+  return getCharacterCount(content)
 })
 
 // History state
@@ -1334,6 +1395,7 @@ const buildPreview = (html: string) => {
 const captureSnapshot = (emitUpdate = true) => {
   if (!editorContent.value || isApplyingHistory.value) return
   const html = editorContent.value.innerHTML
+  htmlContent.value = html // Store HTML for preview mode
   const preview = buildPreview(html)
   const current = history.value[historyIndex.value]
   if (current && current.html === html) {
@@ -1886,6 +1948,7 @@ watch(
     if (editorContent.value.innerHTML !== newValue) {
       isApplyingHistory.value = true
       applySanitizedContent(newValue)
+      htmlContent.value = newValue // Update stored HTML
       nextTick(() => {
         isApplyingHistory.value = false
         captureSnapshot(false)
@@ -2497,6 +2560,246 @@ onBeforeUnmount(() => {
 }
 
 /* Theme toggle specific styles */
+.toolbar-btn-modern.theme-toggle {
+  font-size: 18px;
+}
+
+/* View Mode Toggle Styles */
+.view-mode-group {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--editor-border);
+  border-radius: 6px;
+}
+
+.view-mode-btn {
+  min-width: 36px;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--toolbar-text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.view-mode-btn:hover {
+  background: var(--toolbar-hover);
+}
+
+.view-mode-btn.active {
+  background: var(--editor-bg);
+  color: var(--toolbar-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.view-mode-btn:focus {
+  outline: 2px solid var(--toolbar-accent);
+  outline-offset: 2px;
+}
+
+/* Tooltips for view mode buttons */
+.view-mode-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.view-mode-btn[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* Editor Container with Split View */
+.editor-container {
+  display: flex;
+  gap: 0;
+  position: relative;
+  border-top: 1px solid var(--editor-border);
+}
+
+.editor-container.view-mode-code {
+  display: block;
+}
+
+.editor-container.view-mode-split {
+  display: flex;
+}
+
+.editor-container.view-mode-preview {
+  display: block;
+}
+
+.editor-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.split-divider {
+  width: 1px;
+  background: var(--editor-border);
+  flex-shrink: 0;
+}
+
+.preview-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--editor-bg);
+}
+
+.preview-header {
+  padding: 8px 16px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--editor-border);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--toolbar-text);
+}
+
+.preview-content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--content-color);
+}
+
+.preview-content-wrapper .empty-preview {
+  color: var(--placeholder-color);
+  font-style: italic;
+}
+
+/* Preview content styling (matches editor content) */
+.preview-content-wrapper :deep(h1),
+.preview-content-wrapper :deep(h2),
+.preview-content-wrapper :deep(h3),
+.preview-content-wrapper :deep(h4),
+.preview-content-wrapper :deep(h5),
+.preview-content-wrapper :deep(h6) {
+  margin: 18px 0 10px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.preview-content-wrapper :deep(h1) {
+  font-size: 2.2em;
+}
+
+.preview-content-wrapper :deep(h2) {
+  font-size: 1.8em;
+}
+
+.preview-content-wrapper :deep(h3) {
+  font-size: 1.4em;
+}
+
+.preview-content-wrapper :deep(p) {
+  margin: 10px 0;
+}
+
+.preview-content-wrapper :deep(ul),
+.preview-content-wrapper :deep(ol) {
+  margin: 12px 0;
+  padding-left: 26px;
+}
+
+.preview-content-wrapper :deep(li) {
+  margin: 4px 0;
+}
+
+.preview-content-wrapper :deep(a) {
+  color: var(--toolbar-accent);
+  text-decoration: underline;
+}
+
+.preview-content-wrapper :deep(a):hover {
+  color: #1d4ed8;
+}
+
+.preview-content-wrapper :deep(img) {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 16px 0;
+  border-radius: 6px;
+}
+
+.preview-content-wrapper :deep(code) {
+  background: var(--code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+.preview-content-wrapper :deep(pre) {
+  background: var(--code-bg);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.preview-content-wrapper :deep(pre code) {
+  background: transparent;
+  padding: 0;
+}
+
+.preview-content-wrapper :deep(blockquote) {
+  margin: 16px 0;
+  padding: 12px 20px;
+  border-left: 4px solid var(--toolbar-accent);
+  background: rgba(59, 130, 246, 0.05);
+  font-style: italic;
+}
+
+.preview-content-wrapper :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+}
+
+.preview-content-wrapper :deep(table th),
+.preview-content-wrapper :deep(table td) {
+  border: 1px solid var(--editor-border);
+  padding: 10px;
+  text-align: left;
+}
+
+.preview-content-wrapper :deep(table th) {
+  background: var(--toolbar-bg);
+  font-weight: 600;
+}
+
+.preview-content-wrapper :deep(hr) {
+  border: none;
+  border-top: 2px solid var(--editor-border);
+  margin: 24px 0;
+}
+
 .toolbar-btn-modern.theme-toggle {
   font-size: 18px;
 }
