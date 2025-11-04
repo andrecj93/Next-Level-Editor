@@ -57,6 +57,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
+    "@types/jsdom": "^27.0.0",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^20.10.0",
     "@types/prismjs": "^1.26.5",
