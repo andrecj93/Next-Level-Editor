@@ -2553,6 +2553,30 @@ onBeforeUnmount(() => {
   transform: rotate(180deg);
 }
 
+/* Tooltips for dropdown triggers */
+.dropdown-trigger[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.dropdown-trigger[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 4px);
