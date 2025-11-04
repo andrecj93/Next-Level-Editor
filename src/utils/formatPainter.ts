@@ -3,6 +3,12 @@
  * Allows copying formatting from one text selection and applying it to another
  */
 
+// Constants
+const NORMAL_FONT_WEIGHT = '400'
+const NORMAL_FONT_STYLE = 'normal'
+const NO_TEXT_DECORATION = 'none'
+const TRANSPARENT_BG = 'rgba(0, 0, 0, 0)'
+
 export interface CopiedFormat {
   styles: {
     fontWeight?: string
@@ -86,15 +92,15 @@ export function pasteFormat(
   const span = document.createElement('span')
 
   // Apply inline styles
-  if (copiedFormat.styles.fontWeight && copiedFormat.styles.fontWeight !== '400') {
+  if (copiedFormat.styles.fontWeight && copiedFormat.styles.fontWeight !== NORMAL_FONT_WEIGHT) {
     span.style.fontWeight = copiedFormat.styles.fontWeight
   }
-  if (copiedFormat.styles.fontStyle && copiedFormat.styles.fontStyle !== 'normal') {
+  if (copiedFormat.styles.fontStyle && copiedFormat.styles.fontStyle !== NORMAL_FONT_STYLE) {
     span.style.fontStyle = copiedFormat.styles.fontStyle
   }
   if (
     copiedFormat.styles.textDecoration &&
-    copiedFormat.styles.textDecoration !== 'none'
+    copiedFormat.styles.textDecoration !== NO_TEXT_DECORATION
   ) {
     span.style.textDecoration = copiedFormat.styles.textDecoration
   }
@@ -103,7 +109,7 @@ export function pasteFormat(
   }
   if (
     copiedFormat.styles.backgroundColor &&
-    copiedFormat.styles.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+    copiedFormat.styles.backgroundColor !== TRANSPARENT_BG &&
     copiedFormat.styles.backgroundColor !== 'transparent'
   ) {
     span.style.backgroundColor = copiedFormat.styles.backgroundColor

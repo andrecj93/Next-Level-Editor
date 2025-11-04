@@ -3,6 +3,10 @@
  * Page breaks and table of contents functionality
  */
 
+// Constants
+const MAX_HEADING_ID_LENGTH = 50
+const TOC_INDENT_PX = 20
+
 /**
  * Inserts a page break at the current cursor position
  * @param editor - The editor element
@@ -73,7 +77,7 @@ export function generateTableOfContents(editor: HTMLElement): TocItem[] {
         .toLowerCase()
         .replace(/[^\w\s-]/g, '')
         .replace(/\s+/g, '-')
-        .substring(0, 50)}`
+        .substring(0, MAX_HEADING_ID_LENGTH)}`
       element.id = id
     }
 
@@ -101,7 +105,7 @@ export function generateTocHtml(tocItems: TocItem[]): string {
   let html = '<nav class="table-of-contents"><h2>Table of Contents</h2><ul>'
 
   tocItems.forEach((item) => {
-    const indent = (item.level - 1) * 20
+    const indent = (item.level - 1) * TOC_INDENT_PX
     html += `<li style="margin-left: ${indent}px;"><a href="#${item.id}">${item.text}</a></li>`
   })
 
