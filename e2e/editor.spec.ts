@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Next Level Editor - Basic Functionality', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -36,7 +36,7 @@ test.describe('Next Level Editor - Basic Functionality', () => {
 
 test.describe('Next Level Editor - Formatting', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -124,7 +124,7 @@ test.describe('Next Level Editor - Formatting', () => {
 
 test.describe('Next Level Editor - Headings', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -170,7 +170,7 @@ test.describe('Next Level Editor - Headings', () => {
 
 test.describe('Next Level Editor - Lists', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -214,7 +214,7 @@ test.describe('Next Level Editor - Lists', () => {
 
 test.describe('Next Level Editor - Undo/Redo', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -255,7 +255,7 @@ test.describe('Next Level Editor - Undo/Redo', () => {
 
 test.describe('Next Level Editor - Context Menu', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -288,7 +288,7 @@ test.describe('Next Level Editor - Context Menu', () => {
 
 test.describe('Next Level Editor - Floating Toolbar', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -311,7 +311,7 @@ test.describe('Next Level Editor - Floating Toolbar', () => {
 
 test.describe('Next Level Editor - Theme Toggle', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -334,7 +334,7 @@ test.describe('Next Level Editor - Theme Toggle', () => {
 
 test.describe('Next Level Editor - Font Size', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -364,7 +364,7 @@ test.describe('Next Level Editor - Font Size', () => {
 
 test.describe('Next Level Editor - Enter Key', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
   })
 

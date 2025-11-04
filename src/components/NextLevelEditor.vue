@@ -110,32 +110,13 @@
 
       <!-- Font Size Dropdown -->
       <div class="toolbar-divider" />
-      <div class="toolbar-dropdown">
-        <button
-          class="dropdown-trigger"
-          :class="{ open: showFontSizeDropdown }"
-          data-tooltip="Font size"
-          @mousedown.prevent="rememberSelection"
-          @click.stop="showFontSizeDropdown = !showFontSizeDropdown"
-        >
-          <span class="dropdown-icon">Aa</span>
-          <span class="dropdown-label">Size</span>
-          <span class="dropdown-arrow">▼</span>
-        </button>
-        <transition name="dropdown-fade">
-          <div
-            v-if="showFontSizeDropdown"
-            class="dropdown-menu"
-            @click.stop
-          >
-            <div class="font-size-wrapper">
-              <FontSizeSelector
-                v-model="fontSize"
-                @update:model-value="handleFontSize"
-              />
-            </div>
-          </div>
-        </transition>
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Size"
+          icon="Aa"
+          tooltip="Font size"
+          :items="fontSizeDropdownItems"
+        />
       </div>
 
       <!-- History Controls (Undo/Redo) -->
@@ -409,7 +390,6 @@ import { useTheme } from '../composables/useTheme'
 import { useAutoSave } from '../composables/useAutoSave'
 import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
-import FontSizeSelector from './FontSizeSelector.vue'
 import TableModal from './TableModal.vue'
 import FindReplaceModal from './FindReplaceModal.vue'
 import CodeBlockModal from './CodeBlockModal.vue'
@@ -507,7 +487,6 @@ const floatingToolbarTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 // Dropdown states for modern toolbar
 const showColorsDropdown = ref(false)
-const showFontSizeDropdown = ref(false)
 
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
@@ -1224,6 +1203,33 @@ const alignmentDropdownItems = computed(() => [
   },
 ])
 
+const fontSizeDropdownItems = computed(() => [
+  {
+    id: 'size-small',
+    label: 'Small',
+    onClick: () => handleFontSize('small'),
+    isActive: () => fontSize.value === 'small',
+  },
+  {
+    id: 'size-normal',
+    label: 'Normal',
+    onClick: () => handleFontSize('normal'),
+    isActive: () => fontSize.value === 'normal',
+  },
+  {
+    id: 'size-large',
+    label: 'Large',
+    onClick: () => handleFontSize('large'),
+    isActive: () => fontSize.value === 'large',
+  },
+  {
+    id: 'size-huge',
+    label: 'Huge',
+    onClick: () => handleFontSize('huge'),
+    isActive: () => fontSize.value === 'huge',
+  },
+])
+
 const listActions = computed(() => [
   {
     id: 'bullet-list',
@@ -1861,9 +1867,42 @@ const handleKeydown = (event: KeyboardEvent) => {
         currentBlock.parentNode?.appendChild(newParagraph)
       }
     } else {
-      // No block element found - insert a new paragraph at cursor position
-      newParagraph.innerHTML = '<br>'
-      range.insertNode(newParagraph)
+      // No block element found - we need to wrap existing content and create a new paragraph
+      if (!editorContent.value) return
+      
+      try {
+        // Extract content before cursor
+        const beforeRange = document.createRange()
+        beforeRange.setStart(editorContent.value, 0)
+        beforeRange.setEnd(range.startContainer, range.startOffset)
+        const beforeContent = beforeRange.extractContents()
+        
+        // Extract content after cursor
+        const afterRange = document.createRange()
+        afterRange.setStart(range.startContainer, range.startOffset)
+        afterRange.setEnd(editorContent.value, editorContent.value.childNodes.length)
+        const afterContent = afterRange.extractContents()
+        
+        // Create first paragraph with content before cursor
+        const firstParagraph = document.createElement('p')
+        populateNewElement(firstParagraph, beforeContent)
+        
+        // Create second paragraph with content after cursor
+        populateNewElement(newParagraph, afterContent)
+        
+        // Insert both paragraphs
+        editorContent.value.appendChild(firstParagraph)
+        editorContent.value.appendChild(newParagraph)
+      } catch (error) {
+        // If range manipulation fails, fall back to simple paragraph insertion
+        console.error('Error handling Enter key:', error)
+        newParagraph.innerHTML = '<br>'
+        if (editorContent.value.lastChild) {
+          editorContent.value.insertBefore(newParagraph, editorContent.value.lastChild.nextSibling)
+        } else {
+          editorContent.value.appendChild(newParagraph)
+        }
+      }
     }
     
     // Move cursor to the beginning of the new paragraph
@@ -2913,9 +2952,6 @@ onBeforeUnmount(() => {
   margin-bottom: 0;
 }
 
-.font-size-wrapper {
-  padding: 4px;
-}
 
 .dropdown-fade-enter-active,
 .dropdown-fade-leave-active {

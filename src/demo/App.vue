@@ -232,10 +232,12 @@ const tabs = [
   { id: 'docs', label: 'Documentation', icon: '📚' }
 ]
 
-// Use the showcase template as default
+// Use the showcase template as default, unless 'empty' query param is present
 const templates = exampleTemplates
 const selectedTemplate = ref('showcase')
-const content = ref(getDefaultTemplate().content)
+const urlParams = new URLSearchParams(window.location.search)
+const startEmpty = urlParams.get('empty') === 'true'
+const content = ref(startEmpty ? '' : getDefaultTemplate().content)
 
 const loadTemplate = () => {
   const template = getTemplateById(selectedTemplate.value)
