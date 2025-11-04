@@ -19,7 +19,7 @@ export interface EditorCommand {
 export function getWordCount(html: string): number {
   const temp = document.createElement('div')
   temp.innerHTML = html
-  const text = temp.innerText || ''
+  const text = temp.innerText || temp.textContent || ''
   const words = text.trim().split(/\s+/).filter(Boolean)
   return words.length
 }
@@ -32,7 +32,7 @@ export function getWordCount(html: string): number {
 export function getCharacterCount(html: string): number {
   const temp = document.createElement('div')
   temp.innerHTML = html
-  const text = temp.innerText || ''
+  const text = temp.innerText || temp.textContent || ''
   return text.length
 }
 
@@ -44,7 +44,7 @@ export function getCharacterCount(html: string): number {
 export function getCharacterCountWithoutSpaces(html: string): number {
   const temp = document.createElement('div')
   temp.innerHTML = html
-  const text = temp.innerText || ''
+  const text = temp.innerText || temp.textContent || ''
   return text.replace(/\s/g, '').length
 }
 
