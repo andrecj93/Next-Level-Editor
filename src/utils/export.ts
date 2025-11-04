@@ -40,7 +40,7 @@ export function formatHtml(html: string, indentSize: number = 2): string {
 
     if (node.nodeType === Node.TEXT_NODE) {
       const text = (node.textContent || '').trim()
-      return text ? text + ' ' : ''
+      return text
     }
 
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -225,8 +225,11 @@ export function downloadFile(content: string, filename: string, mimeType: string
  * @param prettify - Whether to format the HTML with indentation (default: true)
  */
 export function exportAsHtml(html: string, filename: string = 'document.html', prettify: boolean = true) {
+  const BODY_INDENT = '  ' // 2 spaces to match formatHtml default
   const bodyContent = prettify ? formatHtml(html) : html
-  const formattedBody = prettify ? bodyContent.split('\n').map(line => `  ${line}`).join('\n') : bodyContent
+  const formattedBody = prettify 
+    ? bodyContent.split('\n').map(line => line ? `${BODY_INDENT}${line}` : '').join('\n') 
+    : bodyContent
   
   const fullHtml = `<!DOCTYPE html>
 <html lang="en">
