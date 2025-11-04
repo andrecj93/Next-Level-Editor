@@ -38,6 +38,26 @@
             Try all the features! Type <code>/</code> for slash commands, select text to see the floating toolbar, 
             or press <kbd>Ctrl+F</kbd> to search. Click the theme toggle to switch to dark mode.
           </p>
+          
+          <!-- Template Selector -->
+          <div class="template-selector">
+            <label for="template-select">📋 Load Example:</label>
+            <select
+              id="template-select"
+              v-model="selectedTemplate"
+              class="template-dropdown"
+              @change="loadTemplate"
+            >
+              <option
+                v-for="template in templates"
+                :key="template.id"
+                :value="template.id"
+              >
+                {{ template.icon }} {{ template.name }} - {{ template.description }}
+              </option>
+            </select>
+          </div>
+
           <NextLevelEditor
             v-model="content"
             placeholder="Start typing your content here... Try typing / for quick commands!"
@@ -202,6 +222,7 @@ const content = ref('&lt;p&gt;Hello World!&lt;/p&gt;')
 import { ref } from 'vue'
 import NextLevelEditor from '../components/NextLevelEditor.vue'
 import FeatureShowcase from './FeatureShowcase.vue'
+import { exampleTemplates, getTemplateById, getDefaultTemplate } from './examples/exampleTemplates'
 
 const activeTab = ref('editor')
 
@@ -211,7 +232,17 @@ const tabs = [
   { id: 'docs', label: 'Documentation', icon: '📚' }
 ]
 
-const content = ref('<h2>Welcome to Next Level Editor!</h2><p>This is a <strong>powerful</strong> and <em>beautiful</em> WYSIWYG editor for Vue.js with modern features.</p><h3>✨ Key Features</h3><ul><li><strong>Modern Toolbar</strong> - CKEditor-inspired design with dropdown menus</li><li><strong>Code Blocks</strong> - Syntax highlighting for 22 languages</li><li><strong>Rich Media</strong> - Images, videos, emojis, and tables</li><li><strong>Dark Mode</strong> - Beautiful theme switching</li><li><strong>Auto-Save</strong> - Never lose your work</li></ul><h3>🚀 Try These</h3><p>Select this text to see the <strong>floating toolbar</strong>! Or type <code>/</code> to open <strong>slash commands</strong>. Press <kbd>Ctrl+F</kbd> to <strong>search and replace</strong>.</p>')
+// Use the showcase template as default
+const templates = exampleTemplates
+const selectedTemplate = ref('showcase')
+const content = ref(getDefaultTemplate().content)
+
+const loadTemplate = () => {
+  const template = getTemplateById(selectedTemplate.value)
+  if (template) {
+    content.value = template.content
+  }
+}
 
 const handleFocus = () => {
   console.log('Editor focused')
@@ -372,6 +403,51 @@ body {
   font-size: 13px;
   color: #667eea;
   font-weight: 600;
+}
+
+.template-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8f9fb;
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+}
+
+.template-selector label {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.template-dropdown {
+  flex: 1;
+  padding: 10px 16px;
+  border: 2px solid #d8dde6;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.template-dropdown:hover {
+  border-color: #667eea;
+}
+
+.template-dropdown:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.template-dropdown option {
+  padding: 10px;
 }
 
 .output-grid {
