@@ -26,37 +26,38 @@ vi.mock('html-docx-js-typescript', () => ({
 }))
 
 describe('PDF and Word Export Tests', () => {
-  describe('exportAsPdf', () => {
-    beforeEach(() => {
-      // Mock document methods
-      vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as any)
-      vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as any)
-      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
-      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+  // Shared setup for both test suites
+  beforeEach(() => {
+    // Mock document methods
+    vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as any)
+    vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as any)
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    
+    // Mock link click
+    const mockClick = vi.fn()
+    vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+      const element = {
+        style: {},
+        innerHTML: '',
+        click: mockClick,
+        href: '',
+        download: '',
+      } as any
       
-      // Mock link click
-      const mockClick = vi.fn()
-      vi.spyOn(document, 'createElement').mockImplementation((tag) => {
-        const element = {
-          style: {},
-          innerHTML: '',
-          click: mockClick,
-          href: '',
-          download: '',
-        } as any
-        
-        if (tag === 'a') {
-          element.click = mockClick
-        }
-        
-        return element
-      })
+      if (tag === 'a') {
+        element.click = mockClick
+      }
+      
+      return element
     })
+  })
 
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
 
+  describe('exportAsPdf', () => {
     it('exports PDF with default filename', async () => {
       const mockElement = document.createElement('div')
       mockElement.innerHTML = '<p>Test content</p>'
@@ -73,31 +74,6 @@ describe('PDF and Word Export Tests', () => {
   })
 
   describe('exportAsWord', () => {
-    beforeEach(() => {
-      // Mock document methods
-      vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as any)
-      vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as any)
-      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
-      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
-      
-      const mockClick = vi.fn()
-      vi.spyOn(document, 'createElement').mockImplementation((tag) => {
-        if (tag === 'a') {
-          return {
-            href: '',
-            download: '',
-            click: mockClick,
-            style: {},
-          } as any
-        }
-        return document.createElement(tag)
-      })
-    })
-
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
     it('exports Word with default filename', async () => {
       const html = '<p>Test content</p>'
       

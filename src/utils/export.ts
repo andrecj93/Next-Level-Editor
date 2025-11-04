@@ -94,12 +94,12 @@ export function htmlToMarkdown(html: string): string {
 
 /**
  * Download content as a file
- * @param content - Content to download
+ * @param content - Content to download (string or Blob)
  * @param filename - Name of the file
- * @param mimeType - MIME type of the file
+ * @param mimeType - MIME type of the file (only used when content is a string)
  */
-export function downloadFile(content: string, filename: string, mimeType: string = 'text/plain') {
-  const blob = new Blob([content], { type: mimeType })
+export function downloadFile(content: string | Blob, filename: string, mimeType: string = 'text/plain') {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -169,22 +169,6 @@ ${html}
 export function exportAsMarkdown(html: string, filename: string = 'document.md') {
   const markdown = htmlToMarkdown(html)
   downloadFile(markdown, filename, 'text/markdown')
-}
-
-/**
- * Download blob as a file
- * @param blob - Blob to download
- * @param filename - Name of the file
- */
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
 }
 
 /**
@@ -306,7 +290,7 @@ ${html}
     const blob = await asBlob(fullHtml)
     
     // Download the blob
-    downloadBlob(blob, filename)
+    downloadFile(blob, filename)
   } catch (error) {
     console.error('Error exporting Word document:', error)
     throw error
