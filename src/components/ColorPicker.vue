@@ -1,5 +1,5 @@
 <template>
-  <div class="color-picker">
+  <div class="color-picker-wrapper">
     <button
       class="color-button"
       :style="{ backgroundColor: modelValue || '#000000' }"
@@ -12,39 +12,33 @@
     <transition name="picker-fade">
       <div
         v-if="showPicker"
-        class="color-palette"
+        class="color-picker-container"
         @click.stop
       >
-        <div class="palette-header">
+        <div class="color-picker-label">
           {{ label }}
         </div>
-        <div class="palette-colors">
-          <button
-            v-for="color in colors"
-            :key="color"
-            class="palette-color"
-            :class="{ active: modelValue === color }"
-            :style="{ backgroundColor: color }"
-            :aria-label="`Select color ${color}`"
-            @click="selectColor(color)"
-          />
-        </div>
-        <div class="palette-custom">
-          <input
-            type="color"
-            :value="modelValue || '#000000'"
-            aria-label="Custom color picker"
-            @input="onCustomColor"
-          >
-          <span class="custom-label">Custom</span>
-        </div>
+        <Vue3ColorPicker
+          v-model="internalColor"
+          mode="solid"
+          type="HEX"
+          :theme="theme"
+          :show-color-list="false"
+          :show-eye-drop="false"
+          :show-alpha="true"
+          :show-input-menu="true"
+          :show-input-set="true"
+          :show-picker-mode="false"
+          :show-buttons="false"
+        />
       </div>
     </transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { Vue3ColorPicker } from '@cyhnkckali/vue3-color-picker'
 
 interface Props {
   modelValue?: string
@@ -56,7 +50,7 @@ interface Emits {
   (e: 'update:modelValue', value: string): void
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   modelValue: '#000000',
   label: 'Color',
   icon: '🎨'
@@ -65,32 +59,38 @@ withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const showPicker = ref(false)
+const internalColor = ref(props.modelValue || '#000000')
 
-const colors = [
-  '#000000', '#3f3f3f', '#7f7f7f', '#bfbfbf', '#ffffff',
-  '#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff',
-  '#4b0082', '#9400d3', '#ff1493', '#00ced1', '#ff6347',
-  '#dc143c', '#ff8c00', '#ffd700', '#32cd32', '#1e90ff',
-  '#9370db', '#ff69b4', '#ff4500', '#ffa500', '#ffff66',
-]
+// Watch for external changes to modelValue
+watch(() => props.modelValue, (newValue) => {
+  if (newValue && newValue !== internalColor.value) {
+    internalColor.value = newValue
+  }
+})
+
+// Watch for internal color changes and emit
+watch(internalColor, (newColor) => {
+  if (newColor !== props.modelValue) {
+    emit('update:modelValue', newColor)
+  }
+})
+
+// Detect theme from the editor
+const theme = computed(() => {
+  const editorElement = document.querySelector('.next-level-editor')
+  return editorElement?.classList.contains('theme-dark') ? 'dark' : 'light'
+})
 
 const togglePicker = () => {
   showPicker.value = !showPicker.value
-}
-
-const selectColor = (color: string) => {
-  emit('update:modelValue', color)
-  showPicker.value = false
-}
-
-const onCustomColor = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  emit('update:modelValue', target.value)
+  if (showPicker.value) {
+    internalColor.value = props.modelValue || '#000000'
+  }
 }
 
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  if (!target.closest('.color-picker')) {
+  if (!target.closest('.color-picker-wrapper')) {
     showPicker.value = false
   }
 }
@@ -105,7 +105,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.color-picker {
+.color-picker-wrapper {
   position: relative;
   display: inline-block;
 }
@@ -132,74 +132,26 @@ onBeforeUnmount(() => {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
-.color-palette {
+.color-picker-container {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
   z-index: 100;
-  background: white;
-  border: 1px solid #d8dde6;
+  background: var(--editor-bg, white);
+  border: 1px solid var(--editor-border, #d8dde6);
   border-radius: var(--radius-lg, 10px);
   box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
   padding: 12px;
-  min-width: 220px;
+  min-width: 280px;
 }
 
-.palette-header {
+.color-picker-label {
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 8px;
-  color: #1f2937;
-}
-
-.palette-colors {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
   margin-bottom: 12px;
-}
-
-.palette-color {
-  width: 32px;
-  height: 32px;
-  border: 2px solid transparent;
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  transition: all var(--transition-fast, 150ms) ease;
-  padding: 0;
-}
-
-.palette-color:hover {
-  transform: scale(1.1);
-  border-color: #3b82f6;
-}
-
-.palette-color.active {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-.palette-custom {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.palette-custom input[type="color"] {
-  width: 40px;
-  height: 32px;
-  border: none;
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-}
-
-.custom-label {
-  font-size: 13px;
-  color: #6b7280;
+  color: var(--toolbar-text, #1f2937);
 }
 
 .picker-fade-enter-active,
