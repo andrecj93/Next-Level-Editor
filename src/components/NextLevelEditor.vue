@@ -1,9 +1,26 @@
 <template>
   <div :class="['next-level-editor', themeClass, { fullscreen: isFullScreen }]">
+    <!-- Context Hints (Smart Toolbar Feature) -->
+    <div
+      v-if="getContextHints().length > 0"
+      class="context-hints"
+    >
+      <span
+        v-for="(hint, index) in getContextHints()"
+        :key="index"
+        class="context-hint"
+      >
+        💡 {{ hint }}
+      </span>
+    </div>
+
     <!-- Modern Horizontal Toolbar -->
     <div class="editor-toolbar-modern">
       <!-- Format Dropdown -->
-      <div @mousedown.prevent="rememberSelection">
+      <div
+        v-if="isToolbarSectionVisible('format')"
+        @mousedown.prevent="rememberSelection"
+      >
         <ToolbarDropdown
           label="Format"
           icon="¶"
@@ -13,60 +30,68 @@
       </div>
 
       <!-- Text Formatting (Inline Buttons) -->
-      <div class="toolbar-divider" />
-      <div class="toolbar-group">
-        <button
-          v-for="action in inlineFormatActions"
-          :key="action.id"
-          :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
-          :data-tooltip="action.tooltip"
-          :aria-label="action.label"
-          :aria-pressed="action.isActive?.() || false"
-          @mousedown.prevent="rememberSelection"
-          @click="action.onClick"
-        >
-          <span v-html="action.icon" />
-        </button>
-      </div>
+      <template v-if="isToolbarSectionVisible('textFormatting')">
+        <div class="toolbar-divider" />
+        <div class="toolbar-group">
+          <button
+            v-for="action in inlineFormatActions"
+            :key="action.id"
+            :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
+            :data-tooltip="action.tooltip"
+            :aria-label="action.label"
+            :aria-pressed="action.isActive?.() || false"
+            @mousedown.prevent="rememberSelection"
+            @click="action.onClick"
+          >
+            <span v-html="action.icon" />
+          </button>
+        </div>
+      </template>
 
       <!-- Alignment Dropdown -->
-      <div class="toolbar-divider" />
-      <div @mousedown.prevent="rememberSelection">
-        <ToolbarDropdown
-          label="Align"
-          icon="☰"
-          tooltip="Text alignment"
-          :items="alignmentDropdownItems"
-        />
-      </div>
+      <template v-if="isToolbarSectionVisible('alignment')">
+        <div class="toolbar-divider" />
+        <div @mousedown.prevent="rememberSelection">
+          <ToolbarDropdown
+            label="Align"
+            icon="☰"
+            tooltip="Text alignment"
+            :items="alignmentDropdownItems"
+          />
+        </div>
+      </template>
 
       <!-- Lists (Inline Buttons) -->
-      <div class="toolbar-divider" />
-      <div class="toolbar-group">
-        <button
-          v-for="action in listActions"
-          :key="action.id"
-          :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
-          :data-tooltip="action.tooltip"
-          :aria-label="action.label"
-          :aria-pressed="action.isActive?.() || false"
-          @mousedown.prevent="rememberSelection"
-          @click="action.onClick"
-        >
-          <span v-html="action.icon" />
-        </button>
-      </div>
+      <template v-if="isToolbarSectionVisible('lists')">
+        <div class="toolbar-divider" />
+        <div class="toolbar-group">
+          <button
+            v-for="action in listActions"
+            :key="action.id"
+            :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
+            :data-tooltip="action.tooltip"
+            :aria-label="action.label"
+            :aria-pressed="action.isActive?.() || false"
+            @mousedown.prevent="rememberSelection"
+            @click="action.onClick"
+          >
+            <span v-html="action.icon" />
+          </button>
+        </div>
+      </template>
 
       <!-- Insert Dropdown -->
-      <div class="toolbar-divider" />
-      <div @mousedown.prevent="rememberSelection">
-        <ToolbarDropdown
-          label="Insert"
-          icon="+"
-          tooltip="Insert content"
-          :items="insertDropdownItems"
-        />
-      </div>
+      <template v-if="isToolbarSectionVisible('insert')">
+        <div class="toolbar-divider" />
+        <div @mousedown.prevent="rememberSelection">
+          <ToolbarDropdown
+            label="Insert"
+            icon="+"
+            tooltip="Insert content"
+            :items="insertDropdownItems"
+          />
+        </div>
+      </template>
 
       <!-- Colors Dropdown -->
       <div class="toolbar-divider" />
@@ -444,6 +469,7 @@ import {
 import { exportAsHtml, exportAsMarkdown, exportAsPdf, formatHtml, exportAsWord } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
 import { useAutoSave } from '../composables/useAutoSave'
+import { useSmartToolbar } from '../composables/useSmartToolbar'
 import { copyFormat, pasteFormat, hasFormatCopied } from '../utils/formatPainter'
 import { insertPageBreak, insertTableOfContents } from '../utils/pageManagement'
 import { toggleSpellCheck, enableSpellCheck } from '../utils/spellChecker'
@@ -550,6 +576,13 @@ const {
   closeCommandPalette,
   addToRecent,
 } = useCommandPalette()
+
+// Smart Toolbar
+const {
+  updateContext: updateToolbarContext,
+  isVisible: isToolbarSectionVisible,
+  getContextHints
+} = useSmartToolbar()
 
 // Format painter state
 const formatPainterActive = ref(false)
@@ -2537,6 +2570,13 @@ const checkForTableSelection = () => {
 const onSelectionChange = () => {
   updateFloatingToolbar()
   checkForTableSelection()
+  
+  // Update smart toolbar context
+  nextTick(() => {
+    if (editorContent.value) {
+      updateToolbarContext(editorContent.value)
+    }
+  })
 }
 
 // Lifecycle and watchers
@@ -2633,6 +2673,29 @@ onBeforeUnmount(() => {
   --history-bg: rgba(96, 165, 250, 0.12);
   --history-active: #60a5fa;
   --checklist-border: #334155;
+}
+
+/* Context Hints (Smart Toolbar) */
+.context-hints {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--editor-border);
+  font-size: 12px;
+  color: var(--toolbar-text);
+  flex-wrap: wrap;
+}
+
+.context-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--history-bg);
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .editor-toolbar {

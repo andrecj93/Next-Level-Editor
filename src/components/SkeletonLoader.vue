@@ -66,8 +66,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-
 interface Props {
   variant?: 'editor' | 'modal' | 'dropdown' | 'table' | 'card' | 'text'
   lines?: number
@@ -76,7 +74,7 @@ interface Props {
   columns?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   variant: 'text',
   lines: 10,
   items: 5,
