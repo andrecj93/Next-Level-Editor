@@ -996,10 +996,10 @@ const handleCopyFormat = () => {
 const handlePasteFormat = () => {
   if (!editorContent.value) return
   const selection = window.getSelection()
-  const success = pasteFormat(editorContent.value, selection)
+  const success = pasteFormat(selection)
   if (success) {
     formatPainterActive.value = false
-    updateContent()
+    captureSnapshot()
   }
 }
 
@@ -1015,7 +1015,7 @@ const closeTemplateModal = () => {
 const handleSelectTemplate = (template: any) => {
   if (editorContent.value) {
     editorContent.value.innerHTML = template.content
-    updateContent()
+    captureSnapshot()
   }
 }
 
@@ -1023,15 +1023,15 @@ const handleSelectTemplate = (template: any) => {
 const handleInsertPageBreak = () => {
   if (!editorContent.value) return
   const selection = window.getSelection()
-  insertPageBreak(editorContent.value, selection)
-  updateContent()
+  insertPageBreak(selection)
+  captureSnapshot()
 }
 
 const handleInsertTOC = () => {
   if (!editorContent.value) return
   const selection = window.getSelection()
   insertTableOfContents(editorContent.value, selection)
-  updateContent()
+  captureSnapshot()
 }
 
 // Spell check actions

@@ -65,12 +65,10 @@ export function copyFormat(selection: Selection | null): CopiedFormat | null {
 
 /**
  * Applies the copied format to the current selection
- * @param editor - The editor element
  * @param selection - The browser selection object
  * @returns true if format was applied successfully
  */
 export function pasteFormat(
-  editor: HTMLElement,
   selection: Selection | null
 ): boolean {
   if (!copiedFormat || !selection || selection.rangeCount === 0) {

@@ -58,7 +58,7 @@ describe('Format Painter', () => {
 
   it('should return false when pasting without copied format', () => {
     clearCopiedFormat()
-    const result = pasteFormat(document.createElement('div'), null)
+    const result = pasteFormat(null)
     expect(result).toBe(false)
   })
 
@@ -132,7 +132,7 @@ describe('Format Painter', () => {
     selection?.removeAllRanges()
     selection?.addRange(newRange)
 
-    const result = pasteFormat(div, selection)
+    const result = pasteFormat(selection)
     expect(result).toBe(false)
 
     document.body.removeChild(div)

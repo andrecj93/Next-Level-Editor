@@ -112,7 +112,7 @@ describe('Page Management', () => {
       selection?.removeAllRanges()
       selection?.addRange(range)
 
-      insertPageBreak(editor, selection)
+      insertPageBreak(selection)
       
       const pageBreak = editor.querySelector('.page-break')
       expect(pageBreak).toBeTruthy()
@@ -126,7 +126,7 @@ describe('Page Management', () => {
       editor.contentEditable = 'true'
       editor.innerHTML = '<p>Test</p>'
 
-      insertPageBreak(editor, null)
+      insertPageBreak(null)
       
       const pageBreak = editor.querySelector('.page-break')
       expect(pageBreak).toBeFalsy()
@@ -146,7 +146,7 @@ describe('Page Management', () => {
       selection?.addRange(range)
 
       const initialLength = editor.children.length
-      insertPageBreak(editor, selection)
+      insertPageBreak(selection)
       
       // Should have added page break and a new paragraph
       expect(editor.children.length).toBeGreaterThan(initialLength)

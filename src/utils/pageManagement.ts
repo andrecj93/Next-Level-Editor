@@ -9,11 +9,9 @@ const TOC_INDENT_PX = 20
 
 /**
  * Inserts a page break at the current cursor position
- * @param editor - The editor element
  * @param selection - The browser selection object
  */
 export function insertPageBreak(
-  editor: HTMLElement,
   selection: Selection | null
 ): void {
   if (!selection || selection.rangeCount === 0) {
