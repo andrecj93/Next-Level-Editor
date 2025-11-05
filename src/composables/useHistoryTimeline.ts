@@ -293,7 +293,7 @@ export function useHistoryTimeline(options: TimelineOptions = {}) {
   })
 
   const timelineProgress = computed<number>(() => {
-    if (history.value.length === 0) {
+    if (history.value.length <= 1) {
       return 0
     }
     return (currentIndex.value / (history.value.length - 1)) * 100

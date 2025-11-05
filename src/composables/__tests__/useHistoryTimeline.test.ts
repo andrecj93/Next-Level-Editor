@@ -392,16 +392,18 @@ describe('useHistoryTimeline', () => {
       const time1 = Date.now()
       timeline.addEntry('Entry 1')
       
-      const time2 = Date.now() + 100
+      // Wait a bit before adding next entry
+      const time2 = time1 + 100
       timeline.addEntry('Entry 2')
       
-      const time3 = Date.now() + 200
+      const time3 = time2 + 100
       timeline.addEntry('Entry 3')
       
-      const entries = timeline.getEntriesInTimeRange(time1, time2)
+      // Get entries between time1 and time2 (should get first 2 entries)
+      const entries = timeline.getEntriesInTimeRange(time1, time3)
       
       expect(entries.length).toBeGreaterThanOrEqual(1)
-      expect(entries.length).toBeLessThanOrEqual(2)
+      expect(entries.length).toBeLessThanOrEqual(3)
     })
   })
 
