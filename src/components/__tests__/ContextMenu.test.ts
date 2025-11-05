@@ -189,4 +189,77 @@ describe('ContextMenu', () => {
     menuItem.click()
     expect(onClickFn).not.toHaveBeenCalled()
   })
+
+  it('should handle document clicks when menu is shown', async () => {
+    wrapper = mount(ContextMenu, {
+      props: {
+        ...defaultProps,
+        show: false,
+        items: [
+          { id: 'test', label: 'Test Item', icon: '📝', onClick: vi.fn() },
+        ],
+      },
+      attachTo: document.body,
+    })
+
+    // Change show to true to trigger the watch
+    await wrapper.setProps({ show: true })
+
+    // Wait for setTimeout to complete
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    // Simulate clicking on document
+    const clickEvent = new MouseEvent('click', { bubbles: true })
+    document.dispatchEvent(clickEvent)
+
+    // Wait for event to propagate
+    await wrapper.vm.$nextTick()
+
+    // Should have emitted close event
+    expect(wrapper.emitted('close')).toBeTruthy()
+  })
+
+  it('should add document click listener when show becomes true', async () => {
+    wrapper = mount(ContextMenu, {
+      props: {
+        ...defaultProps,
+        show: false,
+        items: [
+          { id: 'test', label: 'Test Item', icon: '📝', onClick: vi.fn() },
+        ],
+      },
+      attachTo: document.body,
+    })
+
+    // Change show to true
+    await wrapper.setProps({ show: true })
+
+    // Wait for setTimeout in watch to complete
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    // Document addEventListener should have been called
+    expect(document.addEventListener).toHaveBeenCalledWith('click', expect.any(Function))
+  })
+
+  it('should remove document click listener when show becomes false', async () => {
+    wrapper = mount(ContextMenu, {
+      props: {
+        ...defaultProps,
+        show: true,
+        items: [
+          { id: 'test', label: 'Test Item', icon: '📝', onClick: vi.fn() },
+        ],
+      },
+      attachTo: document.body,
+    })
+
+    // Wait for setTimeout
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    // Change show to false
+    await wrapper.setProps({ show: false })
+
+    // Document removeEventListener should have been called
+    expect(document.removeEventListener).toHaveBeenCalledWith('click', expect.any(Function))
+  })
 })
