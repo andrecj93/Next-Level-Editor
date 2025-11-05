@@ -608,12 +608,13 @@ const showColorsDropdown = ref(false)
 
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
-  async (content) => {
+  async (content: string, version: number) => {
     // Emit the content for parent to save
     emit('update:modelValue', content)
     console.log('Auto-saved at:', new Date().toLocaleTimeString())
+    return { success: true, serverVersion: version + 1 }
   },
-  2000 // 2 second delay
+  { delay: 2000 } // 2 second delay
 )
 
 // Word count state

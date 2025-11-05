@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useAutoSave } from '../useAutoSave'
-import type { ConflictInfo } from '../useAutoSave'
 
 describe('useAutoSave', () => {
   beforeEach(() => {
@@ -296,7 +295,7 @@ describe('useAutoSave', () => {
 
     it('should return "saving" while save in progress', async () => {
       let resolveCallback: (value: any) => void
-      const mockCallback = vi.fn(
+      const mockCallback = vi.fn<[string, number], Promise<{ success: boolean; serverVersion?: number }>>(
         () =>
           new Promise((resolve) => {
             resolveCallback = resolve

@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRefs } from 'vue'
+import { ref, toRefs } from 'vue'
 import { useVirtualScroll } from '../composables/useVirtualScroll'
 
 interface Props {
@@ -50,19 +50,22 @@ const props = withDefaults(defineProps<Props>(), {
 const { totalItems } = toRefs(props)
 const containerRef = ref<HTMLElement | null>(null)
 
-const {
-  visibleItems,
-  totalHeight,
-  offsetTop,
-  handleScroll: onScroll,
-  scrollToIndex,
-  scrollToTop,
-  scrollToBottom
-} = useVirtualScroll(totalItems, {
+const virtualScroll = useVirtualScroll(totalItems, {
   itemHeight: props.itemHeight,
   bufferSize: props.bufferSize,
   containerHeight: props.height
 })
+
+const {
+  visibleItems,
+  totalHeight,
+  offsetTop
+} = virtualScroll
+
+const onScroll = virtualScroll.handleScroll
+const scrollToIndex = virtualScroll.scrollToIndex
+const scrollToTop = virtualScroll.scrollToTop
+const scrollToBottom = virtualScroll.scrollToBottom
 
 function handleScroll(event: Event) {
   onScroll(event)

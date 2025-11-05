@@ -113,7 +113,6 @@ describe('VirtualScrollContainer', () => {
       })
 
       // Should render items with default buffer
-      const items = wrapper.findAll('.test-item')
       expect(wrapper.vm).toBeDefined()
     })
 
