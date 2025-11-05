@@ -1,9 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   generateTableOfContents,
   generateTocHtml,
   hasTableOfContents,
   insertPageBreak,
+  insertTableOfContents,
+  updateTableOfContents,
+  scrollToHeading,
 } from '../pageManagement'
 
 describe('Page Management', () => {
@@ -54,6 +57,14 @@ describe('Page Management', () => {
       expect(toc[0].id).toBe('custom-id')
     })
 
+    it('should truncate long heading IDs', () => {
+      const longText = 'a'.repeat(100)
+      editor.innerHTML = `<h1>${longText}</h1>`
+      const toc = generateTableOfContents(editor)
+      // ID includes prefix "heading-0-" plus truncated text
+      expect(toc[0].id.length).toBeLessThanOrEqual(65) // prefix + 50 char limit
+    })
+
     it('should generate HTML for TOC', () => {
       editor.innerHTML = `
         <h1>First</h1>
@@ -96,6 +107,86 @@ describe('Page Management', () => {
       expect(html).toContain('margin-left: 20px')
       expect(html).toContain('margin-left: 40px')
     })
+
+    it('should insert TOC at cursor position', () => {
+      editor.innerHTML = '<p>Some text</p><h1>Test Heading</h1>'
+      document.body.appendChild(editor)
+
+      const selection = window.getSelection()
+      const range = document.createRange()
+      const p = editor.querySelector('p')!
+      range.setStart(p, 0)
+      range.collapse(true)
+      selection?.removeAllRanges()
+      selection?.addRange(range)
+
+      insertTableOfContents(editor, selection)
+
+      expect(editor.querySelector('.table-of-contents')).toBeTruthy()
+
+      document.body.removeChild(editor)
+    })
+
+    it('should insert TOC at beginning when no selection', () => {
+      editor.innerHTML = '<h1>Test Heading</h1><p>Content</p>'
+      document.body.appendChild(editor)
+
+      insertTableOfContents(editor, null)
+
+      const firstChild = editor.firstChild as HTMLElement
+      expect(firstChild.classList?.contains('table-of-contents')).toBe(true)
+
+      document.body.removeChild(editor)
+    })
+
+    it('should update existing TOC', () => {
+      editor.innerHTML = `
+        <nav class="table-of-contents"><ul><li>Old TOC</li></ul></nav>
+        <h1>New Heading</h1>
+      `
+      document.body.appendChild(editor)
+
+      updateTableOfContents(editor)
+
+      const toc = editor.querySelector('.table-of-contents')
+      expect(toc).toBeTruthy()
+      expect(toc?.textContent).toContain('New Heading')
+
+      document.body.removeChild(editor)
+    })
+
+    it('should do nothing if no TOC exists when updating', () => {
+      editor.innerHTML = '<h1>Heading</h1>'
+      const originalHTML = editor.innerHTML
+
+      updateTableOfContents(editor)
+
+      expect(editor.innerHTML).toBe(originalHTML)
+    })
+
+    it('should scroll to heading smoothly', () => {
+      const heading = document.createElement('h1')
+      heading.id = 'test-heading'
+      heading.textContent = 'Test'
+      document.body.appendChild(heading)
+
+      const scrollIntoViewMock = vi.fn()
+      heading.scrollIntoView = scrollIntoViewMock
+
+      scrollToHeading('test-heading')
+
+      expect(scrollIntoViewMock).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'start',
+      })
+
+      document.body.removeChild(heading)
+    })
+
+    it('should do nothing when scrolling to non-existent heading', () => {
+      // Should not throw error
+      expect(() => scrollToHeading('non-existent')).not.toThrow()
+    })
   })
 
   describe('Page Break', () => {
@@ -132,6 +223,20 @@ describe('Page Management', () => {
       expect(pageBreak).toBeFalsy()
     })
 
+    it('should not insert page break when selection has no ranges', () => {
+      const editor = document.createElement('div')
+      editor.contentEditable = 'true'
+      editor.innerHTML = '<p>Test</p>'
+
+      const selection = window.getSelection()
+      selection?.removeAllRanges()
+
+      insertPageBreak(selection)
+      
+      const pageBreak = editor.querySelector('.page-break')
+      expect(pageBreak).toBeFalsy()
+    })
+
     it('should add paragraph after page break', () => {
       const editor = document.createElement('div')
       editor.contentEditable = 'true'
@@ -150,6 +255,57 @@ describe('Page Management', () => {
       
       // Should have added page break and a new paragraph
       expect(editor.children.length).toBeGreaterThan(initialLength)
+
+      // Check that next sibling is a paragraph
+      const pageBreak = editor.querySelector('.page-break')
+      expect(pageBreak?.nextElementSibling?.tagName).toBe('P')
+
+      document.body.removeChild(editor)
+    })
+
+    it('should make page break non-editable', () => {
+      const editor = document.createElement('div')
+      editor.contentEditable = 'true'
+      editor.innerHTML = '<p>Test</p>'
+      document.body.appendChild(editor)
+
+      const selection = window.getSelection()
+      const range = document.createRange()
+      range.selectNodeContents(editor)
+      range.collapse(false)
+      selection?.removeAllRanges()
+      selection?.addRange(range)
+
+      insertPageBreak(selection)
+      
+      const pageBreak = editor.querySelector('.page-break') as HTMLElement
+      expect(pageBreak.contentEditable).toBe('false')
+
+      document.body.removeChild(editor)
+    })
+
+    it('should move cursor to paragraph after page break', () => {
+      const editor = document.createElement('div')
+      editor.contentEditable = 'true'
+      editor.innerHTML = '<p>Test</p>'
+      document.body.appendChild(editor)
+
+      const selection = window.getSelection()
+      const range = document.createRange()
+      range.selectNodeContents(editor)
+      range.collapse(false)
+      selection?.removeAllRanges()
+      selection?.addRange(range)
+
+      insertPageBreak(selection)
+      
+      const pageBreak = editor.querySelector('.page-break')
+      const nextParagraph = pageBreak?.nextElementSibling
+
+      // Check that selection was moved
+      expect(selection?.rangeCount).toBeGreaterThan(0)
+      const newRange = selection?.getRangeAt(0)
+      expect(newRange?.startContainer).toBe(nextParagraph)
 
       document.body.removeChild(editor)
     })
