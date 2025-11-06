@@ -394,6 +394,13 @@
       @insert="handleInsertEmbed"
     />
 
+    <!-- File Manager Modal -->
+    <FileManagerModal
+      :is-open="showFileManagerModal"
+      @close="closeFileManagerModal"
+      @insert="handleInsertFile"
+    />
+
     <!-- Template Modal -->
     <TemplateModal
       :show="showTemplateModal"
@@ -483,6 +490,7 @@ import CodeBlockModal from './CodeBlockModal.vue'
 import EmojiPicker from './EmojiPicker.vue'
 import ImageUploadModal from './ImageUploadModal.vue'
 import EmbedModal from './EmbedModal.vue'
+import FileManagerModal from './FileManagerModal.vue'
 import ToolbarDropdown from './ToolbarDropdown.vue'
 import ContextMenu, { type ContextMenuItem } from './ContextMenu.vue'
 import TemplateModal from './TemplateModal.vue'
@@ -563,6 +571,9 @@ const showImageUploadModal = ref(false)
 
 // Embed modal state
 const showEmbedModal = ref(false)
+
+// File manager modal state
+const showFileManagerModal = ref(false)
 
 // Emoji picker state
 const showEmojiPicker = ref(false)
@@ -1009,6 +1020,43 @@ const handleInsertEmbed = (html: string) => {
 
 const closeEmbedModal = () => {
   showEmbedModal.value = false
+}
+
+const openFileManagerModal = () => {
+  showFileManagerModal.value = true
+}
+
+const closeFileManagerModal = () => {
+  showFileManagerModal.value = false
+}
+
+const handleInsertFile = (file: any) => {
+  if (!editorContent.value) return
+  
+  // Insert file based on its type
+  if (file.type.startsWith('image/')) {
+    // Insert as image
+    performWithSelection((root) => insertImageUtil(root, file.url, file.name))
+  } else {
+    // Insert as link for other file types
+    performWithSelection((root) => {
+      const selection = window.getSelection()
+      if (!selection || !selection.rangeCount) return
+      
+      const range = selection.getRangeAt(0)
+      const link = document.createElement('a')
+      link.href = file.url
+      link.textContent = file.name
+      link.download = file.name
+      link.target = '_blank'
+      
+      range.deleteContents()
+      range.insertNode(link)
+      range.collapse(false)
+    })
+  }
+  
+  showFileManagerModal.value = false
 }
 
 // Clear formatting function (for future cleanup toolbar)
@@ -1514,6 +1562,12 @@ const insertDropdownItems = computed(() => [
     label: 'Image',
     icon: '🖼️',
     onClick: insertImage,
+  },
+  {
+    id: 'file-manager',
+    label: 'File Manager',
+    icon: '📁',
+    onClick: openFileManagerModal,
   },
   {
     id: 'video',
