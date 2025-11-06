@@ -104,14 +104,51 @@ export function applyTextAlignment(root: HTMLElement, alignment: 'left' | 'cente
   const range = selection.getRangeAt(0)
   let element = range.commonAncestorContainer as HTMLElement
 
-  // Find the closest block element
-  while (element && element !== root) {
-    if (element.nodeType === Node.ELEMENT_NODE) {
-      const tagName = element.tagName.toLowerCase()
-      if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote'].includes(tagName)) {
-        element.style.textAlign = alignment
-        return
+  // Helper function to check if an element is a block element that can have text alignment
+  const isAlignableBlock = (el: HTMLElement): boolean => {
+    if (el.nodeType !== Node.ELEMENT_NODE) return false
+    const tagName = el.tagName.toLowerCase()
+    return ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote'].includes(tagName)
+  }
+
+  // If the common ancestor is the root or very close to it, apply to all block children in the selection
+  if (element === root || element.parentElement === root) {
+    // Get all block elements that are at least partially within the selection
+    const blockElements: HTMLElement[] = []
+    
+    const collectBlocks = (node: Node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement
+        if (isAlignableBlock(el)) {
+          blockElements.push(el)
+        }
+        // Recurse into children
+        Array.from(node.childNodes).forEach(collectBlocks)
       }
+    }
+    
+    // Collect all block elements within the range
+    if (element === root) {
+      // Select all scenario - apply to all direct block children
+      Array.from(root.childNodes).forEach(collectBlocks)
+    } else {
+      // Apply to the element itself if it's a block
+      collectBlocks(element)
+    }
+    
+    // Apply alignment to all collected blocks
+    blockElements.forEach(block => {
+      block.style.textAlign = alignment
+    })
+    
+    if (blockElements.length > 0) return
+  }
+
+  // Find the closest block element (original behavior for single element selection)
+  while (element && element !== root) {
+    if (isAlignableBlock(element)) {
+      element.style.textAlign = alignment
+      return
     }
     element = element.parentElement as HTMLElement
   }
