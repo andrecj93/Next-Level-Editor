@@ -1,9 +1,26 @@
 <template>
   <div :class="['next-level-editor', themeClass, { fullscreen: isFullScreen }]">
+    <!-- Context Hints (Smart Toolbar Feature) -->
+    <div
+      v-if="getContextHints().length > 0"
+      class="context-hints"
+    >
+      <span
+        v-for="(hint, index) in getContextHints()"
+        :key="index"
+        class="context-hint"
+      >
+        💡 {{ hint }}
+      </span>
+    </div>
+
     <!-- Modern Horizontal Toolbar -->
     <div class="editor-toolbar-modern">
       <!-- Format Dropdown -->
-      <div @mousedown.prevent="rememberSelection">
+      <div
+        v-if="isToolbarSectionVisible('format')"
+        @mousedown.prevent="rememberSelection"
+      >
         <ToolbarDropdown
           label="Format"
           icon="¶"
@@ -13,60 +30,68 @@
       </div>
 
       <!-- Text Formatting (Inline Buttons) -->
-      <div class="toolbar-divider" />
-      <div class="toolbar-group">
-        <button
-          v-for="action in inlineFormatActions"
-          :key="action.id"
-          :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
-          :data-tooltip="action.tooltip"
-          :aria-label="action.label"
-          :aria-pressed="action.isActive?.() || false"
-          @mousedown.prevent="rememberSelection"
-          @click="action.onClick"
-        >
-          <span v-html="action.icon" />
-        </button>
-      </div>
+      <template v-if="isToolbarSectionVisible('textFormatting')">
+        <div class="toolbar-divider" />
+        <div class="toolbar-group">
+          <button
+            v-for="action in inlineFormatActions"
+            :key="action.id"
+            :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
+            :data-tooltip="action.tooltip"
+            :aria-label="action.label"
+            :aria-pressed="action.isActive?.() || false"
+            @mousedown.prevent="rememberSelection"
+            @click="action.onClick"
+          >
+            <span v-html="action.icon" />
+          </button>
+        </div>
+      </template>
 
       <!-- Alignment Dropdown -->
-      <div class="toolbar-divider" />
-      <div @mousedown.prevent="rememberSelection">
-        <ToolbarDropdown
-          label="Align"
-          icon="☰"
-          tooltip="Text alignment"
-          :items="alignmentDropdownItems"
-        />
-      </div>
+      <template v-if="isToolbarSectionVisible('alignment')">
+        <div class="toolbar-divider" />
+        <div @mousedown.prevent="rememberSelection">
+          <ToolbarDropdown
+            label="Align"
+            icon="☰"
+            tooltip="Text alignment"
+            :items="alignmentDropdownItems"
+          />
+        </div>
+      </template>
 
       <!-- Lists (Inline Buttons) -->
-      <div class="toolbar-divider" />
-      <div class="toolbar-group">
-        <button
-          v-for="action in listActions"
-          :key="action.id"
-          :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
-          :data-tooltip="action.tooltip"
-          :aria-label="action.label"
-          :aria-pressed="action.isActive?.() || false"
-          @mousedown.prevent="rememberSelection"
-          @click="action.onClick"
-        >
-          <span v-html="action.icon" />
-        </button>
-      </div>
+      <template v-if="isToolbarSectionVisible('lists')">
+        <div class="toolbar-divider" />
+        <div class="toolbar-group">
+          <button
+            v-for="action in listActions"
+            :key="action.id"
+            :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
+            :data-tooltip="action.tooltip"
+            :aria-label="action.label"
+            :aria-pressed="action.isActive?.() || false"
+            @mousedown.prevent="rememberSelection"
+            @click="action.onClick"
+          >
+            <span v-html="action.icon" />
+          </button>
+        </div>
+      </template>
 
       <!-- Insert Dropdown -->
-      <div class="toolbar-divider" />
-      <div @mousedown.prevent="rememberSelection">
-        <ToolbarDropdown
-          label="Insert"
-          icon="+"
-          tooltip="Insert content"
-          :items="insertDropdownItems"
-        />
-      </div>
+      <template v-if="isToolbarSectionVisible('insert')">
+        <div class="toolbar-divider" />
+        <div @mousedown.prevent="rememberSelection">
+          <ToolbarDropdown
+            label="Insert"
+            icon="+"
+            tooltip="Insert content"
+            :items="insertDropdownItems"
+          />
+        </div>
+      </template>
 
       <!-- Colors Dropdown -->
       <div class="toolbar-divider" />
@@ -144,6 +169,15 @@
 
       <!-- Tools (Inline Buttons) -->
       <div class="toolbar-divider" />
+      <div @mousedown.prevent="rememberSelection">
+        <ToolbarDropdown
+          label="Tools"
+          icon="🛠️"
+          tooltip="Productivity tools"
+          :items="productivityDropdownItems"
+        />
+      </div>
+
       <div class="toolbar-group">
         <button
           v-for="action in toolActions"
@@ -360,6 +394,21 @@
       @insert="handleInsertEmbed"
     />
 
+    <!-- Template Modal -->
+    <TemplateModal
+      :show="showTemplateModal"
+      @close="closeTemplateModal"
+      @select="handleSelectTemplate"
+    />
+
+    <!-- Command Palette -->
+    <CommandPalette
+      :show="showCommandPalette"
+      :commands="commandPaletteCommands"
+      @close="closeCommandPalette"
+      @execute="handleCommandExecute"
+    />
+
     <!-- Auto-save Indicator -->
     <div
       v-if="isSaving || lastSaved"
@@ -420,6 +469,11 @@ import {
 import { exportAsHtml, exportAsMarkdown, exportAsPdf, formatHtml, exportAsWord } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
 import { useAutoSave } from '../composables/useAutoSave'
+import { useSmartToolbar } from '../composables/useSmartToolbar'
+import { copyFormat, pasteFormat, hasFormatCopied } from '../utils/formatPainter'
+import { insertPageBreak, insertTableOfContents } from '../utils/pageManagement'
+import { toggleSpellCheck, enableSpellCheck } from '../utils/spellChecker'
+import { useCommandPalette } from '../composables/useCommandPalette'
 import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
 import TableModal from './TableModal.vue'
@@ -431,6 +485,8 @@ import ImageUploadModal from './ImageUploadModal.vue'
 import EmbedModal from './EmbedModal.vue'
 import ToolbarDropdown from './ToolbarDropdown.vue'
 import ContextMenu, { type ContextMenuItem } from './ContextMenu.vue'
+import TemplateModal from './TemplateModal.vue'
+import CommandPalette from './CommandPalette.vue'
 
 interface Props {
   modelValue?: string
@@ -511,6 +567,29 @@ const showEmbedModal = ref(false)
 // Emoji picker state
 const showEmojiPicker = ref(false)
 
+// Template modal state
+const showTemplateModal = ref(false)
+
+// Command Palette
+const {
+  showCommandPalette,
+  closeCommandPalette,
+  addToRecent,
+} = useCommandPalette()
+
+// Smart Toolbar
+const {
+  updateContext: updateToolbarContext,
+  isVisible: isToolbarSectionVisible,
+  getContextHints
+} = useSmartToolbar()
+
+// Format painter state
+const formatPainterActive = ref(false)
+
+// Spell check state
+const spellCheckEnabled = ref(true)
+
 // Full screen state
 const isFullScreen = ref(false)
 
@@ -529,12 +608,13 @@ const showColorsDropdown = ref(false)
 
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
-  async (content) => {
+  async (content: string, version: number) => {
     // Emit the content for parent to save
     emit('update:modelValue', content)
     console.log('Auto-saved at:', new Date().toLocaleTimeString())
+    return { success: true, serverVersion: version + 1 }
   },
-  2000 // 2 second delay
+  { delay: 2000 } // 2 second delay
 )
 
 // Word count state
@@ -958,6 +1038,61 @@ const handleBackgroundColor = (color: string) => {
 const handleFontSize = (size: 'small' | 'normal' | 'large' | 'huge') => {
   fontSize.value = size
   performWithSelection((root) => applyFontSize(root, size))
+}
+
+// Format Painter actions
+const handleCopyFormat = () => {
+  const selection = window.getSelection()
+  copyFormat(selection)
+  formatPainterActive.value = true
+}
+
+const handlePasteFormat = () => {
+  if (!editorContent.value) return
+  const selection = window.getSelection()
+  const success = pasteFormat(selection)
+  if (success) {
+    formatPainterActive.value = false
+    captureSnapshot()
+  }
+}
+
+// Template actions
+const openTemplateModal = () => {
+  showTemplateModal.value = true
+}
+
+const closeTemplateModal = () => {
+  showTemplateModal.value = false
+}
+
+const handleSelectTemplate = (template: any) => {
+  if (editorContent.value) {
+    editorContent.value.innerHTML = template.content
+    captureSnapshot()
+  }
+}
+
+// Page management actions
+const handleInsertPageBreak = () => {
+  if (!editorContent.value) return
+  const selection = window.getSelection()
+  insertPageBreak(selection)
+  captureSnapshot()
+}
+
+const handleInsertTOC = () => {
+  if (!editorContent.value) return
+  const selection = window.getSelection()
+  insertTableOfContents(editorContent.value, selection)
+  captureSnapshot()
+}
+
+// Spell check actions
+const handleToggleSpellCheck = () => {
+  if (!editorContent.value) return
+  const newState = toggleSpellCheck(editorContent.value)
+  spellCheckEnabled.value = newState
 }
 
 // Insert horizontal rule
@@ -1406,6 +1541,18 @@ const insertDropdownItems = computed(() => [
     onClick: handleInsertHR,
   },
   {
+    id: 'page-break',
+    label: 'Page Break',
+    icon: '📄',
+    onClick: handleInsertPageBreak,
+  },
+  {
+    id: 'toc',
+    label: 'Table of Contents',
+    icon: '📑',
+    onClick: handleInsertTOC,
+  },
+  {
     id: 'emoji',
     label: 'Emoji',
     icon: '😀',
@@ -1458,6 +1605,280 @@ const toolActions = computed(() => [
     isActive: () => isFullScreen.value,
   },
 ])
+
+const productivityDropdownItems = computed(() => [
+  {
+    id: 'format-painter-copy',
+    label: 'Copy Format',
+    icon: '🖌️',
+    onClick: handleCopyFormat,
+  },
+  {
+    id: 'format-painter-paste',
+    label: 'Paste Format',
+    icon: '📋',
+    onClick: handlePasteFormat,
+    disabled: !hasFormatCopied(),
+  },
+  { divider: true },
+  {
+    id: 'spell-check',
+    label: spellCheckEnabled.value ? 'Disable Spell Check' : 'Enable Spell Check',
+    icon: spellCheckEnabled.value ? '✓' : '✗',
+    onClick: handleToggleSpellCheck,
+  },
+  { divider: true },
+  {
+    id: 'templates',
+    label: 'Templates',
+    icon: '📚',
+    onClick: openTemplateModal,
+  },
+])
+
+// Command Palette Commands
+const commandPaletteCommands = computed(() => [
+  // Formatting Commands
+  {
+    id: 'format-bold',
+    name: 'Bold',
+    description: 'Make selected text bold',
+    icon: '**B**',
+    category: 'Formatting',
+    shortcut: 'Ctrl+B',
+    action: () => document.execCommand('bold'),
+  },
+  {
+    id: 'format-italic',
+    name: 'Italic',
+    description: 'Make selected text italic',
+    icon: '*I*',
+    category: 'Formatting',
+    shortcut: 'Ctrl+I',
+    action: () => document.execCommand('italic'),
+  },
+  {
+    id: 'format-underline',
+    name: 'Underline',
+    description: 'Underline selected text',
+    icon: '__U__',
+    category: 'Formatting',
+    shortcut: 'Ctrl+U',
+    action: () => document.execCommand('underline'),
+  },
+  // Heading Commands
+  {
+    id: 'heading-1',
+    name: 'Heading 1',
+    description: 'Large heading',
+    icon: 'H1',
+    category: 'Structure',
+    shortcut: 'Ctrl+Alt+1',
+    action: () => document.execCommand('formatBlock', false, 'h1'),
+  },
+  {
+    id: 'heading-2',
+    name: 'Heading 2',
+    description: 'Medium heading',
+    icon: 'H2',
+    category: 'Structure',
+    shortcut: 'Ctrl+Alt+2',
+    action: () => document.execCommand('formatBlock', false, 'h2'),
+  },
+  {
+    id: 'heading-3',
+    name: 'Heading 3',
+    description: 'Small heading',
+    icon: 'H3',
+    category: 'Structure',
+    shortcut: 'Ctrl+Alt+3',
+    action: () => document.execCommand('formatBlock', false, 'h3'),
+  },
+  // List Commands
+  {
+    id: 'list-bullet',
+    name: 'Bullet List',
+    description: 'Create an unordered list',
+    icon: '•',
+    category: 'Lists',
+    action: () => document.execCommand('insertUnorderedList'),
+  },
+  {
+    id: 'list-numbered',
+    name: 'Numbered List',
+    description: 'Create an ordered list',
+    icon: '1.',
+    category: 'Lists',
+    action: () => document.execCommand('insertOrderedList'),
+  },
+  // Insert Commands
+  {
+    id: 'insert-link',
+    name: 'Insert Link',
+    description: 'Add a hyperlink',
+    icon: '🔗',
+    category: 'Insert',
+    shortcut: 'Ctrl+K',
+    action: insertLink,
+  },
+  {
+    id: 'insert-image',
+    name: 'Insert Image',
+    description: 'Add an image',
+    icon: '🖼️',
+    category: 'Insert',
+    action: insertImage,
+  },
+  {
+    id: 'insert-table',
+    name: 'Insert Table',
+    description: 'Add a table',
+    icon: '⊞',
+    category: 'Insert',
+    action: openTableModal,
+  },
+  {
+    id: 'insert-code',
+    name: 'Code Block',
+    description: 'Insert code with syntax highlighting',
+    icon: '</>',
+    category: 'Insert',
+    action: openCodeBlockModal,
+  },
+  {
+    id: 'insert-emoji',
+    name: 'Insert Emoji',
+    description: 'Add an emoji',
+    icon: '😀',
+    category: 'Insert',
+    action: toggleEmojiPicker,
+  },
+  {
+    id: 'insert-hr',
+    name: 'Horizontal Rule',
+    description: 'Insert a dividing line',
+    icon: '—',
+    category: 'Insert',
+    action: handleInsertHR,
+  },
+  {
+    id: 'insert-page-break',
+    name: 'Page Break',
+    description: 'Insert a page break',
+    icon: '📄',
+    category: 'Insert',
+    action: handleInsertPageBreak,
+  },
+  {
+    id: 'insert-toc',
+    name: 'Table of Contents',
+    description: 'Generate table of contents',
+    icon: '📑',
+    category: 'Insert',
+    action: handleInsertTOC,
+  },
+  // Tools
+  {
+    id: 'find-replace',
+    name: 'Find & Replace',
+    description: 'Search and replace text',
+    icon: '🔍',
+    category: 'Tools',
+    shortcut: 'Ctrl+F',
+    action: openFindReplaceModal,
+  },
+  {
+    id: 'format-painter-copy',
+    name: 'Copy Format',
+    description: 'Copy text formatting',
+    icon: '🖌️',
+    category: 'Tools',
+    action: handleCopyFormat,
+  },
+  {
+    id: 'templates',
+    name: 'Templates',
+    description: 'Choose a document template',
+    icon: '📚',
+    category: 'Tools',
+    action: openTemplateModal,
+  },
+  // View
+  {
+    id: 'toggle-theme',
+    name: 'Toggle Theme',
+    description: 'Switch between light and dark mode',
+    icon: '🌓',
+    category: 'View',
+    action: toggleTheme,
+  },
+  {
+    id: 'fullscreen',
+    name: 'Toggle Fullscreen',
+    description: 'Enter or exit fullscreen mode',
+    icon: '⛶',
+    category: 'View',
+    action: toggleFullScreen,
+  },
+  // Export
+  {
+    id: 'export-html',
+    name: 'Export as HTML',
+    description: 'Download document as HTML',
+    icon: '📄',
+    category: 'Export',
+    action: handleExportHtml,
+  },
+  {
+    id: 'export-markdown',
+    name: 'Export as Markdown',
+    description: 'Download document as Markdown',
+    icon: '📝',
+    category: 'Export',
+    action: handleExportMarkdown,
+  },
+  {
+    id: 'export-pdf',
+    name: 'Export as PDF',
+    description: 'Download document as PDF',
+    icon: '📕',
+    category: 'Export',
+    action: handleExportPdf,
+  },
+  {
+    id: 'export-word',
+    name: 'Export as Word',
+    description: 'Download document as Word document',
+    icon: '📘',
+    category: 'Export',
+    action: handleExportWord,
+  },
+  // History
+  {
+    id: 'undo',
+    name: 'Undo',
+    description: 'Undo last action',
+    icon: '⟲',
+    category: 'History',
+    shortcut: 'Ctrl+Z',
+    action: undo,
+  },
+  {
+    id: 'redo',
+    name: 'Redo',
+    description: 'Redo last undone action',
+    icon: '⟳',
+    category: 'History',
+    shortcut: 'Ctrl+Shift+Z',
+    action: redo,
+  },
+])
+
+// Handle command execution
+function handleCommandExecute(command: any) {
+  addToRecent(command.id)
+  command.action()
+}
 
 // Toolbar sections organized by category (for future grouped toolbar UI)
 // const toolbarSections = [
@@ -2153,6 +2574,13 @@ const checkForTableSelection = () => {
 const onSelectionChange = () => {
   updateFloatingToolbar()
   checkForTableSelection()
+  
+  // Update smart toolbar context
+  nextTick(() => {
+    if (editorContent.value) {
+      updateToolbarContext(editorContent.value)
+    }
+  })
 }
 
 // Lifecycle and watchers
@@ -2192,6 +2620,9 @@ onMounted(() => {
     applySanitizedContent(props.modelValue)
     captureSnapshot(false)
     editorContent.value.addEventListener('keydown', handleKeydown)
+    // Enable spell check by default
+    enableSpellCheck(editorContent.value)
+    spellCheckEnabled.value = true
   }
   document.addEventListener('click', handleDocumentClick)
   document.addEventListener('keydown', handleEscape)
@@ -2249,6 +2680,29 @@ onBeforeUnmount(() => {
   --history-bg: rgba(96, 165, 250, 0.12);
   --history-active: #60a5fa;
   --checklist-border: #334155;
+}
+
+/* Context Hints (Smart Toolbar) */
+.context-hints {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--editor-border);
+  font-size: 12px;
+  color: var(--toolbar-text);
+  flex-wrap: wrap;
+}
+
+.context-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--history-bg);
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .editor-toolbar {
@@ -3422,6 +3876,94 @@ onBeforeUnmount(() => {
 
 .theme-dark .preview-content-wrapper :deep(hr) {
   opacity: 0.3;
+}
+
+/* Page Break Styles */
+.editor-content :deep(.page-break) {
+  margin: 24px 0;
+  padding: 12px;
+  border: 2px dashed var(--editor-border);
+  border-radius: var(--radius-md);
+  background: var(--toolbar-bg);
+  text-align: center;
+  user-select: none;
+  position: relative;
+}
+
+.editor-content :deep(.page-break-label) {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--toolbar-accent);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.editor-content :deep(.page-break-line) {
+  margin: 8px 0 0 0;
+  border: none;
+  border-top: 1px solid var(--editor-border);
+}
+
+@media print {
+  .editor-content :deep(.page-break) {
+    page-break-after: always;
+    border: none;
+    background: none;
+  }
+  
+  .editor-content :deep(.page-break-label) {
+    display: none;
+  }
+}
+
+/* Table of Contents Styles */
+.editor-content :deep(.table-of-contents) {
+  background: var(--toolbar-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.editor-content :deep(.table-of-contents h2) {
+  margin: 0 0 16px 0;
+  font-size: 1.25rem;
+  color: var(--content-color);
+  border-bottom: 2px solid var(--toolbar-accent);
+  padding-bottom: 8px;
+}
+
+.editor-content :deep(.table-of-contents ul) {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.editor-content :deep(.table-of-contents li) {
+  margin: 8px 0;
+}
+
+.editor-content :deep(.table-of-contents a) {
+  color: var(--toolbar-accent);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.editor-content :deep(.table-of-contents a:hover) {
+  background: var(--toolbar-hover);
+  transform: translateX(4px);
+}
+
+.theme-dark .editor-content :deep(.table-of-contents) {
+  background: rgba(30, 41, 59, 0.5);
 }
 </style>
 

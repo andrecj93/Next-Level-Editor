@@ -68,11 +68,19 @@
 - **Word & Character Count** - Live statistics in footer
 - **Undo/Redo** - Full history management with Ctrl+Z/Ctrl+Shift+Z
 
+### 🚀 Productivity Features (NEW!)
+- **Format Painter** - Copy formatting from one selection and apply it to another with one click
+- **Document Templates** - 8 pre-built templates across 4 categories (Documents, Email, Blog, Marketing)
+  - Meeting Notes, Project Proposal, Blog Post, Email, Product Description, Press Release, Technical Documentation
+- **Page Breaks** - Insert visual page breaks for print/export formatting
+- **Table of Contents** - Auto-generate clickable TOC from document headings (H1-H6)
+- **Spell Checker** - Browser-based spell checking with enable/disable toggle
+
 ### 🔐 Security & Quality
 
 - **HTML Sanitization** - Secure content handling prevents XSS attacks with DOMPurify-level protection
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **129 Unit Tests** - Comprehensive test coverage with 81%+ code coverage
+- **265 Unit Tests** - Comprehensive test coverage with 80%+ code coverage
 - **23 E2E Tests** - Full end-to-end testing with Playwright for real-world scenarios
 - **0 Security Vulnerabilities** - CodeQL verified and continuously monitored
 - **GitHub Actions CI/CD** - Automated testing, linting, and deployment
@@ -82,9 +90,9 @@
 
 Optimized for production with tree-shaking and code splitting:
 
-- **ES Module** - 231.63 KB (58.73 KB gzipped)
-- **UMD** - 147.74 KB (44.15 KB gzipped)
-- **CSS** - 41.91 KB (6.89 KB gzipped)
+- **ES Module** - 234.16 KB (61.23 KB gzipped)
+- **UMD** - 1,068.41 KB (325.65 KB gzipped)
+- **CSS** - 53.01 KB (8.13 KB gzipped)
 
 Includes Prism.js (22 languages), emoji data, and all features — fully optimized for modern bundlers like Vite, Webpack, and Rollup.
 
@@ -326,7 +334,7 @@ npm run test:e2e:debug
 
 ### Test Suites Overview
 
-**Unit Tests (129 tests with Vitest)**
+**Unit Tests (265 tests with Vitest)**
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
 - **Commands** (29 tests) - Text alignment, tables, horizontal rules, search/replace
@@ -334,6 +342,10 @@ npm run test:e2e:debug
 - **Embed** (23 tests) - YouTube/Vimeo URL detection and embedding
 - **Formatting** (27 tests) - Bold, italic, underline, lists, headings, links
 - **Coverage** (4 tests) - Edge cases and error handling
+- **Format Painter** (7 tests) - Copy/paste formatting functionality
+- **Templates** (13 tests) - Template retrieval, categories, content validation
+- **Page Management** (11 tests) - Page breaks, table of contents generation
+- **Spell Checker** (17 tests) - Enable/disable, suggestions, auto-correct
 
 **End-to-End Tests (23 tests with Playwright)**
 - **Basic Functionality** - Editor loading, typing, word count

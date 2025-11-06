@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Added - CKEditor-Competitive Features 🚀
+- 🖌️ **Format Painter** - Copy formatting from one text selection and apply to another
+- 📚 **Document Templates** - 8 pre-built templates across 4 categories:
+  - Documents: Blank, Meeting Notes, Project Proposal, Technical Documentation
+  - Email: Professional Email template
+  - Blog: Blog Post structure
+  - Marketing: Product Description, Press Release
+- 📄 **Page Breaks** - Insert visual page breaks for print/export formatting with print-friendly styling
+- 📑 **Table of Contents** - Auto-generate clickable TOC from document headings (H1-H6)
+  - Automatic heading ID assignment
+  - Smooth scrolling navigation
+  - Hierarchical indentation
+- ✓ **Spell Checker** - Browser-based spell checking with enable/disable toggle
+  - Common misspelling corrections dictionary (20+ words)
+  - Auto-correct functionality
+  - Ignore list support
+- 🛠️ **Tools Dropdown** - New productivity tools menu in toolbar
+- 48 new unit tests for all productivity features
+
+### Previous Features
 - 🎨 Color picker for text and background colors with 25 preset colors + custom picker
 - 📐 Text alignment controls (left, center, right, justify)
 - 💬 Floating toolbar that appears on text selection (like Medium editor)
@@ -41,11 +60,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved bundle optimization
 
 ### Changed
-- Bundle size increased for new features:
-  - ES Module: 44.24 KB (10.85 KB gzipped) - up from 26.96 KB
-  - UMD: 31.38 KB (9.58 KB gzipped) - up from 18.94 KB
-  - CSS: 11.58 KB (2.71 KB gzipped) - up from 7.77 KB
-- Still under 50KB gzipped target
+- Bundle size increased for new productivity features:
+  - ES Module: 234.16 KB (61.23 KB gzipped) - includes all templates and new utilities
+  - UMD: 1,068.41 KB (325.65 KB gzipped)
+  - CSS: 53.01 KB (8.13 KB gzipped)
+- Test suite expanded to 265 tests (was 217 tests)
+- Added 4 new utility modules (formatPainter, templates, pageManagement, spellChecker)
+- Enhanced toolbar with Tools dropdown for productivity features
 
 ## [1.0.0] - 2025-10-30
 
