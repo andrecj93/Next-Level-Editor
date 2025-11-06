@@ -165,7 +165,7 @@ class FileManagerService {
   // Private methods
 
   private generateId(): string {
-    return `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    return `file_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
   }
 
   private isFileTypeAllowed(type: string): boolean {
@@ -224,9 +224,9 @@ class FileManagerService {
     try {
       const stored = localStorage.getItem(this.options.storageKey)
       if (stored) {
-        const parsed = JSON.parse(stored)
+        const parsed = JSON.parse(stored) as Array<Omit<ManagedFile, 'uploadedAt'> & { uploadedAt: string }>
         this.files = new Map(
-          parsed.map((file: any) => [
+          parsed.map((file) => [
             file.id,
             {
               ...file,
