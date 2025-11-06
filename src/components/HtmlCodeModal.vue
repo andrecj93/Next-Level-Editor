@@ -60,7 +60,8 @@
 import { ref, computed, watch } from 'vue'
 import Prism from 'prismjs'
 import 'prismjs/themes/prism-tomorrow.css'
-import 'prismjs/components/prism-markup'
+// Import markup (HTML) language support
+import 'prismjs/components/prism-markup-templating'
 
 interface Props {
   show: boolean
@@ -79,10 +80,19 @@ const copyButtonText = ref('📋 Copy')
 const highlightedHtml = computed(() => {
   if (!props.htmlContent) return ''
   try {
-    return Prism.highlight(props.htmlContent, Prism.languages.html, 'html')
+    // Check if html language is available, otherwise fall back to plain text
+    if (Prism.languages.html) {
+      return Prism.highlight(props.htmlContent, Prism.languages.html, 'html')
+    } else if (Prism.languages.markup) {
+      return Prism.highlight(props.htmlContent, Prism.languages.markup, 'markup')
+    } else {
+      // Fallback: return escaped HTML for display
+      return props.htmlContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    }
   } catch (error) {
     console.error('Failed to highlight HTML:', error)
-    return props.htmlContent
+    // Fallback: return escaped HTML for display
+    return props.htmlContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')
   }
 })
 
