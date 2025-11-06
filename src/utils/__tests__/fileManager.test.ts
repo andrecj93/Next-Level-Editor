@@ -1,8 +1,8 @@
 /**
  * Tests for File Manager Utility
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { FileManagerService, type ManagedFile } from '../fileManager'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { FileManagerService } from '../fileManager'
 
 describe('FileManagerService', () => {
   let fileManager: FileManagerService
