@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { ref } from 'vue'
 import { useVirtualScroll } from '../useVirtualScroll'
 
@@ -63,7 +63,7 @@ describe('useVirtualScroll', () => {
     it('should include buffer items before and after visible range', () => {
       const totalItems = ref(1000)
       const bufferSize = 5
-      const { visibleStartIndex, visibleEndIndex, visibleItems } =
+      const { visibleStartIndex, visibleEndIndex } =
         useVirtualScroll(totalItems, {
           itemHeight: 24,
           bufferSize,
@@ -222,12 +222,11 @@ describe('useVirtualScroll', () => {
   describe('Reactivity', () => {
     it('should update when total items changes', () => {
       const totalItems = ref(100)
-      const { totalHeight, visibleItems } = useVirtualScroll(totalItems, {
+      const { totalHeight } = useVirtualScroll(totalItems, {
         itemHeight: 24
       })
 
       const initialHeight = totalHeight.value
-      const initialCount = visibleItems.value.length
 
       // Change total items
       totalItems.value = 200
@@ -239,8 +238,6 @@ describe('useVirtualScroll', () => {
     it('should recalculate visible range when items change', () => {
       const totalItems = ref(50)
       const { visibleEndIndex } = useVirtualScroll(totalItems)
-
-      const initialEnd = visibleEndIndex.value
 
       // Increase items
       totalItems.value = 1000

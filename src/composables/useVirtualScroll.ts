@@ -20,6 +20,10 @@ export interface VirtualScrollState {
   totalHeight: Ref<number>
   offsetTop: Ref<number>
   offsetBottom: Ref<number>
+  handleScroll: (event: Event) => void
+  scrollToIndex: (index: number, behavior?: ScrollBehavior) => number
+  scrollToTop: () => void
+  scrollToBottom: () => void
 }
 
 /**
@@ -83,7 +87,7 @@ export function useVirtualScroll(
   }
 
   // Scroll to specific index
-  function scrollToIndex(index: number, behavior: ScrollBehavior = 'smooth') {
+  function scrollToIndex(index: number, _behavior: ScrollBehavior = 'smooth') {
     const offset = index * itemHeight
     scrollTop.value = offset
     updateVisibleRange()
@@ -122,10 +126,5 @@ export function useVirtualScroll(
     scrollToIndex,
     scrollToTop,
     scrollToBottom
-  } as VirtualScrollState & {
-    handleScroll: (event: Event) => void
-    scrollToIndex: (index: number, behavior?: ScrollBehavior) => number
-    scrollToTop: () => void
-    scrollToBottom: () => void
   }
 }

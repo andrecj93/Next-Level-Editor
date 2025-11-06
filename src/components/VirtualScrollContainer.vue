@@ -59,13 +59,12 @@ const virtualScroll = useVirtualScroll(totalItems, {
 const {
   visibleItems,
   totalHeight,
-  offsetTop
+  offsetTop,
+  handleScroll: onScroll,
+  scrollToIndex,
+  scrollToTop,
+  scrollToBottom
 } = virtualScroll
-
-const onScroll = virtualScroll.handleScroll
-const scrollToIndex = virtualScroll.scrollToIndex
-const scrollToTop = virtualScroll.scrollToTop
-const scrollToBottom = virtualScroll.scrollToBottom
 
 function handleScroll(event: Event) {
   onScroll(event)
