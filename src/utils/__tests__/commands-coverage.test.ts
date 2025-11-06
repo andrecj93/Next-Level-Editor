@@ -130,9 +130,9 @@ describe('Additional Commands Coverage', () => {
       applyTextAlignment(root, 'center')
 
       // Check that at least one block element got the alignment
-      const p1 = root.querySelector('p:nth-of-type(1)')!
-      const p2 = root.querySelector('p:nth-of-type(2)')!
-      const h1 = root.querySelector('h1')!
+      const p1 = root.querySelector('p:nth-of-type(1)') as HTMLElement
+      const p2 = root.querySelector('p:nth-of-type(2)') as HTMLElement
+      const h1 = root.querySelector('h1') as HTMLElement
 
       // At least one element should have alignment applied
       const hasAlignment = p1.style.textAlign === 'center' || 
@@ -155,9 +155,9 @@ describe('Additional Commands Coverage', () => {
       applyTextAlignment(root, 'right')
 
       // All block elements should have the alignment
-      const p1 = root.querySelector('p:nth-of-type(1)')!
-      const h2 = root.querySelector('h2')!
-      const p2 = root.querySelector('p:nth-of-type(2)')!
+      const p1 = root.querySelector('p:nth-of-type(1)') as HTMLElement
+      const h2 = root.querySelector('h2') as HTMLElement
+      const p2 = root.querySelector('p:nth-of-type(2)') as HTMLElement
 
       expect(p1.style.textAlign).toBe('right')
       expect(h2.style.textAlign).toBe('right')
