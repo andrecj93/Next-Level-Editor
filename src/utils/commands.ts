@@ -536,3 +536,164 @@ export function removeTableColumn(table: HTMLTableElement, colIndex: number): vo
 export function deleteTable(table: HTMLTableElement): void {
   table.remove()
 }
+
+/**
+ * Apply properties to a table cell
+ * @param cell - The table cell element
+ * @param properties - Cell properties to apply
+ */
+export function applyCellProperties(
+  cell: HTMLTableCellElement,
+  properties: {
+    backgroundColor?: string
+    textAlign?: string
+    verticalAlign?: string
+    padding?: number
+    width?: string
+    height?: string
+  }
+): void {
+  if (properties.backgroundColor !== undefined) {
+    if (properties.backgroundColor) {
+      cell.style.backgroundColor = properties.backgroundColor
+    } else {
+      cell.style.backgroundColor = ''
+    }
+  }
+  
+  if (properties.textAlign !== undefined) {
+    cell.style.textAlign = properties.textAlign
+  }
+  
+  if (properties.verticalAlign !== undefined) {
+    cell.style.verticalAlign = properties.verticalAlign
+  }
+  
+  if (properties.padding !== undefined) {
+    cell.style.padding = `${properties.padding}px`
+  }
+  
+  if (properties.width !== undefined) {
+    cell.style.width = properties.width || ''
+  }
+  
+  if (properties.height !== undefined) {
+    cell.style.height = properties.height || ''
+  }
+}
+
+/**
+ * Apply properties to a table
+ * @param table - The table element
+ * @param properties - Table properties to apply
+ */
+export function applyTableProperties(
+  table: HTMLTableElement,
+  properties: {
+    borderStyle?: string
+    borderWidth?: number
+    borderColor?: string
+    width?: string
+    backgroundColor?: string
+    borderCollapse?: boolean
+  }
+): void {
+  if (properties.borderStyle || properties.borderWidth !== undefined || properties.borderColor) {
+    const width = properties.borderWidth !== undefined ? properties.borderWidth : 1
+    const style = properties.borderStyle || 'solid'
+    const color = properties.borderColor || '#d1d5db'
+    
+    // Apply to all cells
+    const allCells = table.getElementsByTagName('td')
+    const allHeaders = table.getElementsByTagName('th')
+    
+    const cells = [...Array.from(allCells), ...Array.from(allHeaders)]
+    cells.forEach(cell => {
+      if (style === 'none') {
+        cell.style.border = 'none'
+      } else {
+        cell.style.border = `${width}px ${style} ${color}`
+      }
+    })
+  }
+  
+  if (properties.width !== undefined) {
+    table.style.width = properties.width
+  }
+  
+  if (properties.backgroundColor !== undefined) {
+    if (properties.backgroundColor) {
+      table.style.backgroundColor = properties.backgroundColor
+    } else {
+      table.style.backgroundColor = ''
+    }
+  }
+  
+  if (properties.borderCollapse !== undefined) {
+    table.style.borderCollapse = properties.borderCollapse ? 'collapse' : 'separate'
+  }
+}
+
+/**
+ * Get current cell properties
+ * @param cell - The table cell element
+ * @returns Current cell properties
+ */
+export function getCellProperties(cell: HTMLTableCellElement): {
+  backgroundColor: string
+  textAlign: string
+  verticalAlign: string
+  padding: number
+  width: string
+  height: string
+} {
+  const computedStyle = window.getComputedStyle(cell)
+  const padding = parseInt(computedStyle.padding) || 8
+  
+  return {
+    backgroundColor: cell.style.backgroundColor || '',
+    textAlign: cell.style.textAlign || computedStyle.textAlign || 'left',
+    verticalAlign: cell.style.verticalAlign || computedStyle.verticalAlign || 'middle',
+    padding: padding,
+    width: cell.style.width || '',
+    height: cell.style.height || ''
+  }
+}
+
+/**
+ * Get current table properties
+ * @param table - The table element
+ * @returns Current table properties
+ */
+export function getTableProperties(table: HTMLTableElement): {
+  borderStyle: string
+  borderWidth: number
+  borderColor: string
+  width: string
+  backgroundColor: string
+  borderCollapse: boolean
+} {
+  const computedStyle = window.getComputedStyle(table)
+  
+  // Get border properties from first cell
+  const firstCell = table.querySelector('td, th') as HTMLTableCellElement | null
+  let borderStyle = 'solid'
+  let borderWidth = 1
+  let borderColor = '#d1d5db'
+  
+  if (firstCell) {
+    const cellStyle = window.getComputedStyle(firstCell)
+    borderStyle = cellStyle.borderStyle || 'solid'
+    borderWidth = parseInt(cellStyle.borderWidth) || 1
+    borderColor = cellStyle.borderColor || '#d1d5db'
+  }
+  
+  return {
+    borderStyle,
+    borderWidth,
+    borderColor,
+    width: table.style.width || computedStyle.width || '100%',
+    backgroundColor: table.style.backgroundColor || '',
+    borderCollapse: computedStyle.borderCollapse === 'collapse'
+  }
+}
