@@ -1569,6 +1569,14 @@ const toolActions = computed(() => [
     onClick: openFindReplaceModal,
   },
   {
+    id: 'spell-check-toggle',
+    label: 'Toggle Spell Check',
+    icon: spellCheckEnabled.value ? '✓' : 'Aa',
+    tooltip: spellCheckEnabled.value ? 'Disable Spell Check' : 'Enable Spell Check',
+    onClick: handleToggleSpellCheck,
+    isActive: () => spellCheckEnabled.value,
+  },
+  {
     id: 'export-html',
     label: 'Export HTML',
     icon: '📄',
@@ -1802,6 +1810,14 @@ const commandPaletteCommands = computed(() => [
     icon: '📚',
     category: 'Tools',
     action: openTemplateModal,
+  },
+  {
+    id: 'toggle-spell-check',
+    name: 'Toggle Spell Check',
+    description: 'Enable or disable spell checking',
+    icon: 'Aa',
+    category: 'Tools',
+    action: handleToggleSpellCheck,
   },
   // View
   {
