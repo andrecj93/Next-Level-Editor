@@ -106,13 +106,12 @@ export function applyTextAlignment(root: HTMLElement, alignment: 'left' | 'cente
 
   // Helper function to check if an element is a block element that can have text alignment
   const isAlignableBlock = (el: HTMLElement): boolean => {
-    if (el.nodeType !== Node.ELEMENT_NODE) return false
     const tagName = el.tagName.toLowerCase()
     return ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote'].includes(tagName)
   }
 
   // If the common ancestor is the root or very close to it, apply to all block children in the selection
-  if (element === root || element.parentElement === root) {
+  if (element === root || (element.parentElement && element.parentElement === root)) {
     // Get all block elements that are at least partially within the selection
     const blockElements: HTMLElement[] = []
     
