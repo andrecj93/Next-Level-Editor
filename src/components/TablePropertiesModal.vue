@@ -342,7 +342,7 @@ watch(() => props.show, (newShow) => {
       borderColor: props.initialTableProps?.borderColor || '#d1d5db',
       width: props.initialTableProps?.width || '100%',
       backgroundColor: props.initialTableProps?.backgroundColor || '',
-      borderCollapse: props.initialTableProps?.borderCollapse !== undefined ? props.initialTableProps.borderCollapse : true
+      borderCollapse: props.initialTableProps?.borderCollapse ?? true
     }
   }
 })

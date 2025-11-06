@@ -561,11 +561,11 @@ export function applyCellProperties(
     }
   }
   
-  if (properties.textAlign) {
+  if (properties.textAlign !== undefined) {
     cell.style.textAlign = properties.textAlign
   }
   
-  if (properties.verticalAlign) {
+  if (properties.verticalAlign !== undefined) {
     cell.style.verticalAlign = properties.verticalAlign
   }
   

@@ -1223,7 +1223,24 @@ const closeTablePropertiesModal = () => {
   showTablePropertiesModal.value = false
 }
 
-const handleApplyTableProperties = (data: { cellProps?: any; tableProps?: any }) => {
+const handleApplyTableProperties = (data: {
+  cellProps?: {
+    backgroundColor?: string
+    textAlign?: string
+    verticalAlign?: string
+    padding?: number
+    width?: string
+    height?: string
+  }
+  tableProps?: {
+    borderStyle?: string
+    borderWidth?: number
+    borderColor?: string
+    width?: string
+    backgroundColor?: string
+    borderCollapse?: boolean
+  }
+}) => {
   if (data.cellProps && currentCell.value) {
     applyCellProperties(currentCell.value, data.cellProps)
   }
