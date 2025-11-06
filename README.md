@@ -54,6 +54,12 @@
 ### 💻 Code & Media
 - **Syntax Highlighting** - Code blocks with Prism.js for 22 programming languages
   - JavaScript, TypeScript, Python, Java, C++, Go, Rust, PHP, Ruby, SQL, and more
+- **File Manager** - CKBox-inspired file management system for organizing media assets
+  - Upload multiple files with drag-and-drop support (max 10MB per file)
+  - Grid and list view modes for browsing files
+  - Insert images directly or download links for other file types
+  - LocalStorage persistence (in demo - use server storage in production)
+  - File type validation and thumbnail generation for images
 - **Image Upload** - URL input or file upload with live preview and alt text for accessibility
 - **Video Embeds** - Auto-detect and embed YouTube and Vimeo videos with responsive iframes
 - **Emoji Picker** - 100+ emojis across 7 categories with search functionality
