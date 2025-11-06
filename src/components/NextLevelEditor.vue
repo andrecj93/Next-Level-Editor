@@ -365,7 +365,19 @@
       @add-column-right="handleAddColumnRight"
       @remove-row="handleRemoveRow"
       @remove-column="handleRemoveColumn"
+      @cell-properties="handleCellProperties"
+      @table-properties="handleTableProperties"
       @delete-table="handleDeleteTable"
+    />
+
+    <!-- Table Properties Modal -->
+    <TablePropertiesModal
+      :show="showTablePropertiesModal"
+      :mode="tablePropertiesMode"
+      :initial-cell-props="initialCellProps"
+      :initial-table-props="initialTableProps"
+      @close="closeTablePropertiesModal"
+      @apply="handleApplyTableProperties"
     />
 
     <!-- Emoji Picker -->
@@ -464,7 +476,11 @@ import {
   removeTableRow,
   addTableColumn,
   removeTableColumn,
-  deleteTable
+  deleteTable,
+  applyCellProperties,
+  applyTableProperties,
+  getCellProperties,
+  getTableProperties
 } from '../utils/commands'
 import { exportAsHtml, exportAsMarkdown, exportAsPdf, formatHtml, exportAsWord } from '../utils/export'
 import { useTheme } from '../composables/useTheme'
@@ -478,6 +494,7 @@ import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
 import TableModal from './TableModal.vue'
 import TableDesigner from './TableDesigner.vue'
+import TablePropertiesModal from './TablePropertiesModal.vue'
 import FindReplaceModal from './FindReplaceModal.vue'
 import CodeBlockModal from './CodeBlockModal.vue'
 import EmojiPicker from './EmojiPicker.vue'
@@ -551,6 +568,12 @@ const showTableDesigner = ref(false)
 const tableDesignerPosition = ref({ x: 0, y: 0 })
 const currentTable = ref<HTMLTableElement | null>(null)
 const currentCell = ref<HTMLTableCellElement | null>(null)
+
+// Table properties modal state
+const showTablePropertiesModal = ref(false)
+const tablePropertiesMode = ref<'cell' | 'table' | 'both'>('both')
+const initialCellProps = ref({})
+const initialTableProps = ref({})
 
 // Find & Replace modal state
 const showFindReplaceModal = ref(false)
@@ -1176,6 +1199,39 @@ const handleDeleteTable = () => {
   showTableDesigner.value = false
   currentTable.value = null
   currentCell.value = null
+  emit('update:modelValue', editorContent.value?.innerHTML || '')
+}
+
+// Table properties handlers
+const handleCellProperties = () => {
+  if (!currentCell.value) return
+  
+  initialCellProps.value = getCellProperties(currentCell.value)
+  tablePropertiesMode.value = 'cell'
+  showTablePropertiesModal.value = true
+}
+
+const handleTableProperties = () => {
+  if (!currentTable.value) return
+  
+  initialTableProps.value = getTableProperties(currentTable.value)
+  tablePropertiesMode.value = 'table'
+  showTablePropertiesModal.value = true
+}
+
+const closeTablePropertiesModal = () => {
+  showTablePropertiesModal.value = false
+}
+
+const handleApplyTableProperties = (data: { cellProps?: any; tableProps?: any }) => {
+  if (data.cellProps && currentCell.value) {
+    applyCellProperties(currentCell.value, data.cellProps)
+  }
+  
+  if (data.tableProps && currentTable.value) {
+    applyTableProperties(currentTable.value, data.tableProps)
+  }
+  
   emit('update:modelValue', editorContent.value?.innerHTML || '')
 }
 

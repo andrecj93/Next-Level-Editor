@@ -56,6 +56,23 @@
       </button>
       <div class="divider" />
       <button
+        class="control-btn"
+        title="Cell properties"
+        @click="$emit('cell-properties')"
+      >
+        <span class="icon">🎨</span>
+        <span class="label">Cell Properties</span>
+      </button>
+      <button
+        class="control-btn"
+        title="Table properties"
+        @click="$emit('table-properties')"
+      >
+        <span class="icon">⚙️</span>
+        <span class="label">Table Properties</span>
+      </button>
+      <div class="divider" />
+      <button
         class="control-btn danger"
         title="Delete table"
         @click="$emit('delete-table')"
@@ -83,6 +100,8 @@ interface Emits {
   (e: 'add-column-right'): void
   (e: 'remove-row'): void
   (e: 'remove-column'): void
+  (e: 'cell-properties'): void
+  (e: 'table-properties'): void
   (e: 'delete-table'): void
 }
 
