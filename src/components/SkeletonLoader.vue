@@ -1,29 +1,55 @@
 <template>
-  <div class="skeleton-loader" :class="{ [variant]: true }">
-    <div v-if="variant === 'editor'" class="skeleton-editor">
+  <div
+    class="skeleton-loader"
+    :class="{ [variant]: true }"
+  >
+    <div
+      v-if="variant === 'editor'"
+      class="skeleton-editor"
+    >
       <div class="skeleton-toolbar">
         <div class="skeleton-toolbar-group">
-          <div v-for="i in 8" :key="i" class="skeleton-btn" />
+          <div
+            v-for="i in 8"
+            :key="i"
+            class="skeleton-btn"
+          />
         </div>
         <div class="skeleton-toolbar-divider" />
         <div class="skeleton-toolbar-group">
-          <div v-for="i in 6" :key="i" class="skeleton-btn" />
+          <div
+            v-for="i in 6"
+            :key="i"
+            class="skeleton-btn"
+          />
         </div>
       </div>
       <div class="skeleton-content">
-        <div v-for="i in lines" :key="i" class="skeleton-line" :style="{ width: getLineWidth(i) }" />
+        <div
+          v-for="i in lines"
+          :key="i"
+          class="skeleton-line"
+          :style="{ width: getLineWidth(i) }"
+        />
       </div>
       <div class="skeleton-footer">
         <div class="skeleton-text small" />
       </div>
     </div>
 
-    <div v-else-if="variant === 'modal'" class="skeleton-modal">
+    <div
+      v-else-if="variant === 'modal'"
+      class="skeleton-modal"
+    >
       <div class="skeleton-modal-header">
         <div class="skeleton-title" />
       </div>
       <div class="skeleton-modal-body">
-        <div v-for="i in 4" :key="i" class="skeleton-field">
+        <div
+          v-for="i in 4"
+          :key="i"
+          class="skeleton-field"
+        >
           <div class="skeleton-label" />
           <div class="skeleton-input" />
         </div>
@@ -36,23 +62,48 @@
       </div>
     </div>
 
-    <div v-else-if="variant === 'dropdown'" class="skeleton-dropdown">
-      <div v-for="i in items" :key="i" class="skeleton-dropdown-item">
+    <div
+      v-else-if="variant === 'dropdown'"
+      class="skeleton-dropdown"
+    >
+      <div
+        v-for="i in items"
+        :key="i"
+        class="skeleton-dropdown-item"
+      >
         <div class="skeleton-icon" />
         <div class="skeleton-text" />
       </div>
     </div>
 
-    <div v-else-if="variant === 'table'" class="skeleton-table">
+    <div
+      v-else-if="variant === 'table'"
+      class="skeleton-table"
+    >
       <div class="skeleton-table-row header">
-        <div v-for="i in columns" :key="i" class="skeleton-table-cell" />
+        <div
+          v-for="i in columns"
+          :key="i"
+          class="skeleton-table-cell"
+        />
       </div>
-      <div v-for="i in rows" :key="i" class="skeleton-table-row">
-        <div v-for="j in columns" :key="j" class="skeleton-table-cell" />
+      <div
+        v-for="i in rows"
+        :key="i"
+        class="skeleton-table-row"
+      >
+        <div
+          v-for="j in columns"
+          :key="j"
+          class="skeleton-table-cell"
+        />
       </div>
     </div>
 
-    <div v-else-if="variant === 'card'" class="skeleton-card">
+    <div
+      v-else-if="variant === 'card'"
+      class="skeleton-card"
+    >
       <div class="skeleton-card-image" />
       <div class="skeleton-card-body">
         <div class="skeleton-title" />
@@ -61,7 +112,10 @@
       </div>
     </div>
 
-    <div v-else class="skeleton-text" />
+    <div
+      v-else
+      class="skeleton-text"
+    />
   </div>
 </template>
 

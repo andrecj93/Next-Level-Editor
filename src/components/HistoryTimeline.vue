@@ -1,22 +1,27 @@
 <template>
-  <div class="history-timeline" :class="{ 'is-compact': compact }">
+  <div
+    class="history-timeline"
+    :class="{ 'is-compact': compact }"
+  >
     <!-- Timeline Header -->
     <div class="timeline-header">
-      <h3 class="timeline-title">{{ title }}</h3>
+      <h3 class="timeline-title">
+        {{ title }}
+      </h3>
       <div class="timeline-actions">
         <button
           v-if="showClearButton && hasHistory"
-          @click="handleClear"
           class="btn-clear"
           :aria-label="clearButtonLabel"
+          @click="handleClear"
         >
           {{ clearButtonLabel }}
         </button>
         <button
           v-if="showExportButton && hasHistory"
-          @click="handleExport"
           class="btn-export"
           :aria-label="exportButtonLabel"
+          @click="handleExport"
         >
           {{ exportButtonLabel }}
         </button>
@@ -24,7 +29,10 @@
     </div>
 
     <!-- Timeline Progress Bar -->
-    <div v-if="showProgress && hasHistory" class="timeline-progress-container">
+    <div
+      v-if="showProgress && hasHistory"
+      class="timeline-progress-container"
+    >
       <div class="timeline-progress-bar">
         <div
           class="timeline-progress-fill"
@@ -37,43 +45,50 @@
     </div>
 
     <!-- Timeline Navigation -->
-    <div v-if="showNavigation && hasHistory" class="timeline-navigation">
+    <div
+      v-if="showNavigation && hasHistory"
+      class="timeline-navigation"
+    >
       <button
-        @click="handleGoToFirst"
         :disabled="!canGoBack"
         class="nav-btn"
         aria-label="Go to first"
+        @click="handleGoToFirst"
       >
         ⏮
       </button>
       <button
-        @click="handleGoBack"
         :disabled="!canGoBack"
         class="nav-btn"
         aria-label="Go back"
+        @click="handleGoBack"
       >
         ◀
       </button>
       <button
-        @click="handleGoForward"
         :disabled="!canGoForward"
         class="nav-btn"
         aria-label="Go forward"
+        @click="handleGoForward"
       >
         ▶
       </button>
       <button
-        @click="handleGoToLatest"
         :disabled="!canGoForward"
         class="nav-btn"
         aria-label="Go to latest"
+        @click="handleGoToLatest"
       >
         ⏭
       </button>
     </div>
 
     <!-- Timeline Entries -->
-    <div v-if="hasHistory" class="timeline-entries" ref="entriesContainer">
+    <div
+      v-if="hasHistory"
+      ref="entriesContainer"
+      class="timeline-entries"
+    >
       <div
         v-for="(entry, index) in history"
         :key="entry.id"
@@ -95,7 +110,10 @@
               {{ formatTime(entry.timestamp) }}
             </span>
           </div>
-          <div v-if="showPreview && index === currentIndex" class="entry-preview">
+          <div
+            v-if="showPreview && index === currentIndex"
+            class="entry-preview"
+          >
             {{ truncateContent(entry.content) }}
           </div>
         </div>
@@ -103,7 +121,10 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else class="timeline-empty">
+    <div
+      v-else
+      class="timeline-empty"
+    >
       <p>{{ emptyMessage }}</p>
     </div>
   </div>

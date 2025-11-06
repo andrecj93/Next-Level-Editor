@@ -114,6 +114,55 @@ describe('Additional Commands Coverage', () => {
 
       expect(li.style.textAlign).toBe('center')
     })
+
+    it('applies alignment when selecting all content (Ctrl+A scenario)', () => {
+      // This reproduces the bug where selecting all text and applying alignment does nothing
+      root.innerHTML = '<p>First paragraph</p><p>Second paragraph</p><h1>Heading</h1>'
+      
+      // Select all content in the root (simulates Ctrl+A)
+      const range = document.createRange()
+      range.selectNodeContents(root)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      // Apply center alignment
+      applyTextAlignment(root, 'center')
+
+      // Check that at least one block element got the alignment
+      const p1 = root.querySelector('p:nth-of-type(1)')!
+      const p2 = root.querySelector('p:nth-of-type(2)')!
+      const h1 = root.querySelector('h1')!
+
+      // At least one element should have alignment applied
+      const hasAlignment = p1.style.textAlign === 'center' || 
+                          p2.style.textAlign === 'center' || 
+                          h1.style.textAlign === 'center'
+      
+      expect(hasAlignment).toBe(true)
+    })
+
+    it('applies alignment to multiple elements when entire root is selected', () => {
+      root.innerHTML = '<p>Paragraph 1</p><h2>Heading</h2><p>Paragraph 2</p>'
+      
+      // Select all content
+      const range = document.createRange()
+      range.selectNodeContents(root)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      applyTextAlignment(root, 'right')
+
+      // All block elements should have the alignment
+      const p1 = root.querySelector('p:nth-of-type(1)')!
+      const h2 = root.querySelector('h2')!
+      const p2 = root.querySelector('p:nth-of-type(2)')!
+
+      expect(p1.style.textAlign).toBe('right')
+      expect(h2.style.textAlign).toBe('right')
+      expect(p2.style.textAlign).toBe('right')
+    })
   })
 
   describe('insertHorizontalRule', () => {

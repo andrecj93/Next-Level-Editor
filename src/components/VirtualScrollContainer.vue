@@ -19,9 +19,9 @@
         }"
       >
         <slot
-          name="item"
           v-for="item in visibleItems"
           :key="item.index"
+          name="item"
           :item="item"
           :index="item.index"
         />
