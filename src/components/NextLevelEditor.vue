@@ -1073,7 +1073,7 @@ const handleInsertFile = (file: any) => {
     performWithSelection((root) => insertImageUtil(root, file.url, file.name))
   } else {
     // Insert as link for other file types
-    performWithSelection((root) => {
+    performWithSelection(() => {
       const selection = window.getSelection()
       if (!selection || !selection.rangeCount) return
       
