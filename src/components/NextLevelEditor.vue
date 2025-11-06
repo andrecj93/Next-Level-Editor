@@ -408,6 +408,13 @@
       @select="handleSelectTemplate"
     />
 
+    <!-- HTML Code Modal -->
+    <HtmlCodeModal
+      :show="showHtmlCodeModal"
+      :html-content="formatHtml(htmlContent || editorContent?.innerHTML || '')"
+      @close="closeHtmlCodeModal"
+    />
+
     <!-- Command Palette -->
     <CommandPalette
       :show="showCommandPalette"
@@ -495,6 +502,7 @@ import ToolbarDropdown from './ToolbarDropdown.vue'
 import ContextMenu, { type ContextMenuItem } from './ContextMenu.vue'
 import TemplateModal from './TemplateModal.vue'
 import CommandPalette from './CommandPalette.vue'
+import HtmlCodeModal from './HtmlCodeModal.vue'
 
 interface Props {
   modelValue?: string
@@ -580,6 +588,9 @@ const showEmojiPicker = ref(false)
 
 // Template modal state
 const showTemplateModal = ref(false)
+
+// HTML code modal state
+const showHtmlCodeModal = ref(false)
 
 // Command Palette
 const {
@@ -1121,6 +1132,15 @@ const handleSelectTemplate = (template: any) => {
   }
 }
 
+// HTML code modal actions
+const openHtmlCodeModal = () => {
+  showHtmlCodeModal.value = true
+}
+
+const closeHtmlCodeModal = () => {
+  showHtmlCodeModal.value = false
+}
+
 // Page management actions
 const handleInsertPageBreak = () => {
   if (!editorContent.value) return
@@ -1615,6 +1635,13 @@ const insertDropdownItems = computed(() => [
 ])
 
 const toolActions = computed(() => [
+  {
+    id: 'view-html',
+    label: 'View HTML Code',
+    icon: '💻',
+    tooltip: 'View formatted HTML code',
+    onClick: openHtmlCodeModal,
+  },
   {
     id: 'find',
     label: 'Find & Replace',
