@@ -60,6 +60,8 @@
 import { ref, computed, watch } from 'vue'
 import Prism from 'prismjs'
 import 'prismjs/themes/prism-tomorrow.css'
+// Import markup-templating first (required for template languages in HTML)
+import 'prismjs/components/prism-markup-templating'
 // Import markup language for HTML syntax highlighting
 import 'prismjs/components/prism-markup'
 
