@@ -279,11 +279,23 @@
         v-if="viewMode === 'code' || viewMode === 'split'"
         class="editor-panel"
       >
+        <!-- Code editor (textarea) for code/split view -->
+        <textarea
+          ref="codeEditor"
+          class="code-editor"
+          :value="codeContent"
+          spellcheck="false"
+          @input="onCodeInput"
+          @blur="onCodeBlur"
+        />
+        
+        <!-- Hidden WYSIWYG editor to maintain functionality -->
         <div
           ref="editorContent"
           class="editor-content"
           contenteditable="true"
           :placeholder="placeholder"
+          style="display: none;"
           @input="onInput"
           @blur="onBlur"
           @focus="onFocus"
@@ -522,7 +534,9 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const editorContent = ref<HTMLDivElement | null>(null)
+const codeEditor = ref<HTMLTextAreaElement | null>(null)
 const savedRange = ref<Range | null>(null)
+const codeContent = ref('')
 
 // Theme and UI state using composable
 const { theme, toggleTheme: toggleThemeComposable } = useTheme()
@@ -2522,6 +2536,27 @@ const onSelectionChange = () => {
   })
 }
 
+// Code editor handlers
+const onCodeInput = (event: Event) => {
+  const target = event.target as HTMLTextAreaElement
+  codeContent.value = target.value
+  
+  // Update the hidden WYSIWYG editor with the new HTML
+  if (editorContent.value) {
+    editorContent.value.innerHTML = target.value
+    htmlContent.value = target.value
+  }
+}
+
+const onCodeBlur = () => {
+  // Sync code content to editor when leaving code view
+  if (editorContent.value && codeContent.value) {
+    editorContent.value.innerHTML = codeContent.value
+    htmlContent.value = codeContent.value
+    emit('update:modelValue', codeContent.value)
+  }
+}
+
 // Lifecycle and watchers
 watch(
   () => props.modelValue,
@@ -2568,6 +2603,15 @@ watch(viewMode, (newMode, oldMode) => {
       else if (!editorContent.value.innerHTML.trim()) {
         editorContent.value.innerHTML = htmlContent.value || ''
       }
+      
+      // Update code editor content with formatted HTML
+      const currentHtml = editorContent.value.innerHTML || htmlContent.value || ''
+      codeContent.value = formatHtml(currentHtml)
+    } else if (newMode === 'preview') {
+      // When switching to preview mode, save the current content
+      if (editorContent.value) {
+        htmlContent.value = editorContent.value.innerHTML
+      }
     }
   })
 })
@@ -2580,6 +2624,9 @@ onMounted(() => {
     // Enable spell check by default
     enableSpellCheck(editorContent.value)
     spellCheckEnabled.value = true
+    
+    // Initialize code editor content
+    codeContent.value = formatHtml(props.modelValue || '')
   }
   document.addEventListener('click', handleDocumentClick)
   document.addEventListener('keydown', handleEscape)
@@ -2858,6 +2905,31 @@ onBeforeUnmount(() => {
 }
 
 .editor-content:focus {
+  outline: none;
+}
+
+.code-editor {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  max-height: 640px;
+  padding: 20px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--content-color);
+  background: var(--editor-bg);
+  border: none;
+  outline: none;
+  resize: vertical;
+  overflow-y: auto;
+  white-space: pre;
+  word-wrap: normal;
+  overflow-x: auto;
+  tab-size: 2;
+}
+
+.code-editor:focus {
   outline: none;
 }
 
