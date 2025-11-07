@@ -2792,6 +2792,24 @@ watch(
   }
 )
 
+// Watch viewMode changes to restore content when switching back to code/split view
+watch(viewMode, (newMode, oldMode) => {
+  // When switching from preview to code/split view, restore content from htmlContent
+  // This handles the case where the editor element was destroyed and recreated
+  nextTick(() => {
+    if ((newMode === 'code' || newMode === 'split') && editorContent.value) {
+      // If switching from preview mode, always restore content since the editor was destroyed
+      if (oldMode === 'preview') {
+        editorContent.value.innerHTML = htmlContent.value || ''
+      }
+      // If editor is empty, restore content
+      else if (!editorContent.value.innerHTML.trim()) {
+        editorContent.value.innerHTML = htmlContent.value || ''
+      }
+    }
+  })
+})
+
 onMounted(() => {
   if (editorContent.value) {
     applySanitizedContent(props.modelValue)
