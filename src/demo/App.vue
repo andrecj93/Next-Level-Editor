@@ -206,7 +206,7 @@ const content = ref('&lt;p&gt;Hello World!&lt;/p&gt;')
       <p>
         Made with ❤️ by Next Level Editor Team | 
         <a
-          href="https://github.com/andrecj93/next-level-editor-jordan"
+          href="https://github.com/andrecj93/next-level-editor"
           target="_blank"
         >GitHub</a> | 
         <a

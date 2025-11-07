@@ -1,7 +1,7 @@
 # Next Level Editor 🚀
 
-[![CI/CD](https://github.com/andrecj93/next-level-editor-jordan/actions/workflows/ci.yml/badge.svg)](https://github.com/andrecj93/next-level-editor-jordan/actions/workflows/ci.yml)
-[![Playwright Tests](https://img.shields.io/badge/Playwright-23%20tests-45ba4b?logo=playwright)](https://github.com/andrecj93/next-level-editor-jordan/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/andrecj93/next-level-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/andrecj93/next-level-editor/actions/workflows/ci.yml)
+[![Playwright Tests](https://img.shields.io/badge/Playwright-23%20tests-45ba4b?logo=playwright)](https://github.com/andrecj93/next-level-editor/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/next-level-editor.svg)](https://www.npmjs.com/package/next-level-editor)
 [![codecov](https://codecov.io/github/andrecj93/Next-Level-Editor/graph/badge.svg?token=41OUT9ESM5)](https://codecov.io/github/andrecj93/Next-Level-Editor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -404,8 +404,8 @@ All bundles are optimized with:
 
 ```bash
 # Clone the repository
-git clone https://github.com/andrecj93/next-level-editor-jordan.git
-cd next-level-editor-jordan
+git clone https://github.com/andrecj93/next-level-editor.git
+cd next-level-editor
 
 # Install dependencies
 npm install
@@ -439,7 +439,7 @@ npm run test:e2e
 ### Project Structure
 
 ```
-next-level-editor-jordan/
+next-level-editor/
 ├── src/
 │   ├── components/          # Vue components
 │   │   ├── NextLevelEditor.vue      # Main editor with toolbar
@@ -539,8 +539,8 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
 1. **Fork the repository**
    ```bash
    # Click "Fork" on GitHub, then clone your fork
-   git clone https://github.com/YOUR_USERNAME/next-level-editor-jordan.git
-   cd next-level-editor-jordan
+   git clone https://github.com/YOUR_USERNAME/next-level-editor.git
+   cd next-level-editor
    ```
 
 2. **Create a feature branch**
@@ -619,8 +619,8 @@ Be respectful, inclusive, and constructive. We're all here to build something gr
 
 ### Questions?
 
-- 💬 Open a [Discussion](https://github.com/andrecj93/next-level-editor-jordan/discussions)
-- 🐛 Report bugs via [Issues](https://github.com/andrecj93/next-level-editor-jordan/issues)
+- 💬 Open a [Discussion](https://github.com/andrecj93/next-level-editor/discussions)
+- 🐛 Report bugs via [Issues](https://github.com/andrecj93/next-level-editor/issues)
 - 📧 Contact maintainers for security issues
 
 ## 📝 Changelog
@@ -666,10 +666,10 @@ Built with inspiration from the best editors in the industry:
 
 ### Package & Repository
 - 📦 [NPM Package](https://www.npmjs.com/package/next-level-editor) - Install via npm
-- 🔧 [GitHub Repository](https://github.com/andrecj93/next-level-editor-jordan) - Source code
-- 🐛 [Issue Tracker](https://github.com/andrecj93/next-level-editor-jordan/issues) - Report bugs
-- 💬 [Discussions](https://github.com/andrecj93/next-level-editor-jordan/discussions) - Ask questions
-- 🚀 [Demo Site](https://andrecj93.github.io/next-level-editor-jordan/) - Try it live
+- 🔧 [GitHub Repository](https://github.com/andrecj93/next-level-editor) - Source code
+- 🐛 [Issue Tracker](https://github.com/andrecj93/next-level-editor/issues) - Report bugs
+- 💬 [Discussions](https://github.com/andrecj93/next-level-editor/discussions) - Ask questions
+- 🚀 [Demo Site](https://andrecj93.github.io/next-level-editor/) - Try it live
 
 ### Documentation
 - 📖 [CHANGELOG](CHANGELOG.md) - Version history and release notes
@@ -677,8 +677,8 @@ Built with inspiration from the best editors in the industry:
 - 📘 [PUBLISHING](PUBLISHING.md) - Publishing workflow
 
 ### CI/CD & Quality
-- ✅ [GitHub Actions](https://github.com/andrecj93/next-level-editor-jordan/actions) - Build status
-- 📊 [Codecov](https://codecov.io/gh/andrecj93/next-level-editor-jordan) - Code coverage reports
+- ✅ [GitHub Actions](https://github.com/andrecj93/next-level-editor/actions) - Build status
+- 📊 [Codecov](https://codecov.io/gh/andrecj93/next-level-editor) - Code coverage reports
 
 ---
 
@@ -686,7 +686,7 @@ Built with inspiration from the best editors in the industry:
 
 **Made with ❤️ and modern web standards**
 
-[![Star on GitHub](https://img.shields.io/github/stars/andrecj93/next-level-editor-jordan?style=social)](https://github.com/andrecj93/next-level-editor-jordan)
+[![Star on GitHub](https://img.shields.io/github/stars/andrecj93/next-level-editor?style=social)](https://github.com/andrecj93/next-level-editor)
 [![Follow on GitHub](https://img.shields.io/github/followers/andrecj93?style=social)](https://github.com/andrecj93)
 
 *If you find this project useful, please consider giving it a ⭐ on GitHub!*

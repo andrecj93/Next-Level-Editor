@@ -46,12 +46,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andrecj93/next-level-editor-jordan.git"
+    "url": "git+https://github.com/andrecj93/next-level-editor.git"
   },
   "bugs": {
-    "url": "https://github.com/andrecj93/next-level-editor-jordan/issues"
+    "url": "https://github.com/andrecj93/next-level-editor/issues"
   },
-  "homepage": "https://github.com/andrecj93/next-level-editor-jordan#readme",
+  "homepage": "https://github.com/andrecj93/next-level-editor#readme",
   "peerDependencies": {
     "vue": "^3.3.0"
   },

@@ -110,7 +110,7 @@ print(calculate_fibonacci(10))
 </table>
 
 <h2>🔗 Links and Navigation</h2>
-<p>Add hyperlinks to <a href="https://vuejs.org" target="_blank">Vue.js</a>, <a href="https://github.com/andrecj93/next-level-editor-jordan" target="_blank">GitHub</a>, or any resource. Links are essential for connecting ideas and providing references.</p>
+<p>Add hyperlinks to <a href="https://vuejs.org" target="_blank">Vue.js</a>, <a href="https://github.com/andrecj93/next-level-editor" target="_blank">GitHub</a>, or any resource. Links are essential for connecting ideas and providing references.</p>
 
 <h2>⚡ Quick Actions</h2>
 <p><strong>Slash Commands</strong>: Type <code>/</code> anywhere to open the quick actions menu with 14+ commands for instant formatting.</p>
