@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { 
   exampleTemplates, 
+  allExamples,
   getTemplateById, 
   getDefaultTemplate,
+  getAllTemplates,
   type ExampleTemplate 
 } from '../exampleTemplates'
 
@@ -298,6 +300,48 @@ describe('exampleTemplates', () => {
       if (simple && showcase) {
         expect(showcase.content.length).toBeGreaterThan(simple.content.length * 5)
       }
+    })
+  })
+
+  describe('Combined Examples (allExamples)', () => {
+    it('should include both basic and media-rich examples', () => {
+      expect(allExamples.length).toBeGreaterThan(exampleTemplates.length)
+      expect(allExamples.length).toBeGreaterThanOrEqual(10)
+    })
+
+    it('should have all basic templates in combined array', () => {
+      exampleTemplates.forEach(template => {
+        expect(allExamples).toContain(template)
+      })
+    })
+
+    it('should have unique IDs across all examples', () => {
+      const ids = allExamples.map(t => t.id)
+      const uniqueIds = new Set(ids)
+      expect(uniqueIds.size).toBe(allExamples.length)
+    })
+
+    it('getTemplateById should work with all example IDs', () => {
+      allExamples.forEach(template => {
+        const found = getTemplateById(template.id)
+        expect(found).toBeDefined()
+        expect(found?.id).toBe(template.id)
+      })
+    })
+
+    it('getAllTemplates should return all examples', () => {
+      const all = getAllTemplates()
+      expect(all).toEqual(allExamples)
+      expect(all.length).toBe(allExamples.length)
+    })
+
+    it('should include media-rich examples', () => {
+      const mediaExampleIds = ['product-showcase', 'travel-blog', 'recipe', 'portfolio', 'tutorial']
+      
+      mediaExampleIds.forEach(id => {
+        const found = allExamples.find(t => t.id === id)
+        expect(found).toBeDefined()
+      })
     })
   })
 })

@@ -655,10 +655,29 @@ print(data)
   }
 ]
 
+// Import media-rich examples
+import { mediaExamples } from './mediaExamples'
+
+/**
+ * Combined array of all example templates
+ * Includes both basic examples and media-rich examples
+ */
+export const allExamples: ExampleTemplate[] = [
+  ...exampleTemplates,
+  ...mediaExamples
+]
+
 export function getTemplateById(id: string): ExampleTemplate | undefined {
-  return exampleTemplates.find(template => template.id === id)
+  return allExamples.find(template => template.id === id)
 }
 
 export function getDefaultTemplate(): ExampleTemplate {
   return exampleTemplates[0] // Return showcase template by default
+}
+
+/**
+ * Get all available templates
+ */
+export function getAllTemplates(): ExampleTemplate[] {
+  return allExamples
 }
