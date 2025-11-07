@@ -2470,9 +2470,26 @@ const handleContextMenu = (event: MouseEvent) => {
   event.preventDefault()
   
   // Check if the right-click is on a table element
-  // If so, don't show the general context menu - the TableDesigner will handle table-specific actions
   const target = event.target
   if (target instanceof Element && target.closest('table, td, th')) {
+    // Show the TableDesigner at the cursor position for table-specific actions
+    const table = getSelectedTable()
+    const cell = getSelectedCell()
+    
+    if (table && cell) {
+      currentTable.value = table
+      currentCell.value = cell
+      
+      // Position the designer at the mouse cursor
+      const editorRect = editorContent.value?.getBoundingClientRect()
+      if (editorRect) {
+        tableDesignerPosition.value = {
+          x: event.clientX - editorRect.left,
+          y: event.clientY - editorRect.top
+        }
+        showTableDesigner.value = true
+      }
+    }
     return
   }
   
@@ -2839,6 +2856,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .next-level-editor {
+  position: relative;
   --editor-bg: #ffffff;
   --editor-border: #d8dde6;
   --toolbar-bg: #f8f9fb;
