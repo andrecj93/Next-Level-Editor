@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-  base: '/next-level-editor-jordan/',
+  base: '/Next-Level-Editor/',
   build: {
     outDir: 'dist-demo',
     emptyOutDir: true

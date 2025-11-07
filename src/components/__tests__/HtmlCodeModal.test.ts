@@ -179,5 +179,42 @@ describe('HtmlCodeModal', () => {
     await wrapper.setProps({ htmlContent: '<p>Updated</p>' })
     expect(wrapper.props('htmlContent')).toBe('<p>Updated</p>')
   })
+
+  it('should highlight HTML with template tags without error', () => {
+    const htmlWithPhp = '<div><?php echo "Hello"; ?></div>'
+    const wrapper = mount(HtmlCodeModal, {
+      props: {
+        show: true,
+        htmlContent: htmlWithPhp,
+      },
+    })
+
+    const vm = wrapper.vm as any
+    expect(vm.highlightedHtml).toBeTruthy()
+    expect(typeof vm.highlightedHtml).toBe('string')
+    // Should not throw an error about tokenizePlaceholders
+  })
+
+  it('should highlight HTML with various template syntaxes', () => {
+    const templates = [
+      '<div><?php echo "test"; ?></div>',
+      '<div>{{ variable }}</div>',
+      '<div><% code %></div>',
+      '<div>{# comment #}</div>',
+    ]
+
+    templates.forEach((htmlContent) => {
+      const wrapper = mount(HtmlCodeModal, {
+        props: {
+          show: true,
+          htmlContent,
+        },
+      })
+
+      const vm = wrapper.vm as any
+      expect(vm.highlightedHtml).toBeTruthy()
+      expect(typeof vm.highlightedHtml).toBe('string')
+    })
+  })
 })
 
