@@ -2469,6 +2469,27 @@ const contextMenuItems = computed<ContextMenuItem[]>(() => {
 const handleContextMenu = (event: MouseEvent) => {
   event.preventDefault()
   
+  // Check if the right-click is on a table element
+  let target = event.target as Node | null
+  let isInTable = false
+  
+  while (target && target !== document.body) {
+    if (target.nodeType === Node.ELEMENT_NODE) {
+      const element = target as HTMLElement
+      if (element.tagName === 'TABLE' || element.tagName === 'TD' || element.tagName === 'TH') {
+        isInTable = true
+        break
+      }
+    }
+    target = target.parentNode
+  }
+  
+  // If right-clicking on a table, don't show the general context menu
+  // The TableDesigner will handle table-specific actions
+  if (isInTable) {
+    return
+  }
+  
   // Save the current selection before showing the context menu
   savedRange.value = saveSelection()
   
