@@ -3,7 +3,7 @@
 [![CI/CD](https://github.com/andrecj93/next-level-editor-jordan/actions/workflows/ci.yml/badge.svg)](https://github.com/andrecj93/next-level-editor-jordan/actions/workflows/ci.yml)
 [![Playwright Tests](https://img.shields.io/badge/Playwright-23%20tests-45ba4b?logo=playwright)](https://github.com/andrecj93/next-level-editor-jordan/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/next-level-editor.svg)](https://www.npmjs.com/package/next-level-editor)
-[![codecov](https://codecov.io/gh/andrecj93/next-level-editor-jordan/branch/main/graph/badge.svg)](https://codecov.io/gh/andrecj93/next-level-editor-jordan)
+[![codecov](https://codecov.io/github/andrecj93/Next-Level-Editor/graph/badge.svg?token=41OUT9ESM5)](https://codecov.io/github/andrecj93/Next-Level-Editor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://www.typescriptlang.org/)
 [![Vue 3](https://img.shields.io/badge/Vue-3.3%2B-4FC08D.svg)](https://vuejs.org/)
