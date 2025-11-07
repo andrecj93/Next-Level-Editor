@@ -102,16 +102,24 @@ export function applyTextAlignment(root: HTMLElement, alignment: 'left' | 'cente
   if (!selection || selection.rangeCount === 0) return
 
   const range = selection.getRangeAt(0)
-  let element = range.commonAncestorContainer as HTMLElement
+  
+  // Get the element - if commonAncestorContainer is a text node, use its parent
+  let element = range.commonAncestorContainer
+  if (element.nodeType === Node.TEXT_NODE) {
+    element = element.parentElement as HTMLElement
+  } else {
+    element = element as HTMLElement
+  }
 
   // Helper function to check if an element is a block element that can have text alignment
-  const isAlignableBlock = (el: HTMLElement): boolean => {
+  const isAlignableBlock = (el: HTMLElement | null): boolean => {
+    if (!el || !el.tagName) return false
     const tagName = el.tagName.toLowerCase()
     return ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote'].includes(tagName)
   }
 
   // If the common ancestor is the root or very close to it, apply to all block children in the selection
-  if (element === root || (element.parentElement && element.parentElement === root)) {
+  if (element === root || (element && element.parentElement && element.parentElement === root)) {
     // Get all block elements that are at least partially within the selection
     const blockElements: HTMLElement[] = []
     
@@ -145,11 +153,11 @@ export function applyTextAlignment(root: HTMLElement, alignment: 'left' | 'cente
 
   // Find the closest block element (original behavior for single element selection)
   while (element && element !== root) {
-    if (isAlignableBlock(element)) {
-      element.style.textAlign = alignment
+    if (isAlignableBlock(element as HTMLElement)) {
+      (element as HTMLElement).style.textAlign = alignment
       return
     }
-    element = element.parentElement as HTMLElement
+    element = (element as HTMLElement).parentElement
   }
 }
 
