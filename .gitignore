@@ -32,3 +32,6 @@ playwright/.cache/
 *.njsproj
 *.sln
 *.sw?
+.vs/Next-Level-Editor.slnx/v18/.wsuo
+.vs/Next-Level-Editor.slnx/v18/DocumentLayout.json
+.vs/VSWorkspaceState.json
