@@ -60,6 +60,8 @@
 
           <NextLevelEditor
             v-model="content"
+            width="100%"
+            height="600px"
             placeholder="Start typing your content here... Try typing / for quick commands!"
             @focus="handleFocus"
             @blur="handleBlur"

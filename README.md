@@ -164,6 +164,27 @@ const handleBlur = () => {
 </script>
 ```
 
+### Custom Size
+
+You can customize the editor's width and height using the `width` and `height` props:
+
+```vue
+<template>
+  <NextLevelEditor
+    v-model="content"
+    width="800px"
+    height="500px"
+    placeholder="Start typing..."
+  />
+</template>
+```
+
+The props accept any valid CSS size values including:
+- **Pixels**: `'800px'`, `'1000px'`
+- **Percentages**: `'100%'`, `'80%'`
+- **Viewport units**: `'80vh'`, `'50vw'`
+- **Relative units**: `'50rem'`, `'30em'`
+
 ### Global Registration (Optional)
 
 For apps that use the editor throughout:
@@ -195,6 +216,8 @@ Then use it anywhere in your components:
 |------|------|---------|-------------|
 | `modelValue` | `string` | `''` | The HTML content (v-model) |
 | `placeholder` | `string` | `'Start typing...'` | Placeholder text when editor is empty |
+| `width` | `string` | `undefined` | Custom width for the editor (e.g., '800px', '100%', '50rem') |
+| `height` | `string` | `undefined` | Custom height for the editor (e.g., '500px', '80vh', '30em') |
 
 ### Events
 

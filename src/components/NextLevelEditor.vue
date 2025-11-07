@@ -1,5 +1,8 @@
 <template>
-  <div :class="['next-level-editor', themeClass, { fullscreen: isFullScreen }]">
+  <div
+    :class="['next-level-editor', themeClass, { fullscreen: isFullScreen }]"
+    :style="editorStyles"
+  >
     <!-- Context Hints (Smart Toolbar Feature) -->
     <div
       v-if="getContextHints().length > 0"
@@ -516,6 +519,8 @@ import HtmlCodeModal from './HtmlCodeModal.vue'
 interface Props {
   modelValue?: string
   placeholder?: string
+  width?: string
+  height?: string
 }
 
 interface Emits {
@@ -529,6 +534,8 @@ type HistoryEntry = { id: string; html: string; preview: string }
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
   placeholder: 'Start typing...',
+  width: undefined,
+  height: undefined,
 })
 
 const emit = defineEmits<Emits>()
@@ -553,6 +560,18 @@ const { theme, toggleTheme: toggleThemeComposable } = useTheme()
 // })
 
 const themeClass = computed(() => (theme.value === 'dark' ? 'theme-dark' : 'theme-light'))
+
+// Editor styles for width and height
+const editorStyles = computed(() => {
+  const styles: Record<string, string> = {}
+  if (props.width) {
+    styles.width = props.width
+  }
+  if (props.height) {
+    styles.height = props.height
+  }
+  return styles
+})
 
 // Color picker state
 const textColor = ref('#000000')
