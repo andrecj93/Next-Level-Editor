@@ -108,9 +108,9 @@
 
 Optimized for production with tree-shaking and code splitting:
 
-- **ES Module** - 234.16 KB (61.23 KB gzipped)
-- **UMD** - 1,068.41 KB (325.65 KB gzipped)
-- **CSS** - 53.01 KB (8.13 KB gzipped)
+- **ES Module** - ~224 KB total (61 KB gzipped) - Core editor with lazy-loaded chunks
+- **UMD** - 1,151 KB (344 KB gzipped) - Universal module definition
+- **CSS** - 70.63 KB (10.35 KB gzipped) - Includes light/dark themes
 
 Includes Prism.js (22 languages), emoji data, and all features — fully optimized for modern bundlers like Vite, Webpack, and Rollup.
 
@@ -398,22 +398,26 @@ npm run test:e2e:debug
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.es.js` (231.63 KB, 58.73 KB gzipped)
-  - Modern ES6+ syntax for tree-shaking
+- **ES Module** - `dist/next-level-editor.es.js` (~224 KB total with chunks, 61 KB gzipped)
+  - Modern ES6+ syntax with code splitting
+  - Lazy-loaded chunks for optimal performance
   - Recommended for Vite, Webpack 5+, Rollup
   
-- **UMD** - `dist/next-level-editor.umd.js` (147.74 KB, 44.15 KB gzipped)
+- **UMD** - `dist/next-level-editor.umd.js` (1,151 KB, 344 KB gzipped)
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
+  - All features bundled in a single file
   
-- **CSS** - `dist/next-level-editor.css` (41.91 KB, 6.89 KB gzipped)
+- **CSS** - `dist/next-level-editor.css` (70.63 KB, 10.35 KB gzipped)
   - Minified styles with CSS variables
   - Includes light and dark themes
+  - Responsive design utilities
 
 **Bundle Composition:**
-- Core editor (~15KB gzipped)
+- Core editor with toolbar (~20KB gzipped)
 - Prism.js syntax highlighting for 22 languages (~40KB gzipped)
-- Features: tables, emojis, modals, toolbar system (~4KB gzipped)
+- Rich features: tables, emojis, modals, file manager, templates (~30KB gzipped)
+- Vue 3 runtime and utilities (included in chunk sizes)
 
 All bundles are optimized with:
 - Tree-shaking support for ES modules
