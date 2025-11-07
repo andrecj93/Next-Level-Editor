@@ -10,23 +10,23 @@
 
 > A professional, feature-rich WYSIWYG editor for Vue.js 3 built with modern web standards. Combining the power of CKEditor, the elegance of Notion, and the simplicity of Medium into one beautiful package.
 
-**🎯 Built for developers who demand quality** — TypeScript strict mode, 80%+ test coverage, zero security vulnerabilities, and production-ready performance.
+**🎯 Built for developers who demand quality** — TypeScript strict mode, 265+ tests with 80%+ coverage, zero security vulnerabilities, and production-ready performance. Features three view modes (code/split/preview), command palette, format painter, document templates, file manager, and much more.
 
 ## 📸 Screenshots
 
 <table>
   <tr>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/386bb947-38c3-435b-bd35-6c819f9db4d8" alt="Light Mode" width="100%"/>
+      <img src="https://github.com/user-attachments/assets/d43e86b6-1f22-4775-91b5-3699eb6b00a7" alt="Light Mode" width="100%"/>
       <br />
-      <em>Light Mode - Clean and professional</em>
+      <em>Light Mode - Clean and professional interface with comprehensive toolbar</em>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/868e3112-3eb3-48cf-99c0-4949d771cacd" alt="Dark Mode" width="100%"/>
+      <img src="https://github.com/user-attachments/assets/5314509f-8f25-45fd-92b5-c1f625754a98" alt="Dark Mode" width="100%"/>
       <br />
-      <em>Dark Mode - Easy on the eyes</em>
+      <em>Dark Mode - Beautiful dark theme with code/split/preview view modes</em>
     </td>
   </tr>
 </table>
@@ -35,12 +35,16 @@
 
 > **Why Next Level Editor?** Built with modern web standards, best practices, and a focus on developer experience. Every feature is thoroughly tested, accessible, and performant.
 
-### 🎨 Modern UI
+### 🎨 Modern UI & Experience
 - **CKEditor-Inspired Toolbar** - Professional horizontal toolbar with dropdown menus
+- **Three View Modes** - Code view, Split view (side-by-side), and Preview view for different workflows
 - **Responsive Design** - Adapts seamlessly from desktop to mobile
 - **Dark Mode** - Beautiful dark theme with smooth transitions and localStorage persistence
 - **Floating Toolbar** - Medium-style context menu appears on text selection
+- **Context Menu** - Right-click menu with cut, copy, paste, and formatting operations
+- **Smart Toolbar** - Intelligent toolbar that adapts based on content and selection
 - **Visual Feedback** - Hover effects, active states, and smooth animations
+- **Skeleton Loading** - Smooth loading states for better perceived performance
 
 ### ✏️ Rich Text Editing
 - **Text Formatting** - Bold, italic, underline, strikethrough
@@ -66,21 +70,27 @@
 - **Tables** - Create custom tables with header rows and configurable columns
 
 ### ⚡ Power Features
+- **Command Palette** - Quick access to all commands with keyboard-driven interface
 - **Slash Commands** - Type `/` to access 14+ quick actions
 - **Find & Replace** - Full-featured search with case-sensitive and whole-word options (Ctrl+F)
 - **Auto-Save** - 2-second debounced auto-save with visual status indicator
 - **Export** - Download as HTML, Markdown, PDF, or Word document with one click
+- **Format HTML** - Pretty-print HTML code with proper indentation
+- **View HTML Code** - Modal to view and edit formatted HTML source
 - **Full-Screen Mode** - Distraction-free writing with centered content layout
 - **Word & Character Count** - Live statistics in footer
-- **Undo/Redo** - Full history management with Ctrl+Z/Ctrl+Shift+Z
+- **Undo/Redo** - Full history management with Ctrl+Z/Ctrl+Shift+Z and visual timeline
+- **History Timeline** - Visual representation of document history for easy navigation
 
-### 🚀 Productivity Features (NEW!)
+### 🚀 Productivity Features
 - **Format Painter** - Copy formatting from one selection and apply it to another with one click
 - **Document Templates** - 8 pre-built templates across 4 categories (Documents, Email, Blog, Marketing)
   - Meeting Notes, Project Proposal, Blog Post, Email, Product Description, Press Release, Technical Documentation
 - **Page Breaks** - Insert visual page breaks for print/export formatting
-- **Table of Contents** - Auto-generate clickable TOC from document headings (H1-H6)
+- **Table of Contents** - Auto-generate clickable TOC from document headings (H1-H6) with smooth scrolling
+- **Table Designer** - Advanced table editing with properties modal for customization
 - **Spell Checker** - Browser-based spell checking with enable/disable toggle
+- **Virtual Scrolling** - Performance-optimized rendering for large documents
 
 ### 🔐 Security & Quality
 
@@ -91,6 +101,8 @@
 - **0 Security Vulnerabilities** - CodeQL verified and continuously monitored
 - **GitHub Actions CI/CD** - Automated testing, linting, and deployment
 - **WCAG Compliant** - Keyboard navigation, ARIA labels, and screen reader support
+- **Plugin System** - Extensible architecture for custom functionality
+- **Mobile Gestures** - Touch-friendly interface with gesture support
 
 ### 📦 Bundle Size
 
@@ -256,6 +268,21 @@ Type `/` anywhere in the editor to open the quick actions menu with 14+ commands
 ### Elements
 - `/divider` - Horizontal rule separator
 
+## 👁️ View Modes
+
+The editor supports three different view modes to suit your workflow:
+
+### 💻 Code View
+Switch to code view to see and edit the raw HTML source. Perfect for developers who want full control over the markup. The HTML is formatted with syntax highlighting for better readability.
+
+### ⚏ Split View
+Work in split view to see your content and the HTML output side-by-side. Great for learning HTML or debugging formatting issues while maintaining a visual reference.
+
+### 👁️ Preview View
+Focus on the visual output with preview view. See exactly how your content will appear without the distraction of editing controls. Ideal for reviewing content before publishing.
+
+Toggle between views using the buttons in the toolbar or use keyboard shortcuts for quick switching.
+
 ## 🎨 Theming & Customization
 
 The editor uses CSS custom properties (variables) for easy theming and customization:
@@ -340,7 +367,7 @@ npm run test:e2e:debug
 
 ### Test Suites Overview
 
-**Unit Tests (265 tests with Vitest)**
+**Unit Tests (265+ tests with Vitest)**
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
 - **Commands** (29 tests) - Text alignment, tables, horizontal rules, search/replace
@@ -352,6 +379,8 @@ npm run test:e2e:debug
 - **Templates** (13 tests) - Template retrieval, categories, content validation
 - **Page Management** (11 tests) - Page breaks, table of contents generation
 - **Spell Checker** (17 tests) - Enable/disable, suggestions, auto-correct
+- **Composables** (20+ tests) - Auto-save, command palette, history timeline, loading states, smart toolbar, virtual scroll
+- **File Manager** - Upload, storage, and file management functionality
 
 **End-to-End Tests (23 tests with Playwright)**
 - **Basic Functionality** - Editor loading, typing, word count
@@ -445,23 +474,46 @@ next-level-editor-jordan/
 │   │   ├── NextLevelEditor.vue      # Main editor with toolbar
 │   │   ├── ToolbarDropdown.vue      # Reusable dropdown
 │   │   ├── ColorPicker.vue          # Color selection
-│   │   ├── FloatingToolbar.vue      # Context menu
+│   │   ├── FloatingToolbar.vue      # Floating selection toolbar
+│   │   ├── ContextMenu.vue          # Right-click context menu
 │   │   ├── FontSizeSelector.vue     # Font size dropdown
 │   │   ├── TableModal.vue           # Table insertion
+│   │   ├── TableDesigner.vue        # Advanced table editing
+│   │   ├── TablePropertiesModal.vue # Table customization
 │   │   ├── CodeBlockModal.vue       # Syntax highlighting
 │   │   ├── FindReplaceModal.vue     # Search and replace
 │   │   ├── EmojiPicker.vue          # Emoji selector
 │   │   ├── ImageUploadModal.vue     # Image upload
-│   │   └── EmbedModal.vue           # Video embeds
+│   │   ├── EmbedModal.vue           # Video embeds
+│   │   ├── FileManagerModal.vue     # File management system
+│   │   ├── TemplateModal.vue        # Document templates
+│   │   ├── HtmlCodeModal.vue        # View/edit HTML source
+│   │   ├── CommandPalette.vue       # Command search interface
+│   │   ├── HistoryTimeline.vue      # Undo/redo visualization
+│   │   ├── SkeletonLoader.vue       # Loading states
+│   │   └── VirtualScrollContainer.vue # Performance optimization
 │   ├── composables/         # Reusable composition functions
 │   │   ├── useTheme.ts              # Theme management
-│   │   └── useAutoSave.ts           # Auto-save logic
+│   │   ├── useAutoSave.ts           # Auto-save logic
+│   │   ├── useCommandPalette.ts     # Command interface
+│   │   ├── useHistoryTimeline.ts    # History visualization
+│   │   ├── useSmartToolbar.ts       # Adaptive toolbar
+│   │   ├── useVirtualScroll.ts      # Virtual scrolling
+│   │   ├── useLoading.ts            # Loading states
+│   │   ├── useMobileGestures.ts     # Touch support
+│   │   ├── useScreenReader.ts       # Accessibility
+│   │   └── usePlugin.ts             # Plugin system
 │   ├── utils/               # Pure utility functions
 │   │   ├── formatting.ts            # Text formatting
 │   │   ├── commands.ts              # Editor commands
 │   │   ├── export.ts                # Export utilities
 │   │   ├── embed.ts                 # Video embedding
-│   │   └── __tests__/               # Unit tests (129 tests)
+│   │   ├── formatPainter.ts         # Format copying
+│   │   ├── templates.ts             # Document templates
+│   │   ├── pageManagement.ts        # TOC and page breaks
+│   │   ├── spellChecker.ts          # Spell checking
+│   │   ├── fileManager.ts           # File operations
+│   │   └── __tests__/               # Unit tests (265+ tests)
 │   ├── styles/              # CSS files
 │   │   ├── variables.css            # CSS custom properties
 │   │   └── animations.css           # Transitions
