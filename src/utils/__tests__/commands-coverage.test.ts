@@ -163,6 +163,48 @@ describe('Additional Commands Coverage', () => {
       expect(h2.style.textAlign).toBe('right')
       expect(p2.style.textAlign).toBe('right')
     })
+
+    it('handles text node as commonAncestorContainer (bug fix)', () => {
+      // This reproduces the bug: "Cannot read properties of undefined (reading 'toLowerCase')"
+      // When selecting text within a paragraph, commonAncestorContainer is a text node
+      root.innerHTML = '<p>Some text content here</p>'
+      const p = root.querySelector('p')!
+      const textNode = p.firstChild as Text
+
+      // Create a range that selects part of the text (text node is commonAncestor)
+      const range = document.createRange()
+      range.setStart(textNode, 5)
+      range.setEnd(textNode, 9)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      // This should not throw an error
+      expect(() => applyTextAlignment(root, 'center')).not.toThrow()
+
+      // The paragraph should have the alignment
+      expect(p.style.textAlign).toBe('center')
+    })
+
+    it('handles collapsed selection on text node', () => {
+      // Another scenario: cursor is inside text (collapsed range on text node)
+      root.innerHTML = '<p>Test text</p>'
+      const p = root.querySelector('p')!
+      const textNode = p.firstChild as Text
+
+      const range = document.createRange()
+      range.setStart(textNode, 4)
+      range.collapse(true)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      // This should not throw an error
+      expect(() => applyTextAlignment(root, 'right')).not.toThrow()
+
+      // The paragraph should have the alignment
+      expect(p.style.textAlign).toBe('right')
+    })
   })
 
   describe('insertHorizontalRule', () => {
