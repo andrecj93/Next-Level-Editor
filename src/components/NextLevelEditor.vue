@@ -2471,8 +2471,8 @@ const handleContextMenu = (event: MouseEvent) => {
   
   // Check if the right-click is on a table element
   // If so, don't show the general context menu - the TableDesigner will handle table-specific actions
-  const target = event.target as Element
-  if (target.closest && target.closest('table, td, th')) {
+  const target = event.target
+  if (target instanceof Element && target.closest('table, td, th')) {
     return
   }
   
