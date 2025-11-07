@@ -94,6 +94,9 @@ import { ref, computed, watch, nextTick } from 'vue'
 import Prism from 'prismjs'
 import 'prismjs/themes/prism-tomorrow.css'
 
+// Import markup-templating (required for PHP and other template languages)
+import 'prismjs/components/prism-markup-templating'
+
 // Import common language support
 import 'prismjs/components/prism-javascript'
 import 'prismjs/components/prism-typescript'
