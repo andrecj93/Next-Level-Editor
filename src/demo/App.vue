@@ -222,7 +222,7 @@ const content = ref('&lt;p&gt;Hello World!&lt;/p&gt;')
 import { ref } from 'vue'
 import NextLevelEditor from '../components/NextLevelEditor.vue'
 import FeatureShowcase from './FeatureShowcase.vue'
-import { exampleTemplates, getTemplateById, getDefaultTemplate } from './examples/exampleTemplates'
+import { getAllTemplates, getTemplateById, getDefaultTemplate } from './examples/exampleTemplates'
 
 const activeTab = ref('editor')
 
@@ -233,7 +233,7 @@ const tabs = [
 ]
 
 // Use the showcase template as default, unless 'empty' query param is present
-const templates = exampleTemplates
+const templates = getAllTemplates()
 const selectedTemplate = ref('showcase')
 const urlParams = new URLSearchParams(window.location.search)
 const startEmpty = urlParams.get('empty') === 'true'
