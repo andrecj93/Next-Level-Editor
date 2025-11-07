@@ -497,11 +497,19 @@ export const insertImage = (root: HTMLElement, url: string, alt: string = '') =>
   }
   image.style.maxWidth = '100%'
   image.style.height = 'auto'
+  
+  // Insert the image
   range.insertNode(image)
+  
+  // Insert a space after the image to provide a typing location
+  const spaceNode = document.createTextNode('\u00A0') // Non-breaking space
+  image.parentNode?.insertBefore(spaceNode, image.nextSibling)
+  
+  // Position cursor after the space
   const selection = getSelection()
-  if (selection) {
+  if (selection && spaceNode) {
     const newRange = document.createRange()
-    newRange.setStartAfter(image)
+    newRange.setStart(spaceNode, 1) // Position after the space character
     newRange.collapse(true)
     selection.removeAllRanges()
     selection.addRange(newRange)
