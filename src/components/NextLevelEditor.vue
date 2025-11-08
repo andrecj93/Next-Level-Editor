@@ -554,8 +554,8 @@
       >💾 Saving...</span>
       <span
         v-else-if="lastSaved"
-        class="saved"
         :key="lastSaved.getTime()"
+        class="saved"
       >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
     </div>
 
