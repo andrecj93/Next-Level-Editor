@@ -215,12 +215,12 @@
         </button>
       </div>
 
-      <!-- View Mode Toggle -->
+      <!-- View Mode Toggle with Text Labels -->
       <div class="toolbar-divider" />
       <div class="view-mode-group">
         <button
-          :class="['view-mode-btn', { active: viewMode === 'editor' }]"
-          data-tooltip="Editor view"
+          :class="['view-mode-btn', 'with-text', { active: viewMode === 'editor' }]"
+          data-tooltip="WYSIWYG Editor - Edit with visual formatting"
           aria-label="Editor view"
           @click="viewMode = 'editor'"
         >
@@ -230,10 +230,11 @@
             viewBox="0 0 16 16"
             fill="currentColor"
           ><path d="M12.146 1.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-4 2a.5.5 0 0 1-.65-.65l2-4a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zM12.5 5.207L10.207 2.914 3 10.121V11h.879l7.621-5.793z" /></svg>
+          <span class="btn-label">Editor</span>
         </button>
         <button
-          :class="['view-mode-btn', { active: viewMode === 'code' }]"
-          data-tooltip="Code view"
+          :class="['view-mode-btn', 'with-text', { active: viewMode === 'code' }]"
+          data-tooltip="HTML Source Code - Edit raw HTML"
           aria-label="Code view"
           @click="viewMode = 'code'"
         >
@@ -243,10 +244,11 @@
             viewBox="0 0 16 16"
             fill="currentColor"
           ><path d="M5 3l-3 5 3 5V3zm6 0v10l3-5-3-5z" /></svg>
+          <span class="btn-label">Code</span>
         </button>
         <button
-          :class="['view-mode-btn', { active: viewMode === 'split' }]"
-          data-tooltip="Split view"
+          :class="['view-mode-btn', 'with-text', { active: viewMode === 'split' }]"
+          data-tooltip="Split View - Editor and code side by side"
           aria-label="Split view"
           @click="viewMode = 'split'"
         >
@@ -256,10 +258,11 @@
             viewBox="0 0 16 16"
             fill="currentColor"
           ><path d="M1 2h6v12H1V2zm1 1v10h4V3H2zm7-1h6v12H9V2zm1 1v10h4V3h-4z" /></svg>
+          <span class="btn-label">Split</span>
         </button>
         <button
-          :class="['view-mode-btn', { active: viewMode === 'preview' }]"
-          data-tooltip="Preview view"
+          :class="['view-mode-btn', 'with-text', { active: viewMode === 'preview' }]"
+          data-tooltip="Preview - View final output without editing"
           aria-label="Preview view"
           @click="viewMode = 'preview'"
         >
@@ -273,6 +276,7 @@
             cy="8"
             r="2"
           /><path d="M8 3C4 3 1 8 1 8s3 5 7 5 7-5 7-5-3-5-7-5zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" /></svg>
+          <span class="btn-label">Preview</span>
         </button>
       </div>
 
@@ -1826,29 +1830,29 @@ const toolActions = computed(() => [
   {
     id: 'export-html',
     label: 'Export HTML',
-    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm1 2v8h8V4H4zm2 2h4v1H6V6zm0 2h4v1H6V8z"/></svg>',
-    tooltip: 'Export as HTML',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><text x="1" y="12" font-size="10" font-weight="bold" fill="currentColor">HTML</text></svg>',
+    tooltip: 'Export as HTML (.html)',
     onClick: handleExportHtml,
   },
   {
     id: 'export-md',
     label: 'Export Markdown',
-    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm1 2v6h2V7.5L7 10l2-2.5V11h2V5h-2L7 7.5 5 5H3z"/></svg>',
-    tooltip: 'Export as Markdown',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><text x="2" y="12" font-size="11" font-weight="bold" fill="currentColor">MD</text></svg>',
+    tooltip: 'Export as Markdown (.md)',
     onClick: handleExportMarkdown,
   },
   {
     id: 'export-pdf',
     label: 'Export PDF',
-    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h7l3 3v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm1 2v8h8V6h-3V4H4zm4 3h1.5a1 1 0 1 1 0 2H8V7zm-3 0h1a1 1 0 1 1 0 2H5V7z"/></svg>',
-    tooltip: 'Export as PDF',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><text x="1" y="12" font-size="10" font-weight="bold" fill="currentColor">PDF</text></svg>',
+    tooltip: 'Export as PDF (.pdf)',
     onClick: handleExportPdf,
   },
   {
     id: 'export-word',
     label: 'Export Word',
-    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h7l3 3v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm1 4l1.5 5L7 6.5 8.5 11 10 6h1l-2 7H8L6.5 8.5 5 13H4L2 6h2z"/></svg>',
-    tooltip: 'Export as Word',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><text x="1" y="12" font-size="10" font-weight="bold" fill="currentColor">DOCX</text></svg>',
+    tooltip: 'Export as Word (.docx)',
     onClick: handleExportWord,
   },
   {
@@ -3474,6 +3478,20 @@ onBeforeUnmount(() => {
   font-size: 16px;
   transition: all 0.15s;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.view-mode-btn.with-text {
+  padding: 0 12px;
+  min-width: 80px;
+}
+
+.view-mode-btn .btn-label {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .view-mode-btn:hover {
@@ -3833,68 +3851,6 @@ onBeforeUnmount(() => {
     min-width: 36px;
     height: 36px;
   }
-}
-
-/* View Mode Toggle Styles */
-.view-mode-group {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  background: var(--editor-border);
-  border-radius: 6px;
-}
-
-.view-mode-btn {
-  min-width: 36px;
-  height: 28px;
-  padding: 0 8px;
-  border: none;
-  background: transparent;
-  color: var(--toolbar-text);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.15s;
-  position: relative;
-}
-
-.view-mode-btn:hover {
-  background: var(--toolbar-hover);
-}
-
-.view-mode-btn.active {
-  background: var(--editor-bg);
-  color: var(--toolbar-accent);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.view-mode-btn:focus {
-  outline: 2px solid var(--toolbar-accent);
-  outline-offset: 2px;
-}
-
-/* Tooltips for view mode buttons */
-.view-mode-btn[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 6px 10px;
-  background: var(--tooltip-bg);
-  color: var(--tooltip-text);
-  font-size: 12px;
-  font-weight: 400;
-  white-space: nowrap;
-  border-radius: 6px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-  z-index: 1000;
-}
-
-.view-mode-btn[data-tooltip]:hover::after {
-  opacity: 1;
 }
 
 /* Editor Container with Split View */
