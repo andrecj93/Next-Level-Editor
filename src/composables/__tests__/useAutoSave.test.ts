@@ -482,4 +482,96 @@ describe('useAutoSave', () => {
       expect(autoSave.saveHistory.value[0].content).toBe(longContent)
     })
   })
+
+  describe('Callback Function Flexibility', () => {
+    it('should work with callback that ignores parameters', async () => {
+      // Test that callback can be defined without using content/version parameters
+      const mockCallback = vi.fn(() => 
+        Promise.resolve({ success: true, serverVersion: 1 })
+      )
+      const autoSave = useAutoSave(mockCallback, { delay: 100 })
+
+      await autoSave.forceSave('test content')
+
+      expect(mockCallback).toHaveBeenCalledWith('test content', 0)
+      expect(autoSave.saveStatus.value).toBe('saved')
+    })
+
+    it('should work with callback using only content parameter', async () => {
+      const mockCallback = vi.fn((content: string) => {
+        expect(content).toBe('my content')
+        return Promise.resolve({ success: true, serverVersion: 1 })
+      })
+      const autoSave = useAutoSave(mockCallback)
+
+      await autoSave.forceSave('my content')
+
+      expect(mockCallback).toHaveBeenCalledTimes(1)
+      expect(autoSave.lastSaved.value).not.toBeNull()
+    })
+
+    it('should work with callback using both parameters', async () => {
+      const mockCallback = vi.fn((content: string, version: number) => {
+        expect(content).toBe('content v2')
+        expect(version).toBeGreaterThanOrEqual(0)
+        return Promise.resolve({ success: true, serverVersion: version + 1 })
+      })
+      const autoSave = useAutoSave(mockCallback)
+
+      await autoSave.forceSave('content v2')
+
+      expect(mockCallback).toHaveBeenCalledWith('content v2', 0)
+      expect(autoSave.currentVersion.value).toBe(1)
+    })
+
+    it('should pass correct version number across multiple saves', async () => {
+      const versions: number[] = []
+      const mockCallback = vi.fn((content: string, version: number) => {
+        versions.push(version)
+        return Promise.resolve({ success: true, serverVersion: version + 1 })
+      })
+      const autoSave = useAutoSave(mockCallback)
+
+      await autoSave.forceSave('content 1')
+      await autoSave.forceSave('content 2')
+      await autoSave.forceSave('content 3')
+
+      expect(versions).toEqual([0, 1, 2])
+      expect(autoSave.currentVersion.value).toBe(3)
+    })
+
+    it('should handle callback returning promise without parameters', async () => {
+      let resolveCallback: (value: any) => void
+      const mockCallback = vi.fn(
+        () =>
+          new Promise<{ success: boolean; serverVersion?: number }>((resolve) => {
+            resolveCallback = resolve
+          })
+      )
+      const autoSave = useAutoSave(mockCallback, { delay: 100 })
+
+      autoSave.triggerAutoSave('async test')
+      await vi.advanceTimersByTimeAsync(100)
+
+      expect(autoSave.saveStatus.value).toBe('saving')
+
+      resolveCallback!({ success: true, serverVersion: 1 })
+      await vi.runAllTimersAsync()
+
+      expect(autoSave.saveStatus.value).toBe('saved')
+    })
+
+    it('should work with async callback without parameter destructuring', async () => {
+      const mockCallback = vi.fn(async () => {
+        // Simulate some async operation without setTimeout
+        return { success: true, serverVersion: 5 }
+      })
+      const autoSave = useAutoSave(mockCallback)
+
+      await autoSave.forceSave('test')
+
+      expect(mockCallback).toHaveBeenCalled()
+      expect(autoSave.currentVersion.value).toBe(5)
+    })
+  })
 })
