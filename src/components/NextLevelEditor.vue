@@ -551,6 +551,7 @@
       <span
         v-else-if="lastSaved"
         class="saved"
+        :key="lastSaved.getTime()"
       >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
     </div>
   </div>
@@ -1194,10 +1195,18 @@ const handleTextAlignment = (alignment: 'left' | 'center' | 'right' | 'justify')
 // Color actions
 const handleTextColor = (color: string) => {
   performWithSelection((root) => applyTextColor(root, color))
+  // Close colors dropdown after a short delay for better visual feedback
+  setTimeout(() => {
+    showColorsDropdown.value = false
+  }, 300)
 }
 
 const handleBackgroundColor = (color: string) => {
   performWithSelection((root) => applyBackgroundColor(root, color))
+  // Close colors dropdown after a short delay for better visual feedback
+  setTimeout(() => {
+    showColorsDropdown.value = false
+  }, 300)
 }
 
 // Font size action
@@ -2581,6 +2590,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
   
   if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+    event.preventDefault() // Prevent '/' from being inserted in the document
     openCommandMenu()
     return
   }
