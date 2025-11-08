@@ -2806,6 +2806,127 @@ watch(viewMode, (newMode, oldMode) => {
   })
 })
 
+// Image resize functionality
+const setupImageResizing = () => {
+  if (!editorContent.value) return
+  
+  editorContent.value.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement
+    if (target.classList.contains('editor-image-resizable') || target.classList.contains('editor-image-wrapper')) {
+      const wrapper = target.classList.contains('editor-image-wrapper') 
+        ? target 
+        : target.closest('.editor-image-wrapper')
+      
+      if (wrapper) {
+        // Remove selected class from all other images
+        editorContent.value?.querySelectorAll('.editor-image-wrapper.selected').forEach(el => {
+          el.classList.remove('selected')
+        })
+        
+        // Add selected class to clicked image
+        wrapper.classList.add('selected')
+        
+        // Add resize handles if not already present
+        if (!wrapper.querySelector('.image-resize-handle')) {
+          const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+          handles.forEach(position => {
+            const handle = document.createElement('div')
+            handle.className = `image-resize-handle ${position}`
+            handle.addEventListener('mousedown', (e) => startImageResize(e, wrapper as HTMLElement, position))
+            wrapper.appendChild(handle)
+          })
+        }
+      }
+    } else {
+      // Clicked outside image, remove all selections
+      editorContent.value?.querySelectorAll('.editor-image-wrapper.selected').forEach(el => {
+        el.classList.remove('selected')
+      })
+    }
+  })
+}
+
+let resizeData: { 
+  wrapper: HTMLElement; 
+  img: HTMLImageElement; 
+  startX: number; 
+  startY: number; 
+  startWidth: number; 
+  startHeight: number;
+  position: string;
+} | null = null
+
+const startImageResize = (event: MouseEvent, wrapper: HTMLElement, position: string) => {
+  event.preventDefault()
+  event.stopPropagation()
+  
+  const img = wrapper.querySelector('img') as HTMLImageElement
+  if (!img) return
+  
+  resizeData = {
+    wrapper,
+    img,
+    startX: event.clientX,
+    startY: event.clientY,
+    startWidth: img.offsetWidth,
+    startHeight: img.offsetHeight,
+    position
+  }
+  
+  document.addEventListener('mousemove', doImageResize)
+  document.addEventListener('mouseup', stopImageResize)
+  
+  // Prevent text selection during resize
+  document.body.style.userSelect = 'none'
+}
+
+const doImageResize = (event: MouseEvent) => {
+  if (!resizeData) return
+  
+  const { img, startX, startY, startWidth, startHeight, position } = resizeData
+  
+  let newWidth = startWidth
+  let newHeight = startHeight
+  
+  if (position.includes('right')) {
+    newWidth = startWidth + (event.clientX - startX)
+  } else if (position.includes('left')) {
+    newWidth = startWidth - (event.clientX - startX)
+  }
+  
+  if (position.includes('bottom')) {
+    newHeight = startHeight + (event.clientY - startY)
+  } else if (position.includes('top')) {
+    newHeight = startHeight - (event.clientY - startY)
+  }
+  
+  // Maintain aspect ratio
+  const aspectRatio = startWidth / startHeight
+  if (Math.abs(newWidth / newHeight - aspectRatio) > 0.1) {
+    newHeight = newWidth / aspectRatio
+  }
+  
+  // Set minimum size
+  if (newWidth > 50 && newHeight > 50) {
+    img.style.width = `${newWidth}px`
+    img.style.height = `${newHeight}px`
+    img.style.maxWidth = '100%'
+  }
+}
+
+const stopImageResize = () => {
+  if (resizeData) {
+    document.removeEventListener('mousemove', doImageResize)
+    document.removeEventListener('mouseup', stopImageResize)
+    document.body.style.userSelect = ''
+    
+    // Capture snapshot for undo/redo
+    captureSnapshot()
+    
+    resizeData = null
+  }
+}
+
 onMounted(() => {
   if (editorContent.value) {
     applySanitizedContent(props.modelValue)
@@ -2817,6 +2938,9 @@ onMounted(() => {
     
     // Initialize code editor content
     codeContent.value = formatHtml(props.modelValue || '')
+    
+    // Setup image resizing
+    setupImageResizing()
   }
   document.addEventListener('click', handleDocumentClick)
   document.addEventListener('keydown', handleEscape)
@@ -3244,6 +3368,127 @@ onBeforeUnmount(() => {
 
 .theme-dark .editor-content :deep(table tr:hover) {
   background: rgba(96, 165, 250, 0.05);
+}
+
+/* Resizable Image Styles */
+.editor-content :deep(.editor-image-wrapper) {
+  display: inline-block;
+  position: relative;
+  max-width: 100%;
+  margin: 10px 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.editor-content :deep(.editor-image-wrapper:hover) {
+  border-color: var(--toolbar-accent);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.editor-content :deep(.editor-image-wrapper.selected) {
+  border-color: var(--toolbar-accent);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+}
+
+.editor-content :deep(.editor-image-resizable) {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.editor-content :deep(.editor-image-wrapper)::after {
+  content: '↔️ Drag to resize';
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.editor-content :deep(.editor-image-wrapper:hover)::after {
+  opacity: 1;
+}
+
+.editor-content :deep(.image-resize-handle) {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border: 2px solid var(--toolbar-accent);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.editor-content :deep(.editor-image-wrapper:hover .image-resize-handle),
+.editor-content :deep(.editor-image-wrapper.selected .image-resize-handle) {
+  opacity: 1;
+}
+
+.editor-content :deep(.image-resize-handle.bottom-right) {
+  bottom: -6px;
+  right: -6px;
+  cursor: nwse-resize;
+}
+
+.editor-content :deep(.image-resize-handle.bottom-left) {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.editor-content :deep(.image-resize-handle.top-right) {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.editor-content :deep(.image-resize-handle.top-left) {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+/* Table Resize Styles */
+.editor-content :deep(table) {
+  position: relative;
+  resize: both;
+  overflow: auto;
+  min-width: 200px;
+}
+
+.editor-content :deep(table)::after {
+  content: '⇲';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--toolbar-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: se-resize;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.editor-content :deep(table:hover)::after {
+  opacity: 1;
+  background: rgba(59, 130, 246, 0.2);
 }
 
 .toolbar-collapse-enter-active,
