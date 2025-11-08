@@ -483,22 +483,46 @@ import {
   restoreSelection,
   saveSelection,
   getSelectionRange,
+  applyInlineStyle,
+  toggleBlock,
+  toggleList,
+  insertLink as insertLinkUtil,
+  insertImage as insertImageUtil,
 } from '../utils/formatting'
 import {
   getWordCount,
   getCharacterCount,
   getSelectedTable,
   getSelectedCell,
+  applyTextAlignment,
+  applyTextColor,
+  applyBackgroundColor,
+  applyFontSize,
+  insertHorizontalRule,
+  insertTable as insertTableUtil,
+  searchAndReplace,
+  addTableRow,
+  removeTableRow,
+  addTableColumn,
+  removeTableColumn,
+  deleteTable,
+  applyCellProperties,
+  applyTableProperties,
+  getCellProperties,
+  getTableProperties,
 } from '../utils/commands'
 import { useTheme } from '../composables/useTheme'
 import { useAutoSave } from '../composables/useAutoSave'
 import { useSmartToolbar } from '../composables/useSmartToolbar'
-import { hasFormatCopied } from '../utils/formatPainter'
-import { enableSpellCheck } from '../utils/spellChecker'
+import { hasFormatCopied, copyFormat, pasteFormat } from '../utils/formatPainter'
+import { enableSpellCheck, toggleSpellCheck } from '../utils/spellChecker'
+import { exportAsHtml, exportAsMarkdown, exportAsPdf, exportAsWord, formatHtml } from '../utils/export'
+import { insertPageBreak, insertTableOfContents } from '../utils/pageManagement'
 import { useCommandPalette } from '../composables/useCommandPalette'
 import { useEditorActions } from '../composables/useEditorActions'
 import { useToolbarActions } from '../composables/useToolbarActions'
 import { useSlashCommands } from '../composables/useSlashCommands'
+import type { ToolbarAction } from '../types/toolbar'
 import ColorPicker from './ColorPicker.vue'
 import FloatingToolbar from './FloatingToolbar.vue'
 import TableModal from './TableModal.vue'
@@ -604,6 +628,19 @@ const floatingToolbarTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 // Dropdown states for modern toolbar
 const showColorsDropdown = ref(false)
 
+// Modal states
+const showImageUploadModal = ref(false)
+const showEmbedModal = ref(false)
+const showFileManagerModal = ref(false)
+const showEmojiPicker = ref(false)
+const showTemplateModal = ref(false)
+const showHtmlCodeModal = ref(false)
+const showFindReplaceModal = ref(false)
+const showCodeBlockModal = ref(false)
+const showTableModal = ref(false)
+const showTableDesigner = ref(false)
+const showTablePropertiesModal = ref(false)
+
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
   async (content: string, version: number) => {
@@ -634,6 +671,18 @@ const isApplyingHistory = ref(false)
 // Context menu state
 const showContextMenu = ref(false)
 const contextMenuPosition = ref({ top: 0, left: 0 })
+
+// UI state
+const isFullScreen = ref(false)
+const fontSize = ref<'small' | 'normal' | 'large' | 'huge'>('normal')
+const spellCheckEnabled = ref(false)
+const formatPainterActive = ref(false)
+const currentTable = ref<HTMLTableElement | null>(null)
+const currentCell = ref<HTMLTableCellElement | null>(null)
+const tableDesignerPosition = ref({ x: 0, y: 0 })
+const tablePropertiesMode = ref<'cell' | 'table' | 'both'>('both')
+const initialCellProps = ref({})
+const initialTableProps = ref({})
 
 // HTML Sanitization (from PR #6)
 const ALLOWED_TAGS = new Set([
