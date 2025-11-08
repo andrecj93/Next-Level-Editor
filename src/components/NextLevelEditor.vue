@@ -215,12 +215,12 @@
         </button>
       </div>
 
-      <!-- View Mode Toggle -->
+      <!-- View Mode Toggle with Text Labels -->
       <div class="toolbar-divider" />
       <div class="view-mode-group">
         <button
-          :class="['view-mode-btn', { active: viewMode === 'editor' }]"
-          data-tooltip="Editor view"
+          :class="['view-mode-btn', 'with-text', { active: viewMode === 'editor' }]"
+          data-tooltip="WYSIWYG Editor - Edit with visual formatting"
           aria-label="Editor view"
           @click="viewMode = 'editor'"
         >
@@ -230,10 +230,11 @@
             viewBox="0 0 16 16"
             fill="currentColor"
           ><path d="M12.146 1.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-4 2a.5.5 0 0 1-.65-.65l2-4a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zM12.5 5.207L10.207 2.914 3 10.121V11h.879l7.621-5.793z" /></svg>
+          <span class="btn-label">Editor</span>
         </button>
         <button
-          :class="['view-mode-btn', { active: viewMode === 'code' }]"
-          data-tooltip="Code view"
+          :class="['view-mode-btn', 'with-text', { active: viewMode === 'code' }]"
+          data-tooltip="HTML Source Code - Edit raw HTML"
           aria-label="Code view"
           @click="viewMode = 'code'"
         >
@@ -243,10 +244,11 @@
             viewBox="0 0 16 16"
             fill="currentColor"
           ><path d="M5 3l-3 5 3 5V3zm6 0v10l3-5-3-5z" /></svg>
+          <span class="btn-label">Code</span>
         </button>
         <button
-          :class="['view-mode-btn', { active: viewMode === 'split' }]"
-          data-tooltip="Split view"
+          :class="['view-mode-btn', 'with-text', { active: viewMode === 'split' }]"
+          data-tooltip="Split View - Editor and code side by side"
           aria-label="Split view"
           @click="viewMode = 'split'"
         >
@@ -256,10 +258,11 @@
             viewBox="0 0 16 16"
             fill="currentColor"
           ><path d="M1 2h6v12H1V2zm1 1v10h4V3H2zm7-1h6v12H9V2zm1 1v10h4V3h-4z" /></svg>
+          <span class="btn-label">Split</span>
         </button>
         <button
-          :class="['view-mode-btn', { active: viewMode === 'preview' }]"
-          data-tooltip="Preview view"
+          :class="['view-mode-btn', 'with-text', { active: viewMode === 'preview' }]"
+          data-tooltip="Preview - View final output without editing"
           aria-label="Preview view"
           @click="viewMode = 'preview'"
         >
@@ -273,6 +276,7 @@
             cy="8"
             r="2"
           /><path d="M8 3C4 3 1 8 1 8s3 5 7 5 7-5 7-5-3-5-7-5zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" /></svg>
+          <span class="btn-label">Preview</span>
         </button>
       </div>
 
@@ -551,6 +555,7 @@
       <span
         v-else-if="lastSaved"
         class="saved"
+        :key="lastSaved.getTime()"
       >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
     </div>
   </div>
@@ -1194,10 +1199,18 @@ const handleTextAlignment = (alignment: 'left' | 'center' | 'right' | 'justify')
 // Color actions
 const handleTextColor = (color: string) => {
   performWithSelection((root) => applyTextColor(root, color))
+  // Close colors dropdown after a short delay for better visual feedback
+  setTimeout(() => {
+    showColorsDropdown.value = false
+  }, 300)
 }
 
 const handleBackgroundColor = (color: string) => {
   performWithSelection((root) => applyBackgroundColor(root, color))
+  // Close colors dropdown after a short delay for better visual feedback
+  setTimeout(() => {
+    showColorsDropdown.value = false
+  }, 300)
 }
 
 // Font size action
@@ -1817,29 +1830,29 @@ const toolActions = computed(() => [
   {
     id: 'export-html',
     label: 'Export HTML',
-    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm1 2v8h8V4H4zm2 2h4v1H6V6zm0 2h4v1H6V8z"/></svg>',
-    tooltip: 'Export as HTML',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><text x="1" y="12" font-size="10" font-weight="bold" fill="currentColor">HTML</text></svg>',
+    tooltip: 'Export as HTML (.html)',
     onClick: handleExportHtml,
   },
   {
     id: 'export-md',
     label: 'Export Markdown',
-    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm1 2v6h2V7.5L7 10l2-2.5V11h2V5h-2L7 7.5 5 5H3z"/></svg>',
-    tooltip: 'Export as Markdown',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><text x="2" y="12" font-size="11" font-weight="bold" fill="currentColor">MD</text></svg>',
+    tooltip: 'Export as Markdown (.md)',
     onClick: handleExportMarkdown,
   },
   {
     id: 'export-pdf',
     label: 'Export PDF',
-    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h7l3 3v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm1 2v8h8V6h-3V4H4zm4 3h1.5a1 1 0 1 1 0 2H8V7zm-3 0h1a1 1 0 1 1 0 2H5V7z"/></svg>',
-    tooltip: 'Export as PDF',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><text x="1" y="12" font-size="10" font-weight="bold" fill="currentColor">PDF</text></svg>',
+    tooltip: 'Export as PDF (.pdf)',
     onClick: handleExportPdf,
   },
   {
     id: 'export-word',
     label: 'Export Word',
-    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h7l3 3v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm1 4l1.5 5L7 6.5 8.5 11 10 6h1l-2 7H8L6.5 8.5 5 13H4L2 6h2z"/></svg>',
-    tooltip: 'Export as Word',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><text x="1" y="12" font-size="10" font-weight="bold" fill="currentColor">DOCX</text></svg>',
+    tooltip: 'Export as Word (.docx)',
     onClick: handleExportWord,
   },
   {
@@ -2581,6 +2594,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
   
   if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+    event.preventDefault() // Prevent '/' from being inserted in the document
     openCommandMenu()
     return
   }
@@ -2792,6 +2806,127 @@ watch(viewMode, (newMode, oldMode) => {
   })
 })
 
+// Image resize functionality
+const setupImageResizing = () => {
+  if (!editorContent.value) return
+  
+  editorContent.value.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement
+    if (target.classList.contains('editor-image-resizable') || target.classList.contains('editor-image-wrapper')) {
+      const wrapper = target.classList.contains('editor-image-wrapper') 
+        ? target 
+        : target.closest('.editor-image-wrapper')
+      
+      if (wrapper) {
+        // Remove selected class from all other images
+        editorContent.value?.querySelectorAll('.editor-image-wrapper.selected').forEach(el => {
+          el.classList.remove('selected')
+        })
+        
+        // Add selected class to clicked image
+        wrapper.classList.add('selected')
+        
+        // Add resize handles if not already present
+        if (!wrapper.querySelector('.image-resize-handle')) {
+          const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+          handles.forEach(position => {
+            const handle = document.createElement('div')
+            handle.className = `image-resize-handle ${position}`
+            handle.addEventListener('mousedown', (e) => startImageResize(e, wrapper as HTMLElement, position))
+            wrapper.appendChild(handle)
+          })
+        }
+      }
+    } else {
+      // Clicked outside image, remove all selections
+      editorContent.value?.querySelectorAll('.editor-image-wrapper.selected').forEach(el => {
+        el.classList.remove('selected')
+      })
+    }
+  })
+}
+
+let resizeData: { 
+  wrapper: HTMLElement; 
+  img: HTMLImageElement; 
+  startX: number; 
+  startY: number; 
+  startWidth: number; 
+  startHeight: number;
+  position: string;
+} | null = null
+
+const startImageResize = (event: MouseEvent, wrapper: HTMLElement, position: string) => {
+  event.preventDefault()
+  event.stopPropagation()
+  
+  const img = wrapper.querySelector('img') as HTMLImageElement
+  if (!img) return
+  
+  resizeData = {
+    wrapper,
+    img,
+    startX: event.clientX,
+    startY: event.clientY,
+    startWidth: img.offsetWidth,
+    startHeight: img.offsetHeight,
+    position
+  }
+  
+  document.addEventListener('mousemove', doImageResize)
+  document.addEventListener('mouseup', stopImageResize)
+  
+  // Prevent text selection during resize
+  document.body.style.userSelect = 'none'
+}
+
+const doImageResize = (event: MouseEvent) => {
+  if (!resizeData) return
+  
+  const { img, startX, startY, startWidth, startHeight, position } = resizeData
+  
+  let newWidth = startWidth
+  let newHeight = startHeight
+  
+  if (position.includes('right')) {
+    newWidth = startWidth + (event.clientX - startX)
+  } else if (position.includes('left')) {
+    newWidth = startWidth - (event.clientX - startX)
+  }
+  
+  if (position.includes('bottom')) {
+    newHeight = startHeight + (event.clientY - startY)
+  } else if (position.includes('top')) {
+    newHeight = startHeight - (event.clientY - startY)
+  }
+  
+  // Maintain aspect ratio
+  const aspectRatio = startWidth / startHeight
+  if (Math.abs(newWidth / newHeight - aspectRatio) > 0.1) {
+    newHeight = newWidth / aspectRatio
+  }
+  
+  // Set minimum size
+  if (newWidth > 50 && newHeight > 50) {
+    img.style.width = `${newWidth}px`
+    img.style.height = `${newHeight}px`
+    img.style.maxWidth = '100%'
+  }
+}
+
+const stopImageResize = () => {
+  if (resizeData) {
+    document.removeEventListener('mousemove', doImageResize)
+    document.removeEventListener('mouseup', stopImageResize)
+    document.body.style.userSelect = ''
+    
+    // Capture snapshot for undo/redo
+    captureSnapshot()
+    
+    resizeData = null
+  }
+}
+
 onMounted(() => {
   if (editorContent.value) {
     applySanitizedContent(props.modelValue)
@@ -2803,6 +2938,9 @@ onMounted(() => {
     
     // Initialize code editor content
     codeContent.value = formatHtml(props.modelValue || '')
+    
+    // Setup image resizing
+    setupImageResizing()
   }
   document.addEventListener('click', handleDocumentClick)
   document.addEventListener('keydown', handleEscape)
@@ -3232,6 +3370,127 @@ onBeforeUnmount(() => {
   background: rgba(96, 165, 250, 0.05);
 }
 
+/* Resizable Image Styles */
+.editor-content :deep(.editor-image-wrapper) {
+  display: inline-block;
+  position: relative;
+  max-width: 100%;
+  margin: 10px 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.editor-content :deep(.editor-image-wrapper:hover) {
+  border-color: var(--toolbar-accent);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.editor-content :deep(.editor-image-wrapper.selected) {
+  border-color: var(--toolbar-accent);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+}
+
+.editor-content :deep(.editor-image-resizable) {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.editor-content :deep(.editor-image-wrapper)::after {
+  content: '↔️ Drag to resize';
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.editor-content :deep(.editor-image-wrapper:hover)::after {
+  opacity: 1;
+}
+
+.editor-content :deep(.image-resize-handle) {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border: 2px solid var(--toolbar-accent);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.editor-content :deep(.editor-image-wrapper:hover .image-resize-handle),
+.editor-content :deep(.editor-image-wrapper.selected .image-resize-handle) {
+  opacity: 1;
+}
+
+.editor-content :deep(.image-resize-handle.bottom-right) {
+  bottom: -6px;
+  right: -6px;
+  cursor: nwse-resize;
+}
+
+.editor-content :deep(.image-resize-handle.bottom-left) {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.editor-content :deep(.image-resize-handle.top-right) {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.editor-content :deep(.image-resize-handle.top-left) {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+/* Table Resize Styles */
+.editor-content :deep(table) {
+  position: relative;
+  resize: both;
+  overflow: auto;
+  min-width: 200px;
+}
+
+.editor-content :deep(table)::after {
+  content: '⇲';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--toolbar-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: se-resize;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.editor-content :deep(table:hover)::after {
+  opacity: 1;
+  background: rgba(59, 130, 246, 0.2);
+}
+
 .toolbar-collapse-enter-active,
 .toolbar-collapse-leave-active {
   transition: all 0.2s ease;
@@ -3464,6 +3723,20 @@ onBeforeUnmount(() => {
   font-size: 16px;
   transition: all 0.15s;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.view-mode-btn.with-text {
+  padding: 0 12px;
+  min-width: 80px;
+}
+
+.view-mode-btn .btn-label {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .view-mode-btn:hover {
@@ -3823,68 +4096,6 @@ onBeforeUnmount(() => {
     min-width: 36px;
     height: 36px;
   }
-}
-
-/* View Mode Toggle Styles */
-.view-mode-group {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  background: var(--editor-border);
-  border-radius: 6px;
-}
-
-.view-mode-btn {
-  min-width: 36px;
-  height: 28px;
-  padding: 0 8px;
-  border: none;
-  background: transparent;
-  color: var(--toolbar-text);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.15s;
-  position: relative;
-}
-
-.view-mode-btn:hover {
-  background: var(--toolbar-hover);
-}
-
-.view-mode-btn.active {
-  background: var(--editor-bg);
-  color: var(--toolbar-accent);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.view-mode-btn:focus {
-  outline: 2px solid var(--toolbar-accent);
-  outline-offset: 2px;
-}
-
-/* Tooltips for view mode buttons */
-.view-mode-btn[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 6px 10px;
-  background: var(--tooltip-bg);
-  color: var(--tooltip-text);
-  font-size: 12px;
-  font-weight: 400;
-  white-space: nowrap;
-  border-radius: 6px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-  z-index: 1000;
-}
-
-.view-mode-btn[data-tooltip]:hover::after {
-  opacity: 1;
 }
 
 /* Editor Container with Split View */

@@ -490,26 +490,44 @@ export const insertImage = (root: HTMLElement, url: string, alt: string = '') =>
   const range = getSelectionRange()
   if (!range) return
   ensureRangeWithinRoot(range, root)
+  
+  // Create a wrapper div for the image with resize functionality
+  const wrapper = document.createElement('div')
+  wrapper.className = 'editor-image-wrapper'
+  wrapper.contentEditable = 'false'
+  wrapper.style.display = 'inline-block'
+  wrapper.style.position = 'relative'
+  wrapper.style.maxWidth = '100%'
+  wrapper.style.margin = '10px 0'
+  wrapper.style.cursor = 'pointer'
+  
   const image = document.createElement('img')
   image.src = url
   if (alt) {
     image.alt = alt
   }
+  image.className = 'editor-image-resizable'
   image.style.maxWidth = '100%'
   image.style.height = 'auto'
+  image.style.display = 'block'
+  image.draggable = false
   
-  // Insert the image
-  range.insertNode(image)
+  wrapper.appendChild(image)
   
-  // Insert a space after the image to provide a typing location
-  const spaceNode = document.createTextNode('\u00A0') // Non-breaking space
-  image.parentNode?.insertBefore(spaceNode, image.nextSibling)
+  // Insert the wrapped image
+  range.deleteContents()
+  range.insertNode(wrapper)
   
-  // Position cursor after the space
+  // Insert a paragraph after the image for typing
+  const para = document.createElement('p')
+  para.appendChild(document.createTextNode('\u200B')) // Zero-width space
+  wrapper.parentNode?.insertBefore(para, wrapper.nextSibling)
+  
+  // Position cursor in the new paragraph
   const selection = getSelection()
-  if (selection && spaceNode) {
+  if (selection && para.firstChild) {
     const newRange = document.createRange()
-    newRange.setStart(spaceNode, 1) // Position after the space character
+    newRange.setStart(para.firstChild, 0)
     newRange.collapse(true)
     selection.removeAllRanges()
     selection.addRange(newRange)
