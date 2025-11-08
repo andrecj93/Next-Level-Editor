@@ -526,7 +526,7 @@ describe('useAutoSave', () => {
 
     it('should pass correct version number across multiple saves', async () => {
       const versions: number[] = []
-      const mockCallback = vi.fn((content: string, version: number) => {
+      const mockCallback = vi.fn((_content: string, version: number) => {
         versions.push(version)
         return Promise.resolve({ success: true, serverVersion: version + 1 })
       })
