@@ -219,6 +219,19 @@
       <div class="toolbar-divider" />
       <div class="view-mode-group">
         <button
+          :class="['view-mode-btn', { active: viewMode === 'editor' }]"
+          data-tooltip="Editor view"
+          aria-label="Editor view"
+          @click="viewMode = 'editor'"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+          ><path d="M12.146 1.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-4 2a.5.5 0 0 1-.65-.65l2-4a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zM12.5 5.207L10.207 2.914 3 10.121V11h.879l7.621-5.793z" /></svg>
+        </button>
+        <button
           :class="['view-mode-btn', { active: viewMode === 'code' }]"
           data-tooltip="Code view"
           aria-label="Code view"
@@ -265,7 +278,7 @@
 
       <!-- Format HTML Button (visible in code/split view) -->
       <button
-        v-if="viewMode !== 'preview'"
+        v-if="viewMode === 'code' || viewMode === 'split'"
         class="toolbar-btn-modern"
         data-tooltip="Format HTML (pretty-print)"
         aria-label="Format HTML"
@@ -335,6 +348,25 @@
 
     <!-- Editor and Preview Container -->
     <div :class="['editor-container', `view-mode-${viewMode}`]">
+      <!-- WYSIWYG Editor Panel (editor mode) -->
+      <div
+        v-if="viewMode === 'editor'"
+        class="editor-panel"
+      >
+        <div
+          ref="editorContent"
+          class="editor-content"
+          contenteditable="true"
+          :placeholder="placeholder"
+          @input="onInput"
+          @blur="onBlur"
+          @focus="onFocus"
+          @mouseup="onMouseUp"
+          @contextmenu="handleContextMenu"
+        />
+      </div>
+
+      <!-- Code Editor Panel (code/split view) -->
       <div
         v-if="viewMode === 'code' || viewMode === 'split'"
         class="editor-panel"
@@ -669,8 +701,8 @@ const {
   getContextHints
 } = useSmartToolbar()
 
-// View mode state (code, split, preview)
-const viewMode = ref<'code' | 'split' | 'preview'>('code')
+// View mode state (editor, code, split, preview)
+const viewMode = ref<'editor' | 'code' | 'split' | 'preview'>('editor')
 
 // Store HTML content for preview when editor is not rendered
 const htmlContent = ref('')
@@ -2727,19 +2759,25 @@ watch(
   }
 )
 
-// Watch viewMode changes to restore content when switching back to code/split view
+// Watch viewMode changes to restore content when switching between modes
 watch(viewMode, (newMode, oldMode) => {
-  // When switching from preview to code/split view, restore content from htmlContent
-  // This handles the case where the editor element was destroyed and recreated
+  // Handle content restoration and synchronization when switching view modes
   nextTick(() => {
-    if ((newMode === 'code' || newMode === 'split') && editorContent.value) {
-      // If switching from preview mode, always restore content since the editor was destroyed
-      if (oldMode === 'preview') {
-        editorContent.value.innerHTML = htmlContent.value || ''
+    if (newMode === 'editor' && editorContent.value) {
+      // Switching to editor mode - ensure content is loaded
+      if (oldMode === 'preview' || oldMode === 'code' || oldMode === 'split') {
+        // Restore from stored HTML content if editor is empty
+        if (!editorContent.value.innerHTML.trim() && htmlContent.value) {
+          editorContent.value.innerHTML = htmlContent.value
+        }
       }
-      // If editor is empty, restore content
-      else if (!editorContent.value.innerHTML.trim()) {
-        editorContent.value.innerHTML = htmlContent.value || ''
+    } else if ((newMode === 'code' || newMode === 'split') && editorContent.value) {
+      // Switching to code/split mode - sync content and format code
+      if (oldMode === 'preview' || oldMode === 'editor') {
+        // If switching from preview or editor mode, restore content
+        if (!editorContent.value.innerHTML.trim() && htmlContent.value) {
+          editorContent.value.innerHTML = htmlContent.value
+        }
       }
       
       // Update code editor content with formatted HTML
@@ -3475,6 +3513,10 @@ onBeforeUnmount(() => {
   border-top: 1px solid var(--editor-border);
 }
 
+.editor-container.view-mode-editor {
+  display: block;
+}
+
 .editor-container.view-mode-code {
   display: block;
 }
@@ -3850,6 +3892,10 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 0;
   position: relative;
+}
+
+.editor-container.view-mode-editor {
+  display: block;
 }
 
 .editor-container.view-mode-code {
