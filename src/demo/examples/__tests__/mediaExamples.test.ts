@@ -4,8 +4,8 @@ import {
   getMediaExampleById, 
   getAllMediaExamples,
   placeholderImages,
-  type ExampleTemplate 
 } from '../mediaExamples'
+import type { ExampleTemplate } from '../exampleTemplates'
 
 describe('mediaExamples', () => {
   describe('Placeholder Images', () => {

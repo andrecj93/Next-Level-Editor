@@ -21,7 +21,7 @@ describe('NextLevelEditor', () => {
 
       const editor = wrapper.find('.next-level-editor')
       expect(editor.exists()).toBe(true)
-      expect(editor.element.style.width).toBe('800px')
+      expect((editor.element as HTMLElement).style.width).toBe('800px')
     })
 
     it('should apply custom height when height prop is provided', () => {
@@ -33,7 +33,7 @@ describe('NextLevelEditor', () => {
 
       const editor = wrapper.find('.next-level-editor')
       expect(editor.exists()).toBe(true)
-      expect(editor.element.style.height).toBe('500px')
+      expect((editor.element as HTMLElement).style.height).toBe('500px')
     })
 
     it('should apply both width and height when both props are provided', () => {
@@ -46,8 +46,8 @@ describe('NextLevelEditor', () => {
 
       const editor = wrapper.find('.next-level-editor')
       expect(editor.exists()).toBe(true)
-      expect(editor.element.style.width).toBe('1000px')
-      expect(editor.element.style.height).toBe('600px')
+      expect((editor.element as HTMLElement).style.width).toBe('1000px')
+      expect((editor.element as HTMLElement).style.height).toBe('600px')
     })
 
     it('should accept percentage values for width and height', () => {
@@ -60,8 +60,8 @@ describe('NextLevelEditor', () => {
 
       const editor = wrapper.find('.next-level-editor')
       expect(editor.exists()).toBe(true)
-      expect(editor.element.style.width).toBe('100%')
-      expect(editor.element.style.height).toBe('80vh')
+      expect((editor.element as HTMLElement).style.width).toBe('100%')
+      expect((editor.element as HTMLElement).style.height).toBe('80vh')
     })
 
     it('should not apply styles when width and height props are not provided', () => {
@@ -71,8 +71,8 @@ describe('NextLevelEditor', () => {
 
       const editor = wrapper.find('.next-level-editor')
       expect(editor.exists()).toBe(true)
-      expect(editor.element.style.width).toBe('')
-      expect(editor.element.style.height).toBe('')
+      expect((editor.element as HTMLElement).style.width).toBe('')
+      expect((editor.element as HTMLElement).style.height).toBe('')
     })
 
     it('should accept CSS units like em, rem, and vw', () => {
@@ -85,8 +85,8 @@ describe('NextLevelEditor', () => {
 
       const editor = wrapper.find('.next-level-editor')
       expect(editor.exists()).toBe(true)
-      expect(editor.element.style.width).toBe('50rem')
-      expect(editor.element.style.height).toBe('30em')
+      expect((editor.element as HTMLElement).style.width).toBe('50rem')
+      expect((editor.element as HTMLElement).style.height).toBe('30em')
     })
   })
 
