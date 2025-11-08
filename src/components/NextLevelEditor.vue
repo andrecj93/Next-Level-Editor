@@ -482,7 +482,6 @@ import {
   isListActive,
   restoreSelection,
   saveSelection,
-  getSelectionRange,
   applyInlineStyle,
   toggleBlock,
   toggleList,
@@ -519,8 +518,6 @@ import { enableSpellCheck, toggleSpellCheck } from '../utils/spellChecker'
 import { exportAsHtml, exportAsMarkdown, exportAsPdf, exportAsWord, formatHtml } from '../utils/export'
 import { insertPageBreak, insertTableOfContents } from '../utils/pageManagement'
 import { useCommandPalette } from '../composables/useCommandPalette'
-import { useEditorActions } from '../composables/useEditorActions'
-import { useToolbarActions } from '../composables/useToolbarActions'
 import { useSlashCommands } from '../composables/useSlashCommands'
 import type { ToolbarAction } from '../types/toolbar'
 import ColorPicker from './ColorPicker.vue'
@@ -2194,7 +2191,6 @@ const {
   commandMenuPosition,
   commandOptions,
   openCommandMenu,
-  closeCommandMenu,
   handleCommandOption,
   handleDocumentClick,
   handleEscape,
