@@ -591,6 +591,8 @@ import {
   toggleList,
   insertLink as insertLinkUtil,
   insertImage as insertImageUtil,
+  indentListItem,
+  outdentListItem,
 } from '../utils/formatting'
 import {
   getWordCount,
@@ -1777,6 +1779,28 @@ const listActions = computed(() => [
     onClick: () => handleListAction('ol'),
     isActive: () => isListActionActive('ol'),
   },
+  {
+    id: 'increase-indent',
+    label: 'Increase Indent',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v1H3V2zm0 3h10v1H3V5zm0 3h10v1H3V8zm0 3h10v1H3v-1zm0 3h10v1H3v-1zM1 5.5l2 2-2 2v-4z"/></svg>',
+    tooltip: 'Increase indent (Tab)',
+    onClick: () => {
+      if (editorContent.value && indentListItem(editorContent.value)) {
+        captureSnapshot()
+      }
+    },
+  },
+  {
+    id: 'decrease-indent',
+    label: 'Decrease Indent',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v1H3V2zm0 3h10v1H3V5zm0 3h10v1H3V8zm0 3h10v1H3v-1zm0 3h10v1H3v-1zM3 5.5l-2 2 2 2v-4z"/></svg>',
+    tooltip: 'Decrease indent (Shift+Tab)',
+    onClick: () => {
+      if (editorContent.value && outdentListItem(editorContent.value)) {
+        captureSnapshot()
+      }
+    },
+  },
 ])
 
 const insertDropdownItems = computed(() => [
@@ -2637,6 +2661,36 @@ const handleKeydown = (event: KeyboardEvent) => {
     event.preventDefault() // Prevent '/' from being inserted in the document
     openCommandMenu()
     return
+  }
+
+  // Handle Tab/Shift+Tab for list indentation
+  if (event.key === 'Tab' && editorContent.value) {
+    const selection = window.getSelection()
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0)
+      // Check if we're in a list item
+      let node: Node | null = range.startContainer
+      while (node && node !== editorContent.value) {
+        if (node.nodeName === 'LI') {
+          event.preventDefault()
+          if (event.shiftKey) {
+            // Shift+Tab: outdent
+            const success = outdentListItem(editorContent.value)
+            if (success) {
+              captureSnapshot()
+            }
+          } else {
+            // Tab: indent
+            const success = indentListItem(editorContent.value)
+            if (success) {
+              captureSnapshot()
+            }
+          }
+          return
+        }
+        node = node.parentNode
+      }
+    }
   }
 
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
