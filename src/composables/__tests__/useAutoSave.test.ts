@@ -296,7 +296,7 @@ describe('useAutoSave', () => {
     it('should return "saving" while save in progress', async () => {
       let resolveCallback: (value: any) => void
       const mockCallback = vi.fn(
-        (_content: string, _version: number) =>
+        () =>
           new Promise<{ success: boolean; serverVersion?: number }>((resolve) => {
             resolveCallback = resolve
           })
