@@ -157,7 +157,9 @@ export function applyTextAlignment(root: HTMLElement, alignment: 'left' | 'cente
       (element as HTMLElement).style.textAlign = alignment
       return
     }
-    element = (element as HTMLElement).parentElement
+    const parent = (element as HTMLElement).parentElement
+    if (!parent) break
+    element = parent
   }
 }
 

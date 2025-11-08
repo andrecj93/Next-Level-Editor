@@ -411,7 +411,10 @@ ${html}
 </html>`
 
     // Convert HTML to Word document blob
-    const blob = await asBlob(fullHtml)
+    const result = await asBlob(fullHtml)
+    
+    // Convert to Blob if it's a Buffer
+    const blob = result instanceof Blob ? result : new Blob([result])
     
     // Download the blob
     downloadFile(blob, filename)
