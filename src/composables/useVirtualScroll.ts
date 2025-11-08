@@ -87,7 +87,7 @@ export function useVirtualScroll(
   }
 
   // Scroll to specific index
-  function scrollToIndex(index: number, _behavior: ScrollBehavior = 'smooth') {
+  function scrollToIndex(index: number): number {
     const offset = index * itemHeight
     scrollTop.value = offset
     updateVisibleRange()

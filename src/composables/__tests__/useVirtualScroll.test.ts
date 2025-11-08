@@ -189,6 +189,79 @@ describe('useVirtualScroll', () => {
       expect(result.scrollTop.value).toBe(offset)
     })
 
+    it('should scroll to index at start of list', () => {
+      const totalItems = ref(1000)
+      const result = useVirtualScroll(totalItems, {
+        itemHeight: 24
+      }) as any
+
+      const offset = result.scrollToIndex(0)
+
+      expect(offset).toBe(0)
+      expect(result.scrollTop.value).toBe(0)
+      expect(result.visibleStartIndex.value).toBe(0)
+    })
+
+    it('should scroll to index at end of list', () => {
+      const totalItems = ref(1000)
+      const result = useVirtualScroll(totalItems, {
+        itemHeight: 24,
+        containerHeight: 600
+      }) as any
+
+      const lastIndex = 999
+      const offset = result.scrollToIndex(lastIndex)
+
+      expect(offset).toBe(lastIndex * 24)
+      expect(result.scrollTop.value).toBe(offset)
+    })
+
+    it('should scroll to middle index and update visible range', () => {
+      const totalItems = ref(1000)
+      const result = useVirtualScroll(totalItems, {
+        itemHeight: 30,
+        containerHeight: 600,
+        bufferSize: 5
+      }) as any
+
+      const middleIndex = 500
+      result.scrollToIndex(middleIndex)
+
+      expect(result.scrollTop.value).toBe(middleIndex * 30)
+      // Visible range should be updated to include the target index
+      expect(result.visibleStartIndex.value).toBeLessThanOrEqual(middleIndex)
+      expect(result.visibleEndIndex.value).toBeGreaterThanOrEqual(middleIndex)
+    })
+
+    it('should return correct offset for custom item heights', () => {
+      const totalItems = ref(500)
+      const customHeight = 50
+      const result = useVirtualScroll(totalItems, {
+        itemHeight: customHeight
+      }) as any
+
+      const targetIndex = 100
+      const offset = result.scrollToIndex(targetIndex)
+
+      expect(offset).toBe(targetIndex * customHeight)
+      expect(offset).toBe(5000)
+    })
+
+    it('should handle multiple sequential scrollToIndex calls', () => {
+      const totalItems = ref(1000)
+      const result = useVirtualScroll(totalItems, {
+        itemHeight: 24
+      }) as any
+
+      // Scroll to multiple indices in sequence
+      const indices = [10, 50, 25, 100, 5]
+      indices.forEach((index) => {
+        const offset = result.scrollToIndex(index)
+        expect(offset).toBe(index * 24)
+        expect(result.scrollTop.value).toBe(offset)
+      })
+    })
+
     it('should handle scroll to top', () => {
       const totalItems = ref(1000)
       const result = useVirtualScroll(totalItems) as any
