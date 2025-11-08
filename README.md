@@ -1,7 +1,7 @@
 # Next Level Editor 🚀
 
 [![CI/CD](https://github.com/andrecj93/next-level-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/andrecj93/next-level-editor/actions/workflows/ci.yml)
-[![Playwright Tests](https://img.shields.io/badge/Playwright-23%20tests-45ba4b?logo=playwright)](https://github.com/andrecj93/next-level-editor/actions/workflows/ci.yml)
+[![Playwright Tests](https://img.shields.io/badge/Playwright-33%20tests-45ba4b?logo=playwright)](https://github.com/andrecj93/next-level-editor/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/next-level-editor.svg)](https://www.npmjs.com/package/next-level-editor)
 [![codecov](https://codecov.io/github/andrecj93/Next-Level-Editor/graph/badge.svg?token=41OUT9ESM5)](https://codecov.io/github/andrecj93/Next-Level-Editor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -752,6 +752,7 @@ Built with inspiration from the best editors in the industry:
 
 ### Documentation
 - 📖 [CHANGELOG](CHANGELOG.md) - Version history and release notes
+- ✨ [UX Improvements](docs/UX_IMPROVEMENTS.md) - Recent usability enhancements and fixes
 - 📋 [COPILOT_INSTRUCTIONS](COPILOT_INSTRUCTIONS.md) - Development standards and guidelines
 - 📘 [PUBLISHING](PUBLISHING.md) - Publishing workflow
 
