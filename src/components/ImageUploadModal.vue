@@ -95,19 +95,28 @@
       </div>
 
       <div class="modal-footer">
-        <button
-          class="cancel-button"
-          @click="close"
+        <p
+          v-if="!previewUrl"
+          class="footer-hint"
         >
-          Cancel
-        </button>
-        <button 
-          class="insert-button" 
-          :disabled="!previewUrl"
-          @click="insertImage"
-        >
-          Insert Image
-        </button>
+          💡 Enter a URL or upload a file to enable the Insert button
+        </p>
+        <div class="footer-buttons">
+          <button
+            class="cancel-button"
+            @click="close"
+          >
+            Cancel
+          </button>
+          <button 
+            class="insert-button" 
+            :disabled="!previewUrl"
+            :title="!previewUrl ? 'Please provide an image URL or upload a file first' : 'Insert this image into the editor'"
+            @click="insertImage"
+          >
+            ✓ Insert Image
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -398,11 +407,24 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color);
+}
+
+.footer-hint {
+  margin: 0 0 12px 0;
+  padding: 8px 12px;
+  background: var(--secondary-bg);
+  border-left: 3px solid var(--primary-color);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-color);
+}
+
+.footer-buttons {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--border-color);
 }
 
 .cancel-button,
