@@ -414,7 +414,7 @@ ${html}
     const result = await asBlob(fullHtml)
     
     // Convert to Blob if it's a Buffer
-    const blob = result instanceof Blob ? result : new Blob([result])
+    const blob = result instanceof Blob ? result : new Blob([new Uint8Array(result)])
     
     // Download the blob
     downloadFile(blob, filename)
