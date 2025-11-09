@@ -22,7 +22,7 @@ test.describe("Toolbar", () => {
 
     // Scroll the editor content
     await page.evaluate(() => {
-      const editorElement = document.querySelector('.editor-content');
+      const editorElement = document.querySelector(".editor-content");
       if (editorElement) {
         editorElement.scrollTop = 500;
       }
@@ -32,7 +32,7 @@ test.describe("Toolbar", () => {
 
     // Toolbar should still be visible
     await expect(toolbar).toBeVisible();
-    
+
     // Check that toolbar has sticky positioning
     const toolbarStyles = await toolbar.evaluate((el) => {
       const styles = globalThis.getComputedStyle(el);
@@ -41,7 +41,7 @@ test.describe("Toolbar", () => {
         top: styles.top,
       };
     });
-    
+
     expect(toolbarStyles.position).toBe("sticky");
   });
 });

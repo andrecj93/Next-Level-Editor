@@ -32,9 +32,7 @@ test.describe("View Modes", () => {
     await expect(editorPanel).toBeVisible();
 
     // Click Code view button
-    const codeButton = page
-      .locator('.view-mode-btn:has-text("Code")')
-      .first();
+    const codeButton = page.locator('.view-mode-btn:has-text("Code")').first();
     await codeButton.click();
 
     // Wait for view mode to change
@@ -57,9 +55,7 @@ test.describe("View Modes", () => {
     await page.waitForTimeout(500);
 
     // Check that container has view-mode-editor class
-    const editorContainer = page.locator(
-      ".editor-container.view-mode-editor"
-    );
+    const editorContainer = page.locator(".editor-container.view-mode-editor");
     await expect(editorContainer).toBeVisible();
 
     // Editor content should be visible again

@@ -17,31 +17,33 @@ test.describe("Auto-Save", () => {
 
     // Type initial content
     await editor.pressSequentially("First change");
-    
+
     // Wait for auto-save to trigger (2s debounce)
     await page.waitForTimeout(2500);
 
     // Get the first timestamp
     const autoSaveIndicator = page.locator(".auto-save-indicator");
     const firstTimestamp = await autoSaveIndicator.textContent();
-    
+
     // Wait a bit to ensure timestamps would be different
     await page.waitForTimeout(1000);
 
     // Make another change
     await editor.pressSequentially(" - Second change");
-    
+
     // Wait for auto-save to trigger again
     await page.waitForTimeout(2500);
 
     // Get the second timestamp
     const secondTimestamp = await autoSaveIndicator.textContent();
-    
+
     // Timestamps should be different
     expect(firstTimestamp).not.toBe(secondTimestamp);
   });
 
-  test("should update timestamp after slash command usage", async ({ page }) => {
+  test("should update timestamp after slash command usage", async ({
+    page,
+  }) => {
     const editor = page.locator(".editor-content");
     await editor.click();
 
@@ -56,25 +58,25 @@ test.describe("Auto-Save", () => {
 
     const autoSaveIndicator = page.locator(".auto-save-indicator");
     const firstTimestamp = await autoSaveIndicator.textContent();
-    
+
     // Wait to ensure different timestamp
     await page.waitForTimeout(1000);
 
     // Use slash command to create heading
     await page.keyboard.press("Enter");
     await page.keyboard.press("/");
-    
+
     const commandMenu = page.locator(".command-menu");
     await expect(commandMenu).toBeVisible({ timeout: 2000 });
-    
+
     const headingOption = commandMenu.locator("text=Heading 2").first();
     await headingOption.click();
-    
+
     await editor.pressSequentially("New heading");
-    
+
     // Wait for auto-save
     await page.waitForTimeout(2500);
-    
+
     const secondTimestamp = await autoSaveIndicator.textContent();
     expect(firstTimestamp).not.toBe(secondTimestamp);
   });
