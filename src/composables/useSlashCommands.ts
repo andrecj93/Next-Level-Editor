@@ -59,11 +59,20 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     const container = range.startContainer
     if (container.nodeType === Node.TEXT_NODE) {
       const textNode = container as Text
-      const index = range.startOffset - 1
-      if (index >= 0 && textNode.data[index] === '/') {
-        textNode.deleteData(index, 1)
+      // Check both at cursor position and one position before
+      const currentIndex = range.startOffset
+      const beforeIndex = currentIndex - 1
+      
+      // Remove slash at current position if present
+      if (currentIndex < textNode.length && textNode.data[currentIndex] === '/') {
+        textNode.deleteData(currentIndex, 1)
+      }
+      
+      // Also check and remove slash before cursor (in case it was just inserted)
+      if (beforeIndex >= 0 && textNode.data[beforeIndex] === '/') {
+        textNode.deleteData(beforeIndex, 1)
         const newRange = document.createRange()
-        newRange.setStart(textNode, index)
+        newRange.setStart(textNode, beforeIndex)
         newRange.collapse(true)
         selection.removeAllRanges()
         selection.addRange(newRange)
