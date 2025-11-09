@@ -17,8 +17,17 @@ const BLOCK_TAGS = new Set([
 const isElement = (node: Node): node is HTMLElement =>
   node.nodeType === Node.ELEMENT_NODE;
 
-const getSelection = () =>
-  globalThis.window === undefined ? null : globalThis.getSelection();
+const getSelection = () => {
+  // Try window.getSelection first (for test environment compatibility)
+  if (globalThis.window?.getSelection) {
+    return globalThis.window.getSelection();
+  }
+  // Fallback to globalThis.getSelection
+  if (typeof globalThis.getSelection === "function") {
+    return globalThis.getSelection();
+  }
+  return null;
+};
 
 export const getSelectionRange = (): Range | null => {
   const selection = getSelection();
