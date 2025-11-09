@@ -58,6 +58,11 @@ export function useEditorContent(options: UseEditorContentOptions) {
     if (emitUpdate) {
       const sanitized = sanitizeHtml(html);
       onUpdate(sanitized);
+      
+      // Trigger auto-save after updating
+      if (triggerAutoSave) {
+        triggerAutoSave(sanitized);
+      }
     }
   };
 
@@ -136,7 +141,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
   // Watch for content changes and trigger auto-save
   if (triggerAutoSave) {
     watch(
-      () => editorContent.value?.innerHTML,
+      htmlContent,
       (newContent) => {
         if (newContent && !isApplyingHistory.value) {
           triggerAutoSave(newContent);

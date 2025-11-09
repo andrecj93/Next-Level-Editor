@@ -68,6 +68,9 @@
   padding: 16px;
   background: var(--toolbar-bg);
   border-bottom: 1px solid var(--editor-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .toolbar-section {
@@ -625,6 +628,9 @@
   background: var(--toolbar-bg);
   border-bottom: 1px solid var(--editor-border);
   min-height: 48px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .toolbar-divider {

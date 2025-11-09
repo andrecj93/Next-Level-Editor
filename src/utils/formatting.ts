@@ -6,7 +6,7 @@ const BLOCK_TAGS = new Set(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li'
 
 const isElement = (node: Node): node is HTMLElement => node.nodeType === Node.ELEMENT_NODE
 
-const getSelection = () => (typeof window !== 'undefined' ? window.getSelection() : null)
+const getSelection = () => (globalThis.window === undefined ? null : globalThis.getSelection())
 
 export const getSelectionRange = (): Range | null => {
   const selection = getSelection()
@@ -57,7 +57,7 @@ const unwrapElement = (element: HTMLElement) => {
   while (element.firstChild) {
     parent.insertBefore(element.firstChild, element)
   }
-  parent.removeChild(element)
+  element.remove()
 }
 
 const collectFragmentNodes = (fragment: DocumentFragment): Node[] => {
@@ -169,25 +169,18 @@ const isRangeFullyStyled = (range: Range, tagName: string, root: HTMLElement): b
   return encountered
 }
 
-const removeInlineStyleFromRange = (range: Range, tagName: string) => {
-  // Before extracting, remember the styled parent if we're inside one
-  const commonAncestor = range.commonAncestorContainer
-  let styledParent: HTMLElement | null = null
-  
-  // Walk up from the common ancestor to find if we're inside a styled element
-  let node: Node | null = commonAncestor
-  while (node) {
-    if (isElement(node) && node.tagName.toLowerCase() === tagName.toLowerCase()) {
-      styledParent = node
-      break
+const findStyledParent = (node: Node, tagName: string): HTMLElement | null => {
+  let current: Node | null = node
+  while (current) {
+    if (isElement(current) && current.tagName.toLowerCase() === tagName.toLowerCase()) {
+      return current
     }
-    node = node.parentNode
+    current = current.parentNode
   }
+  return null
+}
 
-  // Extract the contents
-  const fragment = range.extractContents()
-
-  // Find and unwrap matching elements in the extracted fragment
+const unwrapMatchingElements = (fragment: DocumentFragment, tagName: string): void => {
   const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_ELEMENT)
   const toUnwrap: HTMLElement[] = []
   let current: Node | null = walker.currentNode
@@ -201,21 +194,17 @@ const removeInlineStyleFromRange = (range: Range, tagName: string) => {
     current = walker.nextNode()
   }
   toUnwrap.forEach((node) => unwrapElement(node))
+}
 
-  // Collect the nodes to re-insert
-  const nodes = collectFragmentNodes(fragment)
-
-  // If we were inside a styled element and it's now empty (because we extracted its contents),
-  // we need to replace the element itself rather than inserting back inside it
-  if (styledParent && styledParent.parentNode && !styledParent.textContent) {
-    // The styled element is empty, replace it with the unwrapped fragment
+const insertFragmentAtPosition = (
+  fragment: DocumentFragment,
+  styledParent: HTMLElement | null
+): void => {
+  if (styledParent?.parentNode && !styledParent.textContent) {
     const parent = styledParent.parentNode
     const nextSibling = styledParent.nextSibling
+    styledParent.remove()
     
-    // Remove the empty styled element
-    parent.removeChild(styledParent)
-    
-    // Insert the unwrapped fragment nodes at the position where the styled element was
     const tempRange = document.createRange()
     if (nextSibling) {
       tempRange.setStartBefore(nextSibling)
@@ -224,8 +213,20 @@ const removeInlineStyleFromRange = (range: Range, tagName: string) => {
       tempRange.collapse(false)
     }
     tempRange.insertNode(fragment)
+  }
+}
+
+const removeInlineStyleFromRange = (range: Range, tagName: string) => {
+  const styledParent = findStyledParent(range.commonAncestorContainer, tagName)
+  const fragment = range.extractContents()
+  
+  unwrapMatchingElements(fragment, tagName)
+  const nodes = collectFragmentNodes(fragment)
+
+  const insertedAtParent = styledParent?.parentNode && !styledParent.textContent
+  if (insertedAtParent) {
+    insertFragmentAtPosition(fragment, styledParent)
   } else {
-    // Normal case: insert the unwrapped fragment back at the range position
     range.insertNode(fragment)
   }
 
@@ -234,7 +235,7 @@ const removeInlineStyleFromRange = (range: Range, tagName: string) => {
   if (selection && nodes.length > 0) {
     const newRange = document.createRange()
     newRange.setStartBefore(nodes[0])
-    newRange.setEndAfter(nodes[nodes.length - 1])
+    newRange.setEndAfter(nodes.at(-1)!)
     selection.removeAllRanges()
     selection.addRange(newRange)
   }
@@ -274,17 +275,21 @@ const removeInlineStyleAtCaret = (
   afterRange.setEnd(existing, existing.childNodes.length)
   const afterFragment = afterRange.cloneContents()
 
-  parent.removeChild(existing)
+  existing.remove()
 
   const beforeWrapper = wrapNodes(collectFragmentNodes(beforeFragment), tagName, attributes)
   const afterWrapper = wrapNodes(collectFragmentNodes(afterFragment), tagName, attributes)
 
-  if (beforeWrapper) {
-    parent.insertBefore(beforeWrapper, referenceNode)
+  if (beforeWrapper && referenceNode) {
+    referenceNode.before(beforeWrapper)
+  } else if (beforeWrapper) {
+    parent.appendChild(beforeWrapper)
   }
 
-  if (afterWrapper) {
-    parent.insertBefore(afterWrapper, referenceNode)
+  if (afterWrapper && referenceNode) {
+    referenceNode.before(afterWrapper)
+  } else if (afterWrapper) {
+    parent.appendChild(afterWrapper)
   }
 
   const selection = getSelection()
@@ -329,6 +334,50 @@ const getBlockAncestor = (node: Node, root: HTMLElement): HTMLElement | null => 
   )
 }
 
+/**
+ * Unnest a list item by converting it to a block element outside the list
+ * Returns the new block element
+ */
+const unnestListItem = (li: HTMLElement, tagName: string): HTMLElement => {
+  const list = li.parentElement
+  if (!list || !['ul', 'ol'].includes(list.tagName.toLowerCase())) {
+    return replaceTag(li, tagName)
+  }
+
+  const newBlock = document.createElement(tagName)
+  while (li.firstChild) {
+    newBlock.appendChild(li.firstChild)
+  }
+
+  // If this is the only item in the list, replace the entire list
+  if (list.children.length === 1) {
+    list.replaceWith(newBlock)
+  } else {
+    // Split the list if necessary
+    const itemsAfter = []
+    let nextSibling = li.nextElementSibling
+    while (nextSibling) {
+      itemsAfter.push(nextSibling)
+      nextSibling = nextSibling.nextElementSibling
+    }
+
+    // Remove the list item
+    li.remove()
+
+    // If there are items after, create a new list for them
+    if (itemsAfter.length > 0) {
+      const newList = document.createElement(list.tagName.toLowerCase())
+      itemsAfter.forEach(item => newList.appendChild(item))
+      list.parentNode?.insertBefore(newBlock, list.nextSibling)
+      list.parentNode?.insertBefore(newList, newBlock.nextSibling)
+    } else {
+      list.parentNode?.insertBefore(newBlock, list.nextSibling)
+    }
+  }
+
+  return newBlock
+}
+
 export const toggleBlock = (root: HTMLElement, tagName: string, fallbackTag = 'p') => {
   const range = getSelectionRange()
   if (!range) return
@@ -342,6 +391,20 @@ export const toggleBlock = (root: HTMLElement, tagName: string, fallbackTag = 'p
 
   const currentTag = block.tagName.toLowerCase()
   const targetTag = tagName.toLowerCase()
+
+  // Special handling for list items - unnest them when converting to headings
+  if (currentTag === 'li' && ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(targetTag)) {
+    const replaced = unnestListItem(block, targetTag)
+    const selection = getSelection()
+    if (selection) {
+      const newRange = document.createRange()
+      newRange.selectNodeContents(replaced)
+      newRange.collapse(false)
+      selection.removeAllRanges()
+      selection.addRange(newRange)
+    }
+    return
+  }
 
   const newTag = currentTag === targetTag ? fallbackTag : targetTag
   const replaced = replaceTag(block, newTag)
@@ -382,7 +445,7 @@ const unwrapList = (list: HTMLElement) => {
       fragment.appendChild(child)
     }
   })
-  parent.replaceChild(fragment, list)
+  list.replaceWith(fragment)
 }
 
 export const toggleList = (root: HTMLElement, listTag: 'ul' | 'ol') => {
@@ -417,7 +480,7 @@ export const toggleList = (root: HTMLElement, listTag: 'ul' | 'ol') => {
   const list = document.createElement(listTag)
   const listItem = document.createElement('li')
   const contents = range.extractContents()
-  if (!contents.childNodes.length) {
+  if (contents.childNodes.length === 0) {
     listItem.appendChild(document.createTextNode('\u200b'))
   } else {
     listItem.appendChild(contents)

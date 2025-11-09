@@ -18,6 +18,7 @@ export interface UseSlashCommandsOptions {
   openCodeBlockModal: () => void
   handleInsertHR: () => void
   performWithSelection: (callback: (root: HTMLElement) => void) => void
+  showToast?: (message: string, type?: 'success' | 'error') => void
 }
 
 export function useSlashCommands(options: UseSlashCommandsOptions) {
@@ -31,6 +32,7 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     openCodeBlockModal,
     handleInsertHR,
     performWithSelection,
+    showToast,
   } = options
 
   const showCommandMenu = ref(false)
@@ -42,10 +44,10 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
       if (!range || !root.contains(range.commonAncestorContainer)) return
       const quote = document.createElement('blockquote')
       const content = range.cloneContents()
-      if (!content.textContent?.trim()) {
-        quote.textContent = 'Type your quote here'
-      } else {
+      if (content.textContent?.trim()) {
         quote.appendChild(content)
+      } else {
+        quote.textContent = 'Type your quote here'
       }
       range.deleteContents()
       range.insertNode(quote)
@@ -53,7 +55,7 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
   }
 
   const removeSlashTrigger = () => {
-    const selection = window.getSelection()
+    const selection = globalThis.getSelection()
     if (!selection || selection.rangeCount === 0) return
     const range = selection.getRangeAt(0)
     const container = range.startContainer
@@ -201,10 +203,43 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     },
   ]
 
+  /**
+   * Scroll to the current selection/element
+   */
+  const scrollToSelection = () => {
+    nextTick(() => {
+      const selection = globalThis.getSelection()
+      if (!selection || selection.rangeCount === 0) return
+      
+      const range = selection.getRangeAt(0)
+      const container = range.startContainer
+      
+      let element: HTMLElement | null = null
+      if (container.nodeType === Node.ELEMENT_NODE) {
+        element = container as HTMLElement
+      } else if (container.parentElement) {
+        element = container.parentElement
+      }
+      
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    })
+  }
+
   const handleCommandOption = (option: SlashCommandOption) => {
     // Slash trigger already removed when menu opened
     option.action()
     closeCommandMenu()
+    
+    // Scroll to the new element and show feedback
+    scrollToSelection()
+    
+    // Optional: Show toast notification
+    if (showToast) {
+      const actionName = option.label
+      showToast(`${actionName} applied`, 'success')
+    }
   }
 
   return {
