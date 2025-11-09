@@ -1,322 +1,329 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { ref } from 'vue'
-import { useTemplateManager } from '../useTemplateManager'
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { ref } from "vue";
+import { useTemplateManager } from "../useTemplateManager";
 
-describe('useTemplateManager', () => {
-  let editorContent: any
-  let captureSnapshot: any
-  let templateManager: ReturnType<typeof useTemplateManager>
+describe("useTemplateManager", () => {
+  let editorContent: any;
+  let captureSnapshot: any;
+  let templateManager: ReturnType<typeof useTemplateManager>;
 
   beforeEach(() => {
-    editorContent = ref(document.createElement('div'))
-    editorContent.value.innerHTML = '<p>Initial content</p>'
-    captureSnapshot = vi.fn()
-    
+    editorContent = ref(document.createElement("div"));
+    editorContent.value.innerHTML = "<p>Initial content</p>";
+    captureSnapshot = vi.fn();
+
     templateManager = useTemplateManager({
       editorContent,
-      captureSnapshot
-    })
-  })
+      captureSnapshot,
+    });
+  });
 
-  describe('handleSelectTemplate', () => {
-    it('should apply template content to editor', () => {
+  describe("handleSelectTemplate", () => {
+    it("should apply template content to editor", () => {
       const template = {
-        content: '<h1>New Template</h1><p>Template body</p>',
-        name: 'Test Template',
-        description: 'A test template'
-      }
+        content: "<h1>New Template</h1><p>Template body</p>",
+        name: "Test Template",
+        description: "A test template",
+      };
 
-      templateManager.handleSelectTemplate(template)
+      templateManager.handleSelectTemplate(template);
 
-      expect(editorContent.value.innerHTML).toBe('<h1>New Template</h1><p>Template body</p>')
-    })
+      expect(editorContent.value.innerHTML).toBe(
+        "<h1>New Template</h1><p>Template body</p>"
+      );
+    });
 
-    it('should call captureSnapshot after applying template', () => {
+    it("should call captureSnapshot after applying template", () => {
       const template = {
-        content: '<div>Content</div>'
-      }
+        content: "<div>Content</div>",
+      };
 
-      templateManager.handleSelectTemplate(template)
+      templateManager.handleSelectTemplate(template);
 
-      expect(captureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should do nothing if editorContent is null', () => {
-      editorContent.value = null
+    it("should do nothing if editorContent is null", () => {
+      editorContent.value = null;
       const template = {
-        content: '<h1>Should not apply</h1>'
-      }
+        content: "<h1>Should not apply</h1>",
+      };
 
-      templateManager.handleSelectTemplate(template)
+      templateManager.handleSelectTemplate(template);
 
-      expect(captureSnapshot).not.toHaveBeenCalled()
-    })
+      expect(captureSnapshot).not.toHaveBeenCalled();
+    });
 
-    it('should handle template with only content (no name/description)', () => {
+    it("should handle template with only content (no name/description)", () => {
       const template = {
-        content: '<p>Simple template</p>'
-      }
+        content: "<p>Simple template</p>",
+      };
 
-      templateManager.handleSelectTemplate(template)
+      templateManager.handleSelectTemplate(template);
 
-      expect(editorContent.value.innerHTML).toBe('<p>Simple template</p>')
-      expect(captureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorContent.value.innerHTML).toBe("<p>Simple template</p>");
+      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should handle empty content template', () => {
+    it("should handle empty content template", () => {
       const template = {
-        content: ''
-      }
+        content: "",
+      };
 
-      templateManager.handleSelectTemplate(template)
+      templateManager.handleSelectTemplate(template);
 
-      expect(editorContent.value.innerHTML).toBe('')
-      expect(captureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorContent.value.innerHTML).toBe("");
+      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should replace existing content completely', () => {
-      editorContent.value.innerHTML = '<h1>Old</h1><p>Content</p>'
-      
+    it("should replace existing content completely", () => {
+      editorContent.value.innerHTML = "<h1>Old</h1><p>Content</p>";
+
       const template = {
-        content: '<span>New</span>'
-      }
+        content: "<span>New</span>",
+      };
 
-      templateManager.handleSelectTemplate(template)
+      templateManager.handleSelectTemplate(template);
 
-      expect(editorContent.value.innerHTML).toBe('<span>New</span>')
-    })
+      expect(editorContent.value.innerHTML).toBe("<span>New</span>");
+    });
 
-    it('should handle complex HTML structures', () => {
+    it("should handle complex HTML structures", () => {
       const template = {
-        content: '<div class="container"><header><h1>Title</h1></header><main><p>Body</p></main></div>'
-      }
+        content:
+          '<div class="container"><header><h1>Title</h1></header><main><p>Body</p></main></div>',
+      };
 
-      templateManager.handleSelectTemplate(template)
+      templateManager.handleSelectTemplate(template);
 
-      expect(editorContent.value.innerHTML).toBe(template.content)
-      expect(captureSnapshot).toHaveBeenCalledTimes(1)
-    })
-  })
+      expect(editorContent.value.innerHTML).toBe(template.content);
+      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+    });
+  });
 
-  describe('getCurrentAsTemplate', () => {
-    it('should return current editor content as template', () => {
-      editorContent.value.innerHTML = '<h2>Current Content</h2>'
+  describe("getCurrentAsTemplate", () => {
+    it("should return current editor content as template", () => {
+      editorContent.value.innerHTML = "<h2>Current Content</h2>";
 
-      const result = templateManager.getCurrentAsTemplate()
+      const result = templateManager.getCurrentAsTemplate();
 
       expect(result).toEqual({
-        content: '<h2>Current Content</h2>'
-      })
-    })
+        content: "<h2>Current Content</h2>",
+      });
+    });
 
-    it('should return null if editorContent is null', () => {
-      editorContent.value = null
+    it("should return null if editorContent is null", () => {
+      editorContent.value = null;
 
-      const result = templateManager.getCurrentAsTemplate()
+      const result = templateManager.getCurrentAsTemplate();
 
-      expect(result).toBeNull()
-    })
+      expect(result).toBeNull();
+    });
 
-    it('should handle empty editor content', () => {
-      editorContent.value.innerHTML = ''
+    it("should handle empty editor content", () => {
+      editorContent.value.innerHTML = "";
 
-      const result = templateManager.getCurrentAsTemplate()
-
-      expect(result).toEqual({
-        content: ''
-      })
-    })
-
-    it('should capture exact HTML including whitespace', () => {
-      editorContent.value.innerHTML = '<p>  Text with   spaces  </p>'
-
-      const result = templateManager.getCurrentAsTemplate()
+      const result = templateManager.getCurrentAsTemplate();
 
       expect(result).toEqual({
-        content: '<p>  Text with   spaces  </p>'
-      })
-    })
+        content: "",
+      });
+    });
 
-    it('should handle complex nested structures', () => {
-      const complexHTML = '<div><ul><li>Item 1</li><li>Item 2</li></ul><table><tbody><tr><td>Cell</td></tr></tbody></table></div>'
-      editorContent.value.innerHTML = complexHTML
+    it("should capture exact HTML including whitespace", () => {
+      editorContent.value.innerHTML = "<p>  Text with   spaces  </p>";
 
-      const result = templateManager.getCurrentAsTemplate()
+      const result = templateManager.getCurrentAsTemplate();
 
       expect(result).toEqual({
-        content: complexHTML
-      })
-    })
+        content: "<p>  Text with   spaces  </p>",
+      });
+    });
 
-    it('should not modify editor content', () => {
-      const originalContent = '<p>Original</p>'
-      editorContent.value.innerHTML = originalContent
+    it("should handle complex nested structures", () => {
+      const complexHTML =
+        "<div><ul><li>Item 1</li><li>Item 2</li></ul><table><tbody><tr><td>Cell</td></tr></tbody></table></div>";
+      editorContent.value.innerHTML = complexHTML;
 
-      templateManager.getCurrentAsTemplate()
+      const result = templateManager.getCurrentAsTemplate();
 
-      expect(editorContent.value.innerHTML).toBe(originalContent)
-    })
-  })
+      expect(result).toEqual({
+        content: complexHTML,
+      });
+    });
 
-  describe('applyBlankTemplate', () => {
-    it('should clear editor content', () => {
-      editorContent.value.innerHTML = '<h1>Content to clear</h1><p>More content</p>'
+    it("should not modify editor content", () => {
+      const originalContent = "<p>Original</p>";
+      editorContent.value.innerHTML = originalContent;
 
-      templateManager.applyBlankTemplate()
+      templateManager.getCurrentAsTemplate();
 
-      expect(editorContent.value.innerHTML).toBe('')
-    })
+      expect(editorContent.value.innerHTML).toBe(originalContent);
+    });
+  });
 
-    it('should call captureSnapshot after clearing', () => {
-      templateManager.applyBlankTemplate()
+  describe("applyBlankTemplate", () => {
+    it("should clear editor content", () => {
+      editorContent.value.innerHTML =
+        "<h1>Content to clear</h1><p>More content</p>";
 
-      expect(captureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      templateManager.applyBlankTemplate();
 
-    it('should do nothing if editorContent is null', () => {
-      editorContent.value = null
+      expect(editorContent.value.innerHTML).toBe("");
+    });
 
-      templateManager.applyBlankTemplate()
+    it("should call captureSnapshot after clearing", () => {
+      templateManager.applyBlankTemplate();
 
-      expect(captureSnapshot).not.toHaveBeenCalled()
-    })
+      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should handle already empty editor', () => {
-      editorContent.value.innerHTML = ''
+    it("should do nothing if editorContent is null", () => {
+      editorContent.value = null;
 
-      templateManager.applyBlankTemplate()
+      templateManager.applyBlankTemplate();
 
-      expect(editorContent.value.innerHTML).toBe('')
-      expect(captureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(captureSnapshot).not.toHaveBeenCalled();
+    });
 
-    it('should clear complex nested structures', () => {
-      editorContent.value.innerHTML = '<div><div><div><p>Nested</p></div></div></div>'
+    it("should handle already empty editor", () => {
+      editorContent.value.innerHTML = "";
 
-      templateManager.applyBlankTemplate()
+      templateManager.applyBlankTemplate();
 
-      expect(editorContent.value.innerHTML).toBe('')
-    })
-  })
+      expect(editorContent.value.innerHTML).toBe("");
+      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-  describe('Integration Tests', () => {
-    it('should allow switching between templates', () => {
-      const template1 = { content: '<h1>Template 1</h1>' }
-      const template2 = { content: '<h2>Template 2</h2>' }
+    it("should clear complex nested structures", () => {
+      editorContent.value.innerHTML =
+        "<div><div><div><p>Nested</p></div></div></div>";
 
-      templateManager.handleSelectTemplate(template1)
-      expect(editorContent.value.innerHTML).toBe('<h1>Template 1</h1>')
+      templateManager.applyBlankTemplate();
 
-      templateManager.handleSelectTemplate(template2)
-      expect(editorContent.value.innerHTML).toBe('<h2>Template 2</h2>')
+      expect(editorContent.value.innerHTML).toBe("");
+    });
+  });
 
-      expect(captureSnapshot).toHaveBeenCalledTimes(2)
-    })
+  describe("Integration Tests", () => {
+    it("should allow switching between templates", () => {
+      const template1 = { content: "<h1>Template 1</h1>" };
+      const template2 = { content: "<h2>Template 2</h2>" };
 
-    it('should save current content and reapply it', () => {
-      const originalContent = '<p>Save me</p>'
-      editorContent.value.innerHTML = originalContent
+      templateManager.handleSelectTemplate(template1);
+      expect(editorContent.value.innerHTML).toBe("<h1>Template 1</h1>");
 
-      const savedTemplate = templateManager.getCurrentAsTemplate()
-      
+      templateManager.handleSelectTemplate(template2);
+      expect(editorContent.value.innerHTML).toBe("<h2>Template 2</h2>");
+
+      expect(captureSnapshot).toHaveBeenCalledTimes(2);
+    });
+
+    it("should save current content and reapply it", () => {
+      const originalContent = "<p>Save me</p>";
+      editorContent.value.innerHTML = originalContent;
+
+      const savedTemplate = templateManager.getCurrentAsTemplate();
+
       // Change content
-      editorContent.value.innerHTML = '<p>Changed</p>'
-      
+      editorContent.value.innerHTML = "<p>Changed</p>";
+
       // Reapply saved template
       if (savedTemplate) {
-        templateManager.handleSelectTemplate(savedTemplate)
+        templateManager.handleSelectTemplate(savedTemplate);
       }
 
-      expect(editorContent.value.innerHTML).toBe(originalContent)
-    })
+      expect(editorContent.value.innerHTML).toBe(originalContent);
+    });
 
-    it('should apply blank then template', () => {
-      editorContent.value.innerHTML = '<p>Initial</p>'
+    it("should apply blank then template", () => {
+      editorContent.value.innerHTML = "<p>Initial</p>";
 
-      templateManager.applyBlankTemplate()
-      expect(editorContent.value.innerHTML).toBe('')
+      templateManager.applyBlankTemplate();
+      expect(editorContent.value.innerHTML).toBe("");
 
-      const template = { content: '<h1>New</h1>' }
-      templateManager.handleSelectTemplate(template)
-      expect(editorContent.value.innerHTML).toBe('<h1>New</h1>')
+      const template = { content: "<h1>New</h1>" };
+      templateManager.handleSelectTemplate(template);
+      expect(editorContent.value.innerHTML).toBe("<h1>New</h1>");
 
-      expect(captureSnapshot).toHaveBeenCalledTimes(2)
-    })
+      expect(captureSnapshot).toHaveBeenCalledTimes(2);
+    });
 
-    it('should handle rapid template changes', () => {
+    it("should handle rapid template changes", () => {
       const templates = [
-        { content: '<p>T1</p>' },
-        { content: '<p>T2</p>' },
-        { content: '<p>T3</p>' },
-        { content: '<p>T4</p>' }
-      ]
+        { content: "<p>T1</p>" },
+        { content: "<p>T2</p>" },
+        { content: "<p>T3</p>" },
+        { content: "<p>T4</p>" },
+      ];
 
-      templates.forEach(template => {
-        templateManager.handleSelectTemplate(template)
-      })
+      templates.forEach((template) => {
+        templateManager.handleSelectTemplate(template);
+      });
 
-      expect(editorContent.value.innerHTML).toBe('<p>T4</p>')
-      expect(captureSnapshot).toHaveBeenCalledTimes(4)
-    })
-  })
+      expect(editorContent.value.innerHTML).toBe("<p>T4</p>");
+      expect(captureSnapshot).toHaveBeenCalledTimes(4);
+    });
+  });
 
-  describe('Edge Cases', () => {
-    it('should handle template with special characters', () => {
+  describe("Edge Cases", () => {
+    it("should handle template with special characters", () => {
       const template = {
-        content: '<p>&lt;script&gt;alert("test")&lt;/script&gt;</p>'
-      }
+        content: '<p>&lt;script&gt;alert("test")&lt;/script&gt;</p>',
+      };
 
-      templateManager.handleSelectTemplate(template)
+      templateManager.handleSelectTemplate(template);
 
-      expect(editorContent.value.innerHTML).toBe(template.content)
-    })
+      expect(editorContent.value.innerHTML).toBe(template.content);
+    });
 
-    it('should handle template with unicode characters', () => {
+    it("should handle template with unicode characters", () => {
       const template = {
-        content: '<p>Hello 世界 🌍 émojis</p>'
-      }
+        content: "<p>Hello 世界 🌍 émojis</p>",
+      };
 
-      templateManager.handleSelectTemplate(template)
+      templateManager.handleSelectTemplate(template);
 
-      expect(editorContent.value.innerHTML).toBe(template.content)
-    })
+      expect(editorContent.value.innerHTML).toBe(template.content);
+    });
 
-    it('should handle very large template content', () => {
-      const largeContent = '<p>' + 'Lorem ipsum dolor sit amet. '.repeat(100) + '</p>'
-      const template = { content: largeContent }
+    it("should handle very large template content", () => {
+      const largeContent =
+        "<p>" + "Lorem ipsum dolor sit amet. ".repeat(100) + "</p>";
+      const template = { content: largeContent };
 
-      templateManager.handleSelectTemplate(template)
+      templateManager.handleSelectTemplate(template);
 
-      expect(editorContent.value.innerHTML).toBe(largeContent)
-      expect(captureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorContent.value.innerHTML).toBe(largeContent);
+      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should handle getCurrentAsTemplate with null after clearing', () => {
-      templateManager.applyBlankTemplate()
-      
-      const result = templateManager.getCurrentAsTemplate()
+    it("should handle getCurrentAsTemplate with null after clearing", () => {
+      templateManager.applyBlankTemplate();
 
-      expect(result).toEqual({ content: '' })
-    })
+      const result = templateManager.getCurrentAsTemplate();
 
-    it('should handle multiple captureSnapshot calls', () => {
-      const template = { content: '<p>Test</p>' }
-      
-      templateManager.handleSelectTemplate(template)
-      templateManager.handleSelectTemplate(template)
-      templateManager.applyBlankTemplate()
-      
-      expect(captureSnapshot).toHaveBeenCalledTimes(3)
-    })
+      expect(result).toEqual({ content: "" });
+    });
 
-    it('should not throw on malformed HTML', () => {
+    it("should handle multiple captureSnapshot calls", () => {
+      const template = { content: "<p>Test</p>" };
+
+      templateManager.handleSelectTemplate(template);
+      templateManager.handleSelectTemplate(template);
+      templateManager.applyBlankTemplate();
+
+      expect(captureSnapshot).toHaveBeenCalledTimes(3);
+    });
+
+    it("should not throw on malformed HTML", () => {
       const template = {
-        content: '<div><p>Unclosed div'
-      }
+        content: "<div><p>Unclosed div",
+      };
 
       expect(() => {
-        templateManager.handleSelectTemplate(template)
-      }).not.toThrow()
-    })
-  })
-})
+        templateManager.handleSelectTemplate(template);
+      }).not.toThrow();
+    });
+  });
+});
