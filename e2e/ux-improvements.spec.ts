@@ -26,7 +26,7 @@ test.describe('Next Level Editor - UX Improvements', () => {
       expect(editorText?.includes('/')).toBeFalsy()
       
       // Verify command menu is visible
-      const commandMenu = page.locator('.slash-commands, .quick-actions')
+      const commandMenu = page.locator('.command-menu')
       await expect(commandMenu).toBeVisible({ timeout: 2000 })
     })
 
@@ -37,7 +37,7 @@ test.describe('Next Level Editor - UX Improvements', () => {
       await page.keyboard.press('/')
       
       // Command menu should appear
-      const commandMenu = page.locator('.slash-commands, .quick-actions')
+      const commandMenu = page.locator('.command-menu')
       await expect(commandMenu).toBeVisible({ timeout: 2000 })
     })
 
@@ -83,20 +83,18 @@ test.describe('Next Level Editor - UX Improvements', () => {
       const savedIndicator = page.locator('.saved, text=/Saved at/')
       await savedIndicator.waitFor({ timeout: 5000 })
       
-      // Get initial timestamp
-      const initialText = await savedIndicator.textContent()
-      
       // Make a change
       await editor.pressSequentially('New content')
       
       // Wait a bit for auto-save to trigger
-      await page.waitForTimeout(2000)
+      await page.waitForTimeout(2500)
       
-      // Get new timestamp  
+      // Get timestamp after change
       const newText = await savedIndicator.textContent()
       
-      // Timestamps should be different (or at minimum, indicator should still be present)
+      // Timestamp indicator should still be present and showing a time
       expect(newText).toBeTruthy()
+      expect(newText).toMatch(/Saved at/)
       await expect(savedIndicator).toBeVisible()
     })
   })
@@ -254,6 +252,92 @@ test.describe('Next Level Editor - UX Improvements', () => {
       // Colors dropdown should be closed
       const colorsDropdown = page.locator('.colors-dropdown, .color-picker-dropdown')
       await expect(colorsDropdown).not.toBeVisible()
+    })
+  })
+
+  test.describe('Redo Shortcut', () => {
+    test('should support Ctrl+Y for redo', async ({ page }) => {
+      const editor = page.locator('.editor-content')
+      await editor.click()
+      
+      // Clear existing content
+      await page.keyboard.press('Control+A')
+      await page.keyboard.press('Delete')
+      
+      // Type some text
+      await editor.pressSequentially('Hello World')
+      await page.waitForTimeout(100)
+      
+      // Undo (Ctrl+Z)
+      await page.keyboard.press('Control+Z')
+      await page.waitForTimeout(100)
+      
+      const afterUndo = await editor.textContent()
+      expect(afterUndo?.trim()).not.toContain('Hello World')
+      
+      // Redo with Ctrl+Y
+      await page.keyboard.press('Control+Y')
+      await page.waitForTimeout(100)
+      
+      const afterRedo = await editor.textContent()
+      expect(afterRedo?.trim()).toContain('Hello World')
+    })
+
+    test('should support Ctrl+Shift+Z for redo (existing shortcut)', async ({ page }) => {
+      const editor = page.locator('.editor-content')
+      await editor.click()
+      
+      // Clear existing content
+      await page.keyboard.press('Control+A')
+      await page.keyboard.press('Delete')
+      
+      // Type some text
+      await editor.pressSequentially('Test Content')
+      await page.waitForTimeout(100)
+      
+      // Undo
+      await page.keyboard.press('Control+Z')
+      await page.waitForTimeout(100)
+      
+      // Redo with Ctrl+Shift+Z
+      await page.keyboard.press('Control+Shift+Z')
+      await page.waitForTimeout(100)
+      
+      const afterRedo = await editor.textContent()
+      expect(afterRedo?.trim()).toContain('Test Content')
+    })
+  })
+
+  test.describe('Table Insertion', () => {
+    test('should show notification when table is inserted', async ({ page }) => {
+      const editor = page.locator('.editor-content')
+      await editor.click()
+      
+      // Open Insert dropdown or table modal
+      const insertButton = page.locator('button:has-text("Insert"), [data-tooltip*="Insert"]').first()
+      await insertButton.click()
+      await page.waitForTimeout(200)
+      
+      // Look for table option
+      const tableOption = page.locator('text=/Table/i, [aria-label*="Table"]').first()
+      await tableOption.click()
+      await page.waitForTimeout(300)
+      
+      // Modal should be visible with table configuration
+      const tableModal = page.locator('.modal-content, [role="dialog"]')
+      await expect(tableModal).toBeVisible({ timeout: 2000 })
+      
+      // Click Insert Table button
+      const insertTableBtn = page.locator('button:has-text("Insert Table")')
+      await insertTableBtn.click()
+      
+      // Toast notification should appear
+      const toast = page.locator('.toast, .notification, text=/Table.*inserted/i')
+      await expect(toast).toBeVisible({ timeout: 2000 })
+      
+      // Table should be present in editor
+      const table = editor.locator('table')
+      await expect(table).toBeVisible({ timeout: 1000 })
     })
   })
 })
