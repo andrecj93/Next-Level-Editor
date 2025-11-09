@@ -700,4 +700,4 @@ useEditorSetup({
 });
 </script>
 
-<style src="../styles/NextLevelEditor.css" scoped></style>
+<style src="../styles/NextLevelEditor.css"></style>
