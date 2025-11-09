@@ -1,52 +1,52 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ref, type Ref } from 'vue'
-import { useFormattingActions } from '../useFormattingActions'
-import * as formatPainter from '../../utils/formatPainter'
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { ref, type Ref } from "vue";
+import { useFormattingActions } from "../useFormattingActions";
+import * as formatPainter from "../../utils/formatPainter";
 
 // Mock format painter
-vi.mock('../../utils/formatPainter', () => ({
+vi.mock("../../utils/formatPainter", () => ({
   copyFormat: vi.fn(),
   pasteFormat: vi.fn(),
-}))
+}));
 
-type FontSize = 'small' | 'normal' | 'large' | 'huge'
-type TextAlignment = 'left' | 'center' | 'right' | 'justify'
+type FontSize = "small" | "normal" | "large" | "huge";
+type TextAlignment = "left" | "center" | "right" | "justify";
 
-describe('useFormattingActions', () => {
-  let editorContent: Ref<HTMLElement | null>
-  let fontSize: Ref<FontSize>
-  let editorElement: HTMLElement
-  let captureSnapshot: () => void
-  let applyTextAlignment: (root: HTMLElement, alignment: TextAlignment) => void
-  let applyTextColor: (root: HTMLElement, color: string) => void
-  let applyBackgroundColor: (root: HTMLElement, color: string) => void
-  let applyFontSize: (root: HTMLElement, size: FontSize) => void
+describe("useFormattingActions", () => {
+  let editorContent: Ref<HTMLElement | null>;
+  let fontSize: Ref<FontSize>;
+  let editorElement: HTMLElement;
+  let captureSnapshot: () => void;
+  let applyTextAlignment: (root: HTMLElement, alignment: TextAlignment) => void;
+  let applyTextColor: (root: HTMLElement, color: string) => void;
+  let applyBackgroundColor: (root: HTMLElement, color: string) => void;
+  let applyFontSize: (root: HTMLElement, size: FontSize) => void;
 
   beforeEach(() => {
     // Create editor element
-    editorElement = document.createElement('div')
-    editorElement.setAttribute('contenteditable', 'true')
-    editorElement.innerHTML = '<p>Test content</p>'
-    document.body.appendChild(editorElement)
+    editorElement = document.createElement("div");
+    editorElement.setAttribute("contenteditable", "true");
+    editorElement.innerHTML = "<p>Test content</p>";
+    document.body.appendChild(editorElement);
 
-    editorContent = ref<HTMLElement | null>(editorElement)
-    fontSize = ref<'small' | 'normal' | 'large' | 'huge'>('normal')
+    editorContent = ref<HTMLElement | null>(editorElement);
+    fontSize = ref<"small" | "normal" | "large" | "huge">("normal");
 
     // Setup mock functions
-    captureSnapshot = vi.fn()
-    applyTextAlignment = vi.fn()
-    applyTextColor = vi.fn()
-    applyBackgroundColor = vi.fn()
-    applyFontSize = vi.fn()
-  })
+    captureSnapshot = vi.fn();
+    applyTextAlignment = vi.fn();
+    applyTextColor = vi.fn();
+    applyBackgroundColor = vi.fn();
+    applyFontSize = vi.fn();
+  });
 
   afterEach(() => {
-    editorElement.remove()
-    vi.clearAllMocks()
-  })
+    editorElement.remove();
+    vi.clearAllMocks();
+  });
 
-  describe('handleTextAlignment', () => {
-    it('should apply left alignment', () => {
+  describe("handleTextAlignment", () => {
+    it("should apply left alignment", () => {
       const { handleTextAlignment } = useFormattingActions(
         editorContent,
         fontSize,
@@ -55,15 +55,15 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleTextAlignment('left')
+      handleTextAlignment("left");
 
-      expect(applyTextAlignment).toHaveBeenCalledWith(editorElement, 'left')
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(applyTextAlignment).toHaveBeenCalledWith(editorElement, "left");
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should apply center alignment', () => {
+    it("should apply center alignment", () => {
       const { handleTextAlignment } = useFormattingActions(
         editorContent,
         fontSize,
@@ -72,15 +72,15 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleTextAlignment('center')
+      handleTextAlignment("center");
 
-      expect(applyTextAlignment).toHaveBeenCalledWith(editorElement, 'center')
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(applyTextAlignment).toHaveBeenCalledWith(editorElement, "center");
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should apply right alignment', () => {
+    it("should apply right alignment", () => {
       const { handleTextAlignment } = useFormattingActions(
         editorContent,
         fontSize,
@@ -89,15 +89,15 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleTextAlignment('right')
+      handleTextAlignment("right");
 
-      expect(applyTextAlignment).toHaveBeenCalledWith(editorElement, 'right')
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(applyTextAlignment).toHaveBeenCalledWith(editorElement, "right");
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should apply justify alignment', () => {
+    it("should apply justify alignment", () => {
       const { handleTextAlignment } = useFormattingActions(
         editorContent,
         fontSize,
@@ -106,16 +106,16 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleTextAlignment('justify')
+      handleTextAlignment("justify");
 
-      expect(applyTextAlignment).toHaveBeenCalledWith(editorElement, 'justify')
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(applyTextAlignment).toHaveBeenCalledWith(editorElement, "justify");
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should not apply alignment when editorContent is null', () => {
-      editorContent.value = null
+    it("should not apply alignment when editorContent is null", () => {
+      editorContent.value = null;
 
       const { handleTextAlignment } = useFormattingActions(
         editorContent,
@@ -125,32 +125,32 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleTextAlignment('center')
+      handleTextAlignment("center");
 
-      expect(applyTextAlignment).not.toHaveBeenCalled()
-      expect(captureSnapshot).not.toHaveBeenCalled()
-    })
-  })
+      expect(applyTextAlignment).not.toHaveBeenCalled();
+      expect(captureSnapshot).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleTextColor', () => {
+  describe("handleTextColor", () => {
     beforeEach(() => {
       // Create a selection
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 4)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 4);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
-    })
+    });
 
-    it('should apply text color', () => {
+    it("should apply text color", () => {
       const { handleTextColor } = useFormattingActions(
         editorContent,
         fontSize,
@@ -159,15 +159,15 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleTextColor('#ff0000')
+      handleTextColor("#ff0000");
 
-      expect(applyTextColor).toHaveBeenCalledWith(editorElement, '#ff0000')
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(applyTextColor).toHaveBeenCalledWith(editorElement, "#ff0000");
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should apply multiple colors', () => {
+    it("should apply multiple colors", () => {
       const { handleTextColor } = useFormattingActions(
         editorContent,
         fontSize,
@@ -176,18 +176,18 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleTextColor('#00ff00')
-      handleTextColor('#0000ff')
+      handleTextColor("#00ff00");
+      handleTextColor("#0000ff");
 
-      expect(applyTextColor).toHaveBeenCalledTimes(2)
-      expect(applyTextColor).toHaveBeenCalledWith(editorElement, '#00ff00')
-      expect(applyTextColor).toHaveBeenCalledWith(editorElement, '#0000ff')
-    })
+      expect(applyTextColor).toHaveBeenCalledTimes(2);
+      expect(applyTextColor).toHaveBeenCalledWith(editorElement, "#00ff00");
+      expect(applyTextColor).toHaveBeenCalledWith(editorElement, "#0000ff");
+    });
 
-    it('should not apply color when editorContent is null', () => {
-      editorContent.value = null
+    it("should not apply color when editorContent is null", () => {
+      editorContent.value = null;
 
       const { handleTextColor } = useFormattingActions(
         editorContent,
@@ -197,18 +197,18 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleTextColor('#ff0000')
+      handleTextColor("#ff0000");
 
-      expect(applyTextColor).not.toHaveBeenCalled()
-      expect(captureSnapshot).not.toHaveBeenCalled()
-    })
+      expect(applyTextColor).not.toHaveBeenCalled();
+      expect(captureSnapshot).not.toHaveBeenCalled();
+    });
 
-    it('should not apply color when no selection exists', () => {
-      const selection = globalThis.getSelection()
+    it("should not apply color when no selection exists", () => {
+      const selection = globalThis.getSelection();
       if (selection) {
-        selection.removeAllRanges()
+        selection.removeAllRanges();
       }
 
       const { handleTextColor } = useFormattingActions(
@@ -219,32 +219,32 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleTextColor('#ff0000')
+      handleTextColor("#ff0000");
 
-      expect(applyTextColor).not.toHaveBeenCalled()
-      expect(captureSnapshot).not.toHaveBeenCalled()
-    })
-  })
+      expect(applyTextColor).not.toHaveBeenCalled();
+      expect(captureSnapshot).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleBackgroundColor', () => {
+  describe("handleBackgroundColor", () => {
     beforeEach(() => {
       // Create a selection
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 4)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 4);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
-    })
+    });
 
-    it('should apply background color', () => {
+    it("should apply background color", () => {
       const { handleBackgroundColor } = useFormattingActions(
         editorContent,
         fontSize,
@@ -253,15 +253,18 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleBackgroundColor('#ffff00')
+      handleBackgroundColor("#ffff00");
 
-      expect(applyBackgroundColor).toHaveBeenCalledWith(editorElement, '#ffff00')
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(applyBackgroundColor).toHaveBeenCalledWith(
+        editorElement,
+        "#ffff00"
+      );
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should apply multiple background colors', () => {
+    it("should apply multiple background colors", () => {
       const { handleBackgroundColor } = useFormattingActions(
         editorContent,
         fontSize,
@@ -270,18 +273,24 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleBackgroundColor('#ffcccc')
-      handleBackgroundColor('#ccffcc')
+      handleBackgroundColor("#ffcccc");
+      handleBackgroundColor("#ccffcc");
 
-      expect(applyBackgroundColor).toHaveBeenCalledTimes(2)
-      expect(applyBackgroundColor).toHaveBeenCalledWith(editorElement, '#ffcccc')
-      expect(applyBackgroundColor).toHaveBeenCalledWith(editorElement, '#ccffcc')
-    })
+      expect(applyBackgroundColor).toHaveBeenCalledTimes(2);
+      expect(applyBackgroundColor).toHaveBeenCalledWith(
+        editorElement,
+        "#ffcccc"
+      );
+      expect(applyBackgroundColor).toHaveBeenCalledWith(
+        editorElement,
+        "#ccffcc"
+      );
+    });
 
-    it('should not apply background color when editorContent is null', () => {
-      editorContent.value = null
+    it("should not apply background color when editorContent is null", () => {
+      editorContent.value = null;
 
       const { handleBackgroundColor } = useFormattingActions(
         editorContent,
@@ -291,18 +300,18 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleBackgroundColor('#ffff00')
+      handleBackgroundColor("#ffff00");
 
-      expect(applyBackgroundColor).not.toHaveBeenCalled()
-      expect(captureSnapshot).not.toHaveBeenCalled()
-    })
+      expect(applyBackgroundColor).not.toHaveBeenCalled();
+      expect(captureSnapshot).not.toHaveBeenCalled();
+    });
 
-    it('should not apply background color when no selection exists', () => {
-      const selection = globalThis.getSelection()
+    it("should not apply background color when no selection exists", () => {
+      const selection = globalThis.getSelection();
       if (selection) {
-        selection.removeAllRanges()
+        selection.removeAllRanges();
       }
 
       const { handleBackgroundColor } = useFormattingActions(
@@ -313,17 +322,17 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleBackgroundColor('#ffff00')
+      handleBackgroundColor("#ffff00");
 
-      expect(applyBackgroundColor).not.toHaveBeenCalled()
-      expect(captureSnapshot).not.toHaveBeenCalled()
-    })
-  })
+      expect(applyBackgroundColor).not.toHaveBeenCalled();
+      expect(captureSnapshot).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleFontSize', () => {
-    it('should apply small font size', () => {
+  describe("handleFontSize", () => {
+    it("should apply small font size", () => {
       const { handleFontSize } = useFormattingActions(
         editorContent,
         fontSize,
@@ -332,16 +341,16 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleFontSize('small')
+      handleFontSize("small");
 
-      expect(fontSize.value).toBe('small')
-      expect(applyFontSize).toHaveBeenCalledWith(editorElement, 'small')
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(fontSize.value).toBe("small");
+      expect(applyFontSize).toHaveBeenCalledWith(editorElement, "small");
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should apply normal font size', () => {
+    it("should apply normal font size", () => {
       const { handleFontSize } = useFormattingActions(
         editorContent,
         fontSize,
@@ -350,16 +359,16 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleFontSize('normal')
+      handleFontSize("normal");
 
-      expect(fontSize.value).toBe('normal')
-      expect(applyFontSize).toHaveBeenCalledWith(editorElement, 'normal')
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(fontSize.value).toBe("normal");
+      expect(applyFontSize).toHaveBeenCalledWith(editorElement, "normal");
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should apply large font size', () => {
+    it("should apply large font size", () => {
       const { handleFontSize } = useFormattingActions(
         editorContent,
         fontSize,
@@ -368,16 +377,16 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleFontSize('large')
+      handleFontSize("large");
 
-      expect(fontSize.value).toBe('large')
-      expect(applyFontSize).toHaveBeenCalledWith(editorElement, 'large')
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(fontSize.value).toBe("large");
+      expect(applyFontSize).toHaveBeenCalledWith(editorElement, "large");
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should apply huge font size', () => {
+    it("should apply huge font size", () => {
       const { handleFontSize } = useFormattingActions(
         editorContent,
         fontSize,
@@ -386,16 +395,16 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleFontSize('huge')
+      handleFontSize("huge");
 
-      expect(fontSize.value).toBe('huge')
-      expect(applyFontSize).toHaveBeenCalledWith(editorElement, 'huge')
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(fontSize.value).toBe("huge");
+      expect(applyFontSize).toHaveBeenCalledWith(editorElement, "huge");
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should update fontSize ref when changing size', () => {
+    it("should update fontSize ref when changing size", () => {
       const { handleFontSize } = useFormattingActions(
         editorContent,
         fontSize,
@@ -404,19 +413,19 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      expect(fontSize.value).toBe('normal')
-      
-      handleFontSize('large')
-      expect(fontSize.value).toBe('large')
-      
-      handleFontSize('small')
-      expect(fontSize.value).toBe('small')
-    })
+      expect(fontSize.value).toBe("normal");
 
-    it('should not apply font size when editorContent is null', () => {
-      editorContent.value = null
+      handleFontSize("large");
+      expect(fontSize.value).toBe("large");
+
+      handleFontSize("small");
+      expect(fontSize.value).toBe("small");
+    });
+
+    it("should not apply font size when editorContent is null", () => {
+      editorContent.value = null;
 
       const { handleFontSize } = useFormattingActions(
         editorContent,
@@ -426,33 +435,33 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleFontSize('large')
+      handleFontSize("large");
 
-      expect(applyFontSize).not.toHaveBeenCalled()
-      expect(captureSnapshot).not.toHaveBeenCalled()
-      expect(fontSize.value).toBe('normal')
-    })
-  })
+      expect(applyFontSize).not.toHaveBeenCalled();
+      expect(captureSnapshot).not.toHaveBeenCalled();
+      expect(fontSize.value).toBe("normal");
+    });
+  });
 
-  describe('handleCopyFormat', () => {
+  describe("handleCopyFormat", () => {
     beforeEach(() => {
       // Create a selection
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 4)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 4);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
-    })
+    });
 
-    it('should copy format from selection', () => {
+    it("should copy format from selection", () => {
       const { handleCopyFormat } = useFormattingActions(
         editorContent,
         fontSize,
@@ -461,37 +470,16 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleCopyFormat()
+      handleCopyFormat();
 
-      const selection = globalThis.getSelection()
-      expect(formatPainter.copyFormat).toHaveBeenCalledWith(selection)
-    })
+      const selection = globalThis.getSelection();
+      expect(formatPainter.copyFormat).toHaveBeenCalledWith(selection);
+    });
 
-    it('should not copy format when editorContent is null', () => {
-      editorContent.value = null
-
-      const { handleCopyFormat } = useFormattingActions(
-        editorContent,
-        fontSize,
-        captureSnapshot,
-        applyTextAlignment,
-        applyTextColor,
-        applyBackgroundColor,
-        applyFontSize
-      )
-
-      handleCopyFormat()
-
-      expect(formatPainter.copyFormat).not.toHaveBeenCalled()
-    })
-
-    it('should not copy format when no selection exists', () => {
-      const selection = globalThis.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-      }
+    it("should not copy format when editorContent is null", () => {
+      editorContent.value = null;
 
       const { handleCopyFormat } = useFormattingActions(
         editorContent,
@@ -501,31 +489,52 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleCopyFormat()
+      handleCopyFormat();
 
-      expect(formatPainter.copyFormat).not.toHaveBeenCalled()
-    })
-  })
+      expect(formatPainter.copyFormat).not.toHaveBeenCalled();
+    });
 
-  describe('handlePasteFormat', () => {
+    it("should not copy format when no selection exists", () => {
+      const selection = globalThis.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+      }
+
+      const { handleCopyFormat } = useFormattingActions(
+        editorContent,
+        fontSize,
+        captureSnapshot,
+        applyTextAlignment,
+        applyTextColor,
+        applyBackgroundColor,
+        applyFontSize
+      );
+
+      handleCopyFormat();
+
+      expect(formatPainter.copyFormat).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("handlePasteFormat", () => {
     beforeEach(() => {
       // Create a selection
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 4)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 4);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
-    })
+    });
 
-    it('should paste format to selection', () => {
+    it("should paste format to selection", () => {
       const { handlePasteFormat } = useFormattingActions(
         editorContent,
         fontSize,
@@ -534,17 +543,17 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handlePasteFormat()
+      handlePasteFormat();
 
-      const selection = globalThis.getSelection()
-      expect(formatPainter.pasteFormat).toHaveBeenCalledWith(selection)
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      const selection = globalThis.getSelection();
+      expect(formatPainter.pasteFormat).toHaveBeenCalledWith(selection);
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should not paste format when editorContent is null', () => {
-      editorContent.value = null
+    it("should not paste format when editorContent is null", () => {
+      editorContent.value = null;
 
       const { handlePasteFormat } = useFormattingActions(
         editorContent,
@@ -554,18 +563,18 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handlePasteFormat()
+      handlePasteFormat();
 
-      expect(formatPainter.pasteFormat).not.toHaveBeenCalled()
-      expect(captureSnapshot).not.toHaveBeenCalled()
-    })
+      expect(formatPainter.pasteFormat).not.toHaveBeenCalled();
+      expect(captureSnapshot).not.toHaveBeenCalled();
+    });
 
-    it('should not paste format when no selection exists', () => {
-      const selection = globalThis.getSelection()
+    it("should not paste format when no selection exists", () => {
+      const selection = globalThis.getSelection();
       if (selection) {
-        selection.removeAllRanges()
+        selection.removeAllRanges();
       }
 
       const { handlePasteFormat } = useFormattingActions(
@@ -576,27 +585,27 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handlePasteFormat()
+      handlePasteFormat();
 
-      expect(formatPainter.pasteFormat).not.toHaveBeenCalled()
-      expect(captureSnapshot).not.toHaveBeenCalled()
-    })
-  })
+      expect(formatPainter.pasteFormat).not.toHaveBeenCalled();
+      expect(captureSnapshot).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('Edge Cases', () => {
-    it('should handle all formatting operations in sequence', () => {
+  describe("Edge Cases", () => {
+    it("should handle all formatting operations in sequence", () => {
       // Create a selection
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 4)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 4);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
 
@@ -608,27 +617,27 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
       expect(() => {
-        actions.handleTextAlignment('center')
-        actions.handleTextColor('#ff0000')
-        actions.handleBackgroundColor('#ffff00')
-        actions.handleFontSize('large')
-        actions.handleCopyFormat()
-        actions.handlePasteFormat()
-      }).not.toThrow()
+        actions.handleTextAlignment("center");
+        actions.handleTextColor("#ff0000");
+        actions.handleBackgroundColor("#ffff00");
+        actions.handleFontSize("large");
+        actions.handleCopyFormat();
+        actions.handlePasteFormat();
+      }).not.toThrow();
 
-      expect(applyTextAlignment).toHaveBeenCalled()
-      expect(applyTextColor).toHaveBeenCalled()
-      expect(applyBackgroundColor).toHaveBeenCalled()
-      expect(applyFontSize).toHaveBeenCalled()
-      expect(formatPainter.copyFormat).toHaveBeenCalled()
-      expect(formatPainter.pasteFormat).toHaveBeenCalled()
-    })
+      expect(applyTextAlignment).toHaveBeenCalled();
+      expect(applyTextColor).toHaveBeenCalled();
+      expect(applyBackgroundColor).toHaveBeenCalled();
+      expect(applyFontSize).toHaveBeenCalled();
+      expect(formatPainter.copyFormat).toHaveBeenCalled();
+      expect(formatPainter.pasteFormat).toHaveBeenCalled();
+    });
 
-    it('should handle all operations without editor content', () => {
-      editorContent.value = null
+    it("should handle all operations without editor content", () => {
+      editorContent.value = null;
 
       const actions = useFormattingActions(
         editorContent,
@@ -638,24 +647,24 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
       expect(() => {
-        actions.handleTextAlignment('left')
-        actions.handleTextColor('#000000')
-        actions.handleBackgroundColor('#ffffff')
-        actions.handleFontSize('normal')
-        actions.handleCopyFormat()
-        actions.handlePasteFormat()
-      }).not.toThrow()
+        actions.handleTextAlignment("left");
+        actions.handleTextColor("#000000");
+        actions.handleBackgroundColor("#ffffff");
+        actions.handleFontSize("normal");
+        actions.handleCopyFormat();
+        actions.handlePasteFormat();
+      }).not.toThrow();
 
-      expect(applyTextAlignment).not.toHaveBeenCalled()
-      expect(applyTextColor).not.toHaveBeenCalled()
-      expect(applyBackgroundColor).not.toHaveBeenCalled()
-      expect(captureSnapshot).not.toHaveBeenCalled()
-    })
+      expect(applyTextAlignment).not.toHaveBeenCalled();
+      expect(applyTextColor).not.toHaveBeenCalled();
+      expect(applyBackgroundColor).not.toHaveBeenCalled();
+      expect(captureSnapshot).not.toHaveBeenCalled();
+    });
 
-    it('should handle rapid font size changes', () => {
+    it("should handle rapid font size changes", () => {
       const { handleFontSize } = useFormattingActions(
         editorContent,
         fontSize,
@@ -664,16 +673,16 @@ describe('useFormattingActions', () => {
         applyTextColor,
         applyBackgroundColor,
         applyFontSize
-      )
+      );
 
-      handleFontSize('small')
-      handleFontSize('normal')
-      handleFontSize('large')
-      handleFontSize('huge')
+      handleFontSize("small");
+      handleFontSize("normal");
+      handleFontSize("large");
+      handleFontSize("huge");
 
-      expect(fontSize.value).toBe('huge')
-      expect(applyFontSize).toHaveBeenCalledTimes(4)
-      expect(captureSnapshot).toHaveBeenCalledTimes(4)
-    })
-  })
-})
+      expect(fontSize.value).toBe("huge");
+      expect(applyFontSize).toHaveBeenCalledTimes(4);
+      expect(captureSnapshot).toHaveBeenCalledTimes(4);
+    });
+  });
+});

@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { ref } from 'vue'
-import { useTableActions } from '../useTableActions'
-import * as commands from '../../utils/commands'
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { ref } from "vue";
+import { useTableActions } from "../useTableActions";
+import * as commands from "../../utils/commands";
 
-vi.mock('../../utils/commands', () => ({
+vi.mock("../../utils/commands", () => ({
   addTableRow: vi.fn(),
   addTableColumn: vi.fn(),
   removeTableRow: vi.fn(),
@@ -13,54 +13,54 @@ vi.mock('../../utils/commands', () => ({
   applyTableProperties: vi.fn(),
   getCellProperties: vi.fn(() => ({})),
   getTableProperties: vi.fn(() => ({})),
-}))
+}));
 
-type TablePropertiesMode = 'cell' | 'table' | 'both'
+type TablePropertiesMode = "cell" | "table" | "both";
 
-describe('useTableActions', () => {
-  let currentTable: HTMLTableElement
-  let currentCell: HTMLTableCellElement
-  let mockOnUpdate: () => void
+describe("useTableActions", () => {
+  let currentTable: HTMLTableElement;
+  let currentCell: HTMLTableCellElement;
+  let mockOnUpdate: () => void;
 
   beforeEach(() => {
     // Create a complete table structure
-    const table = document.createElement('table')
-    const tbody = document.createElement('tbody')
-    
+    const table = document.createElement("table");
+    const tbody = document.createElement("tbody");
+
     // Create 3x3 table
-    const rows: HTMLTableRowElement[] = []
+    const rows: HTMLTableRowElement[] = [];
     for (let i = 0; i < 3; i++) {
-      const row = document.createElement('tr')
+      const row = document.createElement("tr");
       for (let j = 0; j < 3; j++) {
-        const cell = document.createElement('td')
-        cell.textContent = `Cell ${i}-${j}`
-        row.appendChild(cell)
+        const cell = document.createElement("td");
+        cell.textContent = `Cell ${i}-${j}`;
+        row.appendChild(cell);
       }
-      tbody.appendChild(row)
-      rows.push(row)
+      tbody.appendChild(row);
+      rows.push(row);
     }
-    
+
     // Mock tbody.rows to return HTMLCollection-like object
-    Object.defineProperty(tbody, 'rows', {
+    Object.defineProperty(tbody, "rows", {
       get() {
-        return tbody.querySelectorAll('tr')
+        return tbody.querySelectorAll("tr");
       },
       configurable: true,
-    })
-    
-    table.appendChild(tbody)
-    document.body.appendChild(table)
-    
-    currentTable = table
-    const middleRow = rows[1]
-    currentCell = middleRow.querySelectorAll('td')[1]
-    mockOnUpdate = vi.fn()
-    
-    vi.clearAllMocks()
-  })
+    });
 
-  describe('handleAddRowAbove', () => {
-    it('should add row above current cell', () => {
+    table.appendChild(tbody);
+    document.body.appendChild(table);
+
+    currentTable = table;
+    const middleRow = rows[1];
+    currentCell = middleRow.querySelectorAll("td")[1];
+    mockOnUpdate = vi.fn();
+
+    vi.clearAllMocks();
+  });
+
+  describe("handleAddRowAbove", () => {
+    it("should add row above current cell", () => {
       const { handleAddRowAbove } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(currentCell),
@@ -69,17 +69,17 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddRowAbove()
+      handleAddRowAbove();
 
-      expect(commands.addTableRow).toHaveBeenCalledWith(currentTable, 1)
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.addTableRow).toHaveBeenCalledWith(currentTable, 1);
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not add row when table is null', () => {
+    it("should not add row when table is null", () => {
       const { handleAddRowAbove } = useTableActions({
         currentTable: ref(null),
         currentCell: ref(currentCell),
@@ -88,17 +88,17 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddRowAbove()
+      handleAddRowAbove();
 
-      expect(commands.addTableRow).not.toHaveBeenCalled()
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
+      expect(commands.addTableRow).not.toHaveBeenCalled();
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
 
-    it('should not add row when cell is null', () => {
+    it("should not add row when cell is null", () => {
       const { handleAddRowAbove } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(null),
@@ -107,19 +107,19 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddRowAbove()
+      handleAddRowAbove();
 
-      expect(commands.addTableRow).not.toHaveBeenCalled()
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
-  })
+      expect(commands.addTableRow).not.toHaveBeenCalled();
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleAddRowBelow', () => {
-    it('should add row below current cell', () => {
+  describe("handleAddRowBelow", () => {
+    it("should add row below current cell", () => {
       const { handleAddRowBelow } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(currentCell),
@@ -128,17 +128,17 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddRowBelow()
+      handleAddRowBelow();
 
-      expect(commands.addTableRow).toHaveBeenCalledWith(currentTable, 2)
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.addTableRow).toHaveBeenCalledWith(currentTable, 2);
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not add row when table is null', () => {
+    it("should not add row when table is null", () => {
       const { handleAddRowBelow } = useTableActions({
         currentTable: ref(null),
         currentCell: ref(currentCell),
@@ -147,17 +147,17 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddRowBelow()
+      handleAddRowBelow();
 
-      expect(commands.addTableRow).not.toHaveBeenCalled()
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
+      expect(commands.addTableRow).not.toHaveBeenCalled();
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
 
-    it('should not add row when cell is null', () => {
+    it("should not add row when cell is null", () => {
       const { handleAddRowBelow } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(null),
@@ -166,19 +166,19 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddRowBelow()
+      handleAddRowBelow();
 
-      expect(commands.addTableRow).not.toHaveBeenCalled()
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
-  })
+      expect(commands.addTableRow).not.toHaveBeenCalled();
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleAddColumnLeft', () => {
-    it('should add column to the left of current cell', () => {
+  describe("handleAddColumnLeft", () => {
+    it("should add column to the left of current cell", () => {
       const { handleAddColumnLeft } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(currentCell),
@@ -187,17 +187,17 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddColumnLeft()
+      handleAddColumnLeft();
 
-      expect(commands.addTableColumn).toHaveBeenCalledWith(currentTable, 1)
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.addTableColumn).toHaveBeenCalledWith(currentTable, 1);
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not add column when table is null', () => {
+    it("should not add column when table is null", () => {
       const { handleAddColumnLeft } = useTableActions({
         currentTable: ref(null),
         currentCell: ref(currentCell),
@@ -206,17 +206,17 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddColumnLeft()
+      handleAddColumnLeft();
 
-      expect(commands.addTableColumn).not.toHaveBeenCalled()
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
+      expect(commands.addTableColumn).not.toHaveBeenCalled();
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
 
-    it('should not add column when cell is null', () => {
+    it("should not add column when cell is null", () => {
       const { handleAddColumnLeft } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(null),
@@ -225,19 +225,19 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddColumnLeft()
+      handleAddColumnLeft();
 
-      expect(commands.addTableColumn).not.toHaveBeenCalled()
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
-  })
+      expect(commands.addTableColumn).not.toHaveBeenCalled();
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleAddColumnRight', () => {
-    it('should add column to the right of current cell', () => {
+  describe("handleAddColumnRight", () => {
+    it("should add column to the right of current cell", () => {
       const { handleAddColumnRight } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(currentCell),
@@ -246,17 +246,17 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddColumnRight()
+      handleAddColumnRight();
 
-      expect(commands.addTableColumn).toHaveBeenCalledWith(currentTable, 2)
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.addTableColumn).toHaveBeenCalledWith(currentTable, 2);
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not add column when table is null', () => {
+    it("should not add column when table is null", () => {
       const { handleAddColumnRight } = useTableActions({
         currentTable: ref(null),
         currentCell: ref(currentCell),
@@ -265,17 +265,17 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddColumnRight()
+      handleAddColumnRight();
 
-      expect(commands.addTableColumn).not.toHaveBeenCalled()
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
+      expect(commands.addTableColumn).not.toHaveBeenCalled();
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
 
-    it('should not add column when cell is null', () => {
+    it("should not add column when cell is null", () => {
       const { handleAddColumnRight } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(null),
@@ -284,20 +284,20 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddColumnRight()
+      handleAddColumnRight();
 
-      expect(commands.addTableColumn).not.toHaveBeenCalled()
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
-  })
+      expect(commands.addTableColumn).not.toHaveBeenCalled();
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleRemoveRow', () => {
-    it('should remove the row containing current cell', () => {
-      const showTableDesigner = ref(true)
+  describe("handleRemoveRow", () => {
+    it("should remove the row containing current cell", () => {
+      const showTableDesigner = ref(true);
       const { handleRemoveRow } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(currentCell),
@@ -306,19 +306,19 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleRemoveRow()
+      handleRemoveRow();
 
-      expect(commands.removeTableRow).toHaveBeenCalledWith(currentTable, 1)
-      expect(showTableDesigner.value).toBe(false)
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.removeTableRow).toHaveBeenCalledWith(currentTable, 1);
+      expect(showTableDesigner.value).toBe(false);
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not remove row when table is null', () => {
-      const showTableDesigner = ref(true)
+    it("should not remove row when table is null", () => {
+      const showTableDesigner = ref(true);
       const { handleRemoveRow } = useTableActions({
         currentTable: ref(null),
         currentCell: ref(currentCell),
@@ -327,19 +327,19 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleRemoveRow()
+      handleRemoveRow();
 
-      expect(commands.removeTableRow).not.toHaveBeenCalled()
-      expect(showTableDesigner.value).toBe(true)
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
+      expect(commands.removeTableRow).not.toHaveBeenCalled();
+      expect(showTableDesigner.value).toBe(true);
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
 
-    it('should not remove row when cell is null', () => {
-      const showTableDesigner = ref(true)
+    it("should not remove row when cell is null", () => {
+      const showTableDesigner = ref(true);
       const { handleRemoveRow } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(null),
@@ -348,21 +348,21 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleRemoveRow()
+      handleRemoveRow();
 
-      expect(commands.removeTableRow).not.toHaveBeenCalled()
-      expect(showTableDesigner.value).toBe(true)
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
-  })
+      expect(commands.removeTableRow).not.toHaveBeenCalled();
+      expect(showTableDesigner.value).toBe(true);
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleRemoveColumn', () => {
-    it('should remove the column containing current cell', () => {
-      const showTableDesigner = ref(true)
+  describe("handleRemoveColumn", () => {
+    it("should remove the column containing current cell", () => {
+      const showTableDesigner = ref(true);
       const { handleRemoveColumn } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(currentCell),
@@ -371,19 +371,19 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleRemoveColumn()
+      handleRemoveColumn();
 
-      expect(commands.removeTableColumn).toHaveBeenCalledWith(currentTable, 1)
-      expect(showTableDesigner.value).toBe(false)
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.removeTableColumn).toHaveBeenCalledWith(currentTable, 1);
+      expect(showTableDesigner.value).toBe(false);
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not remove column when table is null', () => {
-      const showTableDesigner = ref(true)
+    it("should not remove column when table is null", () => {
+      const showTableDesigner = ref(true);
       const { handleRemoveColumn } = useTableActions({
         currentTable: ref(null),
         currentCell: ref(currentCell),
@@ -392,19 +392,19 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleRemoveColumn()
+      handleRemoveColumn();
 
-      expect(commands.removeTableColumn).not.toHaveBeenCalled()
-      expect(showTableDesigner.value).toBe(true)
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
+      expect(commands.removeTableColumn).not.toHaveBeenCalled();
+      expect(showTableDesigner.value).toBe(true);
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
 
-    it('should not remove column when cell is null', () => {
-      const showTableDesigner = ref(true)
+    it("should not remove column when cell is null", () => {
+      const showTableDesigner = ref(true);
       const { handleRemoveColumn } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(null),
@@ -413,24 +413,24 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleRemoveColumn()
+      handleRemoveColumn();
 
-      expect(commands.removeTableColumn).not.toHaveBeenCalled()
-      expect(showTableDesigner.value).toBe(true)
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
-  })
+      expect(commands.removeTableColumn).not.toHaveBeenCalled();
+      expect(showTableDesigner.value).toBe(true);
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleDeleteTable', () => {
-    it('should delete entire table', () => {
-      const showTableDesigner = ref(true)
-      const currentTableRef = ref(currentTable)
-      const currentCellRef = ref(currentCell)
-      
+  describe("handleDeleteTable", () => {
+    it("should delete entire table", () => {
+      const showTableDesigner = ref(true);
+      const currentTableRef = ref(currentTable);
+      const currentCellRef = ref(currentCell);
+
       const { handleDeleteTable } = useTableActions({
         currentTable: currentTableRef,
         currentCell: currentCellRef,
@@ -439,23 +439,23 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleDeleteTable()
+      handleDeleteTable();
 
-      expect(commands.deleteTable).toHaveBeenCalledWith(currentTable)
-      expect(showTableDesigner.value).toBe(false)
-      expect(currentTableRef.value).toBeNull()
-      expect(currentCellRef.value).toBeNull()
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.deleteTable).toHaveBeenCalledWith(currentTable);
+      expect(showTableDesigner.value).toBe(false);
+      expect(currentTableRef.value).toBeNull();
+      expect(currentCellRef.value).toBeNull();
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not delete when table is null', () => {
-      const showTableDesigner = ref(true)
-      const currentTableRef = ref(null)
-      
+    it("should not delete when table is null", () => {
+      const showTableDesigner = ref(true);
+      const currentTableRef = ref(null);
+
       const { handleDeleteTable } = useTableActions({
         currentTable: currentTableRef,
         currentCell: ref(currentCell),
@@ -464,28 +464,28 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleDeleteTable()
+      handleDeleteTable();
 
-      expect(commands.deleteTable).not.toHaveBeenCalled()
-      expect(showTableDesigner.value).toBe(true)
-      expect(mockOnUpdate).not.toHaveBeenCalled()
-    })
-  })
+      expect(commands.deleteTable).not.toHaveBeenCalled();
+      expect(showTableDesigner.value).toBe(true);
+      expect(mockOnUpdate).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleCellProperties', () => {
-    it('should open cell properties modal', () => {
-      const showTablePropertiesModal = ref(false)
-      const initialCellProps = ref({})
-      const tablePropertiesMode = ref<TablePropertiesMode>('table')
-      
+  describe("handleCellProperties", () => {
+    it("should open cell properties modal", () => {
+      const showTablePropertiesModal = ref(false);
+      const initialCellProps = ref({});
+      const tablePropertiesMode = ref<TablePropertiesMode>("table");
+
       vi.mocked(commands.getCellProperties).mockReturnValue({
-        backgroundColor: '#fff',
-        textAlign: 'left',
-      } as any)
+        backgroundColor: "#fff",
+        textAlign: "left",
+      } as any);
 
       const { handleCellProperties } = useTableActions({
         currentTable: ref(currentTable),
@@ -497,23 +497,23 @@ describe('useTableActions', () => {
         initialTableProps: ref({}),
         tablePropertiesMode,
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleCellProperties()
+      handleCellProperties();
 
-      expect(commands.getCellProperties).toHaveBeenCalledWith(currentCell)
+      expect(commands.getCellProperties).toHaveBeenCalledWith(currentCell);
       expect(initialCellProps.value).toEqual({
-        backgroundColor: '#fff',
-        textAlign: 'left',
-      })
-      expect(tablePropertiesMode.value).toBe('cell')
-      expect(showTablePropertiesModal.value).toBe(true)
-    })
+        backgroundColor: "#fff",
+        textAlign: "left",
+      });
+      expect(tablePropertiesMode.value).toBe("cell");
+      expect(showTablePropertiesModal.value).toBe(true);
+    });
 
-    it('should not open modal when cell is null', () => {
-      const showTablePropertiesModal = ref(false)
-      const tablePropertiesMode = ref<TablePropertiesMode>('table')
-      
+    it("should not open modal when cell is null", () => {
+      const showTablePropertiesModal = ref(false);
+      const tablePropertiesMode = ref<TablePropertiesMode>("table");
+
       const { handleCellProperties } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(null),
@@ -524,26 +524,26 @@ describe('useTableActions', () => {
         initialTableProps: ref({}),
         tablePropertiesMode,
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleCellProperties()
+      handleCellProperties();
 
-      expect(commands.getCellProperties).not.toHaveBeenCalled()
-      expect(showTablePropertiesModal.value).toBe(false)
-      expect(tablePropertiesMode.value).toBe('table')
-    })
-  })
+      expect(commands.getCellProperties).not.toHaveBeenCalled();
+      expect(showTablePropertiesModal.value).toBe(false);
+      expect(tablePropertiesMode.value).toBe("table");
+    });
+  });
 
-  describe('handleTableProperties', () => {
-    it('should open table properties modal', () => {
-      const initialTableProps = ref({})
-      const tablePropertiesMode = ref<TablePropertiesMode>('cell')
-      const mockOpenModal = vi.fn()
-      
+  describe("handleTableProperties", () => {
+    it("should open table properties modal", () => {
+      const initialTableProps = ref({});
+      const tablePropertiesMode = ref<TablePropertiesMode>("cell");
+      const mockOpenModal = vi.fn();
+
       vi.mocked(commands.getTableProperties).mockReturnValue({
         borderWidth: 1,
-        borderColor: '#000',
-      } as any)
+        borderColor: "#000",
+      } as any);
 
       const { handleTableProperties } = useTableActions({
         currentTable: ref(currentTable),
@@ -555,23 +555,23 @@ describe('useTableActions', () => {
         initialTableProps,
         tablePropertiesMode,
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleTableProperties()
+      handleTableProperties();
 
-      expect(commands.getTableProperties).toHaveBeenCalledWith(currentTable)
+      expect(commands.getTableProperties).toHaveBeenCalledWith(currentTable);
       expect(initialTableProps.value).toEqual({
         borderWidth: 1,
-        borderColor: '#000',
-      })
-      expect(tablePropertiesMode.value).toBe('table')
-      expect(mockOpenModal).toHaveBeenCalledTimes(1)
-    })
+        borderColor: "#000",
+      });
+      expect(tablePropertiesMode.value).toBe("table");
+      expect(mockOpenModal).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not open modal when table is null', () => {
-      const tablePropertiesMode = ref<TablePropertiesMode>('cell')
-      const mockOpenModal = vi.fn()
-      
+    it("should not open modal when table is null", () => {
+      const tablePropertiesMode = ref<TablePropertiesMode>("cell");
+      const mockOpenModal = vi.fn();
+
       const { handleTableProperties } = useTableActions({
         currentTable: ref(null),
         currentCell: ref(currentCell),
@@ -582,18 +582,18 @@ describe('useTableActions', () => {
         initialTableProps: ref({}),
         tablePropertiesMode,
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleTableProperties()
+      handleTableProperties();
 
-      expect(commands.getTableProperties).not.toHaveBeenCalled()
-      expect(mockOpenModal).not.toHaveBeenCalled()
-      expect(tablePropertiesMode.value).toBe('cell')
-    })
-  })
+      expect(commands.getTableProperties).not.toHaveBeenCalled();
+      expect(mockOpenModal).not.toHaveBeenCalled();
+      expect(tablePropertiesMode.value).toBe("cell");
+    });
+  });
 
-  describe('handleApplyTableProperties', () => {
-    it('should apply cell properties', () => {
+  describe("handleApplyTableProperties", () => {
+    it("should apply cell properties", () => {
       const { handleApplyTableProperties } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(currentCell),
@@ -602,23 +602,26 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
       const cellProps = {
-        backgroundColor: '#f00',
-        textAlign: 'center',
+        backgroundColor: "#f00",
+        textAlign: "center",
         padding: 10,
-      }
+      };
 
-      handleApplyTableProperties({ cellProps })
+      handleApplyTableProperties({ cellProps });
 
-      expect(commands.applyCellProperties).toHaveBeenCalledWith(currentCell, cellProps)
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.applyCellProperties).toHaveBeenCalledWith(
+        currentCell,
+        cellProps
+      );
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should apply table properties', () => {
+    it("should apply table properties", () => {
       const { handleApplyTableProperties } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(currentCell),
@@ -627,23 +630,26 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('table'),
+        tablePropertiesMode: ref("table"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
       const tableProps = {
         borderWidth: 2,
-        borderColor: '#000',
-        width: '100%',
-      }
+        borderColor: "#000",
+        width: "100%",
+      };
 
-      handleApplyTableProperties({ tableProps })
+      handleApplyTableProperties({ tableProps });
 
-      expect(commands.applyTableProperties).toHaveBeenCalledWith(currentTable, tableProps)
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.applyTableProperties).toHaveBeenCalledWith(
+        currentTable,
+        tableProps
+      );
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should apply both cell and table properties', () => {
+    it("should apply both cell and table properties", () => {
       const { handleApplyTableProperties } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(currentCell),
@@ -652,21 +658,27 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('both'),
+        tablePropertiesMode: ref("both"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      const cellProps = { backgroundColor: '#f00' }
-      const tableProps = { borderWidth: 2 }
+      const cellProps = { backgroundColor: "#f00" };
+      const tableProps = { borderWidth: 2 };
 
-      handleApplyTableProperties({ cellProps, tableProps })
+      handleApplyTableProperties({ cellProps, tableProps });
 
-      expect(commands.applyCellProperties).toHaveBeenCalledWith(currentCell, cellProps)
-      expect(commands.applyTableProperties).toHaveBeenCalledWith(currentTable, tableProps)
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.applyCellProperties).toHaveBeenCalledWith(
+        currentCell,
+        cellProps
+      );
+      expect(commands.applyTableProperties).toHaveBeenCalledWith(
+        currentTable,
+        tableProps
+      );
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not apply cell properties when cell is null', () => {
+    it("should not apply cell properties when cell is null", () => {
       const { handleApplyTableProperties } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(null),
@@ -675,19 +687,19 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      const cellProps = { backgroundColor: '#f00' }
+      const cellProps = { backgroundColor: "#f00" };
 
-      handleApplyTableProperties({ cellProps })
+      handleApplyTableProperties({ cellProps });
 
-      expect(commands.applyCellProperties).not.toHaveBeenCalled()
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
+      expect(commands.applyCellProperties).not.toHaveBeenCalled();
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not apply table properties when table is null', () => {
+    it("should not apply table properties when table is null", () => {
       const { handleApplyTableProperties } = useTableActions({
         currentTable: ref(null),
         currentCell: ref(currentCell),
@@ -696,49 +708,50 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('table'),
+        tablePropertiesMode: ref("table"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      const tableProps = { borderWidth: 2 }
+      const tableProps = { borderWidth: 2 };
 
-      handleApplyTableProperties({ tableProps })
+      handleApplyTableProperties({ tableProps });
 
-      expect(commands.applyTableProperties).not.toHaveBeenCalled()
-      expect(mockOnUpdate).toHaveBeenCalledTimes(1)
-    })
-  })
+      expect(commands.applyTableProperties).not.toHaveBeenCalled();
+      expect(mockOnUpdate).toHaveBeenCalledTimes(1);
+    });
+  });
 
-  describe('Edge Cases', () => {
-    it('should handle rapid successive operations', () => {
-      const { handleAddRowAbove, handleAddColumnLeft, handleRemoveRow } = useTableActions({
-        currentTable: ref(currentTable),
-        currentCell: ref(currentCell),
-        showTableDesigner: ref(true),
-        showTablePropertiesModal: ref(false),
-        openTablePropertiesModal: vi.fn(),
-        initialCellProps: ref({}),
-        initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
-        onUpdate: mockOnUpdate,
-      })
+  describe("Edge Cases", () => {
+    it("should handle rapid successive operations", () => {
+      const { handleAddRowAbove, handleAddColumnLeft, handleRemoveRow } =
+        useTableActions({
+          currentTable: ref(currentTable),
+          currentCell: ref(currentCell),
+          showTableDesigner: ref(true),
+          showTablePropertiesModal: ref(false),
+          openTablePropertiesModal: vi.fn(),
+          initialCellProps: ref({}),
+          initialTableProps: ref({}),
+          tablePropertiesMode: ref("cell"),
+          onUpdate: mockOnUpdate,
+        });
 
-      handleAddRowAbove()
-      handleAddColumnLeft()
-      handleRemoveRow()
+      handleAddRowAbove();
+      handleAddColumnLeft();
+      handleRemoveRow();
 
-      expect(commands.addTableRow).toHaveBeenCalledTimes(1)
-      expect(commands.addTableColumn).toHaveBeenCalledTimes(1)
-      expect(commands.removeTableRow).toHaveBeenCalledTimes(1)
-      expect(mockOnUpdate).toHaveBeenCalledTimes(3)
-    })
+      expect(commands.addTableRow).toHaveBeenCalledTimes(1);
+      expect(commands.addTableColumn).toHaveBeenCalledTimes(1);
+      expect(commands.removeTableRow).toHaveBeenCalledTimes(1);
+      expect(mockOnUpdate).toHaveBeenCalledTimes(3);
+    });
 
-    it('should handle operations on first cell (0,0)', () => {
-      const tbody = currentTable.querySelector('tbody')!
-      const rows = tbody.querySelectorAll('tr')
-      const firstRow = rows[0]
-      const firstCell = firstRow.querySelectorAll('td')[0]
-      
+    it("should handle operations on first cell (0,0)", () => {
+      const tbody = currentTable.querySelector("tbody")!;
+      const rows = tbody.querySelectorAll("tr");
+      const firstRow = rows[0];
+      const firstCell = firstRow.querySelectorAll("td")[0];
+
       const { handleAddRowAbove, handleAddColumnLeft } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(firstCell),
@@ -747,24 +760,24 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddRowAbove()
-      handleAddColumnLeft()
+      handleAddRowAbove();
+      handleAddColumnLeft();
 
-      expect(commands.addTableRow).toHaveBeenCalledWith(currentTable, 0)
-      expect(commands.addTableColumn).toHaveBeenCalledWith(currentTable, 0)
-    })
+      expect(commands.addTableRow).toHaveBeenCalledWith(currentTable, 0);
+      expect(commands.addTableColumn).toHaveBeenCalledWith(currentTable, 0);
+    });
 
-    it('should handle operations on last cell', () => {
-      const tbody = currentTable.querySelector('tbody')!
-      const rows = tbody.querySelectorAll('tr')
-      const lastRow = rows[rows.length - 1]
-      const cells = lastRow.querySelectorAll('td')
-      const lastCell = cells[cells.length - 1]
-      
+    it("should handle operations on last cell", () => {
+      const tbody = currentTable.querySelector("tbody")!;
+      const rows = tbody.querySelectorAll("tr");
+      const lastRow = rows[rows.length - 1];
+      const cells = lastRow.querySelectorAll("td");
+      const lastCell = cells[cells.length - 1];
+
       const { handleAddRowBelow, handleAddColumnRight } = useTableActions({
         currentTable: ref(currentTable),
         currentCell: ref(lastCell),
@@ -773,15 +786,15 @@ describe('useTableActions', () => {
         openTablePropertiesModal: vi.fn(),
         initialCellProps: ref({}),
         initialTableProps: ref({}),
-        tablePropertiesMode: ref('cell'),
+        tablePropertiesMode: ref("cell"),
         onUpdate: mockOnUpdate,
-      })
+      });
 
-      handleAddRowBelow()
-      handleAddColumnRight()
+      handleAddRowBelow();
+      handleAddColumnRight();
 
-      expect(commands.addTableRow).toHaveBeenCalledWith(currentTable, 3)
-      expect(commands.addTableColumn).toHaveBeenCalledWith(currentTable, 3)
-    })
-  })
-})
+      expect(commands.addTableRow).toHaveBeenCalledWith(currentTable, 3);
+      expect(commands.addTableColumn).toHaveBeenCalledWith(currentTable, 3);
+    });
+  });
+});

@@ -18,7 +18,8 @@
   overflow: hidden;
   background: var(--editor-bg);
   box-shadow: 0 18px 40px -24px rgba(30, 64, 175, 0.45);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   transition: background 0.3s ease, color 0.3s ease;
 }
 
@@ -176,7 +177,7 @@
 }
 
 .toolbar-btn[data-tooltip]:hover::before {
-  content: '';
+  content: "";
   position: absolute;
   bottom: calc(100% + 4px);
   left: 50%;
@@ -266,7 +267,8 @@
   min-height: 240px;
   max-height: 640px;
   padding: 20px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", "Consolas", "source-code-pro",
+    monospace;
   font-size: 14px;
   line-height: 1.6;
   color: var(--content-color);
@@ -343,7 +345,7 @@
   background: rgba(15, 23, 42, 0.08);
   padding: 3px 8px;
   border-radius: 4px;
-  font-family: 'Fira Code', 'Courier New', monospace;
+  font-family: "Fira Code", "Courier New", monospace;
   font-size: 0.92em;
 }
 
@@ -437,7 +439,7 @@
 }
 
 .editor-content :deep(.editor-image-wrapper)::after {
-  content: '↔️ Drag to resize';
+  content: "↔️ Drag to resize";
   position: absolute;
   bottom: 8px;
   right: 8px;
@@ -912,7 +914,7 @@
   background: var(--code-bg);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Courier New", Courier, monospace;
   font-size: 0.9em;
 }
 
@@ -1062,7 +1064,6 @@
   margin-bottom: 0;
 }
 
-
 .dropdown-fade-enter-active,
 .dropdown-fade-leave-active {
   transition: opacity 0.2s, transform 0.2s;
@@ -1084,15 +1085,15 @@
     gap: 2px;
     padding: 6px 8px;
   }
-  
+
   .toolbar-divider {
     display: none;
   }
-  
+
   .dropdown-label {
     display: none;
   }
-  
+
   .toolbar-btn-modern {
     min-width: 36px;
     height: 36px;
@@ -1136,7 +1137,7 @@
     border: none;
     background: none;
   }
-  
+
   .editor-content :deep(.page-break-label) {
     display: none;
   }

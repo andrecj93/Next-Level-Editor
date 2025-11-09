@@ -1,56 +1,61 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ref, type Ref } from 'vue'
-import { useInsertActions } from '../useInsertActions'
-import * as pageManagement from '../../utils/pageManagement'
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { ref, type Ref } from "vue";
+import { useInsertActions } from "../useInsertActions";
+import * as pageManagement from "../../utils/pageManagement";
 
 // Mock the utility modules
-vi.mock('../../utils/pageManagement', () => ({
+vi.mock("../../utils/pageManagement", () => ({
   insertPageBreak: vi.fn(),
   insertTableOfContents: vi.fn(),
-}))
+}));
 
-describe('useInsertActions', () => {
-  let editorContent: Ref<HTMLElement | null>
-  let editorElement: HTMLDivElement
-  let performWithSelection: (callback: (root: HTMLElement) => void, afterCallback?: () => void) => void
-  let captureSnapshot: () => void
-  let showToast: (message: string, type?: 'success' | 'error') => void
-  let openImageUploadModal: () => void
-  let closeImageUploadModal: () => void
-  let closeEmbedModal: () => void
-  let closeFileManagerModal: () => void
-  let closeEmojiPicker: () => void
+describe("useInsertActions", () => {
+  let editorContent: Ref<HTMLElement | null>;
+  let editorElement: HTMLDivElement;
+  let performWithSelection: (
+    callback: (root: HTMLElement) => void,
+    afterCallback?: () => void
+  ) => void;
+  let captureSnapshot: () => void;
+  let showToast: (message: string, type?: "success" | "error") => void;
+  let openImageUploadModal: () => void;
+  let closeImageUploadModal: () => void;
+  let closeEmbedModal: () => void;
+  let closeFileManagerModal: () => void;
+  let closeEmojiPicker: () => void;
 
   beforeEach(() => {
     // Create editor element
-    editorElement = document.createElement('div')
-    editorElement.setAttribute('contenteditable', 'true')
-    editorElement.innerHTML = '<p>Test content</p>'
-    document.body.appendChild(editorElement)
-    
-    editorContent = ref<HTMLElement | null>(editorElement)
+    editorElement = document.createElement("div");
+    editorElement.setAttribute("contenteditable", "true");
+    editorElement.innerHTML = "<p>Test content</p>";
+    document.body.appendChild(editorElement);
+
+    editorContent = ref<HTMLElement | null>(editorElement);
 
     // Create mock functions
-    performWithSelection = vi.fn((callback: (root: HTMLElement) => void) => callback(editorElement))
-    captureSnapshot = vi.fn()
-    showToast = vi.fn()
-    openImageUploadModal = vi.fn()
-    closeImageUploadModal = vi.fn()
-    closeEmbedModal = vi.fn()
-    closeFileManagerModal = vi.fn()
-    closeEmojiPicker = vi.fn()
+    performWithSelection = vi.fn((callback: (root: HTMLElement) => void) =>
+      callback(editorElement)
+    );
+    captureSnapshot = vi.fn();
+    showToast = vi.fn();
+    openImageUploadModal = vi.fn();
+    closeImageUploadModal = vi.fn();
+    closeEmbedModal = vi.fn();
+    closeFileManagerModal = vi.fn();
+    closeEmojiPicker = vi.fn();
 
     // Mock window.prompt
-    globalThis.prompt = vi.fn()
-  })
+    globalThis.prompt = vi.fn();
+  });
 
   afterEach(() => {
-    editorElement.remove()
-    vi.clearAllMocks()
-  })
+    editorElement.remove();
+    vi.clearAllMocks();
+  });
 
-  describe('insertLink', () => {
-    it('should prompt for URL', () => {
+  describe("insertLink", () => {
+    it("should prompt for URL", () => {
       const { insertLink } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -61,15 +66,15 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      globalThis.prompt = vi.fn(() => 'https://example.com')
-      insertLink()
+      globalThis.prompt = vi.fn(() => "https://example.com");
+      insertLink();
 
-      expect(globalThis.prompt).toHaveBeenCalledWith('Enter the URL:')
-    })
+      expect(globalThis.prompt).toHaveBeenCalledWith("Enter the URL:");
+    });
 
-    it('should call insertLinkUtil when URL is provided', () => {
+    it("should call insertLinkUtil when URL is provided", () => {
       const { insertLink } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -80,15 +85,15 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      globalThis.prompt = vi.fn(() => 'https://example.com')
-      insertLink()
+      globalThis.prompt = vi.fn(() => "https://example.com");
+      insertLink();
 
-      expect(performWithSelection).toHaveBeenCalled()
-    })
+      expect(performWithSelection).toHaveBeenCalled();
+    });
 
-    it('should not insert link when URL is cancelled', () => {
+    it("should not insert link when URL is cancelled", () => {
       const { insertLink } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -99,17 +104,17 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      globalThis.prompt = vi.fn(() => null)
-      insertLink()
+      globalThis.prompt = vi.fn(() => null);
+      insertLink();
 
-      expect(performWithSelection).not.toHaveBeenCalled()
-    })
-  })
+      expect(performWithSelection).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('insertImage', () => {
-    it('should open image upload modal', () => {
+  describe("insertImage", () => {
+    it("should open image upload modal", () => {
       const { insertImage } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -120,16 +125,16 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      insertImage()
+      insertImage();
 
-      expect(openImageUploadModal).toHaveBeenCalled()
-    })
-  })
+      expect(openImageUploadModal).toHaveBeenCalled();
+    });
+  });
 
-  describe('handleInsertImage', () => {
-    it('should insert image with URL and alt text', () => {
+  describe("handleInsertImage", () => {
+    it("should insert image with URL and alt text", () => {
       const { handleInsertImage } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -140,15 +145,15 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertImage('https://example.com/image.jpg', 'Test image')
+      handleInsertImage("https://example.com/image.jpg", "Test image");
 
-      expect(performWithSelection).toHaveBeenCalled()
-      expect(closeImageUploadModal).toHaveBeenCalled()
-    })
+      expect(performWithSelection).toHaveBeenCalled();
+      expect(closeImageUploadModal).toHaveBeenCalled();
+    });
 
-    it('should close image upload modal after insertion', () => {
+    it("should close image upload modal after insertion", () => {
       const { handleInsertImage } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -159,16 +164,16 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertImage('https://example.com/image.jpg', 'Alt text')
+      handleInsertImage("https://example.com/image.jpg", "Alt text");
 
-      expect(closeImageUploadModal).toHaveBeenCalled()
-    })
-  })
+      expect(closeImageUploadModal).toHaveBeenCalled();
+    });
+  });
 
-  describe('handleInsertEmbed', () => {
-    it('should insert embed HTML content', () => {
+  describe("handleInsertEmbed", () => {
+    it("should insert embed HTML content", () => {
       const { handleInsertEmbed } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -179,28 +184,28 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
       // Create a selection
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 4)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 4);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
 
-      handleInsertEmbed('<iframe src="https://example.com"></iframe>')
+      handleInsertEmbed('<iframe src="https://example.com"></iframe>');
 
-      expect(performWithSelection).toHaveBeenCalled()
-      expect(closeEmbedModal).toHaveBeenCalled()
-    })
+      expect(performWithSelection).toHaveBeenCalled();
+      expect(closeEmbedModal).toHaveBeenCalled();
+    });
 
-    it('should close embed modal after insertion', () => {
+    it("should close embed modal after insertion", () => {
       const { handleInsertEmbed } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -211,15 +216,15 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertEmbed('<div>Embed content</div>')
+      handleInsertEmbed("<div>Embed content</div>");
 
-      expect(closeEmbedModal).toHaveBeenCalled()
-    })
+      expect(closeEmbedModal).toHaveBeenCalled();
+    });
 
-    it('should not insert when editorContent is null', () => {
-      editorContent.value = null
+    it("should not insert when editorContent is null", () => {
+      editorContent.value = null;
       const { handleInsertEmbed } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -230,16 +235,16 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertEmbed('<div>Test</div>')
+      handleInsertEmbed("<div>Test</div>");
 
-      expect(performWithSelection).not.toHaveBeenCalled()
-    })
-  })
+      expect(performWithSelection).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleInsertFile', () => {
-    it('should insert image file as image', () => {
+  describe("handleInsertFile", () => {
+    it("should insert image file as image", () => {
       const { handleInsertFile } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -250,34 +255,34 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
       // Create a selection inside the editor
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 0)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 0);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
 
       const imageFile = {
-        type: 'image/png',
-        url: 'https://example.com/image.png',
-        name: 'image.png',
-      }
+        type: "image/png",
+        url: "https://example.com/image.png",
+        name: "image.png",
+      };
 
-      handleInsertFile(imageFile)
+      handleInsertFile(imageFile);
 
-      expect(performWithSelection).toHaveBeenCalled()
-      expect(closeFileManagerModal).toHaveBeenCalled()
-    })
+      expect(performWithSelection).toHaveBeenCalled();
+      expect(closeFileManagerModal).toHaveBeenCalled();
+    });
 
-    it('should insert non-image file as link', () => {
+    it("should insert non-image file as link", () => {
       const { handleInsertFile } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -288,34 +293,34 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
       // Create a selection
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 4)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 4);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
 
       const pdfFile = {
-        type: 'application/pdf',
-        url: 'https://example.com/document.pdf',
-        name: 'document.pdf',
-      }
+        type: "application/pdf",
+        url: "https://example.com/document.pdf",
+        name: "document.pdf",
+      };
 
-      handleInsertFile(pdfFile)
+      handleInsertFile(pdfFile);
 
-      expect(performWithSelection).toHaveBeenCalled()
-      expect(closeFileManagerModal).toHaveBeenCalled()
-    })
+      expect(performWithSelection).toHaveBeenCalled();
+      expect(closeFileManagerModal).toHaveBeenCalled();
+    });
 
-    it('should close file manager modal after insertion', () => {
+    it("should close file manager modal after insertion", () => {
       const { handleInsertFile } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -326,34 +331,34 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
       // Create a selection inside the editor
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 0)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 0);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
 
       const file = {
-        type: 'image/jpeg',
-        url: 'https://example.com/photo.jpg',
-        name: 'photo.jpg',
-      }
+        type: "image/jpeg",
+        url: "https://example.com/photo.jpg",
+        name: "photo.jpg",
+      };
 
-      handleInsertFile(file)
+      handleInsertFile(file);
 
-      expect(closeFileManagerModal).toHaveBeenCalled()
-    })
+      expect(closeFileManagerModal).toHaveBeenCalled();
+    });
 
-    it('should not insert when editorContent is null', () => {
-      editorContent.value = null
+    it("should not insert when editorContent is null", () => {
+      editorContent.value = null;
       const { handleInsertFile } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -364,16 +369,20 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertFile({ type: 'image/png', url: 'test.png', name: 'test.png' })
+      handleInsertFile({
+        type: "image/png",
+        url: "test.png",
+        name: "test.png",
+      });
 
-      expect(performWithSelection).not.toHaveBeenCalled()
-    })
-  })
+      expect(performWithSelection).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleInsertEmoji', () => {
-    it('should insert emoji at cursor position', () => {
+  describe("handleInsertEmoji", () => {
+    it("should insert emoji at cursor position", () => {
       const { handleInsertEmoji } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -384,28 +393,28 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
       // Create a selection
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 0)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 0);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
 
-      handleInsertEmoji('😀')
+      handleInsertEmoji("😀");
 
-      expect(performWithSelection).toHaveBeenCalled()
-      expect(closeEmojiPicker).toHaveBeenCalled()
-    })
+      expect(performWithSelection).toHaveBeenCalled();
+      expect(closeEmojiPicker).toHaveBeenCalled();
+    });
 
-    it('should close emoji picker after insertion', () => {
+    it("should close emoji picker after insertion", () => {
       const { handleInsertEmoji } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -416,16 +425,16 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertEmoji('👍')
+      handleInsertEmoji("👍");
 
-      expect(closeEmojiPicker).toHaveBeenCalled()
-    })
-  })
+      expect(closeEmojiPicker).toHaveBeenCalled();
+    });
+  });
 
-  describe('handleInsertPageBreak', () => {
-    it('should insert page break', () => {
+  describe("handleInsertPageBreak", () => {
+    it("should insert page break", () => {
       const { handleInsertPageBreak } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -436,16 +445,16 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertPageBreak()
+      handleInsertPageBreak();
 
-      expect(vi.mocked(pageManagement.insertPageBreak)).toHaveBeenCalled()
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(vi.mocked(pageManagement.insertPageBreak)).toHaveBeenCalled();
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should not insert when editorContent is null', () => {
-      editorContent.value = null
+    it("should not insert when editorContent is null", () => {
+      editorContent.value = null;
       const { handleInsertPageBreak } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -456,16 +465,16 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertPageBreak()
+      handleInsertPageBreak();
 
-      expect(vi.mocked(pageManagement.insertPageBreak)).not.toHaveBeenCalled()
-    })
-  })
+      expect(vi.mocked(pageManagement.insertPageBreak)).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleInsertTOC', () => {
-    it('should insert table of contents', () => {
+  describe("handleInsertTOC", () => {
+    it("should insert table of contents", () => {
       const { handleInsertTOC } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -476,16 +485,18 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertTOC()
+      handleInsertTOC();
 
-      expect(vi.mocked(pageManagement.insertTableOfContents)).toHaveBeenCalled()
-      expect(captureSnapshot).toHaveBeenCalled()
-    })
+      expect(
+        vi.mocked(pageManagement.insertTableOfContents)
+      ).toHaveBeenCalled();
+      expect(captureSnapshot).toHaveBeenCalled();
+    });
 
-    it('should not insert when editorContent is null', () => {
-      editorContent.value = null
+    it("should not insert when editorContent is null", () => {
+      editorContent.value = null;
       const { handleInsertTOC } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -496,16 +507,18 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertTOC()
+      handleInsertTOC();
 
-      expect(vi.mocked(pageManagement.insertTableOfContents)).not.toHaveBeenCalled()
-    })
-  })
+      expect(
+        vi.mocked(pageManagement.insertTableOfContents)
+      ).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('handleInsertHR', () => {
-    it('should insert horizontal rule', () => {
+  describe("handleInsertHR", () => {
+    it("should insert horizontal rule", () => {
       const { handleInsertHR } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -516,16 +529,16 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      handleInsertHR()
+      handleInsertHR();
 
-      expect(performWithSelection).toHaveBeenCalled()
-    })
-  })
+      expect(performWithSelection).toHaveBeenCalled();
+    });
+  });
 
-  describe('handleInsertTable', () => {
-    it('should insert table with specified dimensions', () => {
+  describe("handleInsertTable", () => {
+    it("should insert table with specified dimensions", () => {
       const { handleInsertTable } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -536,15 +549,15 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      const tableData = { rows: 3, cols: 4, includeHeader: true }
-      handleInsertTable(tableData)
+      const tableData = { rows: 3, cols: 4, includeHeader: true };
+      handleInsertTable(tableData);
 
-      expect(performWithSelection).toHaveBeenCalled()
-    })
+      expect(performWithSelection).toHaveBeenCalled();
+    });
 
-    it('should show success toast after table insertion', () => {
+    it("should show success toast after table insertion", () => {
       const { handleInsertTable } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -555,15 +568,17 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      const tableData = { rows: 2, cols: 3, includeHeader: false }
-      handleInsertTable(tableData)
+      const tableData = { rows: 2, cols: 3, includeHeader: false };
+      handleInsertTable(tableData);
 
-      expect(showToast).toHaveBeenCalledWith('✓ Table (2×3) inserted successfully!')
-    })
+      expect(showToast).toHaveBeenCalledWith(
+        "✓ Table (2×3) inserted successfully!"
+      );
+    });
 
-    it('should handle table with header', () => {
+    it("should handle table with header", () => {
       const { handleInsertTable } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -574,16 +589,18 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      const tableData = { rows: 5, cols: 5, includeHeader: true }
-      handleInsertTable(tableData)
+      const tableData = { rows: 5, cols: 5, includeHeader: true };
+      handleInsertTable(tableData);
 
-      expect(performWithSelection).toHaveBeenCalled()
-      expect(showToast).toHaveBeenCalledWith('✓ Table (5×5) inserted successfully!')
-    })
+      expect(performWithSelection).toHaveBeenCalled();
+      expect(showToast).toHaveBeenCalledWith(
+        "✓ Table (5×5) inserted successfully!"
+      );
+    });
 
-    it('should handle table without header', () => {
+    it("should handle table without header", () => {
       const { handleInsertTable } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -594,18 +611,20 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      const tableData = { rows: 2, cols: 2, includeHeader: false }
-      handleInsertTable(tableData)
+      const tableData = { rows: 2, cols: 2, includeHeader: false };
+      handleInsertTable(tableData);
 
-      expect(performWithSelection).toHaveBeenCalled()
-      expect(showToast).toHaveBeenCalledWith('✓ Table (2×2) inserted successfully!')
-    })
-  })
+      expect(performWithSelection).toHaveBeenCalled();
+      expect(showToast).toHaveBeenCalledWith(
+        "✓ Table (2×2) inserted successfully!"
+      );
+    });
+  });
 
-  describe('handleInsertCodeBlock', () => {
-    it('should insert code block with language', () => {
+  describe("handleInsertCodeBlock", () => {
+    it("should insert code block with language", () => {
       const { handleInsertCodeBlock } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -616,28 +635,28 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
       // Create a selection
-      const range = document.createRange()
-      const textNode = editorElement.querySelector('p')?.firstChild
+      const range = document.createRange();
+      const textNode = editorElement.querySelector("p")?.firstChild;
       if (textNode) {
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 4)
-        const selection = globalThis.getSelection()
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 4);
+        const selection = globalThis.getSelection();
         if (selection) {
-          selection.removeAllRanges()
-          selection.addRange(range)
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
 
-      const codeData = { code: 'console.log("Hello")', language: 'javascript' }
-      handleInsertCodeBlock(codeData)
+      const codeData = { code: 'console.log("Hello")', language: "javascript" };
+      handleInsertCodeBlock(codeData);
 
-      expect(performWithSelection).toHaveBeenCalled()
-    })
+      expect(performWithSelection).toHaveBeenCalled();
+    });
 
-    it('should insert code block with different languages', () => {
+    it("should insert code block with different languages", () => {
       const { handleInsertCodeBlock } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -648,17 +667,17 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      const pythonCode = { code: 'print("Hello")', language: 'python' }
-      handleInsertCodeBlock(pythonCode)
+      const pythonCode = { code: 'print("Hello")', language: "python" };
+      handleInsertCodeBlock(pythonCode);
 
-      expect(performWithSelection).toHaveBeenCalled()
-    })
-  })
+      expect(performWithSelection).toHaveBeenCalled();
+    });
+  });
 
-  describe('Edge Cases', () => {
-    it('should handle multiple insertions in sequence', () => {
+  describe("Edge Cases", () => {
+    it("should handle multiple insertions in sequence", () => {
       const actions = useInsertActions({
         editorContent,
         performWithSelection,
@@ -669,17 +688,17 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      actions.handleInsertHR()
-      actions.handleInsertEmoji('🎉')
-      actions.handleInsertPageBreak()
+      actions.handleInsertHR();
+      actions.handleInsertEmoji("🎉");
+      actions.handleInsertPageBreak();
 
-      expect(performWithSelection).toHaveBeenCalledTimes(2)
-      expect(captureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(performWithSelection).toHaveBeenCalledTimes(2);
+      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should handle empty URL in insertLink', () => {
+    it("should handle empty URL in insertLink", () => {
       const { insertLink } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -690,15 +709,15 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
-      globalThis.prompt = vi.fn(() => '')
-      insertLink()
+      globalThis.prompt = vi.fn(() => "");
+      insertLink();
 
-      expect(performWithSelection).not.toHaveBeenCalled()
-    })
+      expect(performWithSelection).not.toHaveBeenCalled();
+    });
 
-    it('should handle all insert operations without errors', () => {
+    it("should handle all insert operations without errors", () => {
       const actions = useInsertActions({
         editorContent,
         performWithSelection,
@@ -709,14 +728,14 @@ describe('useInsertActions', () => {
         closeEmbedModal,
         closeFileManagerModal,
         closeEmojiPicker,
-      })
+      });
 
       // Test all operations don't throw
       expect(() => {
-        actions.insertImage()
-        actions.handleInsertHR()
-        actions.handleInsertEmoji('😀')
-      }).not.toThrow()
-    })
-  })
-})
+        actions.insertImage();
+        actions.handleInsertHR();
+        actions.handleInsertEmoji("😀");
+      }).not.toThrow();
+    });
+  });
+});

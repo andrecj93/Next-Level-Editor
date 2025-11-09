@@ -10,11 +10,7 @@
     </button>
 
     <transition name="picker-fade">
-      <div
-        v-if="showPicker"
-        class="color-picker-container"
-        @click.stop
-      >
+      <div v-if="showPicker" class="color-picker-container" @click.stop>
         <div class="color-picker-label">
           {{ label }}
         </div>
@@ -46,7 +42,7 @@ interface Props {
   icon?: string;
 }
 
-type Emits = (e: "update:modelValue", value: string) => void
+type Emits = (e: "update:modelValue", value: string) => void;
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: "#000000",

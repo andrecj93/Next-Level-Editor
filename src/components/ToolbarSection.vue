@@ -1,7 +1,7 @@
 <template>
   <template v-if="visible">
     <div class="toolbar-divider" />
-    
+
     <!-- Dropdown Section -->
     <div
       v-if="type === 'dropdown'"
@@ -16,10 +16,7 @@
     </div>
 
     <!-- Button Group Section -->
-    <div
-      v-else-if="type === 'buttons'"
-      class="toolbar-group"
-    >
+    <div v-else-if="type === 'buttons'" class="toolbar-group">
       <button
         v-for="action in items"
         :key="action.id"
@@ -45,27 +42,27 @@
 </template>
 
 <script setup lang="ts">
-import ToolbarDropdown from './ToolbarDropdown.vue'
-import type { ToolbarAction } from '../types/toolbar'
+import ToolbarDropdown from "./ToolbarDropdown.vue";
+import type { ToolbarAction } from "../types/toolbar";
 
 interface Props {
-  type: 'dropdown' | 'buttons' | 'custom'
-  visible?: boolean
-  label?: string
-  icon?: string
-  tooltip?: string
-  items?: ToolbarAction[] | any[]
+  type: "dropdown" | "buttons" | "custom";
+  visible?: boolean;
+  label?: string;
+  icon?: string;
+  tooltip?: string;
+  items?: ToolbarAction[] | any[];
 }
 
 withDefaults(defineProps<Props>(), {
   visible: true,
-  label: '',
-  icon: '',
-  tooltip: '',
+  label: "",
+  icon: "",
+  tooltip: "",
   items: () => [],
-})
+});
 
 defineEmits<{
-  'remember-selection': []
-}>()
+  "remember-selection": [];
+}>();
 </script>

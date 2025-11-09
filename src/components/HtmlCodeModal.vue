@@ -1,34 +1,20 @@
 <template>
   <teleport to="body">
     <transition name="modal-fade">
-      <div
-        v-if="show"
-        class="modal-overlay"
-        @click="handleOverlayClick"
-      >
-        <div
-          class="modal-content html-code-modal"
-          @click.stop
-        >
+      <div v-if="show" class="modal-overlay" @click="handleOverlayClick">
+        <div class="modal-content html-code-modal" @click.stop>
           <div class="modal-header">
             <h3>HTML Code</h3>
-            <button
-              class="close-btn"
-              aria-label="Close modal"
-              @click="close"
-            >
+            <button class="close-btn" aria-label="Close modal" @click="close">
               ✕
             </button>
           </div>
-          
+
           <div class="modal-body">
             <div class="code-section">
               <div class="code-header">
                 <span class="code-label">Formatted HTML Code:</span>
-                <button
-                  class="btn btn-copy"
-                  @click="copyToClipboard"
-                >
+                <button class="btn btn-copy" @click="copyToClipboard">
                   {{ copyButtonText }}
                 </button>
               </div>
@@ -40,14 +26,9 @@
               </div>
             </div>
           </div>
-          
+
           <div class="modal-footer">
-            <button
-              class="btn btn-primary"
-              @click="close"
-            >
-              Close
-            </button>
+            <button class="btn btn-primary" @click="close">Close</button>
           </div>
         </div>
       </div>
@@ -56,75 +37,82 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import Prism from 'prismjs'
-import 'prismjs/themes/prism-tomorrow.css'
+import { ref, computed, watch } from "vue";
+import Prism from "prismjs";
+import "prismjs/themes/prism-tomorrow.css";
 // Import markup-templating first (required for template languages in HTML)
-import 'prismjs/components/prism-markup-templating'
+import "prismjs/components/prism-markup-templating";
 // Import markup language for HTML syntax highlighting
-import 'prismjs/components/prism-markup'
+import "prismjs/components/prism-markup";
 
 interface Props {
-  show: boolean
-  htmlContent: string
+  show: boolean;
+  htmlContent: string;
 }
 
-type Emits = (e: 'close') => void
+type Emits = (e: "close") => void;
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
 
-const copyButtonText = ref('📋 Copy')
+const copyButtonText = ref("📋 Copy");
 
 const highlightedHtml = computed(() => {
-  if (!props.htmlContent) return ''
+  if (!props.htmlContent) return "";
   try {
     // HTML highlighting is provided through the markup language in Prism.js
     if (Prism.languages.markup) {
-      return Prism.highlight(props.htmlContent, Prism.languages.markup, 'markup')
+      return Prism.highlight(
+        props.htmlContent,
+        Prism.languages.markup,
+        "markup"
+      );
     } else {
       // Fallback: return escaped HTML for display
-      return props.htmlContent.replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+      return props.htmlContent.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
     }
   } catch (error) {
-    console.error('Failed to highlight HTML:', error)
+    console.error("Failed to highlight HTML:", error);
     // Fallback: return escaped HTML for display
-    return props.htmlContent.replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    return props.htmlContent.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
   }
-})
+});
 
 const close = () => {
-  emit('close')
-}
+  emit("close");
+};
 
 const handleOverlayClick = (event: MouseEvent) => {
   if (event.target === event.currentTarget) {
-    close()
+    close();
   }
-}
+};
 
 const copyToClipboard = async () => {
   try {
-    await navigator.clipboard.writeText(props.htmlContent)
-    copyButtonText.value = '✓ Copied!'
+    await navigator.clipboard.writeText(props.htmlContent);
+    copyButtonText.value = "✓ Copied!";
     setTimeout(() => {
-      copyButtonText.value = '📋 Copy'
-    }, 2000)
+      copyButtonText.value = "📋 Copy";
+    }, 2000);
   } catch (error) {
-    console.error('Failed to copy to clipboard:', error)
-    copyButtonText.value = '✗ Failed'
+    console.error("Failed to copy to clipboard:", error);
+    copyButtonText.value = "✗ Failed";
     setTimeout(() => {
-      copyButtonText.value = '📋 Copy'
-    }, 2000)
+      copyButtonText.value = "📋 Copy";
+    }, 2000);
   }
-}
+};
 
 // Reset copy button text when modal is closed
-watch(() => props.show, (newShow) => {
-  if (!newShow) {
-    copyButtonText.value = '📋 Copy'
+watch(
+  () => props.show,
+  (newShow) => {
+    if (!newShow) {
+      copyButtonText.value = "📋 Copy";
+    }
   }
-})
+);
 </script>
 
 <style scoped>
@@ -196,7 +184,8 @@ watch(() => props.show, (newShow) => {
 
 .code-display pre {
   margin: 0;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", "Consolas", "source-code-pro",
+    monospace;
   font-size: 13px;
   line-height: 1.6;
   white-space: pre-wrap;

@@ -5,9 +5,7 @@
       class="command-menu"
       :style="{ top: `${position.top}px`, left: `${position.left}px` }"
     >
-      <div class="command-menu-header">
-        Quick Actions
-      </div>
+      <div class="command-menu-header">Quick Actions</div>
       <ul>
         <li
           v-for="option in options"
@@ -28,34 +26,34 @@
 </template>
 
 <script setup lang="ts">
-import type { SlashCommandOption } from '../composables/useSlashCommands'
+import type { SlashCommandOption } from "../composables/useSlashCommands";
 
 // Re-export for backward compatibility
 export interface CommandOption {
-  id: string
-  label: string
-  description: string
-  action?: () => void
+  id: string;
+  label: string;
+  description: string;
+  action?: () => void;
 }
 
 export interface CommandMenuPosition {
-  top: number
-  left: number
+  top: number;
+  left: number;
 }
 
 interface Props {
-  show: boolean
-  position: CommandMenuPosition
-  options: SlashCommandOption[]
+  show: boolean;
+  position: CommandMenuPosition;
+  options: SlashCommandOption[];
 }
 
 withDefaults(defineProps<Props>(), {
   show: false,
   position: () => ({ top: 0, left: 0 }),
   options: () => [],
-})
+});
 
 defineEmits<{
-  select: [option: SlashCommandOption]
-}>()
+  select: [option: SlashCommandOption];
+}>();
 </script>

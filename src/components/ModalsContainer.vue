@@ -49,10 +49,7 @@
   />
 
   <!-- Emoji Picker -->
-  <div
-    v-if="showEmojiPicker"
-    class="emoji-picker-container"
-  >
+  <div v-if="showEmojiPicker" class="emoji-picker-container">
     <EmojiPicker
       :show="showEmojiPicker"
       @select="$emit('insert-emoji', $event)"
@@ -104,106 +101,95 @@
   />
 
   <!-- Auto-save Indicator -->
-  <div
-    v-if="isSaving || lastSaved"
-    class="auto-save-indicator"
-  >
-    <span
-      v-if="isSaving"
-      class="saving"
-    >💾 Saving...</span>
-    <span
-      v-else-if="lastSaved"
-      :key="lastSaved.getTime()"
-      class="saved"
-    >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
+  <div v-if="isSaving || lastSaved" class="auto-save-indicator">
+    <span v-if="isSaving" class="saving">💾 Saving...</span>
+    <span v-else-if="lastSaved" :key="lastSaved.getTime()" class="saved"
+      >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span
+    >
   </div>
 
   <!-- Toast Notification -->
   <transition name="toast-fade">
-    <div
-      v-if="showToast"
-      :class="['toast-notification', toastType]"
-    >
+    <div v-if="showToast" :class="['toast-notification', toastType]">
       {{ toastMessage }}
     </div>
   </transition>
 </template>
 
 <script setup lang="ts">
-import TableModal from './TableModal.vue'
-import FindReplaceModal from './FindReplaceModal.vue'
-import CodeBlockModal from './CodeBlockModal.vue'
-import TableDesigner from './TableDesigner.vue'
-import TablePropertiesModal from './TablePropertiesModal.vue'
-import EmojiPicker from './EmojiPicker.vue'
-import ImageUploadModal from './ImageUploadModal.vue'
-import EmbedModal from './EmbedModal.vue'
-import FileManagerModal from './FileManagerModal.vue'
-import TemplateModal from './TemplateModal.vue'
-import HtmlCodeModal from './HtmlCodeModal.vue'
-import CommandPalette from './CommandPalette.vue'
+import TableModal from "./TableModal.vue";
+import FindReplaceModal from "./FindReplaceModal.vue";
+import CodeBlockModal from "./CodeBlockModal.vue";
+import TableDesigner from "./TableDesigner.vue";
+import TablePropertiesModal from "./TablePropertiesModal.vue";
+import EmojiPicker from "./EmojiPicker.vue";
+import ImageUploadModal from "./ImageUploadModal.vue";
+import EmbedModal from "./EmbedModal.vue";
+import FileManagerModal from "./FileManagerModal.vue";
+import TemplateModal from "./TemplateModal.vue";
+import HtmlCodeModal from "./HtmlCodeModal.vue";
+import CommandPalette from "./CommandPalette.vue";
 
 interface Props {
-  showTableModal: boolean
-  showFindReplaceModal: boolean
-  showCodeBlockModal: boolean
-  showTableDesigner: boolean
-  showTablePropertiesModal: boolean
-  showEmojiPicker: boolean
-  showImageUploadModal: boolean
-  showEmbedModal: boolean
-  showFileManagerModal: boolean
-  showTemplateModal: boolean
-  showHtmlCodeModal: boolean
-  showCommandPalette: boolean
-  showToast: boolean
-  isSaving: boolean
-  editorContent: string
-  tableDesignerPosition: { x: number; y: number }
-  tablePropertiesMode: 'cell' | 'table' | 'both'
-  initialCellProps: Record<string, any>
-  initialTableProps: Record<string, any>
-  formattedHtmlContent: string
-  commandPaletteCommands: any[]
-  lastSaved: Date | null
-  toastMessage: string
-  toastType: 'success' | 'error'
+  showTableModal: boolean;
+  showFindReplaceModal: boolean;
+  showCodeBlockModal: boolean;
+  showTableDesigner: boolean;
+  showTablePropertiesModal: boolean;
+  showEmojiPicker: boolean;
+  showImageUploadModal: boolean;
+  showEmbedModal: boolean;
+  showFileManagerModal: boolean;
+  showTemplateModal: boolean;
+  showHtmlCodeModal: boolean;
+  showCommandPalette: boolean;
+  showToast: boolean;
+  isSaving: boolean;
+  editorContent: string;
+  tableDesignerPosition: { x: number; y: number };
+  tablePropertiesMode: "cell" | "table" | "both";
+  initialCellProps: Record<string, any>;
+  initialTableProps: Record<string, any>;
+  formattedHtmlContent: string;
+  commandPaletteCommands: any[];
+  lastSaved: Date | null;
+  toastMessage: string;
+  toastType: "success" | "error";
 }
 
-defineProps<Props>()
+defineProps<Props>();
 
 defineEmits<{
-  'close-table-modal': []
-  'insert-table': [data: any]
-  'close-find-replace-modal': []
-  'find': [data: any]
-  'replace': [data: any]
-  'close-code-block-modal': []
-  'insert-code-block': [data: any]
-  'add-row-above': []
-  'add-row-below': []
-  'add-column-left': []
-  'add-column-right': []
-  'remove-row': []
-  'remove-column': []
-  'cell-properties': []
-  'table-properties': []
-  'delete-table': []
-  'close-table-properties-modal': []
-  'apply-table-properties': [data: any]
-  'close-emoji-picker': []
-  'insert-emoji': [emoji: string]
-  'close-image-upload-modal': []
-  'insert-image': [url: string, alt: string]
-  'close-embed-modal': []
-  'insert-embed': [url: string]
-  'close-file-manager-modal': []
-  'insert-file': [data: any]
-  'close-template-modal': []
-  'select-template': [template: any]
-  'close-html-code-modal': []
-  'close-command-palette': []
-  'execute-command': [command: any]
-}>()
+  "close-table-modal": [];
+  "insert-table": [data: any];
+  "close-find-replace-modal": [];
+  find: [data: any];
+  replace: [data: any];
+  "close-code-block-modal": [];
+  "insert-code-block": [data: any];
+  "add-row-above": [];
+  "add-row-below": [];
+  "add-column-left": [];
+  "add-column-right": [];
+  "remove-row": [];
+  "remove-column": [];
+  "cell-properties": [];
+  "table-properties": [];
+  "delete-table": [];
+  "close-table-properties-modal": [];
+  "apply-table-properties": [data: any];
+  "close-emoji-picker": [];
+  "insert-emoji": [emoji: string];
+  "close-image-upload-modal": [];
+  "insert-image": [url: string, alt: string];
+  "close-embed-modal": [];
+  "insert-embed": [url: string];
+  "close-file-manager-modal": [];
+  "insert-file": [data: any];
+  "close-template-modal": [];
+  "select-template": [template: any];
+  "close-html-code-modal": [];
+  "close-command-palette": [];
+  "execute-command": [command: any];
+}>();
 </script>

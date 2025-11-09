@@ -1,580 +1,600 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ref } from 'vue'
-import { useFindReplace } from '../useFindReplace'
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { ref } from "vue";
+import { useFindReplace } from "../useFindReplace";
 
-describe('useFindReplace', () => {
-  let editorElement: HTMLElement
-  let mockCaptureSnapshot: () => void
+describe("useFindReplace", () => {
+  let editorElement: HTMLElement;
+  let mockCaptureSnapshot: () => void;
 
   beforeEach(() => {
-    editorElement = document.createElement('div')
-    editorElement.contentEditable = 'true'
-    document.body.appendChild(editorElement)
-    mockCaptureSnapshot = vi.fn()
-  })
+    editorElement = document.createElement("div");
+    editorElement.contentEditable = "true";
+    document.body.appendChild(editorElement);
+    mockCaptureSnapshot = vi.fn();
+  });
 
   afterEach(() => {
-    editorElement.remove()
-    vi.clearAllMocks()
-  })
+    editorElement.remove();
+    vi.clearAllMocks();
+  });
 
-  describe('searchAndReplace', () => {
-    it('should replace text case-insensitively', () => {
+  describe("searchAndReplace", () => {
+    it("should replace text case-insensitively", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       const result = searchAndReplace(
-        '<p>Hello world, HELLO universe</p>',
-        'hello',
-        'hi',
+        "<p>Hello world, HELLO universe</p>",
+        "hello",
+        "hi",
         { caseSensitive: false, wholeWord: false }
-      )
+      );
 
-      expect(result).toBe('<p>hi world, hi universe</p>')
-    })
+      expect(result).toBe("<p>hi world, hi universe</p>");
+    });
 
-    it('should replace text case-sensitively', () => {
+    it("should replace text case-sensitively", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       const result = searchAndReplace(
-        '<p>Hello world, HELLO universe</p>',
-        'Hello',
-        'Hi',
+        "<p>Hello world, HELLO universe</p>",
+        "Hello",
+        "Hi",
         { caseSensitive: true, wholeWord: false }
-      )
+      );
 
-      expect(result).toBe('<p>Hi world, HELLO universe</p>')
-    })
+      expect(result).toBe("<p>Hi world, HELLO universe</p>");
+    });
 
-    it('should attempt to replace whole words (note: current implementation has a bug)', () => {
+    it("should attempt to replace whole words (note: current implementation has a bug)", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       const result = searchAndReplace(
-        '<p>cat category scattered</p>',
-        'cat',
-        'dog',
+        "<p>cat category scattered</p>",
+        "cat",
+        "dog",
         { caseSensitive: false, wholeWord: true }
-      )
+      );
 
       // Bug: The current implementation escapes the pattern AFTER adding \b
       // So \b gets escaped to \\\\b, making wholeWord not work
       // This test verifies the current (buggy) behavior
-      expect(result).toBe('<p>cat category scattered</p>')
-    })
+      expect(result).toBe("<p>cat category scattered</p>");
+    });
 
-    it('should replace partial matches when wholeWord is false', () => {
+    it("should replace partial matches when wholeWord is false", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       const result = searchAndReplace(
-        '<p>cat category scattered</p>',
-        'cat',
-        'dog',
+        "<p>cat category scattered</p>",
+        "cat",
+        "dog",
         { caseSensitive: false, wholeWord: false }
-      )
+      );
 
-      expect(result).toBe('<p>dog dogegory sdogtered</p>')
-    })
+      expect(result).toBe("<p>dog dogegory sdogtered</p>");
+    });
 
-    it('should escape special regex characters', () => {
+    it("should escape special regex characters", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       const result = searchAndReplace(
-        '<p>Cost: $100 (special)</p>',
-        '$100',
-        '$200',
+        "<p>Cost: $100 (special)</p>",
+        "$100",
+        "$200",
         { caseSensitive: false, wholeWord: false }
-      )
+      );
 
-      expect(result).toBe('<p>Cost: $200 (special)</p>')
-    })
+      expect(result).toBe("<p>Cost: $200 (special)</p>");
+    });
 
-    it('should handle regex special characters in pattern', () => {
+    it("should handle regex special characters in pattern", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       const result = searchAndReplace(
-        '<p>Test [brackets] and {braces}</p>',
-        '[brackets]',
-        '(parentheses)',
+        "<p>Test [brackets] and {braces}</p>",
+        "[brackets]",
+        "(parentheses)",
         { caseSensitive: false, wholeWord: false }
-      )
+      );
 
-      expect(result).toBe('<p>Test (parentheses) and {braces}</p>')
-    })
+      expect(result).toBe("<p>Test (parentheses) and {braces}</p>");
+    });
 
-    it('should replace all occurrences globally', () => {
+    it("should replace all occurrences globally", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       const result = searchAndReplace(
-        '<p>foo bar foo baz foo</p>',
-        'foo',
-        'qux',
+        "<p>foo bar foo baz foo</p>",
+        "foo",
+        "qux",
         { caseSensitive: false, wholeWord: false }
-      )
+      );
 
-      expect(result).toBe('<p>qux bar qux baz qux</p>')
-    })
+      expect(result).toBe("<p>qux bar qux baz qux</p>");
+    });
 
-    it('should handle empty find text', () => {
+    it("should handle empty find text", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
-      const result = searchAndReplace(
-        '<p>Hello world</p>',
-        '',
-        'X',
-        { caseSensitive: false, wholeWord: false }
-      )
+      const result = searchAndReplace("<p>Hello world</p>", "", "X", {
+        caseSensitive: false,
+        wholeWord: false,
+      });
 
       // Empty string regex doesn't replace anything (or inserts between each char)
-      expect(result).toBeDefined()
-    })
+      expect(result).toBeDefined();
+    });
 
-    it('should handle empty replace text', () => {
+    it("should handle empty replace text", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
-      const result = searchAndReplace(
-        '<p>Hello world</p>',
-        'world',
-        '',
-        { caseSensitive: false, wholeWord: false }
-      )
+      const result = searchAndReplace("<p>Hello world</p>", "world", "", {
+        caseSensitive: false,
+        wholeWord: false,
+      });
 
-      expect(result).toBe('<p>Hello </p>')
-    })
+      expect(result).toBe("<p>Hello </p>");
+    });
 
-    it('should combine case-sensitive and whole word options (note: current wholeWord has a bug)', () => {
+    it("should combine case-sensitive and whole word options (note: current wholeWord has a bug)", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       const result = searchAndReplace(
-        '<p>Test test Testing tested</p>',
-        'test',
-        'exam',
+        "<p>Test test Testing tested</p>",
+        "test",
+        "exam",
         { caseSensitive: true, wholeWord: true }
-      )
+      );
 
       // Bug: wholeWord doesn't work due to escaping order issue
       // This test verifies the current (buggy) behavior
-      expect(result).toBe('<p>Test test Testing tested</p>')
-    })
-  })
+      expect(result).toBe("<p>Test test Testing tested</p>");
+    });
+  });
 
-  describe('handleFind', () => {
-    it('should call window.find with correct parameters for next direction', () => {
-      const mockFind = vi.fn()
+  describe("handleFind", () => {
+    it("should call window.find with correct parameters for next direction", () => {
+      const mockFind = vi.fn();
       // @ts-expect-error - mocking window.find
-      globalThis.find = mockFind
+      globalThis.find = mockFind;
 
       const { handleFind } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
-      handleFind({ findText: 'test', direction: 'next' })
+      handleFind({ findText: "test", direction: "next" });
 
-      expect(mockFind).toHaveBeenCalledWith('test', false, false, false, false, true, false)
-    })
+      expect(mockFind).toHaveBeenCalledWith(
+        "test",
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+      );
+    });
 
-    it('should call window.find with correct parameters for previous direction', () => {
-      const mockFind = vi.fn()
+    it("should call window.find with correct parameters for previous direction", () => {
+      const mockFind = vi.fn();
       // @ts-expect-error - mocking window.find
-      globalThis.find = mockFind
+      globalThis.find = mockFind;
 
       const { handleFind } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
-      handleFind({ findText: 'test', direction: 'previous' })
+      handleFind({ findText: "test", direction: "previous" });
 
-      expect(mockFind).toHaveBeenCalledWith('test', false, true, false, false, true, false)
-    })
+      expect(mockFind).toHaveBeenCalledWith(
+        "test",
+        false,
+        true,
+        false,
+        false,
+        true,
+        false
+      );
+    });
 
-    it('should not call window.find when editor content is null', () => {
-      const mockFind = vi.fn()
+    it("should not call window.find when editor content is null", () => {
+      const mockFind = vi.fn();
       // @ts-expect-error - mocking window.find
-      globalThis.find = mockFind
+      globalThis.find = mockFind;
 
       const { handleFind } = useFindReplace({
         editorContent: ref(null),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
-      handleFind({ findText: 'test', direction: 'next' })
+      handleFind({ findText: "test", direction: "next" });
 
-      expect(mockFind).not.toHaveBeenCalled()
-    })
+      expect(mockFind).not.toHaveBeenCalled();
+    });
 
-    it('should handle window.find errors gracefully', () => {
+    it("should handle window.find errors gracefully", () => {
       // @ts-expect-error - mocking window.find
       globalThis.find = () => {
-        throw new Error('Find not supported')
-      }
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        throw new Error("Find not supported");
+      };
+      const consoleWarnSpy = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
 
       const { handleFind } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       expect(() => {
-        handleFind({ findText: 'test', direction: 'next' })
-      }).not.toThrow()
+        handleFind({ findText: "test", direction: "next" });
+      }).not.toThrow();
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Find operation not supported in this browser:',
+        "Find operation not supported in this browser:",
         expect.any(Error)
-      )
+      );
 
-      consoleWarnSpy.mockRestore()
-    })
+      consoleWarnSpy.mockRestore();
+    });
 
-    it('should not call window.find when selection is not available', () => {
-      const mockFind = vi.fn()
+    it("should not call window.find when selection is not available", () => {
+      const mockFind = vi.fn();
       // @ts-expect-error - mocking window.find
-      globalThis.find = mockFind
+      globalThis.find = mockFind;
 
-      const originalGetSelection = globalThis.getSelection
-      globalThis.getSelection = vi.fn(() => null)
+      const originalGetSelection = globalThis.getSelection;
+      globalThis.getSelection = vi.fn(() => null);
 
       const { handleFind } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
-      handleFind({ findText: 'test', direction: 'next' })
+      handleFind({ findText: "test", direction: "next" });
 
-      expect(mockFind).not.toHaveBeenCalled()
+      expect(mockFind).not.toHaveBeenCalled();
 
-      globalThis.getSelection = originalGetSelection
-    })
-  })
+      globalThis.getSelection = originalGetSelection;
+    });
+  });
 
-  describe('handleReplace', () => {
-    it('should replace text and capture snapshot', () => {
-      editorElement.innerHTML = '<p>Hello world</p>'
+  describe("handleReplace", () => {
+    it("should replace text and capture snapshot", () => {
+      editorElement.innerHTML = "<p>Hello world</p>";
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: 'world',
-        replaceText: 'universe',
+        findText: "world",
+        replaceText: "universe",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('<p>Hello universe</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe("<p>Hello universe</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should replace with case sensitivity', () => {
-      editorElement.innerHTML = '<p>Hello HELLO hello</p>'
+    it("should replace with case sensitivity", () => {
+      editorElement.innerHTML = "<p>Hello HELLO hello</p>";
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: 'Hello',
-        replaceText: 'Hi',
+        findText: "Hello",
+        replaceText: "Hi",
         options: { caseSensitive: true, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('<p>Hi HELLO hello</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe("<p>Hi HELLO hello</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should attempt to replace whole words (note: current implementation has a bug)', () => {
-      editorElement.innerHTML = '<p>cat category cats</p>'
+    it("should attempt to replace whole words (note: current implementation has a bug)", () => {
+      editorElement.innerHTML = "<p>cat category cats</p>";
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: 'cat',
-        replaceText: 'dog',
+        findText: "cat",
+        replaceText: "dog",
         options: { caseSensitive: false, wholeWord: true },
-      })
+      });
 
       // Bug: wholeWord doesn't work due to escaping order issue
-      expect(editorElement.innerHTML).toBe('<p>cat category cats</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe("<p>cat category cats</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not replace when editor content is null', () => {
+    it("should not replace when editor content is null", () => {
       const { handleReplace } = useFindReplace({
         editorContent: ref(null),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: 'test',
-        replaceText: 'result',
+        findText: "test",
+        replaceText: "result",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(mockCaptureSnapshot).not.toHaveBeenCalled()
-    })
+      expect(mockCaptureSnapshot).not.toHaveBeenCalled();
+    });
 
-    it('should handle complex HTML with attributes', () => {
-      editorElement.innerHTML = '<p class="test">Hello <strong>world</strong></p>'
+    it("should handle complex HTML with attributes", () => {
+      editorElement.innerHTML =
+        '<p class="test">Hello <strong>world</strong></p>';
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: 'world',
-        replaceText: 'universe',
+        findText: "world",
+        replaceText: "universe",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('<p class="test">Hello <strong>universe</strong></p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe(
+        '<p class="test">Hello <strong>universe</strong></p>'
+      );
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should replace multiple occurrences', () => {
-      editorElement.innerHTML = '<p>test test test</p>'
+    it("should replace multiple occurrences", () => {
+      editorElement.innerHTML = "<p>test test test</p>";
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: 'test',
-        replaceText: 'result',
+        findText: "test",
+        replaceText: "result",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('<p>result result result</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
-  })
+      expect(editorElement.innerHTML).toBe("<p>result result result</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
+  });
 
-  describe('handleReplaceAll', () => {
-    it('should replace all occurrences and capture snapshot', () => {
-      editorElement.innerHTML = '<p>foo bar foo baz foo</p>'
+  describe("handleReplaceAll", () => {
+    it("should replace all occurrences and capture snapshot", () => {
+      editorElement.innerHTML = "<p>foo bar foo baz foo</p>";
 
       const { handleReplaceAll } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplaceAll({
-        findText: 'foo',
-        replaceText: 'qux',
+        findText: "foo",
+        replaceText: "qux",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('<p>qux bar qux baz qux</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe("<p>qux bar qux baz qux</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should respect case sensitivity for replace all', () => {
-      editorElement.innerHTML = '<p>Test test TEST</p>'
+    it("should respect case sensitivity for replace all", () => {
+      editorElement.innerHTML = "<p>Test test TEST</p>";
 
       const { handleReplaceAll } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplaceAll({
-        findText: 'test',
-        replaceText: 'exam',
+        findText: "test",
+        replaceText: "exam",
         options: { caseSensitive: true, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('<p>Test exam TEST</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe("<p>Test exam TEST</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should respect whole word option for replace all (note: current implementation has a bug)', () => {
-      editorElement.innerHTML = '<p>cat cats category</p>'
+    it("should respect whole word option for replace all (note: current implementation has a bug)", () => {
+      editorElement.innerHTML = "<p>cat cats category</p>";
 
       const { handleReplaceAll } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplaceAll({
-        findText: 'cat',
-        replaceText: 'dog',
+        findText: "cat",
+        replaceText: "dog",
         options: { caseSensitive: false, wholeWord: true },
-      })
+      });
 
       // Bug: wholeWord doesn't work due to escaping order issue
-      expect(editorElement.innerHTML).toBe('<p>cat cats category</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe("<p>cat cats category</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should not replace when editor content is null', () => {
+    it("should not replace when editor content is null", () => {
       const { handleReplaceAll } = useFindReplace({
         editorContent: ref(null),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplaceAll({
-        findText: 'test',
-        replaceText: 'result',
+        findText: "test",
+        replaceText: "result",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(mockCaptureSnapshot).not.toHaveBeenCalled()
-    })
-  })
+      expect(mockCaptureSnapshot).not.toHaveBeenCalled();
+    });
+  });
 
-  describe('Edge Cases', () => {
-    it('should handle rapid sequential replace operations', () => {
-      editorElement.innerHTML = '<p>a b c</p>'
+  describe("Edge Cases", () => {
+    it("should handle rapid sequential replace operations", () => {
+      editorElement.innerHTML = "<p>a b c</p>";
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: 'a',
-        replaceText: 'x',
+        findText: "a",
+        replaceText: "x",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
       handleReplace({
-        findText: 'b',
-        replaceText: 'y',
+        findText: "b",
+        replaceText: "y",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
       handleReplace({
-        findText: 'c',
-        replaceText: 'z',
+        findText: "c",
+        replaceText: "z",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('<p>x y z</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(3)
-    })
+      expect(editorElement.innerHTML).toBe("<p>x y z</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(3);
+    });
 
-    it('should handle replacing text that contains HTML tags', () => {
-      editorElement.innerHTML = '<p>Text with <strong>bold</strong> content</p>'
+    it("should handle replacing text that contains HTML tags", () => {
+      editorElement.innerHTML =
+        "<p>Text with <strong>bold</strong> content</p>";
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: 'bold',
-        replaceText: 'italic',
+        findText: "bold",
+        replaceText: "italic",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('<p>Text with <strong>italic</strong> content</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe(
+        "<p>Text with <strong>italic</strong> content</p>"
+      );
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should handle empty editor content', () => {
-      editorElement.innerHTML = ''
+    it("should handle empty editor content", () => {
+      editorElement.innerHTML = "";
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: 'test',
-        replaceText: 'result',
+        findText: "test",
+        replaceText: "result",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe("");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should handle special characters in both find and replace text', () => {
-      editorElement.innerHTML = '<p>Price: $50.00</p>'
+    it("should handle special characters in both find and replace text", () => {
+      editorElement.innerHTML = "<p>Price: $50.00</p>";
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: '$50.00',
-        replaceText: '$75.99',
+        findText: "$50.00",
+        replaceText: "$75.99",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('<p>Price: $75.99</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe("<p>Price: $75.99</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should handle Unicode characters', () => {
-      editorElement.innerHTML = '<p>Hello 世界</p>'
+    it("should handle Unicode characters", () => {
+      editorElement.innerHTML = "<p>Hello 世界</p>";
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: '世界',
-        replaceText: 'world',
+        findText: "世界",
+        replaceText: "world",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe('<p>Hello world</p>')
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
+      expect(editorElement.innerHTML).toBe("<p>Hello world</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-    it('should handle very long text content', () => {
-      const longText = 'a'.repeat(10000)
-      editorElement.innerHTML = `<p>${longText}</p>`
+    it("should handle very long text content", () => {
+      const longText = "a".repeat(10000);
+      editorElement.innerHTML = `<p>${longText}</p>`;
 
       const { handleReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
-      })
+      });
 
       handleReplace({
-        findText: 'a',
-        replaceText: 'b',
+        findText: "a",
+        replaceText: "b",
         options: { caseSensitive: false, wholeWord: false },
-      })
+      });
 
-      expect(editorElement.innerHTML).toBe(`<p>${'b'.repeat(10000)}</p>`)
-      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1)
-    })
-  })
-})
+      expect(editorElement.innerHTML).toBe(`<p>${"b".repeat(10000)}</p>`);
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
+  });
+});

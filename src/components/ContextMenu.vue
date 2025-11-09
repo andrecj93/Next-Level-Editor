@@ -6,19 +6,13 @@
         class="context-menu"
         :style="{
           top: `${position.top}px`,
-          left: `${position.left}px`
+          left: `${position.left}px`,
         }"
         @click.stop
         @contextmenu.prevent
       >
-        <div
-          v-for="(item, index) in items"
-          :key="index"
-        >
-          <div
-            v-if="item.divider"
-            class="context-menu-divider"
-          />
+        <div v-for="(item, index) in items" :key="index">
+          <div v-if="item.divider" class="context-menu-divider" />
           <button
             v-else
             class="context-menu-item"
@@ -27,10 +21,9 @@
           >
             <span class="context-menu-icon">{{ item.icon }}</span>
             <span class="context-menu-label">{{ item.label }}</span>
-            <span
-              v-if="item.shortcut"
-              class="context-menu-shortcut"
-            >{{ item.shortcut }}</span>
+            <span v-if="item.shortcut" class="context-menu-shortcut">{{
+              item.shortcut
+            }}</span>
           </button>
         </div>
       </div>
@@ -39,47 +32,50 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue'
-import type { ContextMenuItem } from '../types/contextMenu'
+import { watch } from "vue";
+import type { ContextMenuItem } from "../types/contextMenu";
 
 interface Props {
-  show: boolean
-  position: { top: number; left: number }
-  items: ContextMenuItem[]
+  show: boolean;
+  position: { top: number; left: number };
+  items: ContextMenuItem[];
 }
 
-type Emits = (e: 'close') => void
+type Emits = (e: "close") => void;
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
 
 const handleItemClick = (item: ContextMenuItem) => {
-  if (item.disabled) return
-  
+  if (item.disabled) return;
+
   if (item.onClick) {
-    item.onClick()
+    item.onClick();
   }
-  
-  emit('close')
-}
+
+  emit("close");
+};
 
 // Close menu when clicking outside
 const handleDocumentClick = () => {
   if (props.show) {
-    emit('close')
+    emit("close");
   }
-}
+};
 
-watch(() => props.show, (newShow) => {
-  if (newShow) {
-    // Add click listener to close menu when clicking outside
-    setTimeout(() => {
-      document.addEventListener('click', handleDocumentClick)
-    }, 0)
-  } else {
-    document.removeEventListener('click', handleDocumentClick)
+watch(
+  () => props.show,
+  (newShow) => {
+    if (newShow) {
+      // Add click listener to close menu when clicking outside
+      setTimeout(() => {
+        document.addEventListener("click", handleDocumentClick);
+      }, 0);
+    } else {
+      document.removeEventListener("click", handleDocumentClick);
+    }
   }
-})
+);
 </script>
 
 <style scoped>
@@ -92,7 +88,7 @@ watch(() => props.show, (newShow) => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   padding: 4px;
   z-index: 10000;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .context-menu-item {
@@ -134,7 +130,7 @@ watch(() => props.show, (newShow) => {
 .context-menu-shortcut {
   font-size: 12px;
   opacity: 0.6;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 
 .context-menu-divider {

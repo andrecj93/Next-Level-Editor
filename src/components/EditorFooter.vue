@@ -7,9 +7,9 @@
 
 <script setup lang="ts">
 defineProps<{
-  wordCount: number
-  characterCount: number
-}>()
+  wordCount: number;
+  characterCount: number;
+}>();
 </script>
 
 <style scoped>
