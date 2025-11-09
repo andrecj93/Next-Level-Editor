@@ -478,6 +478,134 @@ export const isListActive = (root: HTMLElement, listTag: 'ul' | 'ol'): boolean =
   return Boolean(listAncestor)
 }
 
+/**
+ * Indent a list item (move it into a nested list)
+ */
+export const indentListItem = (root: HTMLElement): boolean => {
+  const range = getSelectionRange()
+  if (!range) return false
+  
+  try {
+    ensureRangeWithinRoot(range, root)
+  } catch {
+    return false
+  }
+
+  // Find the list item containing the cursor
+  const listItem = getClosestElement(
+    range.startContainer,
+    (el) => el.tagName.toLowerCase() === 'li',
+    root
+  )
+  
+  if (!listItem) return false
+
+  // Get the previous sibling list item
+  const prevSibling = listItem.previousElementSibling
+  if (!prevSibling || prevSibling.tagName.toLowerCase() !== 'li') {
+    return false // Can't indent if there's no previous sibling
+  }
+
+  // Get the parent list type
+  const parentList = listItem.parentElement
+  if (!parentList || !['ul', 'ol'].includes(parentList.tagName.toLowerCase())) {
+    return false
+  }
+
+  const listTag = parentList.tagName.toLowerCase() as 'ul' | 'ol'
+
+  // Check if previous sibling already has a nested list
+  let nestedList = Array.from(prevSibling.children).find(
+    (child) => ['ul', 'ol'].includes(child.tagName.toLowerCase())
+  ) as HTMLElement | undefined
+
+  // If no nested list exists, create one
+  if (!nestedList) {
+    nestedList = document.createElement(listTag)
+    prevSibling.appendChild(nestedList)
+  }
+
+  // Move the current list item into the nested list
+  nestedList.appendChild(listItem)
+
+  // Restore selection
+  const selection = getSelection()
+  if (selection) {
+    const newRange = document.createRange()
+    newRange.selectNodeContents(listItem)
+    newRange.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(newRange)
+  }
+
+  return true
+}
+
+/**
+ * Outdent a list item (move it out of a nested list)
+ */
+export const outdentListItem = (root: HTMLElement): boolean => {
+  const range = getSelectionRange()
+  if (!range) return false
+
+  try {
+    ensureRangeWithinRoot(range, root)
+  } catch {
+    return false
+  }
+
+  // Find the list item containing the cursor
+  const listItem = getClosestElement(
+    range.startContainer,
+    (el) => el.tagName.toLowerCase() === 'li',
+    root
+  )
+
+  if (!listItem) return false
+
+  // Get the parent list
+  const parentList = listItem.parentElement
+  if (!parentList || !['ul', 'ol'].includes(parentList.tagName.toLowerCase())) {
+    return false
+  }
+
+  // Get the grandparent list item (if it exists)
+  const grandparentLi = parentList.parentElement
+  if (!grandparentLi || grandparentLi.tagName.toLowerCase() !== 'li') {
+    return false // Can't outdent if not in a nested list
+  }
+
+  // Get the great-grandparent list
+  const greatGrandparentList = grandparentLi.parentElement
+  if (!greatGrandparentList || !['ul', 'ol'].includes(greatGrandparentList.tagName.toLowerCase())) {
+    return false
+  }
+
+  // Insert the list item after the grandparent list item
+  if (grandparentLi.nextSibling) {
+    greatGrandparentList.insertBefore(listItem, grandparentLi.nextSibling)
+  } else {
+    greatGrandparentList.appendChild(listItem)
+  }
+
+  // If the parent list is now empty, remove it
+  if (parentList.children.length === 0) {
+    parentList.remove()
+  }
+
+  // Restore selection
+  const selection = getSelection()
+  if (selection) {
+    const newRange = document.createRange()
+    newRange.selectNodeContents(listItem)
+    newRange.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(newRange)
+  }
+
+  return true
+}
+
 export const insertLink = (root: HTMLElement, url: string) => {
   wrapSelection(root, 'a', {
     href: url,

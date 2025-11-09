@@ -73,6 +73,9 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
 
   const openCommandMenu = () => {
     nextTick(() => {
+      // Remove the slash if it was inserted (in case preventDefault didn't work)
+      removeSlashTrigger()
+      
       const range = getSelectionRange()
       if (!range) return
       const rect = range.getBoundingClientRect()
@@ -190,7 +193,7 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
   ]
 
   const handleCommandOption = (option: SlashCommandOption) => {
-    removeSlashTrigger()
+    // Slash trigger already removed when menu opened
     option.action()
     closeCommandMenu()
   }

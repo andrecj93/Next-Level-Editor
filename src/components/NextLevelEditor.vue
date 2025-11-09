@@ -554,10 +554,20 @@
       >💾 Saving...</span>
       <span
         v-else-if="lastSaved"
-        class="saved"
         :key="lastSaved.getTime()"
+        class="saved"
       >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
     </div>
+
+    <!-- Toast Notification -->
+    <transition name="toast-fade">
+      <div
+        v-if="showToast"
+        :class="['toast-notification', toastType]"
+      >
+        {{ toastMessage }}
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -581,6 +591,8 @@ import {
   toggleList,
   insertLink as insertLinkUtil,
   insertImage as insertImageUtil,
+  indentListItem,
+  outdentListItem,
 } from '../utils/formatting'
 import {
   getWordCount,
@@ -1485,15 +1497,41 @@ const handleInsertCodeBlock = (data: { code: string; language: string }) => {
   })
 }
 
+// Toast notification state
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref<'success' | 'error'>('success')
+
+const showToastNotification = (message: string, type: 'success' | 'error' = 'success') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000) // Hide after 3 seconds
+}
+
 // Export actions
 const handleExportHtml = () => {
   if (!editorContent.value) return
-  exportAsHtml(editorContent.value.innerHTML)
+  try {
+    exportAsHtml(editorContent.value.innerHTML)
+    showToastNotification('✓ HTML file exported successfully!')
+  } catch (error) {
+    console.error('Failed to export HTML:', error)
+    showToastNotification('✗ Failed to export HTML file', 'error')
+  }
 }
 
 const handleExportMarkdown = () => {
   if (!editorContent.value) return
-  exportAsMarkdown(editorContent.value.innerHTML)
+  try {
+    exportAsMarkdown(editorContent.value.innerHTML)
+    showToastNotification('✓ Markdown file exported successfully!')
+  } catch (error) {
+    console.error('Failed to export Markdown:', error)
+    showToastNotification('✗ Failed to export Markdown file', 'error')
+  }
 }
 
 // Format HTML action
@@ -1509,8 +1547,10 @@ const handleExportPdf = async () => {
   if (!editorContent.value) return
   try {
     await exportAsPdf(editorContent.value)
+    showToastNotification('✓ PDF file exported successfully!')
   } catch (error) {
     console.error('Failed to export PDF:', error)
+    showToastNotification('✗ Failed to export PDF file', 'error')
   }
 }
 
@@ -1518,8 +1558,10 @@ const handleExportWord = async () => {
   if (!editorContent.value) return
   try {
     await exportAsWord(editorContent.value.innerHTML)
+    showToastNotification('✓ Word document exported successfully!')
   } catch (error) {
     console.error('Failed to export Word:', error)
+    showToastNotification('✗ Failed to export Word document', 'error')
   }
 }
 
@@ -1736,6 +1778,28 @@ const listActions = computed(() => [
     tooltip: 'Numbered list',
     onClick: () => handleListAction('ol'),
     isActive: () => isListActionActive('ol'),
+  },
+  {
+    id: 'increase-indent',
+    label: 'Increase Indent',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v1H3V2zm0 3h10v1H3V5zm0 3h10v1H3V8zm0 3h10v1H3v-1zm0 3h10v1H3v-1zM1 5.5l2 2-2 2v-4z"/></svg>',
+    tooltip: 'Increase indent (Tab)',
+    onClick: () => {
+      if (editorContent.value && indentListItem(editorContent.value)) {
+        captureSnapshot()
+      }
+    },
+  },
+  {
+    id: 'decrease-indent',
+    label: 'Decrease Indent',
+    icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v1H3V2zm0 3h10v1H3V5zm0 3h10v1H3V8zm0 3h10v1H3v-1zm0 3h10v1H3v-1zM3 5.5l-2 2 2 2v-4z"/></svg>',
+    tooltip: 'Decrease indent (Shift+Tab)',
+    onClick: () => {
+      if (editorContent.value && outdentListItem(editorContent.value)) {
+        captureSnapshot()
+      }
+    },
   },
 ])
 
@@ -2597,6 +2661,36 @@ const handleKeydown = (event: KeyboardEvent) => {
     event.preventDefault() // Prevent '/' from being inserted in the document
     openCommandMenu()
     return
+  }
+
+  // Handle Tab/Shift+Tab for list indentation
+  if (event.key === 'Tab' && editorContent.value) {
+    const selection = window.getSelection()
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0)
+      // Check if we're in a list item
+      let node: Node | null = range.startContainer
+      while (node && node !== editorContent.value) {
+        if (node.nodeName === 'LI') {
+          event.preventDefault()
+          if (event.shiftKey) {
+            // Shift+Tab: outdent
+            const success = outdentListItem(editorContent.value)
+            if (success) {
+              captureSnapshot()
+            }
+          } else {
+            // Tab: indent
+            const success = indentListItem(editorContent.value)
+            if (success) {
+              captureSnapshot()
+            }
+          }
+          return
+        }
+        node = node.parentNode
+      }
+    }
   }
 
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
@@ -4389,6 +4483,45 @@ onBeforeUnmount(() => {
 
 .theme-dark .editor-content :deep(.table-of-contents) {
   background: rgba(30, 41, 59, 0.5);
+}
+
+/* Toast Notification Styles */
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  transition: all var(--transition-fast);
+}
+
+.toast-notification.success {
+  background: #10b981;
+  color: white;
+}
+
+.toast-notification.error {
+  background: #ef4444;
+  color: white;
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-fade-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
 }
 </style>
 
