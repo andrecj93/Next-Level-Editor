@@ -1310,7 +1310,21 @@ const closeTableModal = () => {
 }
 
 const handleInsertTable = (data: { rows: number; cols: number; includeHeader: boolean }) => {
-  performWithSelection((root) => insertTableUtil(root, data.rows, data.cols, data.includeHeader))
+  performWithSelection((root) => {
+    insertTableUtil(root, data.rows, data.cols, data.includeHeader)
+    
+    // Show success notification
+    showToastNotification(`✓ Table (${data.rows}×${data.cols}) inserted successfully!`)
+    
+    // Find the newly inserted table and scroll to it
+    nextTick(() => {
+      const tables = editorContent.value?.querySelectorAll('table')
+      if (tables && tables.length > 0) {
+        const lastTable = tables[tables.length - 1]
+        lastTable.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    })
+  })
 }
 
 // Table designer actions
@@ -1605,18 +1619,25 @@ const toggleFullScreen = () => {
 // Floating toolbar management
 const updateFloatingToolbar = () => {
   const selection = window.getSelection()
-  if (selection && selection.toString().trim().length > 0 && !selection.isCollapsed) {
-    if (floatingToolbarTimer.value) {
-      clearTimeout(floatingToolbarTimer.value)
-    }
-    floatingToolbarTimer.value = setTimeout(() => {
+  
+  // Clear any existing timer
+  if (floatingToolbarTimer.value) {
+    clearTimeout(floatingToolbarTimer.value)
+    floatingToolbarTimer.value = null
+  }
+  
+  // Check if we have a valid text selection
+  if (selection && !selection.isCollapsed) {
+    const selectedText = selection.toString().trim()
+    // Show toolbar immediately if there's selected text (even short selections)
+    if (selectedText.length > 0) {
       showFloatingToolbar.value = true
-    }, 100)
-  } else {
-    showFloatingToolbar.value = false
-    if (floatingToolbarTimer.value) {
-      clearTimeout(floatingToolbarTimer.value)
+    } else {
+      showFloatingToolbar.value = false
     }
+  } else {
+    // No selection or collapsed - hide toolbar
+    showFloatingToolbar.value = false
   }
 }
 
@@ -2657,10 +2678,27 @@ const handleKeydown = (event: KeyboardEvent) => {
     return
   }
   
+  // Handle slash command (/) to open quick actions menu
   if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
-    event.preventDefault() // Prevent '/' from being inserted in the document
-    openCommandMenu()
-    return
+    // Check if we're at the beginning of a line or in an empty block
+    const selection = window.getSelection()
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0)
+      const container = range.startContainer
+      
+      // Get text before cursor in current text node
+      const textBefore = container.nodeType === Node.TEXT_NODE 
+        ? (container as Text).data.substring(0, range.startOffset)
+        : ''
+      
+      // Only trigger if at start of line (no text before, or only whitespace)
+      if (textBefore.trim().length === 0) {
+        event.preventDefault() // Prevent '/' from being inserted
+        event.stopPropagation() // Stop event from bubbling
+        openCommandMenu()
+        return
+      }
+    }
   }
 
   // Handle Tab/Shift+Tab for list indentation
@@ -2700,6 +2738,13 @@ const handleKeydown = (event: KeyboardEvent) => {
     } else {
       undo()
     }
+    return
+  }
+
+  // Handle Ctrl+Y for redo (standard Windows/Linux shortcut)
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+    event.preventDefault()
+    redo()
     return
   }
 
