@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ContextMenu from '../ContextMenu.vue'
-import type { ContextMenuItem } from '../ContextMenu.vue'
+import type { ContextMenuItem } from '../../types/contextMenu'
 
 describe('ContextMenu', () => {
   let wrapper: ReturnType<typeof mount>
@@ -26,7 +26,7 @@ describe('ContextMenu', () => {
   afterEach(() => {
     const el = document.getElementById('teleport-target')
     if (el) {
-      document.body.removeChild(el)
+      el.remove()
     }
     if (wrapper) {
       wrapper.unmount()
@@ -71,8 +71,8 @@ describe('ContextMenu', () => {
 
     const menu = document.body.querySelector('.context-menu') as HTMLElement
     expect(menu).toBeTruthy()
-    expect(menu!.style.top).toBe('100px')
-    expect(menu!.style.left).toBe('200px')
+    expect(menu.style.top).toBe('100px')
+    expect(menu.style.left).toBe('200px')
   })
 
   it('renders menu items correctly', () => {

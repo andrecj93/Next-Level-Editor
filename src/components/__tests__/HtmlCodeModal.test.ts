@@ -47,8 +47,9 @@ describe('HtmlCodeModal', () => {
       },
     })
 
+    const vm = wrapper.vm as any
     expect(wrapper.vm).toBeTruthy()
-    expect(wrapper.props('htmlContent')).toBe(htmlContent)
+    expect(vm.htmlContent).toBe(htmlContent)
   })
 
   it('should emit close event when close is called', async () => {
@@ -174,10 +175,11 @@ describe('HtmlCodeModal', () => {
       },
     })
 
-    expect(wrapper.props('htmlContent')).toBe('<p>Initial</p>')
+    const vm = wrapper.vm as any
+    expect(vm.htmlContent).toBe('<p>Initial</p>')
 
     await wrapper.setProps({ htmlContent: '<p>Updated</p>' })
-    expect(wrapper.props('htmlContent')).toBe('<p>Updated</p>')
+    expect(vm.htmlContent).toBe('<p>Updated</p>')
   })
 
   it('should highlight HTML with template tags without error', () => {

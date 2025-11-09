@@ -8,7 +8,7 @@
     >
       <span class="color-icon">{{ icon }}</span>
     </button>
-    
+
     <transition name="picker-fade">
       <div
         v-if="showPicker"
@@ -37,71 +37,72 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
-import { Vue3ColorPicker } from '@cyhnkckali/vue3-color-picker'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from "vue";
+import { Vue3ColorPicker } from "@cyhnkckali/vue3-color-picker";
 
 interface Props {
-  modelValue?: string
-  label?: string
-  icon?: string
+  modelValue?: string;
+  label?: string;
+  icon?: string;
 }
 
-interface Emits {
-  (e: 'update:modelValue', value: string): void
-}
+type Emits = (e: "update:modelValue", value: string) => void
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: '#000000',
-  label: 'Color',
-  icon: '🎨'
-})
+  modelValue: "#000000",
+  label: "Color",
+  icon: "🎨",
+});
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits>();
 
-const showPicker = ref(false)
-const internalColor = ref(props.modelValue || '#000000')
+const showPicker = ref(false);
+const internalColor = ref(props.modelValue || "#000000");
 
 // Watch for external changes to modelValue
-watch(() => props.modelValue, (newValue) => {
-  if (newValue && newValue !== internalColor.value) {
-    internalColor.value = newValue
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    if (newValue && newValue !== internalColor.value) {
+      internalColor.value = newValue;
+    }
   }
-})
+);
 
 // Watch for internal color changes and emit
 watch(internalColor, (newColor) => {
   if (newColor !== props.modelValue) {
-    emit('update:modelValue', newColor)
+    emit("update:modelValue", newColor);
   }
-})
+});
 
 // Detect theme from the editor
 const theme = computed(() => {
-  const editorElement = document.querySelector('.next-level-editor')
-  return editorElement?.classList.contains('theme-dark') ? 'dark' : 'light'
-})
+  const editorElement = document.querySelector(".next-level-editor");
+  return editorElement?.classList.contains("theme-dark") ? "dark" : "light";
+});
 
 const togglePicker = () => {
-  showPicker.value = !showPicker.value
+  showPicker.value = !showPicker.value;
   if (showPicker.value) {
-    internalColor.value = props.modelValue || '#000000'
+    internalColor.value = props.modelValue || "#000000";
   }
-}
+};
 
 const handleClickOutside = (event: MouseEvent) => {
-  const target = event.target as HTMLElement
-  if (!target.closest('.color-picker-wrapper')) {
-    showPicker.value = false
+  const target = event.target as HTMLElement;
+  if (!target.closest(".color-picker-wrapper")) {
+    showPicker.value = false;
   }
-}
+};
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
+  document.addEventListener("click", handleClickOutside);
+});
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+  document.removeEventListener("click", handleClickOutside);
+});
 </script>
 
 <style scoped>
@@ -157,7 +158,7 @@ onBeforeUnmount(() => {
 .picker-fade-enter-active,
 .picker-fade-leave-active {
   transition: opacity var(--transition-fast, 150ms) ease,
-              transform var(--transition-fast, 150ms) ease;
+    transform var(--transition-fast, 150ms) ease;
 }
 
 .picker-fade-enter-from,

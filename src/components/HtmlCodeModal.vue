@@ -27,7 +27,6 @@
                 <span class="code-label">Formatted HTML Code:</span>
                 <button
                   class="btn btn-copy"
-                  aria-label="Copy HTML code"
                   @click="copyToClipboard"
                 >
                   {{ copyButtonText }}
@@ -70,9 +69,7 @@ interface Props {
   htmlContent: string
 }
 
-interface Emits {
-  (e: 'close'): void
-}
+type Emits = (e: 'close') => void
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
@@ -87,12 +84,12 @@ const highlightedHtml = computed(() => {
       return Prism.highlight(props.htmlContent, Prism.languages.markup, 'markup')
     } else {
       // Fallback: return escaped HTML for display
-      return props.htmlContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      return props.htmlContent.replaceAll('<', '&lt;').replaceAll('>', '&gt;')
     }
   } catch (error) {
     console.error('Failed to highlight HTML:', error)
     // Fallback: return escaped HTML for display
-    return props.htmlContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    return props.htmlContent.replaceAll('<', '&lt;').replaceAll('>', '&gt;')
   }
 })
 
@@ -172,8 +169,8 @@ watch(() => props.show, (newShow) => {
   padding: 6px 12px;
   font-size: 13px;
   border-radius: 6px;
-  background: var(--toolbar-accent, #3b82f6);
-  color: white;
+  background: var(--toolbar-accent, #2563eb);
+  color: #ffffff;
   border: none;
   cursor: pointer;
   transition: all 150ms ease;

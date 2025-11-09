@@ -1,0 +1,209 @@
+<template>
+  <!-- Table Modal -->
+  <TableModal
+    :show="showTableModal"
+    @close="$emit('close-table-modal')"
+    @insert="$emit('insert-table', $event)"
+  />
+
+  <!-- Find & Replace Modal -->
+  <FindReplaceModal
+    :show="showFindReplaceModal"
+    :content="editorContent"
+    @close="$emit('close-find-replace-modal')"
+    @find="$emit('find', $event)"
+    @replace="$emit('replace', $event)"
+  />
+
+  <!-- Code Block Modal -->
+  <CodeBlockModal
+    :show="showCodeBlockModal"
+    @close="$emit('close-code-block-modal')"
+    @insert="$emit('insert-code-block', $event)"
+  />
+
+  <!-- Table Designer -->
+  <TableDesigner
+    :show="showTableDesigner"
+    :x="tableDesignerPosition.x"
+    :y="tableDesignerPosition.y"
+    @add-row-above="$emit('add-row-above')"
+    @add-row-below="$emit('add-row-below')"
+    @add-column-left="$emit('add-column-left')"
+    @add-column-right="$emit('add-column-right')"
+    @remove-row="$emit('remove-row')"
+    @remove-column="$emit('remove-column')"
+    @cell-properties="$emit('cell-properties')"
+    @table-properties="$emit('table-properties')"
+    @delete-table="$emit('delete-table')"
+  />
+
+  <!-- Table Properties Modal -->
+  <TablePropertiesModal
+    :show="showTablePropertiesModal"
+    :mode="tablePropertiesMode"
+    :initial-cell-props="initialCellProps"
+    :initial-table-props="initialTableProps"
+    @close="$emit('close-table-properties-modal')"
+    @apply="$emit('apply-table-properties', $event)"
+  />
+
+  <!-- Emoji Picker -->
+  <div
+    v-if="showEmojiPicker"
+    class="emoji-picker-container"
+  >
+    <EmojiPicker
+      :show="showEmojiPicker"
+      @select="$emit('insert-emoji', $event)"
+      @close="$emit('close-emoji-picker')"
+    />
+  </div>
+
+  <!-- Image Upload Modal -->
+  <ImageUploadModal
+    :is-open="showImageUploadModal"
+    @close="$emit('close-image-upload-modal')"
+    @insert="(url: string, alt: string) => $emit('insert-image', url, alt)"
+  />
+
+  <!-- Embed Modal -->
+  <EmbedModal
+    :is-open="showEmbedModal"
+    @close="$emit('close-embed-modal')"
+    @insert="(url: string) => $emit('insert-embed', url)"
+  />
+
+  <!-- File Manager Modal -->
+  <FileManagerModal
+    :is-open="showFileManagerModal"
+    @close="$emit('close-file-manager-modal')"
+    @insert="$emit('insert-file', $event)"
+  />
+
+  <!-- Template Modal -->
+  <TemplateModal
+    :show="showTemplateModal"
+    @close="$emit('close-template-modal')"
+    @select="$emit('select-template', $event)"
+  />
+
+  <!-- HTML Code Modal -->
+  <HtmlCodeModal
+    :show="showHtmlCodeModal"
+    :html-content="formattedHtmlContent"
+    @close="$emit('close-html-code-modal')"
+  />
+
+  <!-- Command Palette -->
+  <CommandPalette
+    :show="showCommandPalette"
+    :commands="commandPaletteCommands"
+    @close="$emit('close-command-palette')"
+    @execute="$emit('execute-command', $event)"
+  />
+
+  <!-- Auto-save Indicator -->
+  <div
+    v-if="isSaving || lastSaved"
+    class="auto-save-indicator"
+  >
+    <span
+      v-if="isSaving"
+      class="saving"
+    >💾 Saving...</span>
+    <span
+      v-else-if="lastSaved"
+      :key="lastSaved.getTime()"
+      class="saved"
+    >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
+  </div>
+
+  <!-- Toast Notification -->
+  <transition name="toast-fade">
+    <div
+      v-if="showToast"
+      :class="['toast-notification', toastType]"
+    >
+      {{ toastMessage }}
+    </div>
+  </transition>
+</template>
+
+<script setup lang="ts">
+import TableModal from './TableModal.vue'
+import FindReplaceModal from './FindReplaceModal.vue'
+import CodeBlockModal from './CodeBlockModal.vue'
+import TableDesigner from './TableDesigner.vue'
+import TablePropertiesModal from './TablePropertiesModal.vue'
+import EmojiPicker from './EmojiPicker.vue'
+import ImageUploadModal from './ImageUploadModal.vue'
+import EmbedModal from './EmbedModal.vue'
+import FileManagerModal from './FileManagerModal.vue'
+import TemplateModal from './TemplateModal.vue'
+import HtmlCodeModal from './HtmlCodeModal.vue'
+import CommandPalette from './CommandPalette.vue'
+
+interface Props {
+  showTableModal: boolean
+  showFindReplaceModal: boolean
+  showCodeBlockModal: boolean
+  showTableDesigner: boolean
+  showTablePropertiesModal: boolean
+  showEmojiPicker: boolean
+  showImageUploadModal: boolean
+  showEmbedModal: boolean
+  showFileManagerModal: boolean
+  showTemplateModal: boolean
+  showHtmlCodeModal: boolean
+  showCommandPalette: boolean
+  showToast: boolean
+  isSaving: boolean
+  editorContent: string
+  tableDesignerPosition: { x: number; y: number }
+  tablePropertiesMode: 'cell' | 'table' | 'both'
+  initialCellProps: Record<string, any>
+  initialTableProps: Record<string, any>
+  formattedHtmlContent: string
+  commandPaletteCommands: any[]
+  lastSaved: Date | null
+  toastMessage: string
+  toastType: 'success' | 'error'
+}
+
+defineProps<Props>()
+
+defineEmits<{
+  'close-table-modal': []
+  'insert-table': [data: any]
+  'close-find-replace-modal': []
+  'find': [data: any]
+  'replace': [data: any]
+  'close-code-block-modal': []
+  'insert-code-block': [data: any]
+  'add-row-above': []
+  'add-row-below': []
+  'add-column-left': []
+  'add-column-right': []
+  'remove-row': []
+  'remove-column': []
+  'cell-properties': []
+  'table-properties': []
+  'delete-table': []
+  'close-table-properties-modal': []
+  'apply-table-properties': [data: any]
+  'close-emoji-picker': []
+  'insert-emoji': [emoji: string]
+  'close-image-upload-modal': []
+  'insert-image': [url: string, alt: string]
+  'close-embed-modal': []
+  'insert-embed': [url: string]
+  'close-file-manager-modal': []
+  'insert-file': [data: any]
+  'close-template-modal': []
+  'select-template': [template: any]
+  'close-html-code-modal': []
+  'close-command-palette': []
+  'execute-command': [command: any]
+}>()
+</script>

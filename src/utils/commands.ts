@@ -45,7 +45,7 @@ export function getCharacterCountWithoutSpaces(html: string): number {
   const temp = document.createElement('div')
   temp.innerHTML = html
   const text = temp.innerText || temp.textContent || ''
-  return text.replace(/\s/g, '').length
+  return text.replaceAll(/\s/g, '').length
 }
 
 /**
@@ -61,7 +61,7 @@ export function applyFontSize(_root: HTMLElement, size: 'small' | 'normal' | 'la
     huge: '1.75em'
   }
 
-  const selection = window.getSelection()
+  const selection = globalThis.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
   const range = selection.getRangeAt(0)
@@ -98,7 +98,7 @@ export function applyFontSize(_root: HTMLElement, size: 'small' | 'normal' | 'la
  * @param alignment - Text alignment (left, center, right, justify)
  */
 export function applyTextAlignment(root: HTMLElement, alignment: 'left' | 'center' | 'right' | 'justify') {
-  const selection = window.getSelection()
+  const selection = globalThis.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
   const range = selection.getRangeAt(0)
@@ -113,13 +113,13 @@ export function applyTextAlignment(root: HTMLElement, alignment: 'left' | 'cente
 
   // Helper function to check if an element is a block element that can have text alignment
   const isAlignableBlock = (el: HTMLElement | null): boolean => {
-    if (!el || !el.tagName) return false
+    if (!el?.tagName) return false
     const tagName = el.tagName.toLowerCase()
     return ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote'].includes(tagName)
   }
 
   // If the common ancestor is the root or very close to it, apply to all block children in the selection
-  if (element === root || (element && element.parentElement && element.parentElement === root)) {
+  if (element === root || element?.parentElement === root) {
     // Get all block elements that are at least partially within the selection
     const blockElements: HTMLElement[] = []
     
@@ -169,7 +169,7 @@ export function applyTextAlignment(root: HTMLElement, alignment: 'left' | 'cente
  * @param color - Color value (hex, rgb, etc.)
  */
 export function applyTextColor(_root: HTMLElement, color: string) {
-  const selection = window.getSelection()
+  const selection = globalThis.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
   const range = selection.getRangeAt(0)
@@ -206,7 +206,7 @@ export function applyTextColor(_root: HTMLElement, color: string) {
  * @param color - Color value (hex, rgb, etc.)
  */
 export function applyBackgroundColor(_root: HTMLElement, color: string) {
-  const selection = window.getSelection()
+  const selection = globalThis.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
   const range = selection.getRangeAt(0)
@@ -239,7 +239,7 @@ export function applyBackgroundColor(_root: HTMLElement, color: string) {
  * Insert horizontal rule
  */
 export function insertHorizontalRule() {
-  const selection = window.getSelection()
+  const selection = globalThis.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
   const range = selection.getRangeAt(0)
@@ -263,7 +263,7 @@ export function insertHorizontalRule() {
  * @param includeHeader - Whether to include a header row
  */
 export function insertTable(_root: HTMLElement, rows: number, cols: number, includeHeader: boolean) {
-  const selection = window.getSelection()
+  const selection = globalThis.getSelection()
   if (!selection || selection.rangeCount === 0) return
 
   const range = selection.getRangeAt(0)
@@ -344,7 +344,7 @@ export function searchAndReplace(
   let flags = 'g'
   if (!options.caseSensitive) flags += 'i'
 
-  let pattern = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let pattern = searchText.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
   if (options.wholeWord) {
     pattern = `\\b${pattern}\\b`
   }
@@ -373,7 +373,7 @@ export function searchAndReplace(
  * @returns The table element or null
  */
 export function getSelectedTable(): HTMLTableElement | null {
-  const selection = window.getSelection()
+  const selection = globalThis.getSelection()
   if (!selection || selection.rangeCount === 0) return null
 
   let node = selection.anchorNode
@@ -391,7 +391,7 @@ export function getSelectedTable(): HTMLTableElement | null {
  * @returns The cell element or null
  */
 export function getSelectedCell(): HTMLTableCellElement | null {
-  const selection = window.getSelection()
+  const selection = globalThis.getSelection()
   if (!selection || selection.rangeCount === 0) return null
 
   let node = selection.anchorNode
@@ -449,7 +449,48 @@ export function removeTableRow(table: HTMLTableElement, rowIndex: number): void 
   if (rows.length <= 1) return // Keep at least one row
 
   if (rows[rowIndex]) {
-    tbody.removeChild(rows[rowIndex])
+    rows[rowIndex].remove()
+  }
+}
+
+/**
+ * Add a header cell to a table header row
+ * @param headerRow - The header row element
+ * @param atIndex - Index where to insert the column (default: end)
+ */
+function addHeaderCell(headerRow: HTMLTableRowElement, atIndex?: number): void {
+  const th = document.createElement('th')
+  th.style.border = '1px solid #d1d5db'
+  th.style.padding = '8px 12px'
+  th.style.backgroundColor = '#f3f4f6'
+  th.style.fontWeight = '600'
+  th.style.textAlign = 'left'
+  th.textContent = `Header ${(atIndex ?? headerRow.cells.length) + 1}`
+  
+  const cells = Array.from(headerRow.cells)
+  if (atIndex !== undefined && atIndex < cells.length) {
+    headerRow.insertBefore(th, cells[atIndex])
+  } else {
+    headerRow.appendChild(th)
+  }
+}
+
+/**
+ * Add a body cell to a table row
+ * @param row - The table row element
+ * @param atIndex - Index where to insert the column (default: end)
+ */
+function addBodyCell(row: HTMLTableRowElement, atIndex?: number): void {
+  const td = document.createElement('td')
+  td.style.border = '1px solid #d1d5db'
+  td.style.padding = '8px 12px'
+  td.textContent = '\u00A0' // Non-breaking space
+  
+  const cells = Array.from(row.cells)
+  if (atIndex !== undefined && atIndex < cells.length) {
+    row.insertBefore(td, cells[atIndex])
+  } else {
+    row.appendChild(td)
   }
 }
 
@@ -463,21 +504,7 @@ export function addTableColumn(table: HTMLTableElement, atIndex?: number): void 
   if (table.tHead) {
     const headerRows = Array.from(table.tHead.getElementsByTagName('tr'))
     if (headerRows.length > 0) {
-      const headerRow = headerRows[0]
-      const th = document.createElement('th')
-      th.style.border = '1px solid #d1d5db'
-      th.style.padding = '8px 12px'
-      th.style.backgroundColor = '#f3f4f6'
-      th.style.fontWeight = '600'
-      th.style.textAlign = 'left'
-      th.textContent = `Header ${(atIndex ?? headerRow.cells.length) + 1}`
-      
-      const cells = Array.from(headerRow.cells)
-      if (atIndex !== undefined && atIndex < cells.length) {
-        headerRow.insertBefore(th, cells[atIndex])
-      } else {
-        headerRow.appendChild(th)
-      }
+      addHeaderCell(headerRows[0], atIndex)
     }
   }
 
@@ -485,20 +512,9 @@ export function addTableColumn(table: HTMLTableElement, atIndex?: number): void 
   const tbody = table.tBodies[0]
   if (tbody) {
     const bodyRows = Array.from(tbody.getElementsByTagName('tr'))
-    for (let i = 0; i < bodyRows.length; i++) {
-      const row = bodyRows[i]
-      const td = document.createElement('td')
-      td.style.border = '1px solid #d1d5db'
-      td.style.padding = '8px 12px'
-      td.textContent = '\u00A0' // Non-breaking space
-      
-      const cells = Array.from(row.cells)
-      if (atIndex !== undefined && atIndex < cells.length) {
-        row.insertBefore(td, cells[atIndex])
-      } else {
-        row.appendChild(td)
-      }
-    }
+    bodyRows.forEach(row => {
+      addBodyCell(row, atIndex)
+    })
   }
 }
 
@@ -520,7 +536,7 @@ export function removeTableColumn(table: HTMLTableElement, colIndex: number): vo
       const headerRow = headerRows[0]
       const cells = Array.from(headerRow.cells)
       if (cells[colIndex]) {
-        headerRow.removeChild(cells[colIndex])
+        cells[colIndex].remove()
       }
     }
   }
@@ -529,11 +545,10 @@ export function removeTableColumn(table: HTMLTableElement, colIndex: number): vo
   const tbody = table.tBodies[0]
   if (tbody) {
     const bodyRows = Array.from(tbody.getElementsByTagName('tr'))
-    for (let i = 0; i < bodyRows.length; i++) {
-      const row = bodyRows[i]
+    for (const row of bodyRows) {
       const cells = Array.from(row.cells)
       if (cells[colIndex]) {
-        row.removeChild(cells[colIndex])
+        cells[colIndex].remove()
       }
     }
   }
@@ -609,7 +624,7 @@ export function applyTableProperties(
   }
 ): void {
   if (properties.borderStyle || properties.borderWidth !== undefined || properties.borderColor) {
-    const width = properties.borderWidth !== undefined ? properties.borderWidth : 1
+    const width = properties.borderWidth ?? 1
     const style = properties.borderStyle || 'solid'
     const color = properties.borderColor || '#d1d5db'
     
@@ -657,8 +672,8 @@ export function getCellProperties(cell: HTMLTableCellElement): {
   width: string
   height: string
 } {
-  const computedStyle = window.getComputedStyle(cell)
-  const padding = parseInt(computedStyle.padding) || 8
+  const computedStyle = globalThis.getComputedStyle(cell)
+  const padding = Number.parseInt(computedStyle.padding) || 8
   
   return {
     backgroundColor: cell.style.backgroundColor || '',
@@ -683,18 +698,18 @@ export function getTableProperties(table: HTMLTableElement): {
   backgroundColor: string
   borderCollapse: boolean
 } {
-  const computedStyle = window.getComputedStyle(table)
+  const computedStyle = globalThis.getComputedStyle(table)
   
   // Get border properties from first cell
-  const firstCell = table.querySelector('td, th') as HTMLTableCellElement | null
+  const firstCell = table.querySelector<HTMLTableCellElement>('td, th')
   let borderStyle = 'solid'
   let borderWidth = 1
   let borderColor = '#d1d5db'
   
   if (firstCell) {
-    const cellStyle = window.getComputedStyle(firstCell)
+    const cellStyle = globalThis.getComputedStyle(firstCell)
     borderStyle = cellStyle.borderStyle || 'solid'
-    borderWidth = parseInt(cellStyle.borderWidth) || 1
+    borderWidth = Number.parseInt(cellStyle.borderWidth) || 1
     borderColor = cellStyle.borderColor || '#d1d5db'
   }
   

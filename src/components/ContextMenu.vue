@@ -40,16 +40,7 @@
 
 <script setup lang="ts">
 import { watch } from 'vue'
-
-export interface ContextMenuItem {
-  id?: string
-  label?: string
-  icon?: string
-  shortcut?: string
-  onClick?: () => void
-  disabled?: boolean
-  divider?: boolean
-}
+import type { ContextMenuItem } from '../types/contextMenu'
 
 interface Props {
   show: boolean
@@ -57,9 +48,7 @@ interface Props {
   items: ContextMenuItem[]
 }
 
-interface Emits {
-  (e: 'close'): void
-}
+type Emits = (e: 'close') => void
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
