@@ -1,27 +1,14 @@
+<!-- eslint-disable vue/max-attributes-per-line -->
 <template>
-  <div
-    class="skeleton-loader"
-    :class="{ [variant]: true }"
-  >
-    <div
-      v-if="variant === 'editor'"
-      class="skeleton-editor"
-    >
+  <div class="skeleton-loader" :class="{ [variant]: true }">
+    <div v-if="variant === 'editor'" class="skeleton-editor">
       <div class="skeleton-toolbar">
         <div class="skeleton-toolbar-group">
-          <div
-            v-for="i in 8"
-            :key="i"
-            class="skeleton-btn"
-          />
+          <div v-for="i in 8" :key="i" class="skeleton-btn" />
         </div>
         <div class="skeleton-toolbar-divider" />
         <div class="skeleton-toolbar-group">
-          <div
-            v-for="i in 6"
-            :key="i"
-            class="skeleton-btn"
-          />
+          <div v-for="i in 6" :key="i" class="skeleton-btn" />
         </div>
       </div>
       <div class="skeleton-content">
@@ -37,19 +24,12 @@
       </div>
     </div>
 
-    <div
-      v-else-if="variant === 'modal'"
-      class="skeleton-modal"
-    >
+    <div v-else-if="variant === 'modal'" class="skeleton-modal">
       <div class="skeleton-modal-header">
         <div class="skeleton-title" />
       </div>
       <div class="skeleton-modal-body">
-        <div
-          v-for="i in 4"
-          :key="i"
-          class="skeleton-field"
-        >
+        <div v-for="i in 4" :key="i" class="skeleton-field">
           <div class="skeleton-label" />
           <div class="skeleton-input" />
         </div>
@@ -62,48 +42,23 @@
       </div>
     </div>
 
-    <div
-      v-else-if="variant === 'dropdown'"
-      class="skeleton-dropdown"
-    >
-      <div
-        v-for="i in items"
-        :key="i"
-        class="skeleton-dropdown-item"
-      >
+    <div v-else-if="variant === 'dropdown'" class="skeleton-dropdown">
+      <div v-for="i in items" :key="i" class="skeleton-dropdown-item">
         <div class="skeleton-icon" />
         <div class="skeleton-text" />
       </div>
     </div>
 
-    <div
-      v-else-if="variant === 'table'"
-      class="skeleton-table"
-    >
+    <div v-else-if="variant === 'table'" class="skeleton-table">
       <div class="skeleton-table-row header">
-        <div
-          v-for="i in columns"
-          :key="i"
-          class="skeleton-table-cell"
-        />
+        <div v-for="i in columns" :key="i" class="skeleton-table-cell" />
       </div>
-      <div
-        v-for="i in rows"
-        :key="i"
-        class="skeleton-table-row"
-      >
-        <div
-          v-for="j in columns"
-          :key="j"
-          class="skeleton-table-cell"
-        />
+      <div v-for="i in rows" :key="i" class="skeleton-table-row">
+        <div v-for="j in columns" :key="j" class="skeleton-table-cell" />
       </div>
     </div>
 
-    <div
-      v-else-if="variant === 'card'"
-      class="skeleton-card"
-    >
+    <div v-else-if="variant === 'card'" class="skeleton-card">
       <div class="skeleton-card-image" />
       <div class="skeleton-card-body">
         <div class="skeleton-title" />
@@ -112,34 +67,42 @@
       </div>
     </div>
 
-    <div
-      v-else
-      class="skeleton-text"
-    />
+    <div v-else class="skeleton-text" />
   </div>
 </template>
 
 <script setup lang="ts">
 interface Props {
-  variant?: 'editor' | 'modal' | 'dropdown' | 'table' | 'card' | 'text'
-  lines?: number
-  items?: number
-  rows?: number
-  columns?: number
+  variant?: "editor" | "modal" | "dropdown" | "table" | "card" | "text";
+  lines?: number;
+  items?: number;
+  rows?: number;
+  columns?: number;
 }
 
 withDefaults(defineProps<Props>(), {
-  variant: 'text',
+  variant: "text",
   lines: 10,
   items: 5,
   rows: 5,
   columns: 3,
-})
+});
 
 function getLineWidth(index: number): string {
   // Vary line widths to look more natural
-  const widths = ['100%', '95%', '90%', '100%', '85%', '100%', '92%', '100%', '88%', '100%']
-  return widths[index % widths.length]
+  const widths = [
+    "100%",
+    "95%",
+    "90%",
+    "100%",
+    "85%",
+    "100%",
+    "92%",
+    "100%",
+    "88%",
+    "100%",
+  ];
+  return widths[index % widths.length];
 }
 </script>
 
@@ -149,9 +112,11 @@ function getLineWidth(index: number): string {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.6;
   }
@@ -332,7 +297,7 @@ function getLineWidth(index: number): string {
 }
 
 .skeleton-table-cell::before {
-  content: '';
+  content: "";
   width: 80%;
   height: 16px;
   background: var(--skeleton-bg, #e5e7eb);
@@ -390,6 +355,7 @@ function getLineWidth(index: number): string {
   0% {
     background-position: -1000px 0;
   }
+
   100% {
     background-position: 1000px 0;
   }
