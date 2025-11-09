@@ -4,10 +4,7 @@
     :style="editorStyles"
   >
     <!-- Context Hints (Smart Toolbar Feature) -->
-    <div
-      v-if="getContextHints().length > 0"
-      class="context-hints"
-    >
+    <div v-if="getContextHints().length > 0" class="context-hints">
       <span
         v-for="(hint, index) in getContextHints()"
         :key="index"
@@ -41,7 +38,7 @@
       @background-color-change="handleBackgroundColor"
       @undo="undo"
       @redo="redo"
-      @view-mode-change="(mode) => viewMode = mode"
+      @view-mode-change="(mode) => (viewMode = mode)"
       @format-html="handleFormatHtml"
       @toggle-theme="toggleTheme"
     />
@@ -70,16 +67,10 @@
     />
 
     <!-- Word Count Footer -->
-    <EditorFooter
-      :word-count="wordCount"
-      :character-count="characterCount"
-    />
+    <EditorFooter :word-count="wordCount" :character-count="characterCount" />
 
     <!-- Floating Toolbar -->
-    <FloatingToolbar
-      :show="showFloatingToolbar"
-      :actions="floatingActions"
-    />
+    <FloatingToolbar :show="showFloatingToolbar" :actions="floatingActions" />
 
     <!-- Context Menu -->
     <ContextMenu
@@ -110,7 +101,9 @@
       :table-properties-mode="tablePropertiesMode"
       :initial-cell-props="initialCellProps"
       :initial-table-props="initialTableProps"
-      :formatted-html-content="formatHtml(htmlContent || editorContent?.innerHTML || '')"
+      :formatted-html-content="
+        formatHtml(htmlContent || editorContent?.innerHTML || '')
+      "
       :command-palette-commands="commandPaletteCommands"
       :last-saved="lastSaved"
       :toast-message="toastMessage"
@@ -151,107 +144,101 @@
 </template>
 
 <script setup lang="ts">
-import {
-  ref,
-  computed,
-  toRef,
-} from 'vue'
+import { ref, computed, toRef } from "vue";
 
 import {
   applyTextAlignment,
   applyTextColor,
   applyBackgroundColor,
   applyFontSize,
-} from '../utils/commands'
-import { useTheme } from '../composables/useTheme'
-import { useAutoSave } from '../composables/useAutoSave'
-import { useSmartToolbar } from '../composables/useSmartToolbar'
-import { useEditorContent } from '../composables/useEditorContent'
-import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
-import { useImageResize } from '../composables/useImageResize'
-import { useEditorSetup } from '../composables/useEditorSetup'
-import { useToolbarItems } from '../composables/useToolbarItems'
-import { useActiveStates } from '../composables/useActiveStates'
-import { useSelection } from '../composables/useSelection'
-import { useModals } from '../composables/useModals'
-import { useFormattingActions } from '../composables/useFormattingActions'
-import { useInsertActions } from '../composables/useInsertActions'
-import { useContextMenu } from '../composables/useContextMenu'
-import { useViewMode } from '../composables/useViewMode'
-import { useFloatingToolbar } from '../composables/useFloatingToolbar'
-import { useEditorUIState } from '../composables/useEditorUIState'
-import { useTableActions } from '../composables/useTableActions'
-import { useExportActions } from '../composables/useExportActions'
-import { useCommandPaletteCommands } from '../composables/useCommandPaletteCommands'
-import { useFindReplace } from '../composables/useFindReplace'
-import { useEditorComputed } from '../composables/useEditorComputed'
-import { useSpellCheck } from '../composables/useSpellCheck'
-import { useTemplateManager } from '../composables/useTemplateManager'
-import { useEditorEvents } from '../composables/useEditorEvents'
-import { useFormattingHandlers } from '../composables/useFormattingHandlers'
-import { hasFormatCopied } from '../utils/formatPainter'
-import { formatHtml } from '../utils/export'
-import { useCommandPalette } from '../composables/useCommandPalette'
-import { useSlashCommands } from '../composables/useSlashCommands'
-import FloatingToolbar from './FloatingToolbar.vue'
-import ContextMenu from './ContextMenu.vue'
-import ModalsContainer from './ModalsContainer.vue'
-import EditorToolbar from './EditorToolbar.vue'
-import EditorPanels from './EditorPanels.vue'
-import EditorFooter from './EditorFooter.vue'
-import CommandMenu from './CommandMenu.vue'
+} from "../utils/commands";
+import { useTheme } from "../composables/useTheme";
+import { useAutoSave } from "../composables/useAutoSave";
+import { useSmartToolbar } from "../composables/useSmartToolbar";
+import { useEditorContent } from "../composables/useEditorContent";
+import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
+import { useImageResize } from "../composables/useImageResize";
+import { useEditorSetup } from "../composables/useEditorSetup";
+import { useToolbarItems } from "../composables/useToolbarItems";
+import { useActiveStates } from "../composables/useActiveStates";
+import { useSelection } from "../composables/useSelection";
+import { useModals } from "../composables/useModals";
+import { useFormattingActions } from "../composables/useFormattingActions";
+import { useInsertActions } from "../composables/useInsertActions";
+import { useContextMenu } from "../composables/useContextMenu";
+import { useViewMode } from "../composables/useViewMode";
+import { useFloatingToolbar } from "../composables/useFloatingToolbar";
+import { useEditorUIState } from "../composables/useEditorUIState";
+import { useTableActions } from "../composables/useTableActions";
+import { useExportActions } from "../composables/useExportActions";
+import { useCommandPaletteCommands } from "../composables/useCommandPaletteCommands";
+import { useFindReplace } from "../composables/useFindReplace";
+import { useEditorComputed } from "../composables/useEditorComputed";
+import { useSpellCheck } from "../composables/useSpellCheck";
+import { useTemplateManager } from "../composables/useTemplateManager";
+import { useEditorEvents } from "../composables/useEditorEvents";
+import { useFormattingHandlers } from "../composables/useFormattingHandlers";
+import { hasFormatCopied } from "../utils/formatPainter";
+import { formatHtml } from "../utils/export";
+import { useCommandPalette } from "../composables/useCommandPalette";
+import { useSlashCommands } from "../composables/useSlashCommands";
+import FloatingToolbar from "./FloatingToolbar.vue";
+import ContextMenu from "./ContextMenu.vue";
+import ModalsContainer from "./ModalsContainer.vue";
+import EditorToolbar from "./EditorToolbar.vue";
+import EditorPanels from "./EditorPanels.vue";
+import EditorFooter from "./EditorFooter.vue";
+import CommandMenu from "./CommandMenu.vue";
 
 interface Props {
-  modelValue?: string
-  placeholder?: string
-  width?: string
-  height?: string
+  modelValue?: string;
+  placeholder?: string;
+  width?: string;
+  height?: string;
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: string): void
-  (e: 'focus'): void
-  (e: 'blur'): void
+  (e: "update:modelValue", value: string): void;
+  (e: "focus"): void;
+  (e: "blur"): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: '',
-  placeholder: 'Start typing...',
+  modelValue: "",
+  placeholder: "Start typing...",
   width: undefined,
   height: undefined,
-})
+});
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits>();
 
-const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null)
-const editorContent = computed(() => editorPanelsRef.value?.editorRef || null)
+const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
+const editorContent = computed(() => editorPanelsRef.value?.editorRef || null);
 
 // Selection management using composable
-const {
-  rememberSelection: rememberSelectionBase,
-  performWithSelection,
-} = useSelection(editorContent)
+const { rememberSelection: rememberSelectionBase, performWithSelection } =
+  useSelection(editorContent);
 
 // Extend rememberSelection to hide floating toolbar
 const rememberSelection = () => {
-  rememberSelectionBase()
+  rememberSelectionBase();
   // Hide floating toolbar when interacting with main toolbar to prevent pointer event interference
-  showFloatingToolbar.value = false
-}
+  showFloatingToolbar.value = false;
+};
 
 // Theme and UI state using composable
-const { theme, toggleTheme: toggleThemeComposable } = useTheme()
+const { theme, toggleTheme: toggleThemeComposable } = useTheme();
 
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
   async (content: string, version: number) => {
     // Emit the content for parent to save
-    emit('update:modelValue', content)
-    console.log('Auto-saved at:', new Date().toLocaleTimeString())
-    return { success: true, serverVersion: version + 1 }
+    emit("update:modelValue", content);
+    console.log("Auto-saved at:", new Date().toLocaleTimeString());
+    return { success: true, serverVersion: version + 1 };
   },
   { delay: 2000 } // 2 second delay
-)
+);
 
 // Editor Content Management (replaces inline sanitization, history, and content sync)
 const {
@@ -266,52 +253,43 @@ const {
   redo,
 } = useEditorContent({
   editorContent,
-  modelValue: toRef(props, 'modelValue'),
-  onUpdate: (value) => emit('update:modelValue', value),
+  modelValue: toRef(props, "modelValue"),
+  onUpdate: (value) => emit("update:modelValue", value),
   triggerAutoSave,
-})
+});
 
 // Editor computed properties and watchers using composable
-const {
-  themeClass,
-  editorStyles,
-  wordCount,
-  characterCount,
-} = useEditorComputed({
-  theme,
-  width: props.width,
-  height: props.height,
-  modelValue: props.modelValue,
-  editorContent,
-  htmlContent,
-  isApplyingHistory,
-  applySanitizedContent,
-  captureSnapshot,
-  triggerAutoSave,
-})
+const { themeClass, editorStyles, wordCount, characterCount } =
+  useEditorComputed({
+    theme,
+    width: props.width,
+    height: props.height,
+    modelValue: props.modelValue,
+    editorContent,
+    htmlContent,
+    isApplyingHistory,
+    applySanitizedContent,
+    captureSnapshot,
+    triggerAutoSave,
+  });
 
 // Command Palette
-const {
-  showCommandPalette,
-  closeCommandPalette,
-  addToRecent,
-} = useCommandPalette()
+const { showCommandPalette, closeCommandPalette, addToRecent } =
+  useCommandPalette();
 
 // Smart Toolbar
 const {
   updateContext: updateToolbarContext,
   isVisible: isToolbarSectionVisible,
-  getContextHints
-} = useSmartToolbar()
+  getContextHints,
+} = useSmartToolbar();
 
 // View mode management using composable
-const {
-  viewMode,
-} = useViewMode({
+const { viewMode } = useViewMode({
   editorContent,
   htmlContent,
   codeContent,
-})
+});
 
 // Modal management using composable
 const {
@@ -345,7 +323,7 @@ const {
   openCodeBlockModal,
   closeCodeBlockModal,
   toggleEmojiPicker,
-} = useModals()
+} = useModals();
 
 // Editor UI State using composable
 const {
@@ -361,15 +339,15 @@ const {
   toastType,
   showToastNotification,
   toggleFullScreen,
-} = useEditorUIState({ duration: 3000 })
+} = useEditorUIState({ duration: 3000 });
 
 // Table state
-const currentTable = ref<HTMLTableElement | null>(null)
-const currentCell = ref<HTMLTableCellElement | null>(null)
-const tableDesignerPosition = ref({ x: 0, y: 0 })
-const tablePropertiesMode = ref<'cell' | 'table' | 'both'>('both')
-const initialCellProps = ref({})
-const initialTableProps = ref({})
+const currentTable = ref<HTMLTableElement | null>(null);
+const currentCell = ref<HTMLTableCellElement | null>(null);
+const tableDesignerPosition = ref({ x: 0, y: 0 });
+const tablePropertiesMode = ref<"cell" | "table" | "both">("both");
+const initialCellProps = ref({});
+const initialTableProps = ref({});
 
 // Formatting actions using composable
 const {
@@ -387,13 +365,13 @@ const {
   applyTextColor,
   applyBackgroundColor,
   applyFontSize
-)
+);
 
 // Image resize composable
 const { setupImageResizing, cleanup: cleanupImageResize } = useImageResize(
   editorContent,
   captureSnapshot
-)
+);
 
 // Formatting Handlers - Using useFormattingHandlers composable
 const {
@@ -411,7 +389,7 @@ const {
   handlePasteFormatBase,
   showColorsDropdown,
   formatPainterActive,
-})
+});
 
 // Context menu composable - needs to be after handleInlineAction, insertLink, insertImage are available
 // Will be initialized after those dependencies are defined
@@ -424,25 +402,20 @@ const {
 // }
 
 const toggleTheme = () => {
-  toggleThemeComposable()
-}
+  toggleThemeComposable();
+};
 
 // Spell check using composable
-const {
-  enableSpellCheck,
-  handleToggleSpellCheck,
-} = useSpellCheck({
+const { enableSpellCheck, handleToggleSpellCheck } = useSpellCheck({
   editorContent,
   spellCheckEnabled,
-})
+});
 
 // Template manager using composable
-const {
-  handleSelectTemplate,
-} = useTemplateManager({
+const { handleSelectTemplate } = useTemplateManager({
   editorContent,
   captureSnapshot,
-})
+});
 
 // Table actions using composable
 const {
@@ -465,17 +438,15 @@ const {
   initialCellProps,
   initialTableProps,
   tablePropertiesMode,
-  onUpdate: () => emit('update:modelValue', editorContent.value?.innerHTML || ''),
-})
+  onUpdate: () =>
+    emit("update:modelValue", editorContent.value?.innerHTML || ""),
+});
 
 // Find & Replace using composable
-const {
-  handleFind,
-  handleReplace,
-} = useFindReplace({
+const { handleFind, handleReplace } = useFindReplace({
   editorContent,
   captureSnapshot,
-})
+});
 
 // Code block actions - Now using composable
 
@@ -500,9 +471,11 @@ const {
   openImageUploadModal,
   closeImageUploadModal,
   closeEmbedModal,
-  closeFileManagerModal: () => { showFileManagerModal.value = false },
+  closeFileManagerModal: () => {
+    showFileManagerModal.value = false;
+  },
   closeEmojiPicker: toggleEmojiPicker,
-})
+});
 
 // Context menu using composable
 const {
@@ -521,7 +494,7 @@ const {
   currentTable,
   currentCell,
   tableDesignerPosition,
-})
+});
 
 // Export actions using composable
 const {
@@ -536,10 +509,10 @@ const {
   codeContent,
   showToast: showToastNotification,
   updateCodeContent: (content: string) => {
-    codeContent.value = content
+    codeContent.value = content;
   },
   captureSnapshot,
-})
+});
 
 // Emoji picker actions - Now using composable
 
@@ -548,11 +521,8 @@ const {
 // Floating toolbar management - Now using composable
 
 // Active state detection using composable
-const {
-  isInlineActionActive,
-  isBlockActionActive,
-  isListActionActive,
-} = useActiveStates(editorContent)
+const { isInlineActionActive, isBlockActionActive, isListActionActive } =
+  useActiveStates(editorContent);
 
 // Floating toolbar management using composable
 const {
@@ -564,7 +534,7 @@ const {
   handleInlineAction,
   isInlineActionActive,
   insertLink,
-})
+});
 
 // Toolbar Items - Using useToolbarItems composable
 const {
@@ -597,9 +567,13 @@ const {
   openTableModal,
   openCodeBlockModal,
   openHtmlCodeModal,
-  openFindReplaceModal: () => { showFindReplaceModal.value = true },
+  openFindReplaceModal: () => {
+    showFindReplaceModal.value = true;
+  },
   openTemplateModal,
-  toggleEmojiPicker: () => { showEmojiPicker.value = !showEmojiPicker.value },
+  toggleEmojiPicker: () => {
+    showEmojiPicker.value = !showEmojiPicker.value;
+  },
   toggleFullScreen,
   handleToggleSpellCheck,
   handleExportHtml,
@@ -612,7 +586,7 @@ const {
   isFullScreen,
   spellCheckEnabled,
   captureSnapshot,
-})
+});
 
 // Command Palette Commands using composable
 const { commands: commandPaletteCommands } = useCommandPaletteCommands({
@@ -636,12 +610,12 @@ const { commands: commandPaletteCommands } = useCommandPaletteCommands({
   handleExportWord,
   undo,
   redo,
-})
+});
 
 // Handle command execution
 function handleCommandExecute(command: any) {
-  addToRecent(command.id)
-  command.action()
+  addToRecent(command.id);
+  command.action();
 }
 
 // Command menu (Slash commands) - Using useSlashCommands composable
@@ -663,7 +637,7 @@ const {
   openCodeBlockModal,
   handleInsertHR,
   performWithSelection,
-})
+});
 
 // Context menu - Now using composable
 
@@ -690,12 +664,10 @@ const {
   currentCell,
   tableDesignerPosition,
   emit,
-})
+});
 
 // Keyboard Shortcuts - Using useKeyboardShortcuts composable
-const {
-  handleKeydown,
-} = useKeyboardShortcuts({
+const { handleKeydown } = useKeyboardShortcuts({
   editorContent,
   onInput,
   onCaptureSnapshot: captureSnapshot,
@@ -703,10 +675,12 @@ const {
   redo,
   openCommandMenu,
   insertLink,
-  openFindReplaceModal: () => { showFindReplaceModal.value = true },
+  openFindReplaceModal: () => {
+    showFindReplaceModal.value = true;
+  },
   handleInlineAction,
   handleBlockAction,
-})
+});
 
 // Editor Setup and Cleanup - Using useEditorSetup composable
 useEditorSetup({
@@ -723,8 +697,7 @@ useEditorSetup({
   handleDocumentClick,
   handleEscape,
   onSelectionChange,
-})
+});
 </script>
 
 <style src="../styles/NextLevelEditor.css" scoped></style>
-

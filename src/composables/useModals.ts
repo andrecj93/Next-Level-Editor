@@ -1,117 +1,117 @@
-import { ref } from 'vue'
+import { ref } from "vue";
 
 export function useModals() {
   // Modal states
-  const showImageUploadModal = ref(false)
-  const showEmbedModal = ref(false)
-  const showFileManagerModal = ref(false)
-  const showEmojiPicker = ref(false)
-  const showTemplateModal = ref(false)
-  const showHtmlCodeModal = ref(false)
-  const showFindReplaceModal = ref(false)
-  const showCodeBlockModal = ref(false)
-  const showTableModal = ref(false)
-  const showTableDesigner = ref(false)
-  const showTablePropertiesModal = ref(false)
+  const showImageUploadModal = ref(false);
+  const showEmbedModal = ref(false);
+  const showFileManagerModal = ref(false);
+  const showEmojiPicker = ref(false);
+  const showTemplateModal = ref(false);
+  const showHtmlCodeModal = ref(false);
+  const showFindReplaceModal = ref(false);
+  const showCodeBlockModal = ref(false);
+  const showTableModal = ref(false);
+  const showTableDesigner = ref(false);
+  const showTablePropertiesModal = ref(false);
 
   // Image Upload Modal
   const openImageUploadModal = () => {
-    showImageUploadModal.value = true
-  }
+    showImageUploadModal.value = true;
+  };
 
   const closeImageUploadModal = () => {
-    showImageUploadModal.value = false
-  }
+    showImageUploadModal.value = false;
+  };
 
   // Embed Modal
   const openEmbedModal = () => {
-    showEmbedModal.value = true
-  }
+    showEmbedModal.value = true;
+  };
 
   const closeEmbedModal = () => {
-    showEmbedModal.value = false
-  }
+    showEmbedModal.value = false;
+  };
 
   // File Manager Modal
   const openFileManagerModal = () => {
-    showFileManagerModal.value = true
-  }
+    showFileManagerModal.value = true;
+  };
 
   const closeFileManagerModal = () => {
-    showFileManagerModal.value = false
-  }
+    showFileManagerModal.value = false;
+  };
 
   // Template Modal
   const openTemplateModal = () => {
-    showTemplateModal.value = true
-  }
+    showTemplateModal.value = true;
+  };
 
   const closeTemplateModal = () => {
-    showTemplateModal.value = false
-  }
+    showTemplateModal.value = false;
+  };
 
   // HTML Code Modal
   const openHtmlCodeModal = () => {
-    showHtmlCodeModal.value = true
-  }
+    showHtmlCodeModal.value = true;
+  };
 
   const closeHtmlCodeModal = () => {
-    showHtmlCodeModal.value = false
-  }
+    showHtmlCodeModal.value = false;
+  };
 
   // Table Modal
   const openTableModal = () => {
-    showTableModal.value = true
-  }
+    showTableModal.value = true;
+  };
 
   const closeTableModal = () => {
-    showTableModal.value = false
-  }
+    showTableModal.value = false;
+  };
 
   // Table Properties Modal
   const openTablePropertiesModal = () => {
-    showTablePropertiesModal.value = true
-  }
+    showTablePropertiesModal.value = true;
+  };
 
   const closeTablePropertiesModal = () => {
-    showTablePropertiesModal.value = false
-  }
+    showTablePropertiesModal.value = false;
+  };
 
   // Find Replace Modal
   const openFindReplaceModal = () => {
-    showFindReplaceModal.value = true
-  }
+    showFindReplaceModal.value = true;
+  };
 
   const closeFindReplaceModal = () => {
-    showFindReplaceModal.value = false
-  }
+    showFindReplaceModal.value = false;
+  };
 
   // Code Block Modal
   const openCodeBlockModal = () => {
-    showCodeBlockModal.value = true
-  }
+    showCodeBlockModal.value = true;
+  };
 
   const closeCodeBlockModal = () => {
-    showCodeBlockModal.value = false
-  }
+    showCodeBlockModal.value = false;
+  };
 
   // Emoji Picker
   const toggleEmojiPicker = () => {
-    showEmojiPicker.value = !showEmojiPicker.value
-  }
+    showEmojiPicker.value = !showEmojiPicker.value;
+  };
 
   const closeEmojiPicker = () => {
-    showEmojiPicker.value = false
-  }
+    showEmojiPicker.value = false;
+  };
 
   // Table Designer
   const openTableDesigner = () => {
-    showTableDesigner.value = true
-  }
+    showTableDesigner.value = true;
+  };
 
   const closeTableDesigner = () => {
-    showTableDesigner.value = false
-  }
+    showTableDesigner.value = false;
+  };
 
   return {
     // States
@@ -150,5 +150,5 @@ export function useModals() {
     closeEmojiPicker,
     openTableDesigner,
     closeTableDesigner,
-  }
+  };
 }
