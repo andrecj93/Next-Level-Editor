@@ -1,10 +1,11 @@
+<!-- eslint-disable vue/max-attributes-per-line -->
 <template>
   <div class="color-picker-wrapper">
     <button
       class="color-button"
       :style="{ backgroundColor: modelValue || '#000000' }"
       :aria-label="label"
-      @click="togglePicker"
+      @mousedown.prevent="togglePicker"
     >
       <span class="color-icon">{{ icon }}</span>
     </button>

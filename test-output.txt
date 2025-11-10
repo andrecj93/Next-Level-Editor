@@ -1,0 +1,172 @@
+
+> next-level-editor@1.0.0 test:e2e
+> playwright test e2e/file-manager.spec.ts
+
+
+Running 6 tests using 6 workers
+
+[1A[2K[1/6] [chromium] ÔÇ║ e2e\file-manager.spec.ts:4:7 ÔÇ║ File Manager Modal ÔÇ║ should open file manager when clicking Insert ÔåÆ File Manager
+[1A[2K[2/6] [chromium] ÔÇ║ e2e\file-manager.spec.ts:33:7 ÔÇ║ File Manager Modal ÔÇ║ should close file manager when clicking close button
+[1A[2K[3/6] [chromium] ÔÇ║ e2e\file-manager.spec.ts:97:7 ÔÇ║ File Manager Modal ÔÇ║ should allow drag and drop file upload
+[1A[2K[4/6] [chromium] ÔÇ║ e2e\file-manager.spec.ts:164:7 ÔÇ║ File Manager Modal ÔÇ║ should delete file from manager
+[1A[2K[5/6] [chromium] ÔÇ║ e2e\file-manager.spec.ts:58:7 ÔÇ║ File Manager Modal ÔÇ║ should allow file upload via click button
+[1A[2K[6/6] [chromium] ÔÇ║ e2e\file-manager.spec.ts:124:7 ÔÇ║ File Manager Modal ÔÇ║ should insert file into editor
+[1A[2K  1) [chromium] ÔÇ║ e2e\file-manager.spec.ts:33:7 ÔÇ║ File Manager Modal ÔÇ║ should close file manager when clicking close button 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.waitForSelector: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[role="menu"]') to be visible[22m
+
+
+      40 |     const insertButton = page.locator('button:has-text("Insert")')
+      41 |     await insertButton.click()
+    > 42 |     await page.waitForSelector('[role="menu"]')
+         |                ^
+      43 |     const fileManagerOption = page.locator('text=File Manager')
+      44 |     await fileManagerOption.click()
+      45 |     
+        at C:\Users\andre\source\repos\Next-Level-Editor\e2e\file-manager.spec.ts:42:16
+
+    attachment #1: screenshot (image/png) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\file-manager-File-Manager--bda2b--when-clicking-close-button-chromium\test-failed-1.png
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    Error Context: test-results\file-manager-File-Manager--bda2b--when-clicking-close-button-chromium\error-context.md
+
+
+[1A[2K  2) [chromium] ÔÇ║ e2e\file-manager.spec.ts:4:7 ÔÇ║ File Manager Modal ÔÇ║ should open file manager when clicking Insert ÔåÆ File Manager 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.waitForSelector: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[role="menu"]') to be visible[22m
+
+
+      13 |     
+      14 |     // Wait for dropdown menu
+    > 15 |     await page.waitForSelector('[role="menu"]')
+         |                ^
+      16 |     
+      17 |     // Click File Manager option
+      18 |     const fileManagerOption = page.locator('text=File Manager')
+        at C:\Users\andre\source\repos\Next-Level-Editor\e2e\file-manager.spec.ts:15:16
+
+    attachment #1: screenshot (image/png) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\file-manager-File-Manager--626ac-cking-Insert-ÔåÆ-File-Manager-chromium\test-failed-1.png
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    Error Context: test-results\file-manager-File-Manager--626ac-cking-Insert-ÔåÆ-File-Manager-chromium\error-context.md
+
+
+[1A[2K  3) [chromium] ÔÇ║ e2e\file-manager.spec.ts:97:7 ÔÇ║ File Manager Modal ÔÇ║ should allow drag and drop file upload 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.waitForSelector: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[role="menu"]') to be visible[22m
+
+
+      104 |     const insertButton = page.locator('button:has-text("Insert")')
+      105 |     await insertButton.click()
+    > 106 |     await page.waitForSelector('[role="menu"]')
+          |                ^
+      107 |     const fileManagerOption = page.locator('text=File Manager')
+      108 |     await fileManagerOption.click()
+      109 |     
+        at C:\Users\andre\source\repos\Next-Level-Editor\e2e\file-manager.spec.ts:106:16
+
+    attachment #1: screenshot (image/png) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\file-manager-File-Manager--f9a8d-w-drag-and-drop-file-upload-chromium\test-failed-1.png
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    Error Context: test-results\file-manager-File-Manager--f9a8d-w-drag-and-drop-file-upload-chromium\error-context.md
+
+
+[1A[2K  4) [chromium] ÔÇ║ e2e\file-manager.spec.ts:164:7 ÔÇ║ File Manager Modal ÔÇ║ should delete file from manager 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.waitForSelector: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[role="menu"]') to be visible[22m
+
+
+      171 |     const insertButton = page.locator('button:has-text("Insert")')
+      172 |     await insertButton.click()
+    > 173 |     await page.waitForSelector('[role="menu"]')
+          |                ^
+      174 |     const fileManagerOption = page.locator('text=File Manager')
+      175 |     await fileManagerOption.click()
+      176 |     
+        at C:\Users\andre\source\repos\Next-Level-Editor\e2e\file-manager.spec.ts:173:16
+
+    attachment #1: screenshot (image/png) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\file-manager-File-Manager--34e2b-ld-delete-file-from-manager-chromium\test-failed-1.png
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    Error Context: test-results\file-manager-File-Manager--34e2b-ld-delete-file-from-manager-chromium\error-context.md
+
+
+[1A[2K  5) [chromium] ÔÇ║ e2e\file-manager.spec.ts:124:7 ÔÇ║ File Manager Modal ÔÇ║ should insert file into editor 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.waitForSelector: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[role="menu"]') to be visible[22m
+
+
+      131 |     const insertButton = page.locator('button:has-text("Insert")')
+      132 |     await insertButton.click()
+    > 133 |     await page.waitForSelector('[role="menu"]')
+          |                ^
+      134 |     const fileManagerOption = page.locator('text=File Manager')
+      135 |     await fileManagerOption.click()
+      136 |     
+        at C:\Users\andre\source\repos\Next-Level-Editor\e2e\file-manager.spec.ts:133:16
+
+    attachment #1: screenshot (image/png) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\file-manager-File-Manager--ee14d-uld-insert-file-into-editor-chromium\test-failed-1.png
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    Error Context: test-results\file-manager-File-Manager--ee14d-uld-insert-file-into-editor-chromium\error-context.md
+
+
+[1A[2K  6) [chromium] ÔÇ║ e2e\file-manager.spec.ts:58:7 ÔÇ║ File Manager Modal ÔÇ║ should allow file upload via click button 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.waitForSelector: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[role="menu"]') to be visible[22m
+
+
+      65 |     const insertButton = page.locator('button:has-text("Insert")')
+      66 |     await insertButton.click()
+    > 67 |     await page.waitForSelector('[role="menu"]')
+         |                ^
+      68 |     const fileManagerOption = page.locator('text=File Manager')
+      69 |     await fileManagerOption.click()
+      70 |     
+        at C:\Users\andre\source\repos\Next-Level-Editor\e2e\file-manager.spec.ts:67:16
+
+    attachment #1: screenshot (image/png) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\file-manager-File-Manager--b4de7-ile-upload-via-click-button-chromium\test-failed-1.png
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    Error Context: test-results\file-manager-File-Manager--b4de7-ile-upload-via-click-button-chromium\error-context.md
+
+
+[1A[2K  6 failed
+    [chromium] ÔÇ║ e2e\file-manager.spec.ts:4:7 ÔÇ║ File Manager Modal ÔÇ║ should open file manager when clicking Insert ÔåÆ File Manager 
+    [chromium] ÔÇ║ e2e\file-manager.spec.ts:33:7 ÔÇ║ File Manager Modal ÔÇ║ should close file manager when clicking close button 
+    [chromium] ÔÇ║ e2e\file-manager.spec.ts:58:7 ÔÇ║ File Manager Modal ÔÇ║ should allow file upload via click button 
+    [chromium] ÔÇ║ e2e\file-manager.spec.ts:97:7 ÔÇ║ File Manager Modal ÔÇ║ should allow drag and drop file upload 
+    [chromium] ÔÇ║ e2e\file-manager.spec.ts:124:7 ÔÇ║ File Manager Modal ÔÇ║ should insert file into editor 
+    [chromium] ÔÇ║ e2e\file-manager.spec.ts:164:7 ÔÇ║ File Manager Modal ÔÇ║ should delete file from manager 
+
+[36m  Serving HTML report at http://localhost:9323. Press Ctrl+C to quit.[39m

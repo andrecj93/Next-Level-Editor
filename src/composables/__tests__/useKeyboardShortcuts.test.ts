@@ -289,14 +289,14 @@ describe("useKeyboardShortcuts", () => {
       expect(mockOpenCommandMenu).not.toHaveBeenCalled();
     });
 
-    it("should not open command menu with text before cursor", () => {
+    it("should open command menu with trailing whitespace before cursor", () => {
       const p = document.createElement("p");
       const text = document.createTextNode("Hello ");
       p.appendChild(text);
       editorElement.appendChild(p);
 
       const range = document.createRange();
-      range.setStart(text, 6);
+      range.setStart(text, 6); // Position after space
       range.collapse(true);
 
       const selection = globalThis.getSelection()!;
@@ -319,6 +319,41 @@ describe("useKeyboardShortcuts", () => {
       const event = new KeyboardEvent("keydown", { key: "/" });
       handleKeydown(event);
 
+      // Should open command menu because there's trailing whitespace
+      expect(mockOpenCommandMenu).toHaveBeenCalled();
+    });
+
+    it("should not open command menu without text before cursor (non-whitespace)", () => {
+      const p = document.createElement("p");
+      const text = document.createTextNode("HelloWorld");
+      p.appendChild(text);
+      editorElement.appendChild(p);
+
+      const range = document.createRange();
+      range.setStart(text, 5); // Position after "Hello" without space
+      range.collapse(true);
+
+      const selection = globalThis.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const { handleKeydown } = useKeyboardShortcuts({
+        editorContent: ref(editorElement),
+        onInput: mockOnInput,
+        onCaptureSnapshot: mockOnCaptureSnapshot,
+        undo: mockUndo,
+        redo: mockRedo,
+        openCommandMenu: mockOpenCommandMenu,
+        insertLink: mockInsertLink,
+        openFindReplaceModal: mockOpenFindReplaceModal,
+        handleInlineAction: mockHandleInlineAction,
+        handleBlockAction: mockHandleBlockAction,
+      });
+
+      const event = new KeyboardEvent("keydown", { key: "/" });
+      handleKeydown(event);
+
+      // Should NOT open command menu because there's no whitespace
       expect(mockOpenCommandMenu).not.toHaveBeenCalled();
     });
   });

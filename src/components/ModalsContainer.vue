@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/max-attributes-per-line -->
 <template>
   <!-- Table Modal -->
   <TableModal
@@ -68,7 +69,7 @@
   <EmbedModal
     :is-open="showEmbedModal"
     @close="$emit('close-embed-modal')"
-    @insert="(url: string) => $emit('insert-embed', url)"
+    @insert="(html: string) => $emit('insert-embed', html)"
   />
 
   <!-- File Manager Modal -->
@@ -103,9 +104,7 @@
   <!-- Auto-save Indicator -->
   <div v-if="isSaving || lastSaved" class="auto-save-indicator">
     <span v-if="isSaving" class="saving">💾 Saving...</span>
-    <span v-else-if="lastSaved" :key="lastSaved.getTime()" class="saved"
-      >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span
-    >
+    <span v-else-if="lastSaved" :key="lastSaved.getTime()" class="saved">✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
   </div>
 
   <!-- Toast Notification -->

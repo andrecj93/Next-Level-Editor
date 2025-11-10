@@ -210,24 +210,25 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
    * Scroll to the current selection/element
    */
   const scrollToSelection = () => {
-    nextTick(() => {
-      const selection = globalThis.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
+    const selection = globalThis.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
 
-      const range = selection.getRangeAt(0);
-      const container = range.startContainer;
+    const range = selection.getRangeAt(0);
+    const container = range.startContainer;
 
-      let element: HTMLElement | null = null;
-      if (container.nodeType === Node.ELEMENT_NODE) {
-        element = container as HTMLElement;
-      } else if (container.parentElement) {
-        element = container.parentElement;
-      }
+    let element: HTMLElement | null = null;
+    if (container.nodeType === Node.ELEMENT_NODE) {
+      element = container as HTMLElement;
+    } else if (container.parentElement) {
+      element = container.parentElement;
+    }
 
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    });
+    if (element) {
+      // Use requestAnimationFrame instead of nextTick for better performance
+      requestAnimationFrame(() => {
+        element?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+    }
   };
 
   const handleCommandOption = (option: SlashCommandOption) => {
@@ -236,6 +237,7 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     closeCommandMenu();
 
     // Scroll to the new element and show feedback
+    // Use immediate scroll instead of delayed scroll
     scrollToSelection();
 
     // Optional: Show toast notification

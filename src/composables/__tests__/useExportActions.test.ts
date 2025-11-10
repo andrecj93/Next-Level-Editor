@@ -46,7 +46,8 @@ describe("useExportActions", () => {
         "<p>Test content</p>"
       );
       expect(mockShowToast).toHaveBeenCalledWith(
-        "✓ Exported as HTML successfully!"
+        "✓ Document downloaded as HTML! Check your Downloads folder",
+        "success"
       );
     });
 
@@ -108,7 +109,8 @@ describe("useExportActions", () => {
         "<p>Test content</p>"
       );
       expect(mockShowToast).toHaveBeenCalledWith(
-        "✓ Exported as HTML successfully!"
+        "✓ Document downloaded as HTML! Check your Downloads folder",
+        "success"
       );
     });
   });
@@ -130,7 +132,8 @@ describe("useExportActions", () => {
         "<p>Test content</p>"
       );
       expect(mockShowToast).toHaveBeenCalledWith(
-        "✓ Exported as Markdown successfully!"
+        "✓ Document downloaded as Markdown! Check your Downloads folder",
+        "success"
       );
     });
 
@@ -192,7 +195,8 @@ describe("useExportActions", () => {
         "<p>Test content</p>"
       );
       expect(mockShowToast).toHaveBeenCalledWith(
-        "✓ Exported as Markdown successfully!"
+        "✓ Document downloaded as Markdown! Check your Downloads folder",
+        "success"
       );
     });
   });
@@ -212,7 +216,8 @@ describe("useExportActions", () => {
 
       expect(exportUtils.exportAsPdf).toHaveBeenCalledWith(editorElement);
       expect(mockShowToast).toHaveBeenCalledWith(
-        "✓ Exported as PDF successfully!"
+        "✓ Document downloaded as PDF! Check your Downloads folder",
+        "success"
       );
     });
 
@@ -272,7 +277,8 @@ describe("useExportActions", () => {
 
       expect(exportUtils.exportAsPdf).toHaveBeenCalledWith(editorElement);
       expect(mockShowToast).toHaveBeenCalledWith(
-        "✓ Exported as PDF successfully!"
+        "✓ Document downloaded as PDF! Check your Downloads folder",
+        "success"
       );
     });
   });
@@ -294,7 +300,8 @@ describe("useExportActions", () => {
         "<p>Test content</p>"
       );
       expect(mockShowToast).toHaveBeenCalledWith(
-        "✓ Exported as Word document successfully!"
+        "✓ Document downloaded as Word! Check your Downloads folder",
+        "success"
       );
     });
 
@@ -356,7 +363,8 @@ describe("useExportActions", () => {
         "<p>Test content</p>"
       );
       expect(mockShowToast).toHaveBeenCalledWith(
-        "✓ Exported as Word document successfully!"
+        "✓ Document downloaded as Word! Check your Downloads folder",
+        "success"
       );
     });
   });
@@ -559,19 +567,23 @@ describe("useExportActions", () => {
       expect(mockShowToast).toHaveBeenCalledTimes(4);
       expect(mockShowToast).toHaveBeenNthCalledWith(
         1,
-        "✓ Exported as HTML successfully!"
+        "✓ Document downloaded as HTML! Check your Downloads folder",
+        "success"
       );
       expect(mockShowToast).toHaveBeenNthCalledWith(
         2,
-        "✓ Exported as Markdown successfully!"
+        "✓ Document downloaded as Markdown! Check your Downloads folder",
+        "success"
       );
       expect(mockShowToast).toHaveBeenNthCalledWith(
         3,
-        "✓ Exported as PDF successfully!"
+        "✓ Document downloaded as PDF! Check your Downloads folder",
+        "success"
       );
       expect(mockShowToast).toHaveBeenNthCalledWith(
         4,
-        "✓ Exported as Word document successfully!"
+        "✓ Document downloaded as Word! Check your Downloads folder",
+        "success"
       );
     });
   });

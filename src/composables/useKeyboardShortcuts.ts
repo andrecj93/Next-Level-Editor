@@ -277,7 +277,19 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
           ? (container as Text).data.substring(0, range.startOffset)
           : "";
 
-      if (textBefore.trim().length === 0) {
+      // Allow slash commands if:
+      // 1. Line is empty or whitespace only
+      // 2. Text ends with whitespace (space, newline, etc)
+      // 3. At the start of a list item
+      const isEmptyLine = textBefore.trim().length === 0;
+      const endsWithWhitespace = /\s$/.test(textBefore);
+      const inListItem = isInListItem(range);
+
+      if (
+        isEmptyLine ||
+        endsWithWhitespace ||
+        (inListItem && textBefore.trim() === "")
+      ) {
         event.preventDefault();
         event.stopPropagation();
         openCommandMenu();

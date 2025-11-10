@@ -136,6 +136,7 @@ describe("useFormattingActions", () => {
 
   describe("handleTextColor", () => {
     beforeEach(() => {
+      vi.useFakeTimers();
       // Create a selection
       const range = document.createRange();
       const textNode = editorElement.querySelector("p")?.firstChild;
@@ -150,7 +151,11 @@ describe("useFormattingActions", () => {
       }
     });
 
-    it("should apply text color", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should apply text color", async () => {
       const { handleTextColor } = useFormattingActions(
         editorContent,
         fontSize,
@@ -163,11 +168,14 @@ describe("useFormattingActions", () => {
 
       handleTextColor("#ff0000");
 
+      // Wait for setTimeout to complete
+      await vi.runAllTimersAsync();
+
       expect(applyTextColor).toHaveBeenCalledWith(editorElement, "#ff0000");
       expect(captureSnapshot).toHaveBeenCalled();
     });
 
-    it("should apply multiple colors", () => {
+    it("should apply multiple colors", async () => {
       const { handleTextColor } = useFormattingActions(
         editorContent,
         fontSize,
@@ -180,6 +188,9 @@ describe("useFormattingActions", () => {
 
       handleTextColor("#00ff00");
       handleTextColor("#0000ff");
+
+      // Wait for all setTimeout calls to complete
+      await vi.runAllTimersAsync();
 
       expect(applyTextColor).toHaveBeenCalledTimes(2);
       expect(applyTextColor).toHaveBeenCalledWith(editorElement, "#00ff00");
@@ -230,6 +241,7 @@ describe("useFormattingActions", () => {
 
   describe("handleBackgroundColor", () => {
     beforeEach(() => {
+      vi.useFakeTimers();
       // Create a selection
       const range = document.createRange();
       const textNode = editorElement.querySelector("p")?.firstChild;
@@ -244,7 +256,11 @@ describe("useFormattingActions", () => {
       }
     });
 
-    it("should apply background color", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should apply background color", async () => {
       const { handleBackgroundColor } = useFormattingActions(
         editorContent,
         fontSize,
@@ -257,6 +273,9 @@ describe("useFormattingActions", () => {
 
       handleBackgroundColor("#ffff00");
 
+      // Wait for setTimeout to complete
+      await vi.runAllTimersAsync();
+
       expect(applyBackgroundColor).toHaveBeenCalledWith(
         editorElement,
         "#ffff00"
@@ -264,7 +283,7 @@ describe("useFormattingActions", () => {
       expect(captureSnapshot).toHaveBeenCalled();
     });
 
-    it("should apply multiple background colors", () => {
+    it("should apply multiple background colors", async () => {
       const { handleBackgroundColor } = useFormattingActions(
         editorContent,
         fontSize,
@@ -275,17 +294,22 @@ describe("useFormattingActions", () => {
         applyFontSize
       );
 
-      handleBackgroundColor("#ffcccc");
-      handleBackgroundColor("#ccffcc");
+      handleBackgroundColor("#ffff00");
+      handleBackgroundColor("#ff00ff");
+
+      // Wait for all setTimeout calls to complete
+      await vi.runAllTimersAsync();
 
       expect(applyBackgroundColor).toHaveBeenCalledTimes(2);
-      expect(applyBackgroundColor).toHaveBeenCalledWith(
+      expect(applyBackgroundColor).toHaveBeenNthCalledWith(
+        1,
         editorElement,
-        "#ffcccc"
+        "#ffff00"
       );
-      expect(applyBackgroundColor).toHaveBeenCalledWith(
+      expect(applyBackgroundColor).toHaveBeenNthCalledWith(
+        2,
         editorElement,
-        "#ccffcc"
+        "#ff00ff"
       );
     });
 
@@ -595,7 +619,15 @@ describe("useFormattingActions", () => {
   });
 
   describe("Edge Cases", () => {
-    it("should handle all formatting operations in sequence", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should handle all formatting operations in sequence", async () => {
       // Create a selection
       const range = document.createRange();
       const textNode = editorElement.querySelector("p")?.firstChild;
@@ -627,6 +659,9 @@ describe("useFormattingActions", () => {
         actions.handleCopyFormat();
         actions.handlePasteFormat();
       }).not.toThrow();
+
+      // Wait for all setTimeout calls
+      await vi.runAllTimersAsync();
 
       expect(applyTextAlignment).toHaveBeenCalled();
       expect(applyTextColor).toHaveBeenCalled();

@@ -21,18 +21,30 @@ export function useFormattingActions(
 
   const handleTextColor = (color: string) => {
     if (!editorContent.value) return;
-    const selection = globalThis.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    applyTextColor(editorContent.value, color);
-    captureSnapshot();
+    // Focus the editor first to restore selection
+    editorContent.value.focus();
+    const root = editorContent.value;
+    // Small delay to ensure focus is applied
+    setTimeout(() => {
+      const selection = globalThis.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+      applyTextColor(root, color);
+      captureSnapshot();
+    }, 10);
   };
 
   const handleBackgroundColor = (color: string) => {
     if (!editorContent.value) return;
-    const selection = globalThis.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    applyBackgroundColor(editorContent.value, color);
-    captureSnapshot();
+    // Focus the editor first to restore selection
+    editorContent.value.focus();
+    const root = editorContent.value;
+    // Small delay to ensure focus is applied
+    setTimeout(() => {
+      const selection = globalThis.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+      applyBackgroundColor(root, color);
+      captureSnapshot();
+    }, 10);
   };
 
   const handleFontSize = (size: FontSize) => {

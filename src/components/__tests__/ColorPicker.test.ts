@@ -97,7 +97,7 @@ describe("ColorPicker", () => {
       wrapper = mount(ColorPicker);
 
       const button = wrapper.find(".color-button");
-      await button.trigger("click");
+      await button.trigger("mousedown");
 
       const picker = wrapper.find(".color-picker-container");
       expect(picker.exists()).toBe(true);
@@ -107,8 +107,8 @@ describe("ColorPicker", () => {
       wrapper = mount(ColorPicker);
 
       const button = wrapper.find(".color-button");
-      await button.trigger("click");
-      await button.trigger("click");
+      await button.trigger("mousedown");
+      await button.trigger("mousedown");
 
       const picker = wrapper.find(".color-picker-container");
       expect(picker.exists()).toBe(false);
@@ -122,7 +122,7 @@ describe("ColorPicker", () => {
       });
 
       const button = wrapper.find(".color-button");
-      await button.trigger("click");
+      await button.trigger("mousedown");
 
       const label = wrapper.find(".color-picker-label");
       expect(label.text()).toBe("Background Color");
@@ -136,7 +136,7 @@ describe("ColorPicker", () => {
       });
 
       const button = wrapper.find(".color-button");
-      await button.trigger("click");
+      await button.trigger("mousedown");
 
       // Internal color should be synced with modelValue
       expect(wrapper.vm.internalColor).toBe("#00ff00");
@@ -214,7 +214,7 @@ describe("ColorPicker", () => {
       });
 
       const button = wrapper.find(".color-button");
-      await button.trigger("click");
+      await button.trigger("mousedown");
 
       expect(wrapper.find(".color-picker-container").exists()).toBe(true);
 
@@ -236,7 +236,7 @@ describe("ColorPicker", () => {
       });
 
       const button = wrapper.find(".color-button");
-      await button.trigger("click");
+      await button.trigger("mousedown");
 
       const picker = wrapper.find(".color-picker-container");
       await picker.trigger("click");
@@ -328,10 +328,10 @@ describe("ColorPicker", () => {
 
       const button = wrapper.find(".color-button");
 
-      await button.trigger("click");
-      await button.trigger("click");
-      await button.trigger("click");
-      await button.trigger("click");
+      await button.trigger("mousedown");
+      await button.trigger("mousedown");
+      await button.trigger("mousedown");
+      await button.trigger("mousedown");
 
       // Should be closed after even number of clicks
       expect(wrapper.find(".color-picker-container").exists()).toBe(false);

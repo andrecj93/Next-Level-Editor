@@ -38,7 +38,10 @@ export function useExportActions(options: ExportActionsOptions) {
 
     try {
       exportAsHtml(editorContent.value.innerHTML);
-      showToast("✓ Exported as HTML successfully!");
+      showToast(
+        "✓ Document downloaded as HTML! Check your Downloads folder",
+        "success"
+      );
     } catch (error) {
       console.error("Export error:", error);
       showToast("✗ Failed to export as HTML", "error");
@@ -53,7 +56,10 @@ export function useExportActions(options: ExportActionsOptions) {
 
     try {
       exportAsMarkdown(editorContent.value.innerHTML);
-      showToast("✓ Exported as Markdown successfully!");
+      showToast(
+        "✓ Document downloaded as Markdown! Check your Downloads folder",
+        "success"
+      );
     } catch (error) {
       console.error("Export error:", error);
       showToast("✗ Failed to export as Markdown", "error");
@@ -68,7 +74,10 @@ export function useExportActions(options: ExportActionsOptions) {
 
     try {
       await exportAsPdf(editorContent.value);
-      showToast("✓ Exported as PDF successfully!");
+      showToast(
+        "✓ Document downloaded as PDF! Check your Downloads folder",
+        "success"
+      );
     } catch (error) {
       console.error("Export error:", error);
       showToast("✗ Failed to export as PDF", "error");
@@ -83,7 +92,10 @@ export function useExportActions(options: ExportActionsOptions) {
 
     try {
       await exportAsWord(editorContent.value.innerHTML);
-      showToast("✓ Exported as Word document successfully!");
+      showToast(
+        "✓ Document downloaded as Word! Check your Downloads folder",
+        "success"
+      );
     } catch (error) {
       console.error("Export error:", error);
       showToast("✗ Failed to export as Word", "error");

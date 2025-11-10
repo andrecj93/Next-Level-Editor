@@ -695,7 +695,7 @@ describe("useInsertActions", () => {
       actions.handleInsertPageBreak();
 
       expect(performWithSelection).toHaveBeenCalledTimes(2);
-      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+      expect(captureSnapshot).toHaveBeenCalledTimes(2);
     });
 
     it("should handle empty URL in insertLink", () => {

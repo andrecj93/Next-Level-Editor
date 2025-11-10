@@ -742,11 +742,39 @@ export const outdentListItem = (root: HTMLElement): boolean => {
 };
 
 export const insertLink = (root: HTMLElement, url: string) => {
-  wrapSelection(root, "a", {
-    href: url,
-    target: "_blank",
-    rel: "noopener noreferrer",
-  });
+  const range = getSelectionRange();
+  if (!range) return;
+
+  // If range is collapsed (no text selected), create link with visible text
+  if (range.collapsed) {
+    const element = document.createElement("a");
+    element.href = url;
+    element.target = "_blank";
+    element.rel = "noopener noreferrer";
+    element.textContent = url;
+    element.style.color = "var(--primary-color, #3b82f6)";
+    element.style.textDecoration = "underline";
+    element.style.cursor = "pointer";
+
+    range.insertNode(element);
+
+    // Move cursor after the link
+    const newRange = document.createRange();
+    newRange.setStartAfter(element);
+    newRange.collapse(true);
+    const selection = getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    }
+  } else {
+    // If there's selected text, wrap it as a link
+    wrapSelection(root, "a", {
+      href: url,
+      target: "_blank",
+      rel: "noopener noreferrer",
+    });
+  }
 };
 
 export const insertImage = (

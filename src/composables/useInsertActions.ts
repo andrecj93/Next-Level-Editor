@@ -68,9 +68,24 @@ export function useInsertActions(options: InsertActionsOptions) {
    * Insert image with URL and alt text
    */
   const handleInsertImage = (url: string, alt: string) => {
+    if (!editorContent.value) return;
+
     performWithSelection(
-      (root) => insertImageUtil(root, url, alt),
-      captureSnapshot
+      (root) => {
+        insertImageUtil(root, url, alt);
+        captureSnapshot();
+      },
+      () => {
+        // After action callback
+        nextTick(() => {
+          // Find the newly inserted image and scroll to it
+          const images = editorContent.value?.querySelectorAll("img");
+          if (images && images.length > 0) {
+            const lastImage = images[images.length - 1];
+            lastImage.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        });
+      }
     );
     closeImageUploadModal();
   };
@@ -159,6 +174,8 @@ export function useInsertActions(options: InsertActionsOptions) {
       range.collapse(true);
       selection.removeAllRanges();
       selection.addRange(range);
+
+      captureSnapshot();
     });
 
     closeEmojiPicker();
@@ -199,52 +216,88 @@ export function useInsertActions(options: InsertActionsOptions) {
     cols: number;
     includeHeader: boolean;
   }) => {
-    performWithSelection((root) => {
-      insertTableUtil(root, data.rows, data.cols, data.includeHeader);
+    if (!editorContent.value) return;
 
-      // Show success notification
-      showToast(`✓ Table (${data.rows}×${data.cols}) inserted successfully!`);
+    performWithSelection(
+      (root) => {
+        insertTableUtil(root, data.rows, data.cols, data.includeHeader);
+        captureSnapshot();
 
-      // Find the newly inserted table and scroll to it
-      nextTick(() => {
-        const tables = editorContent.value?.querySelectorAll("table");
-        if (tables && tables.length > 0) {
-          const lastTable = tables[tables.length - 1];
-          lastTable.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      });
-    });
+        // Show success notification
+        showToast(`✓ Table (${data.rows}×${data.cols}) inserted successfully!`);
+      },
+      () => {
+        // After action callback - scroll to the newly inserted table
+        nextTick(() => {
+          const tables = editorContent.value?.querySelectorAll("table");
+          if (tables && tables.length > 0) {
+            const lastTable = tables[tables.length - 1];
+            lastTable.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            // Focus first cell in the table
+            const firstCell = lastTable.querySelector("td, th");
+            if (firstCell instanceof HTMLElement) {
+              firstCell.focus();
+            }
+          }
+        });
+      }
+    );
   };
 
   /**
    * Insert code block with language
    */
   const handleInsertCodeBlock = (data: { code: string; language: string }) => {
-    performWithSelection(() => {
-      const selection = globalThis.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
+    if (!editorContent.value) return;
 
-      const range = selection.getRangeAt(0);
+    performWithSelection(
+      () => {
+        const selection = globalThis.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
 
-      const pre = document.createElement("pre");
-      pre.style.margin = "16px 0";
+        const range = selection.getRangeAt(0);
 
-      const code = document.createElement("code");
-      code.className = `language-${data.language}`;
-      code.textContent = data.code;
+        const pre = document.createElement("pre");
+        pre.style.margin = "16px 0";
+        pre.style.padding = "12px";
+        pre.style.backgroundColor = "var(--secondary-bg, #f3f4f6)";
+        pre.style.borderRadius = "6px";
+        pre.style.overflow = "auto";
 
-      pre.appendChild(code);
+        const code = document.createElement("code");
+        code.className = `language-${data.language}`;
+        code.textContent = data.code;
 
-      range.deleteContents();
-      range.insertNode(pre);
+        pre.appendChild(code);
 
-      // Move cursor after code block
-      const newRange = document.createRange();
-      newRange.setStartAfter(pre);
-      newRange.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-    });
+        range.deleteContents();
+        range.insertNode(pre);
+
+        // Move cursor after code block
+        const newRange = document.createRange();
+        newRange.setStartAfter(pre);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+
+        captureSnapshot();
+        showToast(`✓ Code block inserted (${data.language || "text"})`);
+      },
+      () => {
+        // After action callback - scroll to code block
+        nextTick(() => {
+          const codeBlocks = editorContent.value?.querySelectorAll("pre");
+          if (codeBlocks && codeBlocks.length > 0) {
+            const lastCodeBlock = codeBlocks[codeBlocks.length - 1];
+            lastCodeBlock.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+          }
+        });
+      }
+    );
   };
 
   return {
