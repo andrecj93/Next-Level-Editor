@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { ref } from "vue";
 import { useExportActions } from "../useExportActions";
 import * as exportUtils from "../../utils/export";
@@ -26,7 +26,14 @@ describe("useExportActions", () => {
     mockUpdateCodeContent = vi.fn();
     mockCaptureSnapshot = vi.fn();
 
+    // Suppress expected error logs
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("exportHtml", () => {
