@@ -1,26 +1,20 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="modal-overlay"
-    @click="handleOverlayClick"
-  >
-    <div
+  <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
+    <dialog
+      open
       class="modal-content file-manager-modal"
-      role="dialog"
       aria-labelledby="modal-title"
-      aria-modal="true"
       @click.stop
     >
       <div class="modal-header">
-        <h3 id="modal-title">
-          📁 File Manager
-        </h3>
+        <h3 id="modal-title">📁 File Manager</h3>
         <button
           class="close-button"
           aria-label="Close modal"
+          title="Close File Manager"
           @click="close"
         >
-          ×
+          ✕
         </button>
       </div>
 
@@ -35,7 +29,7 @@
                 multiple
                 style="display: none"
                 @change="handleFileSelect"
-              >
+              />
               <button
                 type="button"
                 class="btn btn-primary"
@@ -83,18 +77,10 @@
           @drop.prevent="handleDrop"
         >
           <div class="drop-zone-content">
-            <div class="drop-icon">
-              📁
-            </div>
-            <p class="drop-text">
-              Drag and drop files here
-            </p>
-            <p class="drop-subtext">
-              or click "Upload Files" to browse
-            </p>
-            <p class="drop-info">
-              Max file size: {{ maxFileSizeFormatted }}
-            </p>
+            <div class="drop-icon">📁</div>
+            <p class="drop-text">Drag and drop files here</p>
+            <p class="drop-subtext">or click "Upload Files" to browse</p>
+            <p class="drop-info">Max file size: {{ maxFileSizeFormatted }}</p>
           </div>
         </div>
 
@@ -108,14 +94,14 @@
           @drop.prevent="handleDrop"
         >
           <!-- Grid View -->
-          <div
-            v-if="viewMode === 'grid'"
-            class="file-grid"
-          >
+          <div v-if="viewMode === 'grid'" class="file-grid">
             <div
               v-for="file in files"
               :key="file.id"
-              :class="['file-card', { selected: selectedFiles.includes(file.id) }]"
+              :class="[
+                'file-card',
+                { selected: selectedFiles.includes(file.id) },
+              ]"
               @click="toggleFileSelection(file.id, $event)"
               @dblclick="insertFile(file)"
             >
@@ -124,26 +110,20 @@
                   type="checkbox"
                   :checked="selectedFiles.includes(file.id)"
                   @click.stop="toggleFileSelection(file.id)"
-                >
+                />
               </div>
               <div class="file-preview">
                 <img
                   v-if="file.thumbnail"
                   :src="file.thumbnail"
                   :alt="file.name"
-                >
-                <div
-                  v-else
-                  class="file-icon"
-                >
+                />
+                <div v-else class="file-icon">
                   {{ getFileIcon(file.type) }}
                 </div>
               </div>
               <div class="file-info">
-                <div
-                  class="file-name"
-                  :title="file.name"
-                >
+                <div class="file-name" :title="file.name">
                   {{ file.name }}
                 </div>
                 <div class="file-meta">
@@ -170,10 +150,7 @@
           </div>
 
           <!-- List View -->
-          <div
-            v-else
-            class="file-list"
-          >
+          <div v-else class="file-list">
             <table>
               <thead>
                 <tr>
@@ -182,18 +159,12 @@
                       type="checkbox"
                       :checked="allFilesSelected"
                       @change="toggleSelectAll"
-                    >
+                    />
                   </th>
                   <th>Name</th>
-                  <th style="width: 100px">
-                    Size
-                  </th>
-                  <th style="width: 150px">
-                    Uploaded
-                  </th>
-                  <th style="width: 120px">
-                    Actions
-                  </th>
+                  <th style="width: 100px">Size</th>
+                  <th style="width: 150px">Uploaded</th>
+                  <th style="width: 120px">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -209,10 +180,12 @@
                       type="checkbox"
                       :checked="selectedFiles.includes(file.id)"
                       @click.stop="toggleFileSelection(file.id)"
-                    >
+                    />
                   </td>
                   <td class="file-name-cell">
-                    <span class="file-icon-inline">{{ getFileIcon(file.type) }}</span>
+                    <span class="file-icon-inline">{{
+                      getFileIcon(file.type)
+                    }}</span>
                     <span :title="file.name">{{ file.name }}</span>
                   </td>
                   <td>{{ formatFileSize(file.size) }}</td>
@@ -240,196 +213,190 @@
         </div>
 
         <!-- Storage Info -->
-        <div
-          v-if="files.length > 0"
-          class="storage-info"
-        >
-          <span>{{ files.length }} file(s) • {{ formatFileSize(totalSize) }} used</span>
+        <div v-if="files.length > 0" class="storage-info">
+          <span
+            >{{ files.length }} file(s) •
+            {{ formatFileSize(totalSize) }} used</span
+          >
         </div>
 
         <!-- Error Message -->
-        <div
-          v-if="errorMessage"
-          class="error-message"
-        >
+        <div v-if="errorMessage" class="error-message">
           ⚠️ {{ errorMessage }}
         </div>
       </div>
 
       <div class="modal-footer">
-        <button
-          class="cancel-button"
-          @click="close"
-        >
-          Close
-        </button>
+        <button class="cancel-button" @click="close">Close</button>
       </div>
-    </div>
+    </dialog>
   </div>
 </template>
-
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { fileManager, type ManagedFile } from '../utils/fileManager'
+import { ref, computed, watch } from "vue";
+import { fileManager, type ManagedFile } from "../utils/fileManager";
 
 interface Props {
-  isOpen: boolean
+  isOpen: boolean;
 }
 
 interface Emits {
-  (e: 'close'): void
-  (e: 'insert', file: ManagedFile): void
+  (e: "close"): void;
+  (e: "insert", file: ManagedFile): void;
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
 
-const fileInput = ref<HTMLInputElement | null>(null)
-const files = ref<ManagedFile[]>([])
-const selectedFiles = ref<string[]>([])
-const viewMode = ref<'grid' | 'list'>('grid')
-const isDragging = ref(false)
-const errorMessage = ref('')
+const fileInput = ref<HTMLInputElement | null>(null);
+const files = ref<ManagedFile[]>([]);
+const selectedFiles = ref<string[]>([]);
+const viewMode = ref<"grid" | "list">("grid");
+const isDragging = ref(false);
+const errorMessage = ref("");
 
-const maxFileSizeFormatted = computed(() => 
+const maxFileSizeFormatted = computed(() =>
   fileManager.formatFileSize(10 * 1024 * 1024)
-)
+);
 
-const totalSize = computed(() => 
-  fileManager.getTotalSize()
-)
+const totalSize = computed(() => fileManager.getTotalSize());
 
-const allFilesSelected = computed(() => 
-  files.value.length > 0 && selectedFiles.value.length === files.value.length
-)
+const allFilesSelected = computed(
+  () =>
+    files.value.length > 0 && selectedFiles.value.length === files.value.length
+);
 
 // Load files when modal opens
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    loadFiles()
-    errorMessage.value = ''
-    selectedFiles.value = []
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen) {
+      loadFiles();
+      errorMessage.value = "";
+      selectedFiles.value = [];
+    }
   }
-})
+);
 
 function loadFiles() {
-  files.value = fileManager.getFiles()
+  files.value = fileManager.getFiles();
 }
 
 async function handleFileSelect(event: Event) {
-  const target = event.target as HTMLInputElement
+  const target = event.target as HTMLInputElement;
   if (target.files) {
-    await uploadFiles(Array.from(target.files))
-    target.value = '' // Reset input
+    await uploadFiles(Array.from(target.files));
+    target.value = ""; // Reset input
   }
 }
 
 async function handleDrop(event: DragEvent) {
-  isDragging.value = false
+  isDragging.value = false;
   if (event.dataTransfer?.files) {
-    await uploadFiles(Array.from(event.dataTransfer.files))
+    await uploadFiles(Array.from(event.dataTransfer.files));
   }
 }
 
 async function uploadFiles(fileList: File[]) {
-  errorMessage.value = ''
-  let successCount = 0
-  let errorCount = 0
+  errorMessage.value = "";
+  let successCount = 0;
+  let errorCount = 0;
 
   for (const file of fileList) {
     try {
-      await fileManager.uploadFile(file)
-      successCount++
+      await fileManager.uploadFile(file);
+      successCount++;
     } catch (error) {
-      errorCount++
-      errorMessage.value = error instanceof Error ? error.message : 'Upload failed'
+      errorCount++;
+      errorMessage.value =
+        error instanceof Error ? error.message : "Upload failed";
     }
   }
 
-  loadFiles()
+  loadFiles();
 
   if (successCount > 0 && errorCount === 0) {
-    errorMessage.value = ''
+    errorMessage.value = "";
   } else if (errorCount > 0) {
-    errorMessage.value = `${successCount} file(s) uploaded, ${errorCount} failed`
+    errorMessage.value = `${successCount} file(s) uploaded, ${errorCount} failed`;
   }
 }
 
 function toggleFileSelection(fileId: string, event?: MouseEvent) {
   if (event && (event.ctrlKey || event.metaKey)) {
     // Multi-select with Ctrl/Cmd
-    const index = selectedFiles.value.indexOf(fileId)
+    const index = selectedFiles.value.indexOf(fileId);
     if (index > -1) {
-      selectedFiles.value.splice(index, 1)
+      selectedFiles.value.splice(index, 1);
     } else {
-      selectedFiles.value.push(fileId)
+      selectedFiles.value.push(fileId);
     }
   } else {
     // Single select
-    const index = selectedFiles.value.indexOf(fileId)
+    const index = selectedFiles.value.indexOf(fileId);
     if (index > -1) {
-      selectedFiles.value = []
+      selectedFiles.value = [];
     } else {
-      selectedFiles.value = [fileId]
+      selectedFiles.value = [fileId];
     }
   }
 }
 
 function toggleSelectAll() {
   if (allFilesSelected.value) {
-    selectedFiles.value = []
+    selectedFiles.value = [];
   } else {
-    selectedFiles.value = files.value.map(f => f.id)
+    selectedFiles.value = files.value.map((f) => f.id);
   }
 }
 
 function deleteFile(fileId: string) {
-  if (confirm('Delete this file?')) {
-    fileManager.deleteFile(fileId)
-    selectedFiles.value = selectedFiles.value.filter(id => id !== fileId)
-    loadFiles()
+  if (confirm("Delete this file?")) {
+    fileManager.deleteFile(fileId);
+    selectedFiles.value = selectedFiles.value.filter((id) => id !== fileId);
+    loadFiles();
   }
 }
 
 function deleteSelected() {
   if (confirm(`Delete ${selectedFiles.value.length} file(s)?`)) {
-    fileManager.deleteFiles(selectedFiles.value)
-    selectedFiles.value = []
-    loadFiles()
+    fileManager.deleteFiles(selectedFiles.value);
+    selectedFiles.value = [];
+    loadFiles();
   }
 }
 
 function insertFile(file: ManagedFile) {
-  emit('insert', file)
-  close()
+  emit("insert", file);
+  close();
 }
 
 function getFileIcon(type: string): string {
-  return fileManager.getFileIcon(type)
+  return fileManager.getFileIcon(type);
 }
 
 function formatFileSize(bytes: number): string {
-  return fileManager.formatFileSize(bytes)
+  return fileManager.formatFileSize(bytes);
 }
 
 function formatDate(date: Date): string {
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
-  if (days === 0) return 'Today'
-  if (days === 1) return 'Yesterday'
-  if (days < 7) return `${days} days ago`
-  
-  return date.toLocaleDateString()
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+
+  return date.toLocaleDateString();
 }
 
 function handleOverlayClick() {
-  close()
+  close();
 }
 
 function close() {
-  emit('close')
+  emit("close");
 }
 </script>
 
@@ -440,6 +407,50 @@ function close() {
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--editor-border);
+  background: var(--toolbar-bg);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--toolbar-text);
+}
+
+.close-button {
+  padding: 8px;
+  border: none;
+  background: transparent;
+  color: var(--toolbar-text);
+  cursor: pointer;
+  font-size: 24px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.close-button:hover {
+  background: var(--editor-border);
+  color: var(--toolbar-accent);
+  transform: scale(1.1);
+}
+
+.close-button:active {
+  transform: scale(0.95);
 }
 
 .file-manager-body {
@@ -567,7 +578,7 @@ function close() {
 }
 
 .file-container.drag-over::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: rgba(59, 130, 246, 0.1);

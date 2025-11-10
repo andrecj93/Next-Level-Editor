@@ -51,11 +51,10 @@ export function useFindReplace(options: FindReplaceOptions) {
     const selection = globalThis.getSelection();
     if (!selection) return;
 
-    // Using non-standard window.find() - widely supported but deprecated
-    // Modern alternative would require manual text search and highlighting
     try {
+      // Using native window.find() to search in the editor
       // @ts-expect-error - window.find is non-standard but widely supported
-      globalThis.find(
+      const found = globalThis.find(
         data.findText,
         false,
         data.direction === "previous",
@@ -64,6 +63,21 @@ export function useFindReplace(options: FindReplaceOptions) {
         true,
         false
       );
+
+      // If found, scroll the selected element into view
+      if (found && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const tempSpan = document.createElement("span");
+        range.insertNode(tempSpan);
+
+        tempSpan.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+
+        // Clean up the temporary span
+        tempSpan.remove();
+      }
     } catch (error) {
       console.warn("Find operation not supported in this browser:", error);
     }

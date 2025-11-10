@@ -22,7 +22,7 @@ export const wordCountPlugin: EditorPlugin = createPlugin({
       title: 'Show Word Count',
       onClick: function(this: { getContent: () => string }) {
         const content = this.getContent()
-        const text = content.replace(/<[^>]*>/g, '')
+        const text = content.replaceAll(/<[^>]*>/g, '')
         const words = text.trim().split(/\s+/).filter(w => w.length > 0).length
         alert(`Word Count: ${words}`)
       }
