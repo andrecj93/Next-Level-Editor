@@ -3,29 +3,34 @@
  * These examples demonstrate image and video embedding capabilities
  */
 
-import type { ExampleTemplate } from './exampleTemplates'
+import type { ExampleTemplate } from "./exampleTemplates";
 
 /**
  * Simple base64 encoded placeholder images for examples
  * These are minimal SVG placeholders to demonstrate image functionality
  */
 export const placeholderImages = {
-  product: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzY2N2VlYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZHVjdCBJbWFnZTwvdGV4dD48L3N2Zz4=',
-  travel: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzJlY2M3MSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjgiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+VHJhdmVsIFBob3RvPC90ZXh0Pjwvc3ZnPg==',
-  recipe: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9IjM1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNTAwIiBoZWlnaHQ9IjM1MCIgZmlsbD0iI2YzOWMxMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjYiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UmVjaXBlIEltYWdlPC90ZXh0Pjwvc3ZnPg==',
-  portfolio: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzliNTliNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjIiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZmlsZSBQaG90bzwvdGV4dD48L3N2Zz4=',
-  screenshot: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzM0OThkYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMzAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+U2NyZWVuc2hvdDwvdGV4dD48L3N2Zz4='
-}
+  product:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzY2N2VlYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZHVjdCBJbWFnZTwvdGV4dD48L3N2Zz4=",
+  travel:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzJlY2M3MSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjgiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+VHJhdmVsIFBob3RvPC90ZXh0Pjwvc3ZnPg==",
+  recipe:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9IjM1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNTAwIiBoZWlnaHQ9IjM1MCIgZmlsbD0iI2YzOWMxMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjYiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UmVjaXBlIEltYWdlPC90ZXh0Pjwvc3ZnPg==",
+  portfolio:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzliNTliNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjIiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZmlsZSBQaG90bzwvdGV4dD48L3N2Zz4=",
+  screenshot:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzM0OThkYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMzAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+U2NyZWVuc2hvdDwvdGV4dD48L3N2Zz4=",
+};
 
 /**
  * Media-rich example templates
  */
 export const mediaExamples: ExampleTemplate[] = [
   {
-    id: 'product-showcase',
-    name: 'Product Showcase',
-    icon: '🛍️',
-    description: 'Product page with images and features',
+    id: "product-showcase",
+    name: "Product Showcase",
+    icon: "🛍️",
+    description: "Product page with images and features",
     content: `<h1>Premium Wireless Headphones 🎧</h1>
 
 <div style="text-align: center; margin: 20px 0;">
@@ -106,13 +111,13 @@ export const mediaExamples: ExampleTemplate[] = [
 <p style="text-align: center; margin-top: 30px;">
   <strong>Ready to upgrade your audio experience?</strong><br>
   <a href="#" style="display: inline-block; background: #667eea; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 10px;">Add to Cart</a>
-</p>`
+</p>`,
   },
   {
-    id: 'travel-blog',
-    name: 'Travel Blog',
-    icon: '✈️',
-    description: 'Travel article with photos and tips',
+    id: "travel-blog",
+    name: "Travel Blog",
+    icon: "✈️",
+    description: "Travel article with photos and tips",
     content: `<h1>7 Days in Tokyo: A Complete Travel Guide 🗾</h1>
 <p><em>Published on November 7, 2024 • 12 min read • Travel Guide</em></p>
 
@@ -244,13 +249,13 @@ Total per day:                 ¥8,000-12,000
 <p style="text-align: center; margin-top: 30px; font-style: italic;">
 Happy travels! 🌏✈️<br>
 <em>- Your Travel Guide</em>
-</p>`
+</p>`,
   },
   {
-    id: 'recipe',
-    name: 'Recipe Card',
-    icon: '🍳',
-    description: 'Cooking recipe with step-by-step images',
+    id: "recipe",
+    name: "Recipe Card",
+    icon: "🍳",
+    description: "Cooking recipe with step-by-step images",
     content: `<h1>Perfect Chocolate Chip Cookies 🍪</h1>
 
 <div style="text-align: center; margin: 30px 0;">
@@ -461,13 +466,13 @@ Happy travels! 🌏✈️<br>
 <p style="text-align: center; margin-top: 30px;">
 <strong>🍪 Enjoy your delicious homemade cookies! 🍪</strong><br>
 <em>Share your baking results with us using #PerfectCookies</em>
-</p>`
+</p>`,
   },
   {
-    id: 'portfolio',
-    name: 'Portfolio/Resume',
-    icon: '👔',
-    description: 'Professional portfolio with profile image',
+    id: "portfolio-media",
+    name: "Portfolio/Resume",
+    icon: "👔",
+    description: "Professional portfolio with profile image",
     content: `<h1>Jane Smith - Full Stack Developer 💻</h1>
 
 <div style="text-align: center; margin: 30px 0;">
@@ -659,13 +664,13 @@ Happy travels! 🌏✈️<br>
   📧 <a href="mailto:jane.smith@example.com">jane.smith@example.com</a><br>
   📱 +1 (555) 123-4567<br>
   📍 San Francisco, CA
-</p>`
+</p>`,
   },
   {
-    id: 'tutorial',
-    name: 'Tutorial Guide',
-    icon: '📖',
-    description: 'Step-by-step tutorial with screenshots and video',
+    id: "tutorial",
+    name: "Tutorial Guide",
+    icon: "📖",
+    description: "Step-by-step tutorial with screenshots and video",
     content: `<h1>Building Your First Vue.js App: Complete Tutorial 🚀</h1>
 
 <div style="text-align: center; margin: 30px 0;">
@@ -1027,20 +1032,20 @@ body {
 <strong>🎊 You're now a Vue.js developer! 🎊</strong><br><br>
 <em>Keep building, keep learning, and don't forget to share your projects!</em><br>
 #VueJS #WebDevelopment #Tutorial
-</p>`
-  }
-]
+</p>`,
+  },
+];
 
 /**
  * Get a media example by ID
  */
 export function getMediaExampleById(id: string): ExampleTemplate | undefined {
-  return mediaExamples.find(example => example.id === id)
+  return mediaExamples.find((example) => example.id === id);
 }
 
 /**
  * Get all media examples
  */
 export function getAllMediaExamples(): ExampleTemplate[] {
-  return mediaExamples
+  return mediaExamples;
 }

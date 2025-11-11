@@ -10,7 +10,7 @@
         <p class="header-subtitle">
           A <strong>professional-grade</strong> WYSIWYG editor for Vue.js 3 with
           modern features.
-          <br />
+          <br>
           Inspired by <span class="brand">CKEditor</span>,
           <span class="brand">Notion</span>, and
           <span class="brand">Medium</span>.
@@ -203,7 +203,7 @@
                   min="50"
                   max="100"
                   class="config-slider"
-                />
+                >
                 <select v-model="editorConfig.widthUnit" class="unit-selector">
                   <option value="%">%</option>
                   <option value="px">px</option>
@@ -226,7 +226,7 @@
                   max="1000"
                   step="50"
                   class="config-slider"
-                />
+                >
                 <select v-model="editorConfig.heightUnit" class="unit-selector">
                   <option value="px">px</option>
                   <option value="vh">vh</option>
@@ -244,7 +244,7 @@
                     v-model="editorConfig.showWritingStats"
                     type="checkbox"
                     class="toggle-checkbox"
-                  />
+                  >
                   <span class="toggle-switch" />
                   <span class="toggle-text">📊 Writing Statistics</span>
                 </label>
@@ -256,7 +256,7 @@
                     v-model="editorConfig.enableComments"
                     type="checkbox"
                     class="toggle-checkbox"
-                  />
+                  >
                   <span class="toggle-switch" />
                   <span class="toggle-text">💬 Comments System</span>
                 </label>
@@ -268,7 +268,7 @@
                     v-model="editorConfig.enableVariables"
                     type="checkbox"
                     class="toggle-checkbox"
-                  />
+                  >
                   <span class="toggle-switch" />
                   <span class="toggle-text">🔤 Variable Autocomplete</span>
                 </label>
@@ -283,7 +283,7 @@
                 type="text"
                 class="config-input"
                 placeholder="Enter placeholder text..."
-              />
+              >
             </div>
 
             <!-- Reset Button -->

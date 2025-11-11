@@ -17,7 +17,7 @@ export const exampleTemplates: ExampleTemplate[] = [
     name: "Empty Document",
     icon: "📄",
     description: "Start from scratch",
-    content: `<p><br></p>`,
+    content: `<h2>New Document</h2><p><br></p>`,
   },
   {
     id: "showcase",
@@ -1143,7 +1143,7 @@ Interactive analytics dashboard with real-time data visualization, custom report
   {
     id: "resume",
     name: "Resume/CV",
-    icon: "📄",
+    icon: "👤",
     description: "Professional resume template",
     content: `<h1 style="text-align: center;">MARIA SANTOS</h1>
 <p style="text-align: center;">
@@ -1631,7 +1631,7 @@ export function getTemplateById(id: string): ExampleTemplate | undefined {
 }
 
 export function getDefaultTemplate(): ExampleTemplate {
-  return exampleTemplates[0]; // Return showcase template by default
+  return exampleTemplates[1]; // Return showcase template by default
 }
 
 /**

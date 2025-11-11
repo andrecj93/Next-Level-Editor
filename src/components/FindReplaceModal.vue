@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/html-self-closing -->
 <template>
   <teleport to="body">
     <transition name="modal-fade">
