@@ -4,15 +4,21 @@
     class="shortcut-customization-modal-overlay"
     @click.self="close"
   >
-    <div
+    <dialog
+      open
       class="shortcut-customization-modal"
-      role="dialog"
       aria-labelledby="shortcut-modal-title"
     >
       <!-- Header -->
       <div class="modal-header">
-        <h2 id="shortcut-modal-title">⌨️ Keyboard Shortcuts</h2>
-        <button class="close-button" @click="close" aria-label="Close">
+        <h2 id="shortcut-modal-title">
+          ⌨️ Keyboard Shortcuts
+        </h2>
+        <button
+          class="close-button"
+          aria-label="Close"
+          @click="close"
+        >
           ×
         </button>
       </div>
@@ -25,21 +31,30 @@
           class="search-input"
           placeholder="Search shortcuts..."
           aria-label="Search shortcuts"
-        />
+        >
         <select
           v-model="selectedCategory"
           class="category-filter"
           aria-label="Filter by category"
         >
-          <option value="">All Categories</option>
-          <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+          <option value="">
+            All Categories
+          </option>
+          <option
+            v-for="cat in categories"
+            :key="cat.id"
+            :value="cat.id"
+          >
             {{ cat.name }}
           </option>
         </select>
       </div>
 
       <!-- Conflicts Warning -->
-      <div v-if="conflicts.length > 0" class="conflicts-warning">
+      <div
+        v-if="conflicts.length > 0"
+        class="conflicts-warning"
+      >
         <strong>⚠️ {{ conflicts.length }} Conflict(s) Detected</strong>
         <p>
           Multiple shortcuts are using the same keys. Please resolve conflicts
@@ -83,54 +98,74 @@
             <button
               v-if="shortcut.customizable"
               class="action-button"
-              @click="startCustomizing(shortcut)"
               :aria-label="`Customize ${shortcut.description}`"
+              @click="startCustomizing(shortcut)"
             >
               ✏️ Edit
             </button>
             <button
               v-if="hasCustomBinding(shortcut.id)"
               class="action-button reset"
-              @click="resetShortcut(shortcut.id)"
               :aria-label="`Reset ${shortcut.description} to default`"
+              @click="resetShortcut(shortcut.id)"
             >
               🔄 Reset
             </button>
             <button
               class="action-button toggle"
-              @click="toggleShortcut(shortcut.id)"
               :aria-label="
                 shortcut.enabled
                   ? `Disable ${shortcut.description}`
                   : `Enable ${shortcut.description}`
               "
+              @click="toggleShortcut(shortcut.id)"
             >
               {{ shortcut.enabled ? "✅" : "❌" }}
             </button>
           </div>
         </div>
 
-        <div v-if="filteredShortcuts.length === 0" class="no-results">
+        <div
+          v-if="filteredShortcuts.length === 0"
+          class="no-results"
+        >
           No shortcuts found matching "{{ searchQuery }}"
         </div>
       </div>
 
       <!-- Customization Dialog -->
-      <div v-if="customizingShortcut" class="customization-dialog">
+      <div
+        v-if="customizingShortcut"
+        class="customization-dialog"
+      >
         <div class="dialog-content">
           <h3>Customize {{ customizingShortcut.description }}</h3>
           <p>Press the new key combination you want to use...</p>
           <div class="recording-keys">
-            <span v-if="recordedKeys.length === 0" class="hint"
-              >Waiting for keys...</span
+            <span
+              v-if="recordedKeys.length === 0"
+              class="hint"
             >
-            <span v-else class="recorded-keys">{{
-              recordedKeys.join(" + ")
-            }}</span>
+              Waiting for keys...
+            </span>
+            <span
+              v-else
+              class="recorded-keys"
+            >
+              {{ recordedKeys.join(" + ") }}
+            </span>
           </div>
           <div class="dialog-actions">
-            <button class="dialog-button" @click="saveCustomKeys">Save</button>
-            <button class="dialog-button cancel" @click="cancelCustomization">
+            <button
+              class="dialog-button"
+              @click="saveCustomKeys"
+            >
+              Save
+            </button>
+            <button
+              class="dialog-button cancel"
+              @click="cancelCustomization"
+            >
               Cancel
             </button>
           </div>
@@ -139,14 +174,32 @@
 
       <!-- Footer Actions -->
       <div class="modal-footer">
-        <button class="footer-button" @click="exportBindings">📥 Export</button>
-        <button class="footer-button" @click="importBindings">📤 Import</button>
-        <button class="footer-button danger" @click="resetAll">
+        <button
+          class="footer-button"
+          @click="exportBindings"
+        >
+          📥 Export
+        </button>
+        <button
+          class="footer-button"
+          @click="importBindings"
+        >
+          📤 Import
+        </button>
+        <button
+          class="footer-button danger"
+          @click="resetAll"
+        >
           🔄 Reset All
         </button>
-        <button class="footer-button primary" @click="close">Done</button>
+        <button
+          class="footer-button primary"
+          @click="close"
+        >
+          Done
+        </button>
       </div>
-    </div>
+    </dialog>
   </div>
 </template>
 
@@ -511,8 +564,8 @@ onUnmounted(() => {
 
 .shortcut-category-badge {
   padding: 2px 8px;
-  background: var(--color-primary, #007bff);
-  color: white;
+  background: var(--color-primary, #0056b3);
+  color: #ffffff;
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
@@ -636,8 +689,8 @@ onUnmounted(() => {
 }
 
 .dialog-button:not(.cancel) {
-  background: var(--color-primary, #007bff);
-  color: white;
+  background: var(--color-primary, #0056b3);
+  color: #ffffff;
 }
 
 .dialog-button.cancel {
@@ -673,9 +726,9 @@ onUnmounted(() => {
 }
 
 .footer-button.primary {
-  background: var(--color-primary, #007bff);
-  color: white;
-  border-color: var(--color-primary, #007bff);
+  background: var(--color-primary, #0056b3);
+  color: #ffffff;
+  border-color: var(--color-primary, #0056b3);
 }
 
 .footer-button.primary:hover {

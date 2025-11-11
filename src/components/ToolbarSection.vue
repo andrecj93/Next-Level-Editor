@@ -19,7 +19,10 @@
   </div>
 
   <!-- Button Group Section -->
-  <div v-else-if="type === 'buttons'" class="toolbar-group">
+  <div
+    v-else-if="type === 'buttons'"
+    class="toolbar-group"
+  >
     <button
       v-for="action in items"
       :key="action.id"

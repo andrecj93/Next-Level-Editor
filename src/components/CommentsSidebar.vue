@@ -1,14 +1,24 @@
 <template>
-  <div class="comments-sidebar" :class="{ 'comments-sidebar-open': isOpen }">
+  <div
+    class="comments-sidebar"
+    :class="{ 'comments-sidebar-open': isOpen }"
+  >
     <!-- Header -->
     <div class="comments-sidebar-header">
-      <h3 class="comments-sidebar-title">Comments</h3>
+      <h3 class="comments-sidebar-title">
+        Comments
+      </h3>
       <button
         class="comments-sidebar-close"
-        @click="closeSidebar"
         aria-label="Close comments sidebar"
+        @click="closeSidebar"
       >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="none"
+        >
           <path
             d="M15 5L5 15M5 5l10 10"
             stroke="currentColor"
@@ -43,7 +53,12 @@
     <div class="comments-thread-list">
       <template v-if="currentThreads.length === 0">
         <div class="comments-empty-state">
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 48 48"
+            fill="none"
+          >
             <path
               d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 27.1 4.7 30.05 5.95 32.7L4 44L15.3 42.05C17.95 43.3 20.9 44 24 44Z"
               stroke="currentColor"
@@ -89,10 +104,15 @@
     <button
       v-if="activeTab === 'open'"
       class="comments-fab"
-      @click="createNewComment"
       aria-label="Add new comment"
+      @click="createNewComment"
     >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+      >
         <path
           d="M12 5v14m-7-7h14"
           stroke="currentColor"

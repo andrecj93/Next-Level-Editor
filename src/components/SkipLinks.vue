@@ -1,5 +1,8 @@
 <template>
-  <nav class="skip-links" aria-label="Skip links">
+  <nav
+    class="skip-links"
+    aria-label="Skip links"
+  >
     <a
       v-for="link in links"
       :key="link.id"

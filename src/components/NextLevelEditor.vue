@@ -10,7 +10,10 @@
     <AriaLiveRegion />
 
     <!-- Context Hints (Smart Toolbar Feature) -->
-    <div v-if="getContextHints().length > 0" class="context-hints">
+    <div
+      v-if="getContextHints().length > 0"
+      class="context-hints"
+    >
       <span
         v-for="(hint, index) in getContextHints()"
         :key="index"
@@ -73,10 +76,16 @@
     />
 
     <!-- Word Count Footer -->
-    <EditorFooter :word-count="wordCount" :character-count="characterCount" />
+    <EditorFooter
+      :word-count="wordCount"
+      :character-count="characterCount"
+    />
 
     <!-- Floating Toolbar -->
-    <FloatingToolbar :show="showFloatingToolbar" :actions="floatingActions" />
+    <FloatingToolbar
+      :show="showFloatingToolbar"
+      :actions="floatingActions"
+    />
 
     <!-- Context Menu -->
     <ContextMenu
@@ -290,7 +299,7 @@ const rememberSelection = () => {
 const { theme, toggleTheme: toggleThemeComposable } = useTheme();
 
 // Accessibility (WCAG AAA)
-const { announce } = useAccessibility();
+useAccessibility();
 
 // Writing Assistant (opt-in feature)
 const writingAssistant = props.showWritingStats ? useWritingAssistant() : null;

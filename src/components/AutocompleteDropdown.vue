@@ -24,7 +24,10 @@
       }}</span>
     </div>
 
-    <div v-if="showHelpText" class="dropdown-footer">
+    <div
+      v-if="showHelpText"
+      class="dropdown-footer"
+    >
       <span class="help-text">
         <kbd>↑</kbd><kbd>↓</kbd> Navigate • <kbd>Enter</kbd> Select •
         <kbd>Esc</kbd> Close

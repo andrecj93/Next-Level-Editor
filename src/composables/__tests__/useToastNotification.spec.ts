@@ -194,10 +194,8 @@ describe("useToastNotification", () => {
         vi.advanceTimersByTime(1000);
 
         // Update progress manually (simulating interval)
-        const toast = toasts.value.find((t) => t.id === id);
-        if (toast) {
-          toast.progress = 33.33; // ~1 second of 3 seconds
-        }
+        const currentToast = toasts.value[0];
+        currentToast.progress = 33.33; // ~1 second of 3 seconds
 
         pauseToast(id);
         expect(toasts.value[0].paused).toBe(true);
@@ -473,13 +471,15 @@ describe("useToastNotification", () => {
       it("should handle pausing non-existent toast gracefully", () => {
         const { pauseToast } = useToastNotification();
 
-        expect(() => pauseToast("non-existent-id")).not.toThrow();
+        pauseToast("non-existent-id");
+        // Should not throw
       });
 
       it("should handle resuming non-existent toast gracefully", () => {
         const { resumeToast } = useToastNotification();
 
-        expect(() => resumeToast("non-existent-id")).not.toThrow();
+        resumeToast("non-existent-id");
+        // Should not throw
       });
 
       it("should generate unique IDs for each toast", () => {
@@ -489,10 +489,13 @@ describe("useToastNotification", () => {
         addToast("Toast 2");
         addToast("Toast 3");
 
-        const ids = toasts.value.map((t) => t.id);
-        const uniqueIds = new Set(ids);
+        const id1 = toasts.value[0].id;
+        const id2 = toasts.value[1].id;
+        const id3 = toasts.value[2].id;
 
-        expect(uniqueIds.size).toBe(3);
+        expect(id1).not.toBe(id2);
+        expect(id2).not.toBe(id3);
+        expect(id1).not.toBe(id3);
       });
     });
 

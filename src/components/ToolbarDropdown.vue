@@ -1,5 +1,9 @@
 <template>
-  <div ref="dropdownRef" class="toolbar-dropdown" :class="{ open: isOpen }">
+  <div
+    ref="dropdownRef"
+    class="toolbar-dropdown"
+    :class="{ open: isOpen }"
+  >
     <button
       class="dropdown-trigger"
       :class="{ active: hasActiveItem }"
@@ -10,15 +14,29 @@
       :disabled="disabled"
       @click.stop="!disabled ? toggle() : null"
     >
-      <span v-if="icon" class="dropdown-icon" v-html="icon" />
+      <span
+        v-if="icon"
+        class="dropdown-icon"
+        v-html="icon"
+      />
       <span class="dropdown-label">{{ displayLabel }}</span>
       <span class="dropdown-arrow">▼</span>
     </button>
 
     <transition name="dropdown-fade">
-      <div v-if="isOpen" class="dropdown-menu" :style="menuStyle">
-        <div v-for="(item, index) in items" :key="item.id || index">
-          <div v-if="item.divider" class="dropdown-divider" />
+      <div
+        v-if="isOpen"
+        class="dropdown-menu"
+        :style="menuStyle"
+      >
+        <div
+          v-for="(item, index) in items"
+          :key="item.id || index"
+        >
+          <div
+            v-if="item.divider"
+            class="dropdown-divider"
+          />
           <button
             v-else
             class="dropdown-item"
@@ -27,9 +45,16 @@
             @mousedown.prevent
             @click="handleItemClick(item)"
           >
-            <span v-if="item.icon" class="item-icon" v-html="item.icon" />
+            <span
+              v-if="item.icon"
+              class="item-icon"
+              v-html="item.icon"
+            />
             <span class="item-label">{{ item.label }}</span>
-            <span v-if="item.shortcut" class="item-shortcut">{{
+            <span
+              v-if="item.shortcut"
+              class="item-shortcut"
+            >{{
               item.shortcut
             }}</span>
           </button>

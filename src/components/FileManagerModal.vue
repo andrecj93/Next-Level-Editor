@@ -1,5 +1,9 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
+  <div
+    v-if="isOpen"
+    class="modal-overlay"
+    @click="handleOverlayClick"
+  >
     <dialog
       open
       class="modal-content file-manager-modal"
@@ -7,7 +11,9 @@
       @click.stop
     >
       <div class="modal-header">
-        <h3 id="modal-title">📁 File Manager</h3>
+        <h3 id="modal-title">
+          📁 File Manager
+        </h3>
         <button
           class="close-button"
           aria-label="Close modal"
@@ -29,7 +35,7 @@
                 multiple
                 style="display: none"
                 @change="handleFileSelect"
-              />
+              >
               <button
                 type="button"
                 class="btn btn-primary"
@@ -77,10 +83,18 @@
           @drop.prevent="handleDrop"
         >
           <div class="drop-zone-content">
-            <div class="drop-icon">📁</div>
-            <p class="drop-text">Drag and drop files here</p>
-            <p class="drop-subtext">or click "Upload Files" to browse</p>
-            <p class="drop-info">Max file size: {{ maxFileSizeFormatted }}</p>
+            <div class="drop-icon">
+              📁
+            </div>
+            <p class="drop-text">
+              Drag and drop files here
+            </p>
+            <p class="drop-subtext">
+              or click "Upload Files" to browse
+            </p>
+            <p class="drop-info">
+              Max file size: {{ maxFileSizeFormatted }}
+            </p>
           </div>
         </div>
 
@@ -94,7 +108,10 @@
           @drop.prevent="handleDrop"
         >
           <!-- Grid View -->
-          <div v-if="viewMode === 'grid'" class="file-grid">
+          <div
+            v-if="viewMode === 'grid'"
+            class="file-grid"
+          >
             <div
               v-for="file in files"
               :key="file.id"
@@ -110,20 +127,26 @@
                   type="checkbox"
                   :checked="selectedFiles.includes(file.id)"
                   @click.stop="toggleFileSelection(file.id)"
-                />
+                >
               </div>
               <div class="file-preview">
                 <img
                   v-if="file.thumbnail"
                   :src="file.thumbnail"
                   :alt="file.name"
-                />
-                <div v-else class="file-icon">
+                >
+                <div
+                  v-else
+                  class="file-icon"
+                >
                   {{ getFileIcon(file.type) }}
                 </div>
               </div>
               <div class="file-info">
-                <div class="file-name" :title="file.name">
+                <div
+                  class="file-name"
+                  :title="file.name"
+                >
                   {{ file.name }}
                 </div>
                 <div class="file-meta">
@@ -150,7 +173,10 @@
           </div>
 
           <!-- List View -->
-          <div v-else class="file-list">
+          <div
+            v-else
+            class="file-list"
+          >
             <table>
               <thead>
                 <tr>
@@ -159,12 +185,18 @@
                       type="checkbox"
                       :checked="allFilesSelected"
                       @change="toggleSelectAll"
-                    />
+                    >
                   </th>
                   <th>Name</th>
-                  <th style="width: 100px">Size</th>
-                  <th style="width: 150px">Uploaded</th>
-                  <th style="width: 120px">Actions</th>
+                  <th style="width: 100px">
+                    Size
+                  </th>
+                  <th style="width: 150px">
+                    Uploaded
+                  </th>
+                  <th style="width: 120px">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -180,7 +212,7 @@
                       type="checkbox"
                       :checked="selectedFiles.includes(file.id)"
                       @click.stop="toggleFileSelection(file.id)"
-                    />
+                    >
                   </td>
                   <td class="file-name-cell">
                     <span class="file-icon-inline">{{
@@ -213,21 +245,30 @@
         </div>
 
         <!-- Storage Info -->
-        <div v-if="files.length > 0" class="storage-info">
-          <span
-            >{{ files.length }} file(s) •
-            {{ formatFileSize(totalSize) }} used</span
-          >
+        <div
+          v-if="files.length > 0"
+          class="storage-info"
+        >
+          <span>{{ files.length }} file(s) •
+            {{ formatFileSize(totalSize) }} used</span>
         </div>
 
         <!-- Error Message -->
-        <div v-if="errorMessage" class="error-message">
+        <div
+          v-if="errorMessage"
+          class="error-message"
+        >
           ⚠️ {{ errorMessage }}
         </div>
       </div>
 
       <div class="modal-footer">
-        <button class="cancel-button" @click="close">Close</button>
+        <button
+          class="cancel-button"
+          @click="close"
+        >
+          Close
+        </button>
       </div>
     </dialog>
   </div>
@@ -501,7 +542,7 @@ function close() {
 
 .btn-primary {
   background: var(--primary-color);
-  color: white;
+  color: #ffffff;
 }
 
 .btn-primary:hover {
@@ -509,8 +550,8 @@ function close() {
 }
 
 .btn-danger {
-  background: #ef4444;
-  color: white;
+  background: #dc2626; /* Darker red for better contrast */
+  color: #ffffff;
 }
 
 .btn-danger:hover {
@@ -705,16 +746,16 @@ function close() {
   color: var(--text-color);
 }
 
-.btn-icon:hover {
+.btn-icon.btn-primary:hover {
   background: var(--primary-color);
-  color: white;
+  color: #ffffff;
   border-color: var(--primary-color);
 }
 
 .btn-icon.btn-danger:hover {
-  background: #ef4444;
-  border-color: #ef4444;
-  color: white;
+  background: #dc2626; /* Darker red for better contrast */
+  border-color: #dc2626;
+  color: #ffffff;
 }
 
 /* List View */

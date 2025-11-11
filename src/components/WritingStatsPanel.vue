@@ -1,5 +1,8 @@
 <template>
-  <div class="writing-stats-panel" :class="{ collapsed: isCollapsed }">
+  <div
+    class="writing-stats-panel"
+    :class="{ collapsed: isCollapsed }"
+  >
     <!-- Header -->
     <div class="stats-header">
       <h3 class="stats-title">
@@ -16,10 +19,18 @@
     </div>
 
     <!-- Content (hidden when collapsed) -->
-    <div v-if="!isCollapsed" class="stats-content">
+    <div
+      v-if="!isCollapsed"
+      class="stats-content"
+    >
       <!-- Basic Stats -->
-      <div v-if="stats" class="stats-section">
-        <h4 class="section-title">📝 Basic Stats</h4>
+      <div
+        v-if="stats"
+        class="stats-section"
+      >
+        <h4 class="section-title">
+          📝 Basic Stats
+        </h4>
         <div class="stats-grid">
           <div class="stat-item">
             <span class="stat-label">Words</span>
@@ -51,8 +62,13 @@
       </div>
 
       <!-- Readability Scores -->
-      <div v-if="readability" class="stats-section">
-        <h4 class="section-title">🎯 Readability</h4>
+      <div
+        v-if="readability"
+        class="stats-section"
+      >
+        <h4 class="section-title">
+          🎯 Readability
+        </h4>
 
         <div class="readability-main">
           <div
@@ -62,7 +78,9 @@
             <div class="score-value">
               {{ readability.fleschReadingEase.toFixed(1) }}
             </div>
-            <div class="score-label">Flesch Reading Ease</div>
+            <div class="score-label">
+              Flesch Reading Ease
+            </div>
             <div class="score-description">
               {{ getReadabilityDescription(readability.fleschReadingEase) }}
             </div>
@@ -71,16 +89,16 @@
             <div class="grade-value">
               {{ Math.round(readability.averageGradeLevel) }}
             </div>
-            <div class="grade-label">Grade Level</div>
+            <div class="grade-label">
+              Grade Level
+            </div>
           </div>
         </div>
 
         <div class="readability-details">
           <div class="detail-item">
             <span>Flesch-Kincaid:</span>
-            <strong
-              >Grade {{ readability.fleschKincaidGrade.toFixed(1) }}</strong
-            >
+            <strong>Grade {{ readability.fleschKincaidGrade.toFixed(1) }}</strong>
           </div>
           <div class="detail-item">
             <span>Gunning Fog:</span>
@@ -92,17 +110,20 @@
           </div>
           <div class="detail-item">
             <span>ARI:</span>
-            <strong
-              >Grade
-              {{ readability.automatedReadabilityIndex.toFixed(1) }}</strong
-            >
+            <strong>Grade
+              {{ readability.automatedReadabilityIndex.toFixed(1) }}</strong>
           </div>
         </div>
       </div>
 
       <!-- Sentence Analysis -->
-      <div v-if="sentenceAnalysis" class="stats-section">
-        <h4 class="section-title">✍️ Sentences</h4>
+      <div
+        v-if="sentenceAnalysis"
+        class="stats-section"
+      >
+        <h4 class="section-title">
+          ✍️ Sentences
+        </h4>
         <div class="sentence-distribution">
           <div class="distribution-bar">
             <div
@@ -145,16 +166,19 @@
           </div>
           <div class="stat-item">
             <span class="stat-label">Longest Sentence</span>
-            <span class="stat-value"
-              >{{ sentenceAnalysis.longestSentence }} words</span
-            >
+            <span class="stat-value">{{ sentenceAnalysis.longestSentence }} words</span>
           </div>
         </div>
       </div>
 
       <!-- Word Analysis -->
-      <div v-if="wordAnalysis" class="stats-section">
-        <h4 class="section-title">📚 Words</h4>
+      <div
+        v-if="wordAnalysis"
+        class="stats-section"
+      >
+        <h4 class="section-title">
+          📚 Words
+        </h4>
         <div class="stats-grid">
           <div class="stat-item">
             <span class="stat-label">Unique Words</span>
@@ -183,7 +207,9 @@
           v-if="wordAnalysis.mostCommonWords.length > 0"
           class="common-words"
         >
-          <div class="common-words-title">Most Common:</div>
+          <div class="common-words-title">
+            Most Common:
+          </div>
           <div class="word-tags">
             <span
               v-for="item in wordAnalysis.mostCommonWords"
@@ -197,47 +223,60 @@
       </div>
 
       <!-- Writing Issues -->
-      <div v-if="issues" class="stats-section issues-section">
-        <h4 class="section-title">⚠️ Issues</h4>
+      <div
+        v-if="issues"
+        class="stats-section issues-section"
+      >
+        <h4 class="section-title">
+          ⚠️ Issues
+        </h4>
 
-        <div v-if="issues.passiveVoice.length > 0" class="issue-group">
+        <div
+          v-if="issues.passiveVoice.length > 0"
+          class="issue-group"
+        >
           <div class="issue-header">
             <span class="issue-icon">🔄</span>
-            <span class="issue-title"
-              >Passive Voice ({{ issues.passiveVoice.length }})</span
-            >
+            <span class="issue-title">Passive Voice ({{ issues.passiveVoice.length }})</span>
           </div>
           <div class="issue-hint">
             Consider using active voice for clearer writing
           </div>
         </div>
 
-        <div v-if="issues.adverbs.length > 0" class="issue-group">
+        <div
+          v-if="issues.adverbs.length > 0"
+          class="issue-group"
+        >
           <div class="issue-header">
             <span class="issue-icon">💭</span>
-            <span class="issue-title"
-              >Weak Adverbs ({{ issues.adverbs.length }})</span
-            >
+            <span class="issue-title">Weak Adverbs ({{ issues.adverbs.length }})</span>
           </div>
-          <div class="issue-hint">Remove or replace with stronger verbs</div>
+          <div class="issue-hint">
+            Remove or replace with stronger verbs
+          </div>
         </div>
 
-        <div v-if="issues.complexWords.length > 0" class="issue-group">
+        <div
+          v-if="issues.complexWords.length > 0"
+          class="issue-group"
+        >
           <div class="issue-header">
             <span class="issue-icon">📖</span>
-            <span class="issue-title"
-              >Complex Words ({{ issues.complexWords.length }})</span
-            >
+            <span class="issue-title">Complex Words ({{ issues.complexWords.length }})</span>
           </div>
-          <div class="issue-hint">Consider simpler alternatives</div>
+          <div class="issue-hint">
+            Consider simpler alternatives
+          </div>
         </div>
 
-        <div v-if="issues.repeatedWords.length > 0" class="issue-group">
+        <div
+          v-if="issues.repeatedWords.length > 0"
+          class="issue-group"
+        >
           <div class="issue-header">
             <span class="issue-icon">🔁</span>
-            <span class="issue-title"
-              >Repeated Words ({{ issues.repeatedWords.length }})</span
-            >
+            <span class="issue-title">Repeated Words ({{ issues.repeatedWords.length }})</span>
           </div>
           <div class="repeated-words">
             <span
@@ -250,28 +289,45 @@
           </div>
         </div>
 
-        <div v-if="issues.cliches.length > 0" class="issue-group">
+        <div
+          v-if="issues.cliches.length > 0"
+          class="issue-group"
+        >
           <div class="issue-header">
             <span class="issue-icon">🎭</span>
-            <span class="issue-title"
-              >Clichés ({{ issues.cliches.length }})</span
-            >
+            <span class="issue-title">Clichés ({{ issues.cliches.length }})</span>
           </div>
-          <div class="issue-hint">Find more original expressions</div>
+          <div class="issue-hint">
+            Find more original expressions
+          </div>
         </div>
 
-        <div v-if="getTotalIssues() === 0" class="no-issues">
+        <div
+          v-if="getTotalIssues() === 0"
+          class="no-issues"
+        >
           ✅ No major writing issues detected
         </div>
       </div>
 
       <!-- SEO Analysis -->
-      <div v-if="seo" class="stats-section seo-section">
-        <h4 class="section-title">🔍 SEO</h4>
+      <div
+        v-if="seo"
+        class="stats-section seo-section"
+      >
+        <h4 class="section-title">
+          🔍 SEO
+        </h4>
 
         <div class="seo-score">
-          <div class="score-circle" :class="getSEOClass(seo.score)">
-            <svg viewBox="0 0 36 36" class="circular-chart">
+          <div
+            class="score-circle"
+            :class="getSEOClass(seo.score)"
+          >
+            <svg
+              viewBox="0 0 36 36"
+              class="circular-chart"
+            >
               <path
                 class="circle-bg"
                 d="M18 2.0845
@@ -285,12 +341,18 @@
                   a 15.9155 15.9155 0 0 1 0 31.831
                   a 15.9155 15.9155 0 0 1 0 -31.831"
               />
-              <text x="18" y="20.35" class="percentage">
+              <text
+                x="18"
+                y="20.35"
+                class="percentage"
+              >
                 {{ Math.round(seo.score) }}
               </text>
             </svg>
           </div>
-          <div class="seo-label">SEO Score</div>
+          <div class="seo-label">
+            SEO Score
+          </div>
         </div>
 
         <div class="seo-details">
@@ -314,8 +376,13 @@
           </div>
         </div>
 
-        <div v-if="seo.recommendedKeywords.length > 0" class="keywords">
-          <div class="keywords-title">Top Keywords:</div>
+        <div
+          v-if="seo.recommendedKeywords.length > 0"
+          class="keywords"
+        >
+          <div class="keywords-title">
+            Top Keywords:
+          </div>
           <div class="keyword-tags">
             <span
               v-for="keyword in seo.recommendedKeywords"
@@ -456,8 +523,8 @@ const getSEOClass = (score: number): string => {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #4c51bf 0%, #5b21b6 100%);
+  color: #ffffff;
 }
 
 .stats-title {
@@ -474,9 +541,9 @@ const getSEOClass = (score: number): string => {
 }
 
 .collapse-btn {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
   border: none;
-  color: white;
+  color: #ffffff;
   width: 28px;
   height: 28px;
   border-radius: 6px;
@@ -559,24 +626,24 @@ const getSEOClass = (score: number): string => {
 }
 
 .score-box.very-easy {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  color: #ffffff;
 }
 .score-box.easy {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  color: #ffffff;
 }
 .score-box.standard {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
+  background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%);
+  color: #ffffff;
 }
 .score-box.fairly-difficult {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #ffffff;
 }
 .score-box.difficult {
   background: linear-gradient(135deg, #7c2d12 0%, #991b1b 100%);
-  color: white;
+  color: #ffffff;
 }
 
 .score-value {

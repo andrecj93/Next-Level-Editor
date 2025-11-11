@@ -160,10 +160,10 @@ export function useSmartAutocomplete(
       let converted = text;
 
       // Opening double quote (after space or start)
-      converted = converted.replace(/(^|\s)"/g, '$1"');
+      converted = converted.replaceAll(/(^|\s)"/g, '$1"');
 
       // Closing double quote (before space, punctuation, or end)
-      converted = converted.replace(/"($|\s|[.,!?;:])/g, '"$1');
+      converted = converted.replaceAll(/"($|\s|[.,!?;:])/g, '"$1');
 
       if (converted !== text) {
         return {
@@ -179,10 +179,10 @@ export function useSmartAutocomplete(
       let converted = text;
 
       // Opening single quote (after space or start) - using hex escape
-      converted = converted.replace(/(^|\s)'/g, "$1\u2018");
+      converted = converted.replaceAll(/(^|\s)'/g, "$1\u2018");
 
       // Closing single quote / apostrophe - using hex escape
-      converted = converted.replace(/'($|\s|[.,!?;:])/g, "\u2019$1");
+      converted = converted.replaceAll(/'($|\s|[.,!?;:])/g, "\u2019$1");
 
       // Apostrophe in contractions (don't, it's, etc.) - using hex escape
       converted = converted.replace(/(\w)'(\w)/g, "$1\u2019$2");

@@ -405,4 +405,8 @@ MIT License - veja LICENSE para mais detalhes.
 
 ---
 
+<!-- markdownlint-disable MD036 -->
+
 **Desenvolvido com ❤️ para Next Level Editor**
+
+<!-- markdownlint-enable MD036 -->

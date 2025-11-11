@@ -1,7 +1,10 @@
 <template>
   <div :class="['editor-container', `view-mode-${viewMode}`]">
     <!-- WYSIWYG Editor Panel (editor mode) -->
-    <div v-if="viewMode === 'editor'" class="editor-panel">
+    <div
+      v-if="viewMode === 'editor'"
+      class="editor-panel"
+    >
       <div
         ref="editorRef"
         class="editor-content"
@@ -45,18 +48,23 @@
       />
     </div>
 
-    <div v-if="viewMode === 'split'" class="split-divider" />
+    <div
+      v-if="viewMode === 'split'"
+      class="split-divider"
+    />
 
     <div
       v-if="viewMode === 'preview' || viewMode === 'split'"
       class="preview-panel"
     >
-      <div class="preview-header">Preview</div>
+      <div class="preview-header">
+        Preview
+      </div>
       <div
         class="preview-content-wrapper"
         v-html="
           htmlContent ||
-          '<p class=\'empty-preview\'>Start typing to see preview...</p>'
+            '<p class=\'empty-preview\'>Start typing to see preview...</p>'
         "
       />
     </div>

@@ -5,7 +5,9 @@
       class="command-menu"
       :style="{ top: `${position.top}px`, left: `${position.left}px` }"
     >
-      <div class="command-menu-header">Quick Actions</div>
+      <div class="command-menu-header">
+        Quick Actions
+      </div>
       <ul>
         <li
           v-for="option in options"

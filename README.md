@@ -14,6 +14,7 @@
 
 ## 📸 Screenshots
 
+<!-- markdownlint-disable MD033 -->
 <table>
   <tr>
     <td align="center">
@@ -30,6 +31,7 @@
     </td>
   </tr>
 </table>
+<!-- markdownlint-enable MD033 -->
 
 ## ✨ Features
 
@@ -555,7 +557,7 @@ npm run test:e2e:debug
 
 ### Test Suites Overview
 
-**Unit Tests (265+ tests with Vitest)**
+#### Unit Tests (265+ tests with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
@@ -571,7 +573,7 @@ npm run test:e2e:debug
 - **Composables** (20+ tests) - Auto-save, command palette, history timeline, loading states, smart toolbar, virtual scroll
 - **File Manager** - Upload, storage, and file management functionality
 
-**End-to-End Tests (23 tests with Playwright)**
+#### End-to-End Tests (23 tests with Playwright)
 
 - **Basic Functionality** - Editor loading, typing, word count
 - **Text Formatting** - Bold, italic, underline, toggle formatting
@@ -661,7 +663,7 @@ npm run test:e2e
 
 ### Project Structure
 
-```
+```text
 next-level-editor/
 ├── src/
 │   ├── components/          # Vue components
@@ -831,6 +833,7 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
    ```
 
 6. **Push and create Pull Request**
+
    ```bash
    git push origin feature/amazing-feature
    # Then open a PR on GitHub
@@ -850,7 +853,7 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
 
 **Commit Message Format:**
 
-```
+```text
 type(scope): subject
 
 - feat: new feature
@@ -948,6 +951,7 @@ Built with inspiration from the best editors in the industry:
 
 ---
 
+<!-- markdownlint-disable MD033 MD036 -->
 <div align="center">
 
 **Made with ❤️ and modern web standards**
@@ -958,3 +962,4 @@ Built with inspiration from the best editors in the industry:
 _If you find this project useful, please consider giving it a ⭐ on GitHub!_
 
 </div>
+<!-- markdownlint-enable MD033 MD036 -->

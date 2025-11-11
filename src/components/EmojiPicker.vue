@@ -1,12 +1,15 @@
 <template>
-  <div v-if="show" class="emoji-picker">
+  <div
+    v-if="show"
+    class="emoji-picker"
+  >
     <div class="emoji-picker-header">
       <input
         v-model="searchQuery"
         type="text"
         class="emoji-search"
         placeholder="Search emoji..."
-      />
+      >
       <button
         class="close-emoji-btn"
         aria-label="Close emoji picker"
@@ -39,7 +42,10 @@
         {{ emoji.emoji }}
       </button>
 
-      <div v-if="filteredEmojis.length === 0" class="no-results">
+      <div
+        v-if="filteredEmojis.length === 0"
+        class="no-results"
+      >
         No emoji found
       </div>
     </div>

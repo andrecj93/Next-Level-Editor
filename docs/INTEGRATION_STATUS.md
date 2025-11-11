@@ -43,9 +43,11 @@ Todas as features do Master UX Transformation Plan foram **implementadas e integ
 - **Exportado em:** `src/index.ts`
 - **Props:** `showWritingStats` (default: false)
 - **Uso:**
+
   ```vue
   <NextLevelEditor v-model="content" :show-writing-stats="true" />
   ```
+
 - **Status:** Integrado e funcional (opt-in)
 
 ### 6. **useComments.ts** ✅ INTEGRADO
@@ -56,9 +58,38 @@ Todas as features do Master UX Transformation Plan foram **implementadas e integ
 - **Exportado em:** `src/index.ts`
 - **Props:** `enableComments` (default: false)
 - **Uso:**
+
   ```vue
   <NextLevelEditor v-model="content" :enable-comments="true" />
   ```
+
+- **Status:** Integrado e funcional (opt-in)
+
+### 7. **useVariables.ts** ✅ INTEGRADO
+
+- **Localização:** `src/composables/useVariables.ts`
+- **Integrado em:** `NextLevelEditor.vue` (linha 313, opt-in)
+- **Componente:** VariableAutocomplete.vue
+- **CSS:** editor-variables.css
+- **Exportado em:** `src/index.ts`
+- **Props:** `enableVariables` (default: false)
+- **Uso:**
+
+  ```vue
+  <NextLevelEditor v-model="content" :enable-variables="true" />
+  ```
+
+- **Funcionalidades:**
+
+  - Sintaxe `{{ variableName }}` para variáveis
+  - Autocomplete inteligente ao digitar `{{`
+  - 16 variáveis pré-definidas (User, Date, Document, Company)
+  - Pills visuais estilizados (similar CKEditor)
+  - Suporte a variáveis customizadas
+  - Print-ready (substitui por valores ao imprimir)
+
+- **Demo:** `variables-demo.html`
+- **Documentação:** `docs/VARIABLES_SYSTEM.md`
 - **Status:** Integrado e funcional (opt-in)
 
 ## 🎨 CSS Importados
@@ -74,7 +105,7 @@ Todos os arquivos CSS foram importados em `NextLevelEditor.css`:
 
 ## 📤 Exports no index.ts
 
-### Composables:
+### Composables
 
 - ✅ `useAccessibility`
 - ✅ `useMobileGestures`
@@ -83,7 +114,7 @@ Todos os arquivos CSS foram importados em `NextLevelEditor.css`:
 - ✅ `useWritingAssistant`
 - ✅ `useComments`
 
-### Componentes:
+### Componentes
 
 - ✅ `AriaLiveRegion`
 - ✅ `SkipLinks`
@@ -92,7 +123,7 @@ Todos os arquivos CSS foram importados em `NextLevelEditor.css`:
 - ✅ `AutocompleteDropdown`
 - ✅ `WritingStatsPanel`
 
-### Types:
+### Types
 
 - ✅ `AriaLive`, `FocusTrapOptions`, `AnnouncementOptions`, `NavigationDirection`
 - ✅ `TextStats`, `ReadabilityScores`, `SentenceAnalysis`, `WordAnalysis`, `WritingIssues`, `SEOAnalysis`, `WritingAssistantOptions`
@@ -167,7 +198,7 @@ comments.addThread("Great point!", ["@user1"]);
 
 ## 📊 Build Statistics
 
-```
+```text
 ✓ built in 3.87s
 CSS: 125.32 kB (gzip: 20.82 kB)
 JS: 1,502.66 kB (gzip: 366.49 kB)
@@ -192,7 +223,7 @@ Modules: 457
 
 ## 🎯 Features Disponíveis
 
-### Sempre Ativas:
+### Sempre Ativas
 
 - ✅ Selection & Insertion (Word-level)
 - ✅ Keyboard Shortcuts (80+)
@@ -212,12 +243,12 @@ Modules: 457
 - ✅ Code Blocks
 - ✅ Emojis
 
-### Opt-in (Props):
+### Opt-in (Props)
 
 - ✅ **Writing Stats** - `:show-writing-stats="true"`
 - ✅ **Comments System** - `:enable-comments="true"`
 
-### Disponíveis via Composables:
+### Disponíveis via Composables
 
 - ✅ Mobile Gestures
 - ✅ Device Detection

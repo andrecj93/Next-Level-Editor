@@ -1,11 +1,22 @@
 <template>
   <teleport to="body">
     <transition name="modal-fade">
-      <div v-if="show" class="modal-overlay" @click="handleOverlayClick">
-        <div class="modal-content html-code-modal" @click.stop>
+      <div
+        v-if="show"
+        class="modal-overlay"
+        @click="handleOverlayClick"
+      >
+        <div
+          class="modal-content html-code-modal"
+          @click.stop
+        >
           <div class="modal-header">
             <h3>HTML Code</h3>
-            <button class="close-btn" aria-label="Close modal" @click="close">
+            <button
+              class="close-btn"
+              aria-label="Close modal"
+              @click="close"
+            >
               ✕
             </button>
           </div>
@@ -14,7 +25,10 @@
             <div class="code-section">
               <div class="code-header">
                 <span class="code-label">Formatted HTML Code:</span>
-                <button class="btn btn-copy" @click="copyToClipboard">
+                <button
+                  class="btn btn-copy"
+                  @click="copyToClipboard"
+                >
                   {{ copyButtonText }}
                 </button>
               </div>
@@ -28,7 +42,12 @@
           </div>
 
           <div class="modal-footer">
-            <button class="btn btn-primary" @click="close">Close</button>
+            <button
+              class="btn btn-primary"
+              @click="close"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>

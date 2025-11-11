@@ -22,7 +22,12 @@
           title="Resolve thread"
           @click.stop="emit('resolve', thread.id)"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+          >
             <path
               d="M13 4L6 11L3 8"
               stroke="currentColor"
@@ -39,7 +44,12 @@
           title="Reopen thread"
           @click.stop="emit('reopen', thread.id)"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+          >
             <path
               d="M3 8h10M8 3v10"
               stroke="currentColor"
@@ -54,7 +64,12 @@
           title="Delete thread"
           @click.stop="handleDelete"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+          >
             <path
               d="M2 4h12M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"
               stroke="currentColor"
@@ -72,13 +87,16 @@
     </div>
 
     <!-- First Comment -->
-    <div v-if="thread.comments[0]" class="comment-item">
+    <div
+      v-if="thread.comments[0]"
+      class="comment-item"
+    >
       <div class="comment-avatar">
         <img
           v-if="thread.comments[0].author.avatarUrl"
           :src="thread.comments[0].author.avatarUrl"
           :alt="thread.comments[0].author.name"
-        />
+        >
         <span v-else>
           {{ getInitials(thread.comments[0].author.name) }}
         </span>
@@ -88,14 +106,20 @@
           class="comment-text"
           v-html="renderCommentContent(thread.comments[0].content)"
         />
-        <span v-if="thread.comments[0].isEdited" class="comment-edited">
+        <span
+          v-if="thread.comments[0].isEdited"
+          class="comment-edited"
+        >
           (edited)
         </span>
       </div>
     </div>
 
     <!-- Reply Count -->
-    <div v-if="thread.comments.length > 1" class="comment-replies-count">
+    <div
+      v-if="thread.comments.length > 1"
+      class="comment-replies-count"
+    >
       {{ thread.comments.length - 1 }}
       {{ thread.comments.length === 2 ? "reply" : "replies" }}
     </div>
@@ -112,7 +136,7 @@
             v-if="comment.author.avatarUrl"
             :src="comment.author.avatarUrl"
             :alt="comment.author.name"
-          />
+          >
           <span v-else>
             {{ getInitials(comment.author.name) }}
           </span>
@@ -130,7 +154,10 @@
             class="comment-text"
             v-html="renderCommentContent(comment.content)"
           />
-          <span v-if="comment.isEdited" class="comment-edited"> (edited) </span>
+          <span
+            v-if="comment.isEdited"
+            class="comment-edited"
+          > (edited) </span>
         </div>
       </div>
     </template>

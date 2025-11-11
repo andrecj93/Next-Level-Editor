@@ -57,7 +57,7 @@
 
 ### **NextLevelEditor.vue**
 
-#### Template:
+#### Template
 
 ```vue
 <template>
@@ -73,7 +73,7 @@
 </template>
 ```
 
-#### Script:
+#### Script
 
 ```typescript
 // Imports
@@ -85,7 +85,7 @@ import AriaLiveRegion from "./AriaLiveRegion.vue";
 const { announce } = useAccessibility();
 ```
 
-#### CSS:
+#### CSS
 
 ```css
 /* Import Design Tokens */

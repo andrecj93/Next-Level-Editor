@@ -1,10 +1,18 @@
 <template>
-  <div v-if="isOpen" class="shortcut-help-overlay" @click.self="close">
+  <div
+    v-if="isOpen"
+    class="shortcut-help-overlay"
+    @click.self="close"
+  >
     <div class="shortcut-help-modal">
       <!-- Header -->
       <div class="modal-header">
         <h2>⌨️ Keyboard Shortcuts Reference</h2>
-        <button class="close-button" aria-label="Close" @click="close">
+        <button
+          class="close-button"
+          aria-label="Close"
+          @click="close"
+        >
           ×
         </button>
       </div>
@@ -17,7 +25,7 @@
           placeholder="Search shortcuts..."
           class="search-input"
           aria-label="Search shortcuts"
-        />
+        >
       </div>
 
       <!-- Shortcuts by Category -->
@@ -50,7 +58,10 @@
           </div>
         </div>
 
-        <div v-if="filteredCategories.length === 0" class="no-results">
+        <div
+          v-if="filteredCategories.length === 0"
+          class="no-results"
+        >
           No shortcuts found matching "{{ searchQuery }}"
         </div>
       </div>
@@ -60,7 +71,10 @@
         <p class="footer-hint">
           Press <kbd>Ctrl</kbd> + <kbd>/</kbd> anytime to open this help
         </p>
-        <button class="customize-button" @click="openCustomization">
+        <button
+          class="customize-button"
+          @click="openCustomization"
+        >
           ⚙️ Customize Shortcuts
         </button>
       </div>
@@ -195,23 +209,23 @@ const openCustomization = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #4c51bf 0%, #5b21b6 100%);
+  color: #ffffff;
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 26px;
   font-weight: 700;
-  color: white;
+  color: #ffffff;
 }
 
 .close-button {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
   border: none;
   font-size: 36px;
   cursor: pointer;
-  color: white;
+  color: #ffffff;
   padding: 0;
   width: 40px;
   height: 40px;
@@ -357,15 +371,15 @@ const openCustomization = () => {
 
 .customize-button {
   padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #4c51bf 0%, #5b21b6 100%);
+  color: #ffffff;
   border: none;
   border-radius: 8px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(76, 81, 191, 0.3);
 }
 
 .customize-button:hover {

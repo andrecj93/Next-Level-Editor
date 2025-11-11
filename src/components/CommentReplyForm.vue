@@ -29,7 +29,7 @@
             v-if="suggestion.avatarUrl"
             :src="suggestion.avatarUrl"
             :alt="suggestion.name"
-          />
+          >
           <span v-else>
             {{ getInitials(suggestion.name) }}
           </span>
@@ -38,7 +38,10 @@
           <div class="comment-mention-name">
             {{ suggestion.name }}
           </div>
-          <div v-if="suggestion.email" class="comment-mention-email">
+          <div
+            v-if="suggestion.email"
+            class="comment-mention-email"
+          >
             {{ suggestion.email }}
           </div>
         </div>
@@ -47,7 +50,11 @@
 
     <!-- Actions -->
     <div class="comment-reply-actions">
-      <button class="comment-reply-cancel" type="button" @click="handleCancel">
+      <button
+        class="comment-reply-cancel"
+        type="button"
+        @click="handleCancel"
+      >
         Cancel
       </button>
       <button

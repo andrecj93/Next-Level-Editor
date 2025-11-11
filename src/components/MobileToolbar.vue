@@ -8,13 +8,24 @@
     <div class="toolbar-header">
       <button
         class="toolbar-toggle touch-target"
-        @click="toggleCollapse"
         :aria-label="isCollapsed ? 'Expand toolbar' : 'Collapse toolbar'"
         :aria-expanded="!isCollapsed"
+        @click="toggleCollapse"
       >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-          <path v-if="isCollapsed" d="M5 8l5 5 5-5H5z" />
-          <path v-else d="M5 12l5-5 5 5H5z" />
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            v-if="isCollapsed"
+            d="M5 8l5 5 5-5H5z"
+          />
+          <path
+            v-else
+            d="M5 12l5-5 5 5H5z"
+          />
         </svg>
       </button>
 
@@ -24,10 +35,15 @@
 
       <button
         class="toolbar-close touch-target"
-        @click="emit('close')"
         aria-label="Close toolbar"
+        @click="emit('close')"
       >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
           <path
             d="M6 6l8 8m0-8l-8 8"
             stroke="currentColor"
@@ -39,7 +55,11 @@
     </div>
 
     <!-- Tab Navigation -->
-    <div v-show="!isCollapsed" class="toolbar-tabs" role="tablist">
+    <div
+      v-show="!isCollapsed"
+      class="toolbar-tabs"
+      role="tablist"
+    >
       <button
         v-for="tab in tabs"
         :key="tab.id"
@@ -50,13 +70,19 @@
         role="tab"
         @click="selectTab(tab.id)"
       >
-        <span class="tab-icon" v-html="tab.icon"></span>
+        <span
+          class="tab-icon"
+          v-html="tab.icon"
+        />
         <span class="tab-label">{{ tab.label }}</span>
       </button>
     </div>
 
     <!-- Tab Content -->
-    <div v-show="!isCollapsed" class="toolbar-content">
+    <div
+      v-show="!isCollapsed"
+      class="toolbar-content"
+    >
       <!-- Format Tab -->
       <div
         v-show="activeTab === 'format'"
@@ -74,7 +100,7 @@
             :title="action.label"
             @click="action.onClick"
           >
-            <span v-html="action.icon"></span>
+            <span v-html="action.icon" />
           </button>
         </div>
       </div>
@@ -94,7 +120,10 @@
             :aria-label="action.label"
             @click="action.onClick"
           >
-            <span class="button-icon" v-html="action.icon"></span>
+            <span
+              class="button-icon"
+              v-html="action.icon"
+            />
             <span class="button-label">{{ action.label }}</span>
           </button>
         </div>
@@ -115,7 +144,10 @@
             :aria-label="`Convert to ${block.label}`"
             @click="block.onClick"
           >
-            <span class="block-icon" v-html="block.icon"></span>
+            <span
+              class="block-icon"
+              v-html="block.icon"
+            />
             <span class="block-label">{{ block.label }}</span>
           </button>
         </div>
@@ -136,19 +168,28 @@
             :aria-label="action.label"
             @click="action.onClick"
           >
-            <span class="more-icon" v-html="action.icon"></span>
+            <span
+              class="more-icon"
+              v-html="action.icon"
+            />
             <span class="more-label">{{ action.label }}</span>
-            <span v-if="action.badge" class="more-badge">{{
-              action.badge
-            }}</span>
+            <span
+              v-if="action.badge"
+              class="more-badge"
+            >
+              {{ action.badge }}
+            </span>
           </button>
         </div>
       </div>
     </div>
 
     <!-- Haptic Feedback Indicator (for debugging) -->
-    <div v-if="showHapticIndicator" class="haptic-indicator">
-      <div class="haptic-pulse"></div>
+    <div
+      v-if="showHapticIndicator"
+      class="haptic-indicator"
+    >
+      <div class="haptic-pulse" />
     </div>
   </div>
 </template>
@@ -177,7 +218,7 @@ const emit = defineEmits<{
 }>();
 
 // Composables
-const { showMobileToolbar, isTouchOnly, supportsHover } = useDeviceDetection();
+const { showMobileToolbar } = useDeviceDetection();
 
 // State
 const isCollapsed = ref(false);
@@ -418,13 +459,11 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
   try {
     navigator.vibrate(patterns[intensity]);
 
-    // Show visual indicator (for debugging)
-    if (import.meta.env.DEV) {
-      showHapticIndicator.value = true;
-      setTimeout(() => {
-        showHapticIndicator.value = false;
-      }, patterns[intensity] + 100);
-    }
+    // Show visual indicator
+    showHapticIndicator.value = true;
+    setTimeout(() => {
+      showHapticIndicator.value = false;
+    }, patterns[intensity] + 100);
   } catch (error) {
     console.debug("Haptic feedback failed:", error);
   }
@@ -575,9 +614,9 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
 }
 
 .toolbar-button.active {
-  background: var(--button-active-bg, #4a90e2);
-  color: white;
-  border-color: var(--button-active-border, #3b82f6);
+  background: var(--button-active-bg, #2563eb);
+  color: #ffffff;
+  border-color: var(--button-active-border, #1e40af);
 }
 
 .toolbar-button:active {
@@ -695,8 +734,8 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
 
 .more-badge {
   padding: 2px 8px;
-  background: var(--badge-bg, #4a90e2);
-  color: white;
+  background: var(--badge-bg, #2563eb);
+  color: #ffffff;
   font-size: 12px;
   font-weight: 600;
   border-radius: 12px;

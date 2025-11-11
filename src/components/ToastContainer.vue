@@ -6,7 +6,11 @@
       aria-label="Notifications"
       aria-live="polite"
     >
-      <TransitionGroup name="toast" tag="div" class="toast-list">
+      <TransitionGroup
+        name="toast"
+        tag="div"
+        class="toast-list"
+      >
         <div
           v-for="toast in toasts"
           :key="toast.id"
@@ -17,7 +21,11 @@
           @mouseleave="handleMouseLeave(toast.id)"
         >
           <!-- Icon -->
-          <div v-if="toast.icon" class="toast__icon" aria-hidden="true">
+          <div
+            v-if="toast.icon"
+            class="toast__icon"
+            aria-hidden="true"
+          >
             {{ toast.icon }}
           </div>
 

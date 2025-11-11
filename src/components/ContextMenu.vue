@@ -11,8 +11,14 @@
         @click.stop
         @contextmenu.prevent
       >
-        <div v-for="(item, index) in items" :key="index">
-          <div v-if="item.divider" class="context-menu-divider" />
+        <div
+          v-for="(item, index) in items"
+          :key="index"
+        >
+          <div
+            v-if="item.divider"
+            class="context-menu-divider"
+          />
           <button
             v-else
             class="context-menu-item"
@@ -21,7 +27,10 @@
           >
             <span class="context-menu-icon">{{ item.icon }}</span>
             <span class="context-menu-label">{{ item.label }}</span>
-            <span v-if="item.shortcut" class="context-menu-shortcut">{{
+            <span
+              v-if="item.shortcut"
+              class="context-menu-shortcut"
+            >{{
               item.shortcut
             }}</span>
           </button>
