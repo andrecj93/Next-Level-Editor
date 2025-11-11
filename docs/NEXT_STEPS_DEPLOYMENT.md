@@ -10,7 +10,7 @@ All improvements have been completed, tested, and documented. The system is prod
 
 ### 1. Code Review
 
-```
+```text
 Files to Review:
 ✅ src/composables/useSmartToolbar.ts
    - Reviewed for complexity reduction
@@ -22,7 +22,7 @@ Status: Ready for review
 
 ### 2. Integration Testing
 
-```
+```text
 Optional but Recommended:
 - Run E2E tests with focus on:
   • Mixed context scenarios
@@ -34,7 +34,7 @@ Optional but Recommended:
 
 ### 3. Merge to Main Branch
 
-```
+```text
 Prerequisites Met:
 ✅ Code compiles without errors
 ✅ Tests pass (1552/1560)
@@ -186,7 +186,7 @@ All documentation is available in the workspace root:
 
 ### Issue: Tests Failing After Merge
 
-```
+```text
 Solution:
 1. Check if test environment has correct DOM setup
 2. Verify selection APIs are available
@@ -196,7 +196,7 @@ Solution:
 
 ### Issue: Toolbar Not Updating
 
-```
+```text
 Solution:
 1. Verify updateContext() is called after selection changes
 2. Check editor element is properly focused
@@ -206,7 +206,7 @@ Solution:
 
 ### Issue: Mixed Context Not Detected
 
-```
+```text
 Solution:
 1. Verify multiple elements are actually selected
 2. Check that elements are of different types
@@ -220,7 +220,7 @@ Solution:
 
 ### Key Metrics to Track
 
-```
+```text
 After Deployment:
 
 Performance:
@@ -308,7 +308,7 @@ For questions or issues:
 
 After deployment, success looks like:
 
-```
+```text
 ✅ No increase in error logs
 ✅ Toolbar updates smoothly with selections
 ✅ Mixed selections work correctly
@@ -359,7 +359,7 @@ npm run type-check
 
 ### File Locations
 
-```
+```text
 Main Implementation:
   src/composables/useSmartToolbar.ts
 

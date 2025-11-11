@@ -15,6 +15,7 @@ Multiple UX issues were identified and resolved to improve the editor's usabilit
 **Solution:** Added `event.preventDefault()` to the `/` key handler to prevent character insertion while still opening the command menu.
 
 **Impact:**
+
 - Users can now open slash commands without seeing "/" appear in their document
 - Cleaner editing experience
 - No text artifacts after using slash commands
@@ -38,6 +39,7 @@ if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !e
 **Solution:** Added a unique `:key` attribute based on the timestamp to force Vue to re-render the component when the timestamp changes.
 
 **Impact:**
+
 - Users can now see real-time confirmation that their work is being saved
 - Improved confidence in the auto-save functionality
 - Better user feedback
@@ -61,6 +63,7 @@ if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !e
 **Solution:** Auto-close the color dropdown 300ms after color application to provide clear visual feedback.
 
 **Impact:**
+
 - Clearer visual feedback when colors are applied
 - Reduced UI clutter
 - More intuitive user experience
@@ -85,6 +88,7 @@ const handleTextColor = (color: string) => {
 **Solution:** Replaced generic SVG icons with clear text labels: **HTML**, **MD**, **PDF**, **DOCX**. Added file extensions to tooltips for additional clarity.
 
 **Impact:**
+
 - Users can immediately identify export formats
 - No confusion about which button does what
 - More professional and accessible UI
@@ -101,12 +105,14 @@ const handleTextColor = (color: string) => {
 **Issue:** Users couldn't easily find how to return to WYSIWYG mode from code view because the view mode buttons only had icons.
 
 **Solution:** Added text labels to all view mode buttons:
+
 - **Editor** - WYSIWYG Editor with visual formatting
 - **Code** - HTML Source Code view
 - **Split** - Editor and code side by side
 - **Preview** - View final output without editing
 
 **Impact:**
+
 - Clear navigation between different view modes
 - Users can easily return to WYSIWYG mode
 - Improved tooltips with detailed descriptions
@@ -121,12 +127,14 @@ const handleTextColor = (color: string) => {
 **Issue:** Users reported confusion about how to use the image upload modal and whether they needed to click a button to insert the image.
 
 **Solution:** Enhanced the modal with:
+
 - Helpful hint when Insert button is disabled: "💡 Enter a URL or upload a file to enable the Insert button"
 - Checkmark icon on button: "✓ Insert Image" for better visual clarity
 - Descriptive tooltips to guide users through the upload process
 - Comprehensive unit test suite (9 tests)
 
 **Impact:**
+
 - Users understand what they need to do to insert an image
 - Clear visual feedback about button states
 - Better user guidance throughout the process
@@ -141,11 +149,13 @@ const handleTextColor = (color: string) => {
 Comprehensive test coverage was added to ensure these improvements work correctly and prevent regressions.
 
 ### Unit Tests
+
 - **Total:** 715 unit tests passing
 - **New:** 9 ImageUploadModal-specific tests
 - **Coverage:** All critical functionality tested
 
 ### E2E Tests
+
 Created comprehensive E2E test suite (`e2e/ux-improvements.spec.ts`) with 12 test scenarios:
 
 1. **Slash Commands (3 tests)**
@@ -175,6 +185,7 @@ Created comprehensive E2E test suite (`e2e/ux-improvements.spec.ts`) with 12 tes
 ## Build and Deployment
 
 All improvements maintain backward compatibility:
+
 - ✅ All 715 existing unit tests pass
 - ✅ Build process completes successfully
 - ✅ No breaking changes

@@ -300,16 +300,38 @@ export function useSmartToolbar() {
     }
 
     const range = selection.getRangeAt(0);
-    const startElements = collectContextElements(range.startContainer, editor);
-    const endElements = collectContextElements(range.endContainer, editor);
 
-    // Combine and deduplicate detected elements
-    const allElements = [...startElements];
-    endElements.forEach((el) => {
-      if (!allElements.some((e) => e.element === el.element)) {
-        allElements.push(el);
+    // Check if a single element node is selected (e.g., selectNode on img/table)
+    let allElements: DetectedElement[] = [];
+
+    if (
+      range.startContainer === range.endContainer &&
+      range.startContainer.childNodes.length > 0 &&
+      range.endOffset - range.startOffset === 1
+    ) {
+      const selectedNode = range.startContainer.childNodes[range.startOffset];
+      if (selectedNode instanceof HTMLElement) {
+        const contextType = getElementContextType(selectedNode);
+        allElements = [{ type: contextType, element: selectedNode, depth: 0 }];
       }
-    });
+    }
+
+    // If no single element selected, collect from start and end containers
+    if (allElements.length === 0) {
+      const startElements = collectContextElements(
+        range.startContainer,
+        editor
+      );
+      const endElements = collectContextElements(range.endContainer, editor);
+
+      // Combine and deduplicate detected elements
+      allElements = [...startElements];
+      endElements.forEach((el) => {
+        if (!allElements.some((e) => e.element === el.element)) {
+          allElements.push(el);
+        }
+      });
+    }
 
     const primaryContext = determinePrimaryContext(allElements);
     const isMixed =
@@ -337,6 +359,12 @@ export function useSmartToolbar() {
     // Check if editor is empty
     if (editor.textContent?.trim() === "") return "empty";
 
+    // Check if there's a valid selection
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return "empty";
+    }
+
     const multiContextResult = detectMultipleContexts(editor);
     return multiContextResult.primaryContext;
   };
@@ -346,6 +374,23 @@ export function useSmartToolbar() {
    */
   const updateContext = (editor: HTMLElement | null) => {
     if (!editor) {
+      context.value = "empty";
+      detectedElements.value = [];
+      isMixedSelection.value = false;
+      return;
+    }
+
+    // Check if editor is empty
+    if (editor.textContent?.trim() === "") {
+      context.value = "empty";
+      detectedElements.value = [];
+      isMixedSelection.value = false;
+      return;
+    }
+
+    // Check if there's a valid selection
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
       context.value = "empty";
       detectedElements.value = [];
       isMixedSelection.value = false;

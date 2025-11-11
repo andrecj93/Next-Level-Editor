@@ -16,7 +16,7 @@
   --tooltip-text-light: #f9fafb;
   --history-bg-light: rgba(59, 130, 246, 0.08);
   --history-active-light: #3b82f6;
-  
+
   /* Dark theme colors */
   --editor-bg-dark: #0f172a;
   --editor-border-dark: #1e293b;
@@ -30,28 +30,39 @@
   --tooltip-text-dark: #e2e8f0;
   --history-bg-dark: rgba(96, 165, 250, 0.12);
   --history-active-dark: #60a5fa;
-  
+
   /* Animation durations */
   --transition-fast: 150ms;
   --transition-normal: 200ms;
   --transition-slow: 300ms;
-  
+
   /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
   --spacing-lg: 16px;
   --spacing-xl: 20px;
-  
+
   /* Border radius */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 10px;
   --radius-xl: 12px;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* Template Variables */
+  --variable-bg-light: #e8f2ff;
+  --variable-border-light: #3b82f6;
+  --variable-text-light: #1e40af;
+  --variable-hover-bg-light: #dbeafe;
+
+  --variable-bg-dark: rgba(59, 130, 246, 0.15);
+  --variable-border-dark: #60a5fa;
+  --variable-text-dark: #93c5fd;
+  --variable-hover-bg-dark: rgba(59, 130, 246, 0.25);
 }

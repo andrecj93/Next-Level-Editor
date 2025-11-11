@@ -1,0 +1,373 @@
+/**
+ * Touch Target Optimization
+ * 
+ * WCAG AAA compliance for mobile interactions
+ * Minimum touch target size: 44x44px (iOS HIG / Material Design)
+ * 
+ * Features:
+ * - Utility classes for touch targets
+ * - Responsive adjustments
+ * - Accessibility enhancements
+ */
+
+/* ============================================
+   Base Touch Target Classes
+   ============================================ */
+
+/**
+ * Standard touch target (44x44px minimum)
+ * Apply to buttons, links, and interactive elements on mobile
+ */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/**
+ * Large touch target (56x56px)
+ * For primary actions or frequently used buttons
+ */
+.touch-target-lg {
+  min-width: 56px;
+  min-height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/**
+ * Extra large touch target (64x64px)
+ * For critical actions (save, publish, delete)
+ */
+.touch-target-xl {
+  min-width: 64px;
+  min-height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/**
+ * Small touch target (36x36px)
+ * Use sparingly, only for secondary controls on tablet+
+ * Does not meet WCAG AAA on mobile
+ */
+.touch-target-sm {
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* ============================================
+   Touch Target Spacing
+   ============================================ */
+
+/**
+ * Minimum spacing between touch targets (8px)
+ * Prevents accidental activations
+ */
+.touch-spacing {
+  margin: 4px;
+}
+
+/**
+ * Comfortable spacing between touch targets (16px)
+ * Recommended for most interfaces
+ */
+.touch-spacing-comfortable {
+  margin: 8px;
+}
+
+/**
+ * Generous spacing between touch targets (24px)
+ * For critical or destructive actions
+ */
+.touch-spacing-generous {
+  margin: 12px;
+}
+
+/* ============================================
+   Invisible Hit Area Expansion
+   ============================================ */
+
+/**
+ * Expand hit area without changing visual size
+ * Uses pseudo-element to add invisible padding
+ * 
+ * Example:
+ * <button class="small-visual touch-expand">×</button>
+ * Visual: 24x24px, Touch area: 44x44px
+ */
+.touch-expand::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+  z-index: -1;
+}
+
+.touch-expand-lg::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 56px;
+  min-height: 56px;
+  z-index: -1;
+}
+
+/* ============================================
+   Mobile-Specific Enhancements
+   ============================================ */
+
+/**
+ * Apply touch target sizing only on mobile devices
+ * Desktop maintains compact sizing
+ */
+@media (hover: none) and (pointer: coarse) {
+  /* Mobile devices (touch-only) */
+
+  button,
+  a,
+  [role="button"],
+  [role="link"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Toolbar buttons */
+  .toolbar button,
+  .toolbar-button {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 8px;
+  }
+
+  /* Icon-only buttons */
+  button:has(svg:only-child),
+  button:has(i:only-child),
+  [role="button"]:has(svg:only-child),
+  [role="button"]:has(i:only-child) {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+
+  /* Form controls */
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 24px;
+    min-height: 24px;
+    /* Wrapper should be 44x44 */
+  }
+
+  label:has(input[type="checkbox"]),
+  label:has(input[type="radio"]) {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Dropdown/Select controls */
+  select {
+    min-height: 44px;
+    padding: 8px 32px 8px 12px; /* Right padding for arrow */
+  }
+
+  /* Text inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="url"],
+  input[type="search"],
+  textarea {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+
+  /* List items */
+  li > button,
+  li > a {
+    min-height: 48px;
+    padding: 12px 16px;
+  }
+
+  /* Tab buttons */
+  [role="tab"] {
+    min-height: 48px;
+    min-width: 80px;
+    padding: 12px 16px;
+  }
+
+  /* Close/Dismiss buttons */
+  .close-button,
+  .dismiss-button,
+  [aria-label*="close"],
+  [aria-label*="dismiss"] {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  /* Drag handles */
+  [draggable="true"],
+  .drag-handle {
+    min-height: 48px;
+    cursor: grab;
+  }
+}
+
+/* ============================================
+   Tablet Adjustments
+   ============================================ */
+
+@media (hover: none) and (pointer: coarse) and (min-width: 768px) {
+  /* Tablets can use slightly smaller targets */
+
+  button,
+  a,
+  [role="button"],
+  [role="link"] {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .toolbar button,
+  .toolbar-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* ============================================
+   Focus/Active States for Touch
+   ============================================ */
+
+@media (hover: none) and (pointer: coarse) {
+  /* Enhanced visual feedback on touch devices */
+
+  button:active,
+  a:active,
+  [role="button"]:active,
+  [role="link"]:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
+  }
+
+  /* Ripple effect container */
+  .touch-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Focus indicators remain visible on touch */
+  button:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 3px solid var(--focus-color, #4a90e2);
+    outline-offset: 2px;
+  }
+}
+
+/* ============================================
+   Accessibility Utilities
+   ============================================ */
+
+/**
+ * Screen reader only content
+ * Maintains hit area for keyboard users
+ */
+.sr-only-touch {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.sr-only-touch:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 8px;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/**
+ * Prevent double-tap zoom on specific elements
+ * Use sparingly - can reduce accessibility
+ */
+.no-double-tap-zoom {
+  touch-action: manipulation;
+}
+
+/**
+ * Disable text selection during gestures
+ * Good for drag handles, sliders, etc.
+ */
+.no-select-on-touch {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ============================================
+   Debug Mode
+   ============================================ */
+
+/**
+ * Visualize touch target areas (for development)
+ * Add class to body: <body class="debug-touch-targets">
+ */
+body.debug-touch-targets .touch-target,
+body.debug-touch-targets .touch-target-lg,
+body.debug-touch-targets .touch-target-xl,
+body.debug-touch-targets .touch-target-sm {
+  background-color: rgba(255, 0, 0, 0.1);
+  outline: 1px dashed red;
+}
+
+body.debug-touch-targets .touch-expand::before,
+body.debug-touch-targets .touch-expand-lg::before {
+  background-color: rgba(0, 255, 0, 0.1);
+  outline: 1px dashed green;
+  z-index: 1;
+  pointer-events: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  body.debug-touch-targets button,
+  body.debug-touch-targets a,
+  body.debug-touch-targets [role="button"],
+  body.debug-touch-targets [role="link"] {
+    outline: 2px solid orange !important;
+  }
+
+  body.debug-touch-targets button:has(svg:only-child),
+  body.debug-touch-targets [role="button"]:has(svg:only-child) {
+    background-color: rgba(0, 0, 255, 0.1);
+  }
+}

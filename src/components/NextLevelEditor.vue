@@ -3,11 +3,14 @@
     :class="['next-level-editor', themeClass, { fullscreen: isFullScreen }]"
     :style="editorStyles"
   >
+    <!-- Accessibility: Skip Links -->
+    <SkipLinks />
+
+    <!-- Accessibility: ARIA Live Regions -->
+    <AriaLiveRegion />
+
     <!-- Context Hints (Smart Toolbar Feature) -->
-    <div
-      v-if="getContextHints().length > 0"
-      class="context-hints"
-    >
+    <div v-if="getContextHints().length > 0" class="context-hints">
       <span
         v-for="(hint, index) in getContextHints()"
         :key="index"
@@ -70,16 +73,10 @@
     />
 
     <!-- Word Count Footer -->
-    <EditorFooter
-      :word-count="wordCount"
-      :character-count="characterCount"
-    />
+    <EditorFooter :word-count="wordCount" :character-count="characterCount" />
 
     <!-- Floating Toolbar -->
-    <FloatingToolbar
-      :show="showFloatingToolbar"
-      :actions="floatingActions"
-    />
+    <FloatingToolbar :show="showFloatingToolbar" :actions="floatingActions" />
 
     <!-- Context Menu -->
     <ContextMenu
@@ -149,6 +146,45 @@
       @close-command-palette="closeCommandPalette"
       @execute-command="handleCommandExecute"
     />
+
+    <!-- Toast Notifications Container -->
+    <ToastContainer />
+
+    <!-- Writing Stats Panel (opt-in feature) -->
+    <WritingStatsPanel
+      v-if="showWritingStats && writingAssistant"
+      :stats="writingAssistant.stats.value"
+      :readability="writingAssistant.readability.value"
+      :sentence-analysis="writingAssistant.sentenceAnalysis.value"
+      :word-analysis="writingAssistant.wordAnalysis.value"
+    />
+
+    <!-- Comments Sidebar (opt-in feature) -->
+    <CommentsSidebar
+      v-if="enableComments && comments"
+      :threads="comments.threads.value"
+      :active-thread-id="comments.activeThread.value?.id ?? null"
+      :is-open="showCommentsSidebar"
+      @close="showCommentsSidebar = false"
+      @select-thread="handleSelectThread"
+      @resolve-thread="handleResolveThread"
+      @reopen-thread="handleReopenThread"
+      @delete-thread="handleDeleteThread"
+      @add-reply="handleAddReply"
+      @create-comment="handleCreateComment"
+    />
+
+    <!-- Variable Autocomplete (opt-in feature) -->
+    <VariableAutocomplete
+      v-if="enableVariables && variablesComposable"
+      :variables="variablesComposable.variables.value"
+      :categories="variablesComposable.categories.value"
+      :query="variableAutocompleteQuery"
+      :is-open="showVariableAutocomplete"
+      :position="variableAutocompletePosition"
+      @select="handleVariableSelect"
+      @close="closeVariableAutocomplete"
+    />
   </div>
 </template>
 
@@ -166,6 +202,7 @@ import { useAutoSave } from "../composables/useAutoSave";
 import { useSmartToolbar } from "../composables/useSmartToolbar";
 import { useEditorContent } from "../composables/useEditorContent";
 import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
+import { useAccessibility } from "../composables/useAccessibility";
 import { useImageResize } from "../composables/useImageResize";
 import { useEditorSetup } from "../composables/useEditorSetup";
 import { useToolbarItems } from "../composables/useToolbarItems";
@@ -198,12 +235,24 @@ import EditorToolbar from "./EditorToolbar.vue";
 import EditorPanels from "./EditorPanels.vue";
 import EditorFooter from "./EditorFooter.vue";
 import CommandMenu from "./CommandMenu.vue";
+import ToastContainer from "./ToastContainer.vue";
+import SkipLinks from "./SkipLinks.vue";
+import AriaLiveRegion from "./AriaLiveRegion.vue";
+import WritingStatsPanel from "./WritingStatsPanel.vue";
+import CommentsSidebar from "./CommentsSidebar.vue";
+import VariableAutocomplete from "./VariableAutocomplete.vue";
+import { useWritingAssistant } from "../composables/useWritingAssistant";
+import { useComments } from "../composables/useComments";
+import { useVariables } from "../composables/useVariables";
 
 interface Props {
   modelValue?: string;
   placeholder?: string;
   width?: string;
   height?: string;
+  showWritingStats?: boolean;
+  enableComments?: boolean;
+  enableVariables?: boolean;
 }
 
 interface Emits {
@@ -217,6 +266,8 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: "Start typing...",
   width: undefined,
   height: undefined,
+  showWritingStats: false,
+  enableComments: false,
 });
 
 const emit = defineEmits<Emits>();
@@ -237,6 +288,35 @@ const rememberSelection = () => {
 
 // Theme and UI state using composable
 const { theme, toggleTheme: toggleThemeComposable } = useTheme();
+
+// Accessibility (WCAG AAA)
+const { announce } = useAccessibility();
+
+// Writing Assistant (opt-in feature)
+const writingAssistant = props.showWritingStats ? useWritingAssistant() : null;
+
+// Comments System (opt-in feature)
+const comments = props.enableComments
+  ? useComments({
+      editorElement: editorContent as any,
+      currentUser: {
+        id: "current-user",
+        name: "Current User",
+        color: "#3b82f6",
+      },
+    })
+  : null;
+
+// Comments UI state
+const showCommentsSidebar = ref(props.enableComments ?? false);
+
+// Variables System (opt-in feature)
+const variablesComposable = props.enableVariables ? useVariables() : null;
+
+// Variable autocomplete state
+const showVariableAutocomplete = ref(false);
+const variableAutocompleteQuery = ref("");
+const variableAutocompletePosition = ref({ top: 0, left: 0 });
 
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
@@ -300,7 +380,7 @@ const { viewMode } = useViewMode({
   codeContent,
 });
 
-// Modal management using composable
+// Modal management using composable - pass rememberSelection to save cursor position
 const {
   showImageUploadModal,
   showEmbedModal,
@@ -332,7 +412,7 @@ const {
   openCodeBlockModal,
   closeCodeBlockModal,
   toggleEmojiPicker,
-} = useModals();
+} = useModals({ rememberSelection });
 
 // Editor UI State using composable
 const {
@@ -653,7 +733,7 @@ const {
 
 // Editor Events - Using useEditorEvents composable
 const {
-  onInput,
+  onInput: onInputBase,
   onFocus,
   onBlur,
   onMouseUp,
@@ -676,6 +756,21 @@ const {
   emit,
 });
 
+// Wrap onInput to include variable detection and wrapping
+const onInput = () => {
+  onInputBase();
+
+  // Detect variable syntax for autocomplete
+  if (props.enableVariables) {
+    detectVariableSyntax();
+  }
+
+  // Wrap variables in content
+  if (variablesComposable && editorContent.value) {
+    variablesComposable.wrapVariablesInContent(editorContent.value);
+  }
+};
+
 // Keyboard Shortcuts - Using useKeyboardShortcuts composable
 const { handleKeydown } = useKeyboardShortcuts({
   editorContent,
@@ -691,6 +786,121 @@ const { handleKeydown } = useKeyboardShortcuts({
   handleInlineAction,
   handleBlockAction,
 });
+
+// Comments handlers
+function handleSelectThread(threadId: string) {
+  if (!comments) return;
+  const thread = comments.threads.value.find((t) => t.id === threadId);
+  if (thread?.highlightElement) {
+    thread.highlightElement.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
+}
+
+function handleResolveThread(threadId: string) {
+  if (!comments) return;
+  comments.resolveThread(threadId);
+}
+
+function handleReopenThread(threadId: string) {
+  if (!comments) return;
+  comments.reopenThread(threadId);
+}
+
+function handleDeleteThread(threadId: string) {
+  if (!comments) return;
+  comments.deleteThread(threadId);
+}
+
+function handleAddReply(threadId: string, content: string, mentions: string[]) {
+  if (!comments) return;
+  comments.addReply(threadId, content, mentions);
+}
+
+function handleCreateComment() {
+  if (!comments) return;
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) {
+    showToastNotification("Please select text to comment on", "error");
+    return;
+  }
+
+  const content = prompt("Enter your comment:");
+  if (content) {
+    comments.addThread(content, []);
+    showToastNotification("Comment added", "success");
+  }
+}
+
+// Variable handlers
+function detectVariableSyntax() {
+  if (!variablesComposable || !editorContent.value) return;
+
+  const detection = variablesComposable.detectVariableAtCursor(
+    editorContent.value
+  );
+
+  if (detection?.isInVariable) {
+    // Show autocomplete
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+
+      variableAutocompletePosition.value = {
+        top: rect.bottom + window.scrollY + 5,
+        left: rect.left + window.scrollX,
+      };
+
+      variableAutocompleteQuery.value = detection.query;
+      showVariableAutocomplete.value = true;
+    }
+  } else {
+    showVariableAutocomplete.value = false;
+  }
+}
+
+function handleVariableSelect(variable: any) {
+  if (!variablesComposable || !editorContent.value) return;
+
+  // Remove the {{ and partial text
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  const node = range.startContainer;
+
+  if (node.nodeType === Node.TEXT_NODE) {
+    const text = node.textContent || "";
+    const cursorPos = range.startOffset;
+    const textBefore = text.substring(0, cursorPos);
+    const lastOpenBrace = textBefore.lastIndexOf("{{");
+
+    if (lastOpenBrace !== -1) {
+      // Delete from {{ to cursor
+      const deleteRange = document.createRange();
+      deleteRange.setStart(node, lastOpenBrace);
+      deleteRange.setEnd(node, cursorPos);
+      deleteRange.deleteContents();
+
+      // Insert variable
+      variablesComposable.insertVariable(editorContent.value, variable.name);
+    }
+  }
+
+  showVariableAutocomplete.value = false;
+
+  // Trigger input event
+  if (editorContent.value) {
+    onInput();
+  }
+}
+
+function closeVariableAutocomplete() {
+  showVariableAutocomplete.value = false;
+}
 
 // Editor Setup and Cleanup - Using useEditorSetup composable
 useEditorSetup({
@@ -711,3 +921,4 @@ useEditorSetup({
 </script>
 
 <style src="../styles/NextLevelEditor.css"></style>
+<style src="../styles/editor-variables.css"></style>

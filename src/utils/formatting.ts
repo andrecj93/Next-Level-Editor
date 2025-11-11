@@ -792,7 +792,8 @@ export const insertImage = (
   wrapper.contentEditable = "false";
   wrapper.style.display = "inline-block";
   wrapper.style.position = "relative";
-  wrapper.style.maxWidth = "100%";
+  wrapper.style.maxWidth = "600px"; // Default max width to fit editor
+  wrapper.style.width = "auto";
   wrapper.style.margin = "10px 0";
   wrapper.style.cursor = "pointer";
 
@@ -803,8 +804,10 @@ export const insertImage = (
   }
   image.className = "editor-image-resizable";
   image.style.maxWidth = "100%";
+  image.style.width = "100%"; // Fill wrapper
   image.style.height = "auto";
   image.style.display = "block";
+  image.style.borderRadius = "4px";
   image.draggable = false;
 
   wrapper.appendChild(image);

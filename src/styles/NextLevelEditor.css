@@ -1,3 +1,15 @@
+/* Import Design Tokens */
+@import "./tokens.css";
+
+/* Import Accessibility Styles */
+@import "./focus-indicators.css";
+
+/* Import Touch Targets */
+@import "./touch-targets.css";
+
+/* Import Comments Styles */
+@import "./comments.css";
+
 .next-level-editor {
   position: relative;
   display: flex;
@@ -813,6 +825,7 @@
 
 .editor-container.view-mode-split {
   display: flex;
+  height: 100%;
 }
 
 .editor-container.view-mode-preview {
@@ -822,7 +835,7 @@
 .editor-panel {
   flex: 1;
   min-width: 0;
-  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -836,7 +849,7 @@
 .preview-panel {
   flex: 1;
   min-width: 0;
-  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--editor-bg);

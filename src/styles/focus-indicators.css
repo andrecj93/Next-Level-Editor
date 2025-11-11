@@ -1,0 +1,519 @@
+/**
+ * Focus Indicators & Keyboard Navigation Styles
+ * 
+ * WCAG AAA Compliance for focus visibility
+ * - Minimum contrast ratio: 3:1 (for focus indicators)
+ * - Minimum size: 2px outline or equivalent
+ * - Always visible on keyboard focus
+ * 
+ * Features:
+ * - Professional focus styles
+ * - Skip links for keyboard navigation
+ * - Focus-within states
+ * - High contrast mode support
+ * - Reduced motion preferences
+ */
+
+/* ============================================
+   CSS Custom Properties (Design Tokens)
+   ============================================ */
+
+:root {
+  /* Focus colors */
+  --focus-color: #4a90e2;
+  --focus-color-error: #ef4444;
+  --focus-color-success: #10b981;
+  --focus-color-warning: #f59e0b;
+
+  /* Focus indicator sizing */
+  --focus-width: 3px;
+  --focus-offset: 2px;
+  --focus-radius: 4px;
+
+  /* High contrast adjustments */
+  --focus-color-high-contrast: #000000;
+  --focus-bg-high-contrast: #ffff00;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --focus-color: #60a5fa;
+    --focus-color-high-contrast: #ffffff;
+    --focus-bg-high-contrast: #000000;
+  }
+}
+
+/* ============================================
+   Default Focus Styles (Enhanced)
+   ============================================ */
+
+/**
+ * Remove default browser outline and apply custom styles
+ */
+*:focus {
+  outline: none;
+}
+
+/**
+ * Custom focus indicator for keyboard users
+ * Only shows when focused via keyboard (not mouse/touch)
+ */
+*:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--focus-radius);
+  transition: outline 0.15s ease-in-out;
+}
+
+/* Remove focus for mouse/touch users (but keep for keyboard) */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================
+   Enhanced Focus for Interactive Elements
+   ============================================ */
+
+/**
+ * Buttons
+ */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.2);
+}
+
+button:focus-visible:active {
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+}
+
+/**
+ * Links
+ */
+a:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+/**
+ * Form Controls
+ */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: 0;
+  border-color: var(--focus-color);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+
+input[aria-invalid="true"]:focus-visible,
+textarea[aria-invalid="true"]:focus-visible,
+select[aria-invalid="true"]:focus-visible {
+  outline-color: var(--focus-color-error);
+  border-color: var(--focus-color-error);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/**
+ * Checkboxes and Radio Buttons
+ */
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.2);
+}
+
+/**
+ * Contenteditable (Editor)
+ */
+[contenteditable="true"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: -1px;
+  box-shadow: inset 0 0 0 1px var(--focus-color);
+}
+
+/**
+ * Custom Controls (sliders, color pickers, etc.)
+ */
+input[type="range"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: 3px;
+}
+
+input[type="color"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.2);
+}
+
+/* ============================================
+   Focus Within (Parent Container Focus)
+   ============================================ */
+
+/**
+ * Highlight parent containers when child has focus
+ * Useful for custom form controls and complex widgets
+ */
+.focus-within-highlight:focus-within {
+  outline: 2px solid rgba(74, 144, 226, 0.3);
+  outline-offset: 2px;
+  background-color: rgba(74, 144, 226, 0.05);
+}
+
+/**
+ * Toolbar focus indication
+ */
+.toolbar:focus-within {
+  background-color: rgba(74, 144, 226, 0.05);
+  border-color: var(--focus-color);
+}
+
+/**
+ * Dialog/Modal focus management
+ */
+.modal:focus-within,
+.dialog:focus-within {
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+/* ============================================
+   Skip Links
+   ============================================ */
+
+/**
+ * Skip to main content link
+ * Hidden by default, visible on focus
+ */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--focus-color);
+  color: white;
+  padding: 12px 24px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 16px;
+  z-index: 10000;
+  border-radius: 0 0 4px 0;
+  transition: top 0.2s ease-in-out;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid white;
+  outline-offset: -3px;
+}
+
+/**
+ * Skip link container
+ */
+.skip-links {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+}
+
+/**
+ * Multiple skip links
+ */
+.skip-links a {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--focus-color);
+  color: white;
+  padding: 8px 16px;
+  text-decoration: none;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: top 0.2s ease-in-out;
+}
+
+.skip-links a:focus {
+  top: 0;
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+.skip-links a:nth-child(2):focus {
+  top: 36px; /* Stack multiple skip links */
+}
+
+.skip-links a:nth-child(3):focus {
+  top: 72px;
+}
+
+/* ============================================
+   Keyboard Navigation Indicators
+   ============================================ */
+
+/**
+ * Show visual indicator when using keyboard navigation
+ */
+body.using-keyboard *:focus-visible {
+  outline-width: 3px;
+  outline-offset: 3px;
+}
+
+/**
+ * Subtle indicator for navigation items
+ */
+[role="navigation"] a:focus-visible,
+[role="menu"] [role="menuitem"]:focus-visible {
+  background-color: rgba(74, 144, 226, 0.1);
+  outline: 2px solid var(--focus-color);
+  outline-offset: -2px;
+}
+
+/**
+ * Tab navigation
+ */
+[role="tablist"] [role="tab"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: -3px;
+  z-index: 1;
+}
+
+/**
+ * List navigation
+ */
+[role="listbox"] [role="option"]:focus-visible,
+[role="menu"] [role="menuitem"]:focus-visible,
+[role="tree"] [role="treeitem"]:focus-visible {
+  background-color: rgba(74, 144, 226, 0.15);
+  outline: 2px solid var(--focus-color);
+  outline-offset: -2px;
+}
+
+/* ============================================
+   High Contrast Mode
+   ============================================ */
+
+/**
+ * Windows High Contrast Mode
+ */
+@media (prefers-contrast: more) {
+  *:focus-visible {
+    outline: 4px solid var(--focus-color-high-contrast);
+    outline-offset: 3px;
+    background-color: var(--focus-bg-high-contrast);
+  }
+
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 4px solid var(--focus-color-high-contrast);
+    box-shadow: none;
+  }
+
+  a:focus-visible {
+    outline: 4px solid var(--focus-color-high-contrast);
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 4px solid var(--focus-color-high-contrast);
+    border: 3px solid var(--focus-color-high-contrast);
+  }
+}
+
+/**
+ * Forced Colors Mode (Windows High Contrast)
+ */
+@media (forced-colors: active) {
+  *:focus-visible {
+    outline: 3px solid CanvasText;
+    outline-offset: 2px;
+  }
+
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 3px solid Highlight;
+  }
+
+  a:focus-visible {
+    outline: 3px solid LinkText;
+  }
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+
+/**
+ * Disable focus transitions for users who prefer reduced motion
+ */
+@media (prefers-reduced-motion: reduce) {
+  *:focus-visible {
+    transition: none;
+  }
+
+  .skip-link {
+    transition: none;
+  }
+
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    transition: none;
+  }
+}
+
+/* ============================================
+   Focus Trap Indicator
+   ============================================ */
+
+/**
+ * Visual indicator when focus is trapped (modals, dialogs)
+ */
+.focus-trap-active {
+  position: relative;
+}
+
+.focus-trap-active::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 2px dashed var(--focus-color);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: focus-trap-pulse 2s ease-in-out infinite;
+}
+
+@keyframes focus-trap-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-trap-active::before {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+/* ============================================
+   Screen Reader Utilities
+   ============================================ */
+
+/**
+ * Screen reader only content (sr-only)
+ * Content is visually hidden but accessible to screen readers
+ */
+.sr-only,
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/**
+ * Make sr-only content visible when focused
+ * Useful for skip links and focus indicators
+ */
+.sr-only-focusable:focus,
+.sr-only-focusable:active {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background: var(--focus-color);
+  color: white;
+  outline: 3px solid white;
+  outline-offset: -3px;
+  z-index: 10000;
+}
+
+/* ============================================
+   Keyboard Navigation Hints
+   ============================================ */
+
+/**
+ * Show keyboard shortcut hints on hover (for sighted keyboard users)
+ */
+[data-keyboard-shortcut]:hover::after {
+  content: attr(data-keyboard-shortcut);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  font-size: 12px;
+  white-space: nowrap;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1000;
+  margin-bottom: 8px;
+}
+
+[data-keyboard-shortcut]:hover::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
+  margin-bottom: 4px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-keyboard-shortcut]:hover::after,
+  [data-keyboard-shortcut]:hover::before {
+    transition: none;
+  }
+}
+
+/* ============================================
+   Focus Management Debug Mode
+   ============================================ */
+
+/**
+ * Debug mode to visualize all focusable elements
+ * Add class to body: <body class="debug-focus">
+ */
+body.debug-focus a,
+body.debug-focus button,
+body.debug-focus input,
+body.debug-focus textarea,
+body.debug-focus select,
+body.debug-focus [tabindex]:not([tabindex="-1"]),
+body.debug-focus [contenteditable="true"] {
+  outline: 2px dashed orange !important;
+  outline-offset: 2px !important;
+}
+
+body.debug-focus *:focus-visible {
+  outline: 4px solid red !important;
+  outline-offset: 3px !important;
+}

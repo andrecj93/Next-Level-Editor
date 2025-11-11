@@ -1,9 +1,5 @@
 <template>
-  <div
-    ref="dropdownRef"
-    class="toolbar-dropdown"
-    :class="{ open: isOpen }"
-  >
+  <div ref="dropdownRef" class="toolbar-dropdown" :class="{ open: isOpen }">
     <button
       class="dropdown-trigger"
       :class="{ active: hasActiveItem }"
@@ -11,31 +7,18 @@
       :aria-label="label"
       :aria-expanded="isOpen"
       :aria-haspopup="true"
-      @click.stop="toggle"
+      :disabled="disabled"
+      @click.stop="!disabled ? toggle() : null"
     >
-      <span
-        v-if="icon"
-        class="dropdown-icon"
-        v-html="icon"
-      />
+      <span v-if="icon" class="dropdown-icon" v-html="icon" />
       <span class="dropdown-label">{{ displayLabel }}</span>
       <span class="dropdown-arrow">▼</span>
     </button>
-    
+
     <transition name="dropdown-fade">
-      <div
-        v-if="isOpen"
-        class="dropdown-menu"
-        :style="menuStyle"
-      >
-        <div
-          v-for="(item, index) in items"
-          :key="item.id || index"
-        >
-          <div
-            v-if="item.divider"
-            class="dropdown-divider"
-          />
+      <div v-if="isOpen" class="dropdown-menu" :style="menuStyle">
+        <div v-for="(item, index) in items" :key="item.id || index">
+          <div v-if="item.divider" class="dropdown-divider" />
           <button
             v-else
             class="dropdown-item"
@@ -44,16 +27,11 @@
             @mousedown.prevent
             @click="handleItemClick(item)"
           >
-            <span
-              v-if="item.icon"
-              class="item-icon"
-              v-html="item.icon"
-            />
+            <span v-if="item.icon" class="item-icon" v-html="item.icon" />
             <span class="item-label">{{ item.label }}</span>
-            <span
-              v-if="item.shortcut"
-              class="item-shortcut"
-            >{{ item.shortcut }}</span>
+            <span v-if="item.shortcut" class="item-shortcut">{{
+              item.shortcut
+            }}</span>
           </button>
         </div>
       </div>
@@ -62,87 +40,96 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 
 interface DropdownItem {
-  id?: string
-  label?: string
-  icon?: string
-  shortcut?: string
-  onClick?: () => void
-  isActive?: () => boolean
-  divider?: boolean
+  id?: string;
+  label?: string;
+  icon?: string;
+  shortcut?: string;
+  onClick?: () => void;
+  isActive?: () => boolean;
+  divider?: boolean;
 }
 
 interface Props {
-  label: string
-  icon?: string
-  tooltip?: string
-  items: DropdownItem[]
-  modelValue?: boolean
+  label: string;
+  icon?: string;
+  tooltip?: string;
+  items: DropdownItem[];
+  modelValue?: boolean;
+  disabled?: boolean;
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  'item-click': [item: DropdownItem]
-}>()
+const props = withDefaults(defineProps<Props>(), {
+  icon: "",
+  tooltip: "",
+  disabled: false,
+});
 
-const dropdownRef = ref<HTMLElement | null>(null)
-const isOpen = ref(false)
+const emit = defineEmits<{
+  "update:modelValue": [value: boolean];
+  "item-click": [item: DropdownItem];
+}>();
+
+const dropdownRef = ref<HTMLElement | null>(null);
+const isOpen = ref(false);
 
 const hasActiveItem = computed(() => {
-  return props.items.some(item => item.isActive?.())
-})
+  return props.items.some((item) => item.isActive?.());
+});
 
 const displayLabel = computed(() => {
-  const activeItem = props.items.find(item => item.isActive?.())
-  return activeItem?.label || props.label
-})
+  const activeItem = props.items.find((item) => item.isActive?.());
+  return activeItem?.label || props.label;
+});
 
 const menuStyle = computed(() => {
   return {
-    minWidth: '200px'
-  }
-})
+    minWidth: "200px",
+  };
+});
 
 const toggle = () => {
-  isOpen.value = !isOpen.value
-  emit('update:modelValue', isOpen.value)
-}
+  isOpen.value = !isOpen.value;
+  emit("update:modelValue", isOpen.value);
+};
 
 const close = () => {
-  isOpen.value = false
-  emit('update:modelValue', false)
-}
+  isOpen.value = false;
+  emit("update:modelValue", false);
+};
 
 const handleItemClick = (item: DropdownItem) => {
   if (item.onClick) {
-    item.onClick()
+    item.onClick();
   }
-  emit('item-click', item)
-  close()
-}
+  emit("item-click", item);
+  close();
+};
 
 const handleClickOutside = (event: MouseEvent) => {
   if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
-    close()
+    close();
   }
-}
+};
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
+  document.addEventListener("click", handleClickOutside);
+});
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+  document.removeEventListener("click", handleClickOutside);
+});
 
-watch(() => props.modelValue, (newVal) => {
-  if (newVal !== undefined) {
-    isOpen.value = newVal
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    if (newVal !== undefined) {
+      isOpen.value = newVal;
+    }
   }
-})
+);
 </script>
 
 <style scoped>

@@ -1,44 +1,55 @@
 <template>
-  <template v-if="visible">
-    <div class="toolbar-divider" />
+  <div class="toolbar-divider" />
 
-    <!-- Dropdown Section -->
-    <div
-      v-if="type === 'dropdown'"
+  <!-- Dropdown Section -->
+  <div
+    v-if="type === 'dropdown'"
+    :class="{ 'toolbar-section-disabled': !visible }"
+    @mousedown.prevent="$emit('remember-selection')"
+  >
+    <ToolbarDropdown
+      :label="label"
+      :icon="icon"
+      :tooltip="
+        visible ? tooltip : `${tooltip} (not available for current selection)`
+      "
+      :items="items"
+      :disabled="!visible"
+    />
+  </div>
+
+  <!-- Button Group Section -->
+  <div v-else-if="type === 'buttons'" class="toolbar-group">
+    <button
+      v-for="action in items"
+      :key="action.id"
+      :class="[
+        'toolbar-btn-modern',
+        { active: action.isActive?.(), disabled: !visible },
+      ]"
+      :data-tooltip="
+        visible
+          ? action.tooltip
+          : `${action.tooltip} (not available for current selection)`
+      "
+      :aria-label="action.label"
+      :aria-pressed="action.isActive?.() || false"
+      :disabled="!visible"
       @mousedown.prevent="$emit('remember-selection')"
+      @click="visible ? action.onClick() : null"
     >
-      <ToolbarDropdown
-        :label="label"
-        :icon="icon"
-        :tooltip="tooltip"
-        :items="items"
-      />
-    </div>
+      <span v-html="action.icon" />
+    </button>
+  </div>
 
-    <!-- Button Group Section -->
-    <div v-else-if="type === 'buttons'" class="toolbar-group">
-      <button
-        v-for="action in items"
-        :key="action.id"
-        :class="['toolbar-btn-modern', { active: action.isActive?.() }]"
-        :data-tooltip="action.tooltip"
-        :aria-label="action.label"
-        :aria-pressed="action.isActive?.() || false"
-        @mousedown.prevent="$emit('remember-selection')"
-        @click="action.onClick"
-      >
-        <span v-html="action.icon" />
-      </button>
-    </div>
-
-    <!-- Custom Section -->
-    <div
-      v-else-if="type === 'custom'"
-      @mousedown.prevent="$emit('remember-selection')"
-    >
-      <slot />
-    </div>
-  </template>
+  <!-- Custom Section -->
+  <div
+    v-else-if="type === 'custom'"
+    :class="{ 'toolbar-section-disabled': !visible }"
+    @mousedown.prevent="$emit('remember-selection')"
+  >
+    <slot />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -66,3 +77,22 @@ defineEmits<{
   "remember-selection": [];
 }>();
 </script>
+
+<style scoped>
+.toolbar-section-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.toolbar-btn-modern.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.toolbar-btn-modern:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+</style>

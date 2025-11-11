@@ -1,6 +1,12 @@
 import { ref } from "vue";
 
-export function useModals() {
+export interface UseModalsOptions {
+  rememberSelection?: () => void;
+}
+
+export function useModals(options: UseModalsOptions = {}) {
+  const { rememberSelection } = options;
+
   // Modal states
   const showImageUploadModal = ref(false);
   const showEmbedModal = ref(false);
@@ -14,8 +20,18 @@ export function useModals() {
   const showTableDesigner = ref(false);
   const showTablePropertiesModal = ref(false);
 
+  /**
+   * Helper to remember selection before opening modal
+   */
+  const beforeOpenModal = () => {
+    if (rememberSelection) {
+      rememberSelection();
+    }
+  };
+
   // Image Upload Modal
   const openImageUploadModal = () => {
+    beforeOpenModal();
     showImageUploadModal.value = true;
   };
 
@@ -25,6 +41,7 @@ export function useModals() {
 
   // Embed Modal
   const openEmbedModal = () => {
+    beforeOpenModal();
     showEmbedModal.value = true;
   };
 
@@ -34,6 +51,7 @@ export function useModals() {
 
   // File Manager Modal
   const openFileManagerModal = () => {
+    beforeOpenModal();
     showFileManagerModal.value = true;
   };
 
@@ -43,6 +61,7 @@ export function useModals() {
 
   // Template Modal
   const openTemplateModal = () => {
+    beforeOpenModal();
     showTemplateModal.value = true;
   };
 
@@ -52,6 +71,7 @@ export function useModals() {
 
   // HTML Code Modal
   const openHtmlCodeModal = () => {
+    beforeOpenModal();
     showHtmlCodeModal.value = true;
   };
 
@@ -61,6 +81,7 @@ export function useModals() {
 
   // Table Modal
   const openTableModal = () => {
+    beforeOpenModal();
     showTableModal.value = true;
   };
 
@@ -70,6 +91,7 @@ export function useModals() {
 
   // Table Properties Modal
   const openTablePropertiesModal = () => {
+    beforeOpenModal();
     showTablePropertiesModal.value = true;
   };
 
@@ -79,6 +101,7 @@ export function useModals() {
 
   // Find Replace Modal
   const openFindReplaceModal = () => {
+    beforeOpenModal();
     showFindReplaceModal.value = true;
   };
 
@@ -88,6 +111,7 @@ export function useModals() {
 
   // Code Block Modal
   const openCodeBlockModal = () => {
+    beforeOpenModal();
     showCodeBlockModal.value = true;
   };
 
@@ -97,6 +121,7 @@ export function useModals() {
 
   // Emoji Picker
   const toggleEmojiPicker = () => {
+    beforeOpenModal();
     showEmojiPicker.value = !showEmojiPicker.value;
   };
 
@@ -106,6 +131,7 @@ export function useModals() {
 
   // Table Designer
   const openTableDesigner = () => {
+    // Note: Table designer doesn't need selection save as it's contextual
     showTableDesigner.value = true;
   };
 

@@ -36,6 +36,7 @@
 > **Why Next Level Editor?** Built with modern web standards, best practices, and a focus on developer experience. Every feature is thoroughly tested, accessible, and performant.
 
 ### 🎨 Modern UI & Experience
+
 - **CKEditor-Inspired Toolbar** - Professional horizontal toolbar with dropdown menus
 - **Three View Modes** - Code view, Split view (side-by-side), and Preview view for different workflows
 - **Responsive Design** - Adapts seamlessly from desktop to mobile
@@ -47,6 +48,7 @@
 - **Skeleton Loading** - Smooth loading states for better perceived performance
 
 ### ✏️ Rich Text Editing
+
 - **Text Formatting** - Bold, italic, underline, strikethrough
 - **Headings** - H1, H2, H3, and paragraph styles with keyboard shortcuts
 - **Lists** - Ordered and unordered lists with nested support
@@ -56,6 +58,7 @@
 - **Clear Formatting** - Remove all formatting with one click
 
 ### 💻 Code & Media
+
 - **Syntax Highlighting** - Code blocks with Prism.js for 22 programming languages
   - JavaScript, TypeScript, Python, Java, C++, Go, Rust, PHP, Ruby, SQL, and more
 - **File Manager** - CKBox-inspired file management system for organizing media assets
@@ -70,6 +73,7 @@
 - **Tables** - Create custom tables with header rows and configurable columns
 
 ### ⚡ Power Features
+
 - **Command Palette** - Quick access to all commands with keyboard-driven interface
 - **Slash Commands** - Type `/` to access 14+ quick actions
 - **Find & Replace** - Full-featured search with case-sensitive and whole-word options (Ctrl+F)
@@ -83,6 +87,7 @@
 - **History Timeline** - Visual representation of document history for easy navigation
 
 ### 🚀 Productivity Features
+
 - **Format Painter** - Copy formatting from one selection and apply it to another with one click
 - **Document Templates** - 8 pre-built templates across 4 categories (Documents, Email, Blog, Marketing)
   - Meeting Notes, Project Proposal, Blog Post, Email, Product Description, Press Release, Technical Documentation
@@ -100,9 +105,47 @@
 - **23 E2E Tests** - Full end-to-end testing with Playwright for real-world scenarios
 - **0 Security Vulnerabilities** - CodeQL verified and continuously monitored
 - **GitHub Actions CI/CD** - Automated testing, linting, and deployment
-- **WCAG Compliant** - Keyboard navigation, ARIA labels, and screen reader support
+- **WCAG AAA Compliant** - Full keyboard navigation, ARIA live regions, skip links, and comprehensive screen reader support
 - **Plugin System** - Extensible architecture for custom functionality
-- **Mobile Gestures** - Touch-friendly interface with gesture support
+- **Mobile Gestures** - Touch-friendly interface with 10 gesture types
+
+### 🎯 Advanced Features (Opt-in)
+
+#### ✍️ Writing Assistant & Analytics
+
+Professional text analysis powered by industry-standard readability algorithms:
+
+- **Readability Scoring** - Flesch Reading Ease, Flesch-Kincaid Grade Level, Gunning Fog, Coleman-Liau, ARI
+- **Statistics Panel** - Word count, character count, sentence count, paragraph count, reading/speaking time
+- **Sentence Analysis** - Distribution by length (short/medium/long), average words per sentence
+- **Word Analysis** - Most common words, average syllables per word, vocabulary richness
+- **Writing Issues Detection** - Passive voice, complex words, long sentences, repeated words
+- **SEO Analysis** - Keyword density, meta description length, heading structure
+
+#### 💬 Comments & Collaboration
+
+Full-featured commenting system for collaborative editing:
+
+- **Comment Threads** - Add comments to any selected text with Range API anchoring
+- **Replies** - Thread-based conversation with nested replies
+- **@ Mentions** - Tag team members with autocomplete dropdown
+- **Status Management** - Mark threads as open or resolved
+- **Visual Highlights** - Color-coded text highlighting (yellow for open, green for resolved)
+- **Sidebar UI** - Dedicated sidebar with tabs for open/resolved comments
+- **Persistence** - Export/import threads as JSON for storage
+- **Auto-restore** - Automatically re-anchor comments after content changes
+
+#### ♿ Accessibility (WCAG AAA)
+
+Beyond basic compliance - full WCAG AAA support:
+
+- **Keyboard Navigation** - 80+ keyboard shortcuts, full keyboard operability
+- **Screen Reader Support** - ARIA live regions, proper labels, semantic HTML
+- **Skip Links** - Skip to main content, toolbar, and footer
+- **Focus Management** - Visible focus indicators, focus trap for modals
+- **Touch Targets** - 44x44px minimum size per WCAG 2.2
+- **Announcements** - Live region for status updates
+- **Landmark Regions** - Proper ARIA landmarks for navigation
 
 ### 📦 Bundle Size
 
@@ -128,6 +171,7 @@ pnpm add next-level-editor
 ```
 
 **Requirements:**
+
 - Vue.js 3.3.0 or higher
 - Modern browser with ES6+ support
 
@@ -148,19 +192,19 @@ pnpm add next-level-editor
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { NextLevelEditor } from 'next-level-editor'
-import 'next-level-editor/dist/style.css'
+import { ref } from "vue";
+import { NextLevelEditor } from "next-level-editor";
+import "next-level-editor/dist/style.css";
 
-const content = ref('<p>Hello World!</p>')
+const content = ref("<p>Hello World!</p>");
 
 const handleFocus = () => {
-  console.log('Editor focused')
-}
+  console.log("Editor focused");
+};
 
 const handleBlur = () => {
-  console.log('Editor blurred')
-}
+  console.log("Editor blurred");
+};
 </script>
 ```
 
@@ -180,6 +224,7 @@ You can customize the editor's width and height using the `width` and `height` p
 ```
 
 The props accept any valid CSS size values including:
+
 - **Pixels**: `'800px'`, `'1000px'`
 - **Percentages**: `'100%'`, `'80%'`
 - **Viewport units**: `'80vh'`, `'50vw'`
@@ -190,14 +235,14 @@ The props accept any valid CSS size values including:
 For apps that use the editor throughout:
 
 ```javascript
-import { createApp } from 'vue'
-import App from './App.vue'
-import NextLevelEditor from 'next-level-editor'
-import 'next-level-editor/dist/style.css'
+import { createApp } from "vue";
+import App from "./App.vue";
+import NextLevelEditor from "next-level-editor";
+import "next-level-editor/dist/style.css";
 
-const app = createApp(App)
-app.use(NextLevelEditor)
-app.mount('#app')
+const app = createApp(App);
+app.use(NextLevelEditor);
+app.mount("#app");
 ```
 
 Then use it anywhere in your components:
@@ -208,87 +253,204 @@ Then use it anywhere in your components:
 </template>
 ```
 
+### Using Advanced Features
+
+#### Writing Assistant & Analytics
+
+Enable the writing stats panel to get professional text analysis:
+
+```vue
+<template>
+  <NextLevelEditor v-model="content" :show-writing-stats="true" />
+</template>
+
+<script setup lang="ts">
+import { ref } from "vue";
+import { NextLevelEditor } from "next-level-editor";
+
+const content = ref("<p>Your content here...</p>");
+</script>
+```
+
+The Writing Stats Panel will appear and show:
+
+- **Readability scores** (Flesch Reading Ease, Grade Level, etc.)
+- **Statistics** (word count, reading time, etc.)
+- **Sentence analysis** (short/medium/long distribution)
+- **Word analysis** (common words, syllables)
+- **Writing issues** (passive voice, complex words)
+- **SEO metrics** (keyword density, heading structure)
+
+#### Comments & Collaboration
+
+Enable the comments system for collaborative editing:
+
+```vue
+<template>
+  <NextLevelEditor v-model="content" :enable-comments="true" />
+</template>
+```
+
+Users can:
+
+- Select text and add comments
+- Reply to comments with @ mentions
+- Resolve/reopen comment threads
+- View comments in a dedicated sidebar
+
+#### Template Variables
+
+Enable the variables system for dynamic content with `{{ variableName }}` syntax:
+
+```vue
+<template>
+  <NextLevelEditor v-model="content" :enable-variables="true" />
+</template>
+```
+
+Features:
+
+- **Smart autocomplete** - Type `{{` to see available variables
+- **Visual pills** - Variables appear as styled badges (like CKEditor)
+- **Built-in variables** - User info, dates, document data, company info
+- **Custom variables** - Add your own variables programmatically
+- **Print-ready** - Variables automatically replaced with values when printing
+
+Available variables: `{{ user.name }}`, `{{ date.today }}`, `{{ doc.title }}`, `{{ company.name }}`, and more.
+
+See [Variables System Documentation](docs/VARIABLES_SYSTEM.md) for complete guide.
+
+#### Using Composables Independently
+
+All advanced features can be used as standalone composables:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import {
+  useWritingAssistant,
+  useComments,
+  useAccessibility,
+} from "next-level-editor";
+
+// Writing Assistant
+const assistant = useWritingAssistant();
+const htmlContent = ref("<p>Your content...</p>");
+
+// Analyze content
+await assistant.analyze(htmlContent.value);
+console.log("Stats:", assistant.stats.value);
+console.log("Readability:", assistant.readability.value);
+
+// Comments System
+const editorElement = ref<HTMLElement>();
+const comments = useComments({
+  editorElement,
+  currentUser: {
+    id: "user-1",
+    name: "John Doe",
+    color: "#3b82f6",
+  },
+});
+
+// Add a comment thread
+comments.addThread("Great point!", ["@jane"]);
+
+// Accessibility
+const { announce, setFocus } = useAccessibility();
+announce("Document saved", "polite");
+</script>
+```
+
 ## 📚 API Reference
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `modelValue` | `string` | `''` | The HTML content (v-model) |
-| `placeholder` | `string` | `'Start typing...'` | Placeholder text when editor is empty |
-| `width` | `string` | `undefined` | Custom width for the editor (e.g., '800px', '100%', '50rem') |
-| `height` | `string` | `undefined` | Custom height for the editor (e.g., '500px', '80vh', '30em') |
+| Prop               | Type      | Default             | Description                                                  |
+| ------------------ | --------- | ------------------- | ------------------------------------------------------------ |
+| `modelValue`       | `string`  | `''`                | The HTML content (v-model)                                   |
+| `placeholder`      | `string`  | `'Start typing...'` | Placeholder text when editor is empty                        |
+| `width`            | `string`  | `undefined`         | Custom width for the editor (e.g., '800px', '100%', '50rem') |
+| `height`           | `string`  | `undefined`         | Custom height for the editor (e.g., '500px', '80vh', '30em') |
+| `showWritingStats` | `boolean` | `false`             | Enable Writing Assistant & Analytics panel                   |
+| `enableComments`   | `boolean` | `false`             | Enable Comments & Collaboration system                       |
 
 ### Events
 
-| Event | Payload | Description |
-|-------|---------|-------------|
+| Event               | Payload  | Description                            |
+| ------------------- | -------- | -------------------------------------- |
 | `update:modelValue` | `string` | Emitted when content changes (v-model) |
-| `focus` | - | Emitted when editor receives focus |
-| `blur` | - | Emitted when editor loses focus |
+| `focus`             | -        | Emitted when editor receives focus     |
+| `blur`              | -        | Emitted when editor loses focus        |
 
 ### TypeScript Support
 
 Full TypeScript definitions included:
 
 ```typescript
-import { NextLevelEditor } from 'next-level-editor'
-import type { Ref } from 'vue'
+import { NextLevelEditor } from "next-level-editor";
+import type { Ref } from "vue";
 
 // Use with typed refs
-const content: Ref<string> = ref('<p>Content</p>')
+const content: Ref<string> = ref("<p>Content</p>");
 
 // Component emits are fully typed
 const handleUpdate = (newContent: string) => {
-  console.log('Content updated:', newContent)
-}
+  console.log("Content updated:", newContent);
+};
 ```
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut | Action | Description |
-|----------|--------|-------------|
-| `Ctrl+B` | **Bold** | Make selected text bold |
-| `Ctrl+I` | **Italic** | Make selected text italic |
-| `Ctrl+U` | **Underline** | Underline selected text |
-| `Ctrl+K` | **Insert Link** | Add a hyperlink |
-| `Ctrl+F` | **Find & Replace** | Open search modal |
-| `Ctrl+Z` | **Undo** | Undo last action |
-| `Ctrl+Shift+Z` | **Redo** | Redo last undone action |
-| `Ctrl+Alt+0` | **Paragraph** | Convert to paragraph |
-| `Ctrl+Alt+1` | **Heading 1** | Convert to H1 |
-| `Ctrl+Alt+2` | **Heading 2** | Convert to H2 |
-| `Ctrl+Alt+3` | **Heading 3** | Convert to H3 |
-| `/` | **Slash Commands** | Open quick actions menu |
+| Shortcut       | Action             | Description               |
+| -------------- | ------------------ | ------------------------- |
+| `Ctrl+B`       | **Bold**           | Make selected text bold   |
+| `Ctrl+I`       | **Italic**         | Make selected text italic |
+| `Ctrl+U`       | **Underline**      | Underline selected text   |
+| `Ctrl+K`       | **Insert Link**    | Add a hyperlink           |
+| `Ctrl+F`       | **Find & Replace** | Open search modal         |
+| `Ctrl+Z`       | **Undo**           | Undo last action          |
+| `Ctrl+Shift+Z` | **Redo**           | Redo last undone action   |
+| `Ctrl+Alt+0`   | **Paragraph**      | Convert to paragraph      |
+| `Ctrl+Alt+1`   | **Heading 1**      | Convert to H1             |
+| `Ctrl+Alt+2`   | **Heading 2**      | Convert to H2             |
+| `Ctrl+Alt+3`   | **Heading 3**      | Convert to H3             |
+| `/`            | **Slash Commands** | Open quick actions menu   |
 
 ## ⚡ Slash Commands
 
 Type `/` anywhere in the editor to open the quick actions menu with 14+ commands:
 
 ### Structure
+
 - `/heading1` - Large heading (H1)
 - `/heading2` - Medium heading (H2)
 - `/heading3` - Small heading (H3)
 - `/paragraph` - Regular paragraph
 
 ### Formatting
+
 - `/bold` - Bold text
 - `/italic` - Italic text
 
 ### Lists
+
 - `/bullet-list` - Bulleted list
 - `/numbered-list` - Numbered list
 
 ### Content Blocks
+
 - `/quote` - Block quote
 - `/code` - Code block with syntax highlighting
 - `/table` - Insert table with custom dimensions
 
 ### Media
+
 - `/link` - Insert hyperlink
 - `/image` - Upload or insert image with preview
 
 ### Elements
+
 - `/divider` - Horizontal rule separator
 
 ## 👁️ View Modes
@@ -296,12 +458,15 @@ Type `/` anywhere in the editor to open the quick actions menu with 14+ commands
 The editor supports three different view modes to suit your workflow:
 
 ### 💻 Code View
+
 Switch to code view to see and edit the raw HTML source. Perfect for developers who want full control over the markup. The HTML is formatted with syntax highlighting for better readability.
 
 ### ⚏ Split View
+
 Work in split view to see your content and the HTML output side-by-side. Great for learning HTML or debugging formatting issues while maintaining a visual reference.
 
 ### 👁️ Preview View
+
 Focus on the visual output with preview view. See exactly how your content will appear without the distraction of editing controls. Ideal for reviewing content before publishing.
 
 Toggle between views using the buttons in the toolbar or use keyboard shortcuts for quick switching.
@@ -315,18 +480,18 @@ The editor uses CSS custom properties (variables) for easy theming and customiza
   /* Background colors */
   --editor-bg: #ffffff;
   --toolbar-bg: #f8f9fb;
-  
+
   /* Text colors */
   --toolbar-text: #1f2937;
   --content-color: #1f2937;
-  
+
   /* Border & accent colors */
   --editor-border: #d8dde6;
   --toolbar-accent: #3b82f6;
-  
+
   /* Transitions */
   --transition-speed: 150ms;
-  
+
   /* Border radius */
   --border-radius: 8px;
 }
@@ -382,15 +547,16 @@ npm run test:e2e:debug
 
 ### Test Coverage Statistics
 
-| File Type | Statements | Branches | Functions | Lines |
-|-----------|-----------|----------|-----------|-------|
-| **Overall** | **81%** | **69%** | **84%** | **83%** |
-| Components | 65% | 57% | 50% | 67% |
-| Utils | 81% | 70% | 88% | 84% |
+| File Type   | Statements | Branches | Functions | Lines   |
+| ----------- | ---------- | -------- | --------- | ------- |
+| **Overall** | **81%**    | **69%**  | **84%**   | **83%** |
+| Components  | 65%        | 57%      | 50%       | 67%     |
+| Utils       | 81%        | 70%      | 88%       | 84%     |
 
 ### Test Suites Overview
 
 **Unit Tests (265+ tests with Vitest)**
+
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
 - **Commands** (29 tests) - Text alignment, tables, horizontal rules, search/replace
@@ -406,6 +572,7 @@ npm run test:e2e:debug
 - **File Manager** - Upload, storage, and file management functionality
 
 **End-to-End Tests (23 tests with Playwright)**
+
 - **Basic Functionality** - Editor loading, typing, word count
 - **Text Formatting** - Bold, italic, underline, toggle formatting
 - **Headings** - H1, H2, H3 creation and styling
@@ -425,24 +592,24 @@ The library is built using Vite with optimized output for multiple formats:
   - Modern ES6+ syntax with code splitting
   - Lazy-loaded chunks for optimal performance
   - Recommended for Vite, Webpack 5+, Rollup
-  
 - **UMD** - `dist/next-level-editor.umd.js` (1,151 KB, 344 KB gzipped)
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
   - All features bundled in a single file
-  
 - **CSS** - `dist/next-level-editor.css` (70.63 KB, 10.35 KB gzipped)
   - Minified styles with CSS variables
   - Includes light and dark themes
   - Responsive design utilities
 
 **Bundle Composition:**
+
 - Core editor with toolbar (~20KB gzipped)
 - Prism.js syntax highlighting for 22 languages (~40KB gzipped)
 - Rich features: tables, emojis, modals, file manager, templates (~30KB gzipped)
 - Vue 3 runtime and utilities (included in chunk sizes)
 
 All bundles are optimized with:
+
 - Tree-shaking support for ES modules
 - Minification and compression
 - Code splitting for lazy-loaded features
@@ -564,6 +731,7 @@ next-level-editor/
 ### Development Workflow
 
 1. **Feature Development**
+
    - Create a feature branch: `git checkout -b feature/your-feature`
    - Write tests first (TDD approach recommended)
    - Implement feature following existing patterns
@@ -571,6 +739,7 @@ next-level-editor/
    - Run linter: `npm run lint`
 
 2. **Before Committing**
+
    - Ensure all tests pass: `npm test -- --run`
    - Verify linting: `npm run lint`
    - Type check: `npx vue-tsc --noEmit`
@@ -587,24 +756,29 @@ next-level-editor/
 Next Level Editor supports all modern browsers with ES6+ capabilities:
 
 ### Desktop Browsers
+
 - ✅ **Chrome** (latest & last 2 major versions)
 - ✅ **Firefox** (latest & last 2 major versions)
 - ✅ **Safari** (latest & last 2 major versions)
 - ✅ **Edge** (Chromium-based, latest & last 2 major versions)
 
 ### Mobile Browsers
+
 - ✅ **iOS Safari** 12.0+
 - ✅ **Chrome Mobile** (latest)
 - ✅ **Samsung Internet** (latest)
 
 ### Requirements
+
 - ES6+ support (native modules, arrow functions, async/await)
 - CSS Grid and Flexbox support
 - LocalStorage API (for theme persistence)
 - Clipboard API (for copy/paste features)
 
 ### Feature Detection
+
 The editor gracefully degrades when certain features aren't available:
+
 - Falls back to basic clipboard operations if Clipboard API is unavailable
 - Theme defaults to light mode if LocalStorage is disabled
 - Works without vendor-specific features
@@ -616,6 +790,7 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
 ### Getting Started
 
 1. **Fork the repository**
+
    ```bash
    # Click "Fork" on GitHub, then clone your fork
    git clone https://github.com/YOUR_USERNAME/next-level-editor.git
@@ -623,6 +798,7 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
    ```
 
 2. **Create a feature branch**
+
    ```bash
    git checkout -b feature/amazing-feature
    # or
@@ -630,11 +806,13 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
    ```
 
 3. **Make your changes**
+
    - Follow the coding standards in [COPILOT_INSTRUCTIONS.md](COPILOT_INSTRUCTIONS.md)
    - Write tests for new features
    - Update documentation as needed
 
 4. **Test your changes**
+
    ```bash
    npm test              # Run unit tests
    npm run test:e2e      # Run E2E tests
@@ -644,6 +822,7 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
    ```
 
 5. **Commit your changes**
+
    ```bash
    # Use conventional commit format
    git commit -m 'feat: add amazing feature'
@@ -660,6 +839,7 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
 ### Contribution Guidelines
 
 **Code Quality Checklist:**
+
 - ✅ All tests pass (`npm test -- --run`)
 - ✅ Code is linted (`npm run lint`)
 - ✅ TypeScript compiles without errors (`npx vue-tsc --noEmit`)
@@ -669,6 +849,7 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
 - ✅ Follows existing code patterns and conventions
 
 **Commit Message Format:**
+
 ```
 type(scope): subject
 
@@ -683,6 +864,7 @@ type(scope): subject
 ```
 
 **Areas for Contribution:**
+
 - 🐛 Bug fixes and issue resolution
 - ✨ New features and enhancements
 - 📝 Documentation improvements
@@ -713,6 +895,7 @@ MIT License © [andrecj93](https://github.com/andrecj93)
 See [LICENSE](LICENSE) file for details.
 
 **What this means:**
+
 - ✅ Use in commercial projects
 - ✅ Modify and distribute
 - ✅ Private use
@@ -744,6 +927,7 @@ Built with inspiration from the best editors in the industry:
 ## 🔗 Links & Resources
 
 ### Package & Repository
+
 - 📦 [NPM Package](https://www.npmjs.com/package/next-level-editor) - Install via npm
 - 🔧 [GitHub Repository](https://github.com/andrecj93/next-level-editor) - Source code
 - 🐛 [Issue Tracker](https://github.com/andrecj93/next-level-editor/issues) - Report bugs
@@ -751,12 +935,14 @@ Built with inspiration from the best editors in the industry:
 - 🚀 [Demo Site](https://andrecj93.github.io/next-level-editor/) - Try it live
 
 ### Documentation
+
 - 📖 [CHANGELOG](CHANGELOG.md) - Version history and release notes
 - ✨ [UX Improvements](docs/UX_IMPROVEMENTS.md) - Recent usability enhancements and fixes
 - 📋 [COPILOT_INSTRUCTIONS](COPILOT_INSTRUCTIONS.md) - Development standards and guidelines
 - 📘 [PUBLISHING](PUBLISHING.md) - Publishing workflow
 
 ### CI/CD & Quality
+
 - ✅ [GitHub Actions](https://github.com/andrecj93/next-level-editor/actions) - Build status
 - 📊 [Codecov](https://codecov.io/gh/andrecj93/next-level-editor) - Code coverage reports
 
@@ -769,6 +955,6 @@ Built with inspiration from the best editors in the industry:
 [![Star on GitHub](https://img.shields.io/github/stars/andrecj93/next-level-editor?style=social)](https://github.com/andrecj93/next-level-editor)
 [![Follow on GitHub](https://img.shields.io/github/followers/andrecj93?style=social)](https://github.com/andrecj93)
 
-*If you find this project useful, please consider giving it a ⭐ on GitHub!*
+_If you find this project useful, please consider giving it a ⭐ on GitHub!_
 
 </div>

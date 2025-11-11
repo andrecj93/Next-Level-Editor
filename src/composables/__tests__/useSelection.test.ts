@@ -214,7 +214,7 @@ describe("useSelection", () => {
 
       expect(() => performWithSelection(errorAction)).not.toThrow();
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        "Formatting action failed",
+        "Action execution failed",
         expect.any(Error)
       );
 
