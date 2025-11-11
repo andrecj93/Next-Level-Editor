@@ -559,6 +559,9 @@ describe("useFormattingActions", () => {
     });
 
     it("should paste format to selection", () => {
+      // Mock pasteFormat to return true (successful paste)
+      vi.mocked(formatPainter.pasteFormat).mockReturnValue(true);
+
       const { handlePasteFormat } = useFormattingActions(
         editorContent,
         fontSize,

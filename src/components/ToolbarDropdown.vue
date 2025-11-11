@@ -178,9 +178,14 @@ watch(
   min-height: 32px;
 }
 
-.dropdown-trigger:hover {
+.dropdown-trigger:hover:not(:disabled) {
   background: var(--toolbar-btn-hover, #f5f5f5);
   border-color: var(--border-hover-color, #999);
+}
+
+.dropdown-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .dropdown-trigger.active {
@@ -240,7 +245,7 @@ watch(
   border: 1px solid var(--border-color, #ddd);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
+  z-index: 10000;
   max-height: 400px;
   overflow-y: auto;
   padding: 4px 0;

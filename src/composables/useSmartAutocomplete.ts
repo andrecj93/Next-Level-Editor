@@ -185,7 +185,7 @@ export function useSmartAutocomplete(
       converted = converted.replaceAll(/'($|\s|[.,!?;:])/g, "\u2019$1");
 
       // Apostrophe in contractions (don't, it's, etc.) - using hex escape
-      converted = converted.replace(/(\w)'(\w)/g, "$1\u2019$2");
+      converted = converted.replaceAll(/(\w)'(\w)/g, "$1\u2019$2");
 
       if (converted !== text) {
         return {
@@ -324,7 +324,7 @@ export function useSmartAutocomplete(
     if (!enableMarkdownShortcuts) return null;
 
     for (const shortcut of markdownShortcuts) {
-      const match = text.match(shortcut.pattern);
+      const match = new RegExp(shortcut.pattern).exec(text);
       if (match) {
         const replacement = shortcut.replacement(match);
         return {
@@ -510,16 +510,16 @@ export function useSmartAutocomplete(
     range.insertNode(replacement);
 
     // Set cursor position
-    if (result.cursorOffset !== undefined) {
+    if (result.cursorOffset === undefined) {
+      // Move cursor to end of replacement
+      range.collapse(false);
+    } else {
       const newRange = document.createRange();
       const lastNode = replacement.lastChild || replacement;
       newRange.setStart(lastNode, result.cursorOffset);
       newRange.collapse(true);
       selection.removeAllRanges();
       selection.addRange(newRange);
-    } else {
-      // Move cursor to end of replacement
-      range.collapse(false);
     }
 
     // Add to history

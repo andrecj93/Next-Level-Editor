@@ -67,16 +67,33 @@ export function useFindReplace(options: FindReplaceOptions) {
       // If found, scroll the selected element into view
       if (found && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
-        const tempSpan = document.createElement("span");
-        range.insertNode(tempSpan);
 
-        tempSpan.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
+        // Get the element containing the match
+        let element: HTMLElement | null = null;
+        if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
+          element = range.startContainer as HTMLElement;
+        } else if (range.startContainer.parentElement) {
+          element = range.startContainer.parentElement;
+        }
 
-        // Clean up the temporary span
-        tempSpan.remove();
+        // Scroll to the match with better visibility
+        if (element) {
+          // Use requestAnimationFrame for smoother scrolling
+          requestAnimationFrame(() => {
+            element?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+              inline: "nearest",
+            });
+
+            // Highlight the match temporarily
+            const originalBg = element.style.backgroundColor;
+            element.style.backgroundColor = "rgba(255, 255, 0, 0.3)";
+            setTimeout(() => {
+              element.style.backgroundColor = originalBg;
+            }, 1000);
+          });
+        }
       }
     } catch (error) {
       console.warn("Find operation not supported in this browser:", error);

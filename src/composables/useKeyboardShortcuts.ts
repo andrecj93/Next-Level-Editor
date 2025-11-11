@@ -272,22 +272,34 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       const range = selection.getRangeAt(0);
       const container = range.startContainer;
 
-      const textBefore =
-        container.nodeType === Node.TEXT_NODE
-          ? (container as Text).data.substring(0, range.startOffset)
-          : "";
+      // Get the text before the cursor
+      let textBefore = "";
+      if (container.nodeType === Node.TEXT_NODE) {
+        textBefore = (container as Text).data.substring(0, range.startOffset);
+      } else if (container.nodeType === Node.ELEMENT_NODE) {
+        // If cursor is in an element node, check if it's empty or at the start
+        const element = container as HTMLElement;
+        const textContent = element.textContent || "";
+        textBefore = textContent.substring(0, range.startOffset);
+      }
+
+      // Check if we're in a special context
+      const inListItem = isInListItem(range);
+      const { block: currentBlock } = findCurrentBlock(range.startContainer);
 
       // Allow slash commands if:
       // 1. Line is empty or whitespace only
       // 2. Text ends with whitespace (space, newline, etc)
-      // 3. At the start of a list item
+      // 3. At the start of a list item or block element
+      // 4. In an empty block element (paragraph, heading, etc.)
       const isEmptyLine = textBefore.trim().length === 0;
       const endsWithWhitespace = /\s$/.test(textBefore);
-      const inListItem = isInListItem(range);
+      const isEmptyBlock = currentBlock && isEmptyContent(currentBlock);
 
       if (
         isEmptyLine ||
         endsWithWhitespace ||
+        isEmptyBlock ||
         (inListItem && textBefore.trim() === "")
       ) {
         event.preventDefault();

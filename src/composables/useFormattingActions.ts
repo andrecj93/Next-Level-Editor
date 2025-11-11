@@ -57,16 +57,35 @@ export function useFormattingActions(
   const handleCopyFormat = () => {
     if (!editorContent.value) return;
     const selection = globalThis.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    copyFormat(selection);
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+    const result = copyFormat(selection);
+    if (result && editorContent.value) {
+      // Change cursor to indicate format painter is active
+      editorContent.value.style.cursor = "copy";
+      setTimeout(() => {
+        if (editorContent.value) {
+          editorContent.value.style.cursor = "";
+        }
+      }, 3000);
+    }
   };
 
   const handlePasteFormat = () => {
     if (!editorContent.value) return;
     const selection = globalThis.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    pasteFormat(selection);
-    captureSnapshot();
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+    const success = pasteFormat(selection);
+    if (success) {
+      captureSnapshot();
+      // Reset cursor
+      if (editorContent.value) {
+        editorContent.value.style.cursor = "";
+      }
+    }
   };
 
   return {

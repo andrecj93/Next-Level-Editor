@@ -1,26 +1,15 @@
 <template>
   <teleport to="body">
     <transition name="modal-fade">
-      <div
-        v-if="show"
-        class="modal-overlay"
-        @click="handleOverlayClick"
-      >
-        <div
-          class="modal-content find-replace-modal"
-          @click.stop
-        >
+      <div v-if="show" class="modal-overlay" @click="handleOverlayClick">
+        <div class="modal-content find-replace-modal" @click.stop>
           <div class="modal-header">
             <h3>Find & Replace</h3>
-            <button
-              class="close-btn"
-              aria-label="Close modal"
-              @click="close"
-            >
+            <button class="close-btn" aria-label="Close modal" @click="close">
               ✕
             </button>
           </div>
-          
+
           <div class="modal-body">
             <div class="input-group">
               <label for="find-input">Find</label>
@@ -33,16 +22,17 @@
                 placeholder="Search text..."
                 @keydown.enter="findNext"
                 @keydown.esc="close"
-              >
+              />
               <div class="search-info">
-                <span v-if="matches > 0">{{ currentMatch }} of {{ matches }}</span>
-                <span
-                  v-else-if="findText && matches === 0"
-                  class="no-matches"
-                >No matches</span>
+                <span v-if="matches > 0"
+                  >{{ currentMatch }} of {{ matches }}</span
+                >
+                <span v-else-if="findText && matches === 0" class="no-matches"
+                  >No matches</span
+                >
               </div>
             </div>
-            
+
             <div class="input-group">
               <label for="replace-input">Replace with</label>
               <input
@@ -53,28 +43,22 @@
                 placeholder="Replacement text..."
                 @keydown.enter="replaceOne"
                 @keydown.esc="close"
-              >
+              />
             </div>
-            
+
             <div class="options-group">
               <label class="checkbox-label">
-                <input
-                  v-model="caseSensitive"
-                  type="checkbox"
-                >
+                <input v-model="caseSensitive" type="checkbox" />
                 <span>Case sensitive</span>
               </label>
-              
+
               <label class="checkbox-label">
-                <input
-                  v-model="wholeWord"
-                  type="checkbox"
-                >
+                <input v-model="wholeWord" type="checkbox" />
                 <span>Whole word</span>
               </label>
             </div>
           </div>
-          
+
           <div class="modal-footer">
             <div class="btn-group">
               <button
@@ -116,129 +100,151 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted } from 'vue'
+import { ref, watch, nextTick, onMounted } from "vue";
 
 interface Props {
-  show: boolean
-  content: string
+  show: boolean;
+  content: string;
 }
 
 interface Emits {
-  (e: 'close'): void
-  (e: 'replace', data: { findText: string; replaceText: string; options: { caseSensitive: boolean; wholeWord: boolean } }): void
-  (e: 'find', data: { findText: string; direction: 'next' | 'previous' }): void
+  (e: "close"): void;
+  (
+    e: "replace",
+    data: {
+      findText: string;
+      replaceText: string;
+      options: { caseSensitive: boolean; wholeWord: boolean };
+    }
+  ): void;
+  (e: "find", data: { findText: string; direction: "next" | "previous" }): void;
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
 
-const findInput = ref<HTMLInputElement | null>(null)
-const findText = ref('')
-const replaceText = ref('')
-const caseSensitive = ref(false)
-const wholeWord = ref(false)
-const matches = ref(0)
-const currentMatch = ref(0)
+const findInput = ref<HTMLInputElement | null>(null);
+const findText = ref("");
+const replaceText = ref("");
+const caseSensitive = ref(false);
+const wholeWord = ref(false);
+const matches = ref(0);
+const currentMatch = ref(0);
 
 const close = () => {
-  emit('close')
-}
+  emit("close");
+};
 
 const handleOverlayClick = () => {
-  close()
-}
+  close();
+};
 
 const findNext = () => {
-  if (!findText.value) return
-  emit('find', { findText: findText.value, direction: 'next' })
-}
+  if (!findText.value) return;
+  emit("find", { findText: findText.value, direction: "next" });
+};
 
 const findPrevious = () => {
-  if (!findText.value) return
-  emit('find', { findText: findText.value, direction: 'previous' })
-}
+  if (!findText.value) return;
+  emit("find", { findText: findText.value, direction: "previous" });
+};
 
 const replaceOne = () => {
-  if (!findText.value || matches.value === 0) return
-  emit('replace', {
+  if (!findText.value || matches.value === 0) return;
+  emit("replace", {
     findText: findText.value,
     replaceText: replaceText.value,
     options: {
       caseSensitive: caseSensitive.value,
-      wholeWord: wholeWord.value
-    }
-  })
-}
+      wholeWord: wholeWord.value,
+    },
+  });
+  // After replacing, move to next match
+  findNext();
+};
 
 const replaceAll = () => {
-  if (!findText.value || matches.value === 0) return
-  emit('replace', {
-    findText: findText.value,
-    replaceText: replaceText.value,
-    options: {
-      caseSensitive: caseSensitive.value,
-      wholeWord: wholeWord.value
-    }
-  })
-}
+  if (!findText.value || matches.value === 0) return;
+  // Replace all occurrences by repeatedly calling replace
+  const totalMatches = matches.value;
+  for (let i = 0; i < totalMatches; i++) {
+    emit("replace", {
+      findText: findText.value,
+      replaceText: replaceText.value,
+      options: {
+        caseSensitive: caseSensitive.value,
+        wholeWord: wholeWord.value,
+      },
+    });
+  }
+  updateMatches();
+};
 
 const updateMatches = () => {
   if (!findText.value || !props.content) {
-    matches.value = 0
-    currentMatch.value = 0
-    return
+    matches.value = 0;
+    currentMatch.value = 0;
+    return;
   }
 
-  let flags = 'g'
-  if (!caseSensitive.value) flags += 'i'
-  
-  let pattern = findText.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let flags = "g";
+  if (!caseSensitive.value) flags += "i";
+
+  let pattern = findText.value.replaceAll(
+    /[.*+?^${}()|[\]\\]/g,
+    String.raw`\$&`
+  );
   if (wholeWord.value) {
-    pattern = `\\b${pattern}\\b`
+    pattern = `\\b${pattern}\\b`;
   }
 
   try {
-    const regex = new RegExp(pattern, flags)
-    const temp = document.createElement('div')
-    temp.innerHTML = props.content
-    const text = temp.textContent || ''
-    const allMatches = text.match(regex)
-    matches.value = allMatches ? allMatches.length : 0
-    currentMatch.value = matches.value > 0 ? 1 : 0
+    const regex = new RegExp(pattern, flags);
+    const temp = document.createElement("div");
+    temp.innerHTML = props.content;
+    const text = temp.textContent || "";
+    const allMatches = text.match(regex);
+    matches.value = allMatches ? allMatches.length : 0;
+    currentMatch.value = matches.value > 0 ? 1 : 0;
   } catch (e) {
-    matches.value = 0
-    currentMatch.value = 0
+    // Invalid regex pattern - reset match counts
+    console.warn("Invalid search pattern:", e);
+    matches.value = 0;
+    currentMatch.value = 0;
   }
-}
+};
 
 watch([findText, caseSensitive, wholeWord, () => props.content], () => {
-  updateMatches()
-})
+  updateMatches();
+});
 
-watch(() => props.show, (newShow) => {
-  if (newShow) {
-    nextTick(() => {
-      findInput.value?.focus()
-    })
+watch(
+  () => props.show,
+  (newShow) => {
+    if (newShow) {
+      nextTick(() => {
+        findInput.value?.focus();
+      });
+    }
   }
-})
+);
 
 onMounted(() => {
   // Handle Ctrl+F shortcut globally
   const handleKeydown = (e: KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f' && props.show) {
-      e.preventDefault()
-      findInput.value?.focus()
-      findInput.value?.select()
+    if ((e.ctrlKey || e.metaKey) && e.key === "f" && props.show) {
+      e.preventDefault();
+      findInput.value?.focus();
+      findInput.value?.select();
     }
-  }
+  };
 
-  window.addEventListener('keydown', handleKeydown)
-  
+  window.addEventListener("keydown", handleKeydown);
+
   return () => {
-    window.removeEventListener('keydown', handleKeydown)
-  }
-})
+    window.removeEventListener("keydown", handleKeydown);
+  };
+});
 </script>
 
 <style scoped>
@@ -412,7 +418,7 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: #3b82f6;
+  background: #2563eb;
   color: white;
 }
 

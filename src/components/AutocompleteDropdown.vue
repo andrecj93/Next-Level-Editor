@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/max-attributes-per-line -->
 <template>
   <div
     v-if="visible && suggestions.length > 0"
@@ -24,10 +25,7 @@
       }}</span>
     </div>
 
-    <div
-      v-if="showHelpText"
-      class="dropdown-footer"
-    >
+    <div v-if="showHelpText" class="dropdown-footer">
       <span class="help-text">
         <kbd>↑</kbd><kbd>↓</kbd> Navigate • <kbd>Enter</kbd> Select •
         <kbd>Esc</kbd> Close
@@ -139,6 +137,7 @@ const handleKeydown = (e: KeyboardEvent) => {
       break;
 
     case "Enter":
+    case "Tab":
       e.preventDefault();
       selectSuggestion(selectedIndex.value);
       break;
@@ -146,11 +145,6 @@ const handleKeydown = (e: KeyboardEvent) => {
     case "Escape":
       e.preventDefault();
       emit("close");
-      break;
-
-    case "Tab":
-      e.preventDefault();
-      selectSuggestion(selectedIndex.value);
       break;
   }
 };
