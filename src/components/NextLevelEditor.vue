@@ -835,7 +835,7 @@ function handleAddReply(threadId: string, content: string, mentions: string[]) {
 
 function handleCreateComment() {
   if (!comments) return;
-  
+
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed) {
     showToastNotification("Please select text to comment on", "error");
@@ -861,7 +861,7 @@ function handleCommentSubmit(content: string, mentions: string[]) {
 
   // Add the thread with the captured selection
   const thread = comments.addThread(content, mentions);
-  
+
   if (thread) {
     showToastNotification("Comment added successfully", "success");
     // Ensure sidebar is visible to show the new comment
@@ -877,10 +877,10 @@ function handleCommentSubmit(content: string, mentions: string[]) {
 
 function handleCommentCancel() {
   if (!comments) return;
-  
+
   // Clear the selection capture
   comments.clearSelection();
-  
+
   // Close the modal
   showCommentModal.value = false;
   selectedTextForComment.value = "";

@@ -23,12 +23,7 @@
           aria-label="Close comment modal"
           @click="handleCancel"
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-          >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <path
               d="M15 5L5 15M5 5l10 10"
               stroke="currentColor"
@@ -42,9 +37,7 @@
       <!-- Selected Text Preview -->
       <div v-if="selectedText" class="comment-selected-text">
         <div class="selected-text-label">Commenting on:</div>
-        <div class="selected-text-content">
-          "{{ selectedText }}"
-        </div>
+        <div class="selected-text-content">"{{ selectedText }}"</div>
       </div>
 
       <!-- Comment Form -->
@@ -87,10 +80,7 @@
               <div class="comment-mention-name">
                 {{ suggestion.name }}
               </div>
-              <div
-                v-if="suggestion.email"
-                class="comment-mention-email"
-              >
+              <div v-if="suggestion.email" class="comment-mention-email">
                 {{ suggestion.email }}
               </div>
             </div>
