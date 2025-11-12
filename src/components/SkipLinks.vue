@@ -1,8 +1,5 @@
 <template>
-  <nav
-    class="skip-links"
-    aria-label="Skip links"
-  >
+  <nav class="skip-links" aria-label="Skip links">
     <a
       v-for="link in links"
       :key="link.id"
@@ -18,6 +15,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useAccessibility } from "../composables/useAccessibility";
+import { smoothScrollIntoView } from "../utils/scroll";
 
 /**
  * Skip Link Configuration
@@ -61,12 +59,12 @@ const handleSkip = (targetId: string) => {
   if (targetElement) {
     // Set focus to target
     setFocus(targetElement, {
-      announce: `Skipped to ${targetId.replaceAll("-", " ")}`,
+      announce: `Skipped to ${targetId.replace("-", " ")}`,
       preventScroll: false,
     });
 
     // Scroll into view
-    targetElement.scrollIntoView({
+    smoothScrollIntoView(targetElement, {
       behavior: "smooth",
       block: "start",
     });

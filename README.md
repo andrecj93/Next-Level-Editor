@@ -177,6 +177,44 @@ pnpm add next-level-editor
 - Vue.js 3.3.0 or higher
 - Modern browser with ES6+ support
 
+## 🌐 Browser Compatibility
+
+Next Level Editor is built with cross-browser compatibility in mind and thoroughly tested across all major browsers.
+
+| Browser            | Minimum Version | Notes                                  |
+| ------------------ | --------------- | -------------------------------------- |
+| **Chrome**         | 90+             | ✅ Fully supported                     |
+| **Edge**           | 90+             | ✅ Fully supported                     |
+| **Firefox**        | 88+             | ✅ Fully supported                     |
+| **Safari (macOS)** | 12+             | ✅ Fully supported (15.4+ recommended) |
+| **Safari (iOS)**   | 12+             | ✅ Fully supported (15.4+ recommended) |
+| **Opera**          | 75+             | ✅ Fully supported (Chromium-based)    |
+| **Chrome Android** | 90+             | ✅ Fully supported                     |
+
+### Cross-Browser Features
+
+- ✅ **No `execCommand()`** - Uses modern Selection API and DOM manipulation
+- ✅ **Clipboard API with fallbacks** - Copy/paste works on all browsers including Safari iOS
+- ✅ **Smooth scroll polyfill** - Automatic fallback for Safari < 15.4
+- ✅ **CSS gap fallbacks** - Margin-based fallbacks for Safari < 14.1
+- ✅ **ES2015 target** - Transpiled for broad compatibility
+- ✅ **Autoprefixer** - CSS vendor prefixes added automatically
+- ✅ **Touch-friendly** - Optimized for mobile devices with proper touch targets
+
+### Known Limitations
+
+- **Paste from context menu** is disabled on Safari iOS and Firefox (use Ctrl+V/Cmd+V instead)
+- **PDF export** may be slower on older iOS devices (consider using Share > Print > Save as PDF)
+- Some advanced features require HTTPS for security (Clipboard API, Service Workers)
+
+### Testing
+
+We test on **8 configurations** using Playwright:
+
+- Desktop: Chrome, Firefox, WebKit
+- Mobile: iPhone 13 (portrait & landscape), Pixel 5
+- Tablets: iPad Pro (portrait & landscape)
+
 ## 🚀 Quick Start
 
 ### Basic Usage

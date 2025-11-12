@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="history-timeline"
-    :class="{ 'is-compact': compact }"
-  >
+  <div class="history-timeline" :class="{ 'is-compact': compact }">
     <!-- Timeline Header -->
     <div class="timeline-header">
       <h3 class="timeline-title">
@@ -29,10 +26,7 @@
     </div>
 
     <!-- Timeline Progress Bar -->
-    <div
-      v-if="showProgress && hasHistory"
-      class="timeline-progress-container"
-    >
+    <div v-if="showProgress && hasHistory" class="timeline-progress-container">
       <div class="timeline-progress-bar">
         <div
           class="timeline-progress-fill"
@@ -45,10 +39,7 @@
     </div>
 
     <!-- Timeline Navigation -->
-    <div
-      v-if="showNavigation && hasHistory"
-      class="timeline-navigation"
-    >
+    <div v-if="showNavigation && hasHistory" class="timeline-navigation">
       <button
         :disabled="!canGoBack"
         class="nav-btn"
@@ -84,11 +75,7 @@
     </div>
 
     <!-- Timeline Entries -->
-    <div
-      v-if="hasHistory"
-      ref="entriesContainer"
-      class="timeline-entries"
-    >
+    <div v-if="hasHistory" ref="entriesContainer" class="timeline-entries">
       <div
         v-for="(entry, index) in history"
         :key="entry.id"
@@ -96,7 +83,7 @@
         :class="{
           'is-current': index === currentIndex,
           'is-past': index < currentIndex,
-          'is-future': index > currentIndex
+          'is-future': index > currentIndex,
         }"
         @click="handleEntryClick(index)"
       >
@@ -121,137 +108,135 @@
     </div>
 
     <!-- Empty State -->
-    <div
-      v-else
-      class="timeline-empty"
-    >
+    <div v-else class="timeline-empty">
       <p>{{ emptyMessage }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { HistoryEntry } from '../composables/useHistoryTimeline'
+import { ref } from "vue";
+import type { HistoryEntry } from "../composables/useHistoryTimeline";
+import { smoothScrollIntoView } from "../utils/scroll";
 
 interface Props {
-  history: readonly HistoryEntry[]
-  currentIndex: number
-  canGoBack: boolean
-  canGoForward: boolean
-  hasHistory: boolean
-  historySize: number
-  timelineProgress: number
-  title?: string
-  compact?: boolean
-  showProgress?: boolean
-  showNavigation?: boolean
-  showPreview?: boolean
-  showClearButton?: boolean
-  showExportButton?: boolean
-  clearButtonLabel?: string
-  exportButtonLabel?: string
-  emptyMessage?: string
-  maxPreviewLength?: number
+  history: readonly HistoryEntry[];
+  currentIndex: number;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  hasHistory: boolean;
+  historySize: number;
+  timelineProgress: number;
+  title?: string;
+  compact?: boolean;
+  showProgress?: boolean;
+  showNavigation?: boolean;
+  showPreview?: boolean;
+  showClearButton?: boolean;
+  showExportButton?: boolean;
+  clearButtonLabel?: string;
+  exportButtonLabel?: string;
+  emptyMessage?: string;
+  maxPreviewLength?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  title: 'History Timeline',
+  title: "History Timeline",
   compact: false,
   showProgress: true,
   showNavigation: true,
   showPreview: true,
   showClearButton: true,
   showExportButton: true,
-  clearButtonLabel: 'Clear',
-  exportButtonLabel: 'Export',
-  emptyMessage: 'No history available',
-  maxPreviewLength: 100
-})
+  clearButtonLabel: "Clear",
+  exportButtonLabel: "Export",
+  emptyMessage: "No history available",
+  maxPreviewLength: 100,
+});
 
 interface Emits {
-  (e: 'goToEntry', index: number): void
-  (e: 'goBack'): void
-  (e: 'goForward'): void
-  (e: 'goToFirst'): void
-  (e: 'goToLatest'): void
-  (e: 'clear'): void
-  (e: 'export'): void
+  (e: "goToEntry", index: number): void;
+  (e: "goBack"): void;
+  (e: "goForward"): void;
+  (e: "goToFirst"): void;
+  (e: "goToLatest"): void;
+  (e: "clear"): void;
+  (e: "export"): void;
 }
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits>();
 
-const entriesContainer = ref<HTMLElement | null>(null)
+const entriesContainer = ref<HTMLElement | null>(null);
 
 // Event handlers
 const handleEntryClick = (index: number) => {
-  emit('goToEntry', index)
-}
+  emit("goToEntry", index);
+};
 
 const handleGoBack = () => {
-  emit('goBack')
-}
+  emit("goBack");
+};
 
 const handleGoForward = () => {
-  emit('goForward')
-}
+  emit("goForward");
+};
 
 const handleGoToFirst = () => {
-  emit('goToFirst')
-}
+  emit("goToFirst");
+};
 
 const handleGoToLatest = () => {
-  emit('goToLatest')
-}
+  emit("goToLatest");
+};
 
 const handleClear = () => {
-  emit('clear')
-}
+  emit("clear");
+};
 
 const handleExport = () => {
-  emit('export')
-}
+  emit("export");
+};
 
 // Utility functions
 const formatTime = (timestamp: number): string => {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
 
   if (diffMins < 1) {
-    return 'Just now'
+    return "Just now";
   } else if (diffMins < 60) {
-    return `${diffMins}m ago`
+    return `${diffMins}m ago`;
   } else if (diffHours < 24) {
-    return `${diffHours}h ago`
+    return `${diffHours}h ago`;
   } else if (diffDays < 7) {
-    return `${diffDays}d ago`
+    return `${diffDays}d ago`;
   } else {
-    return date.toLocaleDateString()
+    return date.toLocaleDateString();
   }
-}
+};
 
 const truncateContent = (content: string): string => {
   if (content.length <= props.maxPreviewLength) {
-    return content
+    return content;
   }
-  return content.substring(0, props.maxPreviewLength) + '...'
-}
+  return content.substring(0, props.maxPreviewLength) + "...";
+};
 
 // Expose methods for parent component
 defineExpose({
   scrollToEntry: (index: number) => {
-    if (!entriesContainer.value) return
-    const entries = entriesContainer.value.querySelectorAll('.timeline-entry')
-    const entry = entries[index] as HTMLElement
+    if (!entriesContainer.value) return;
+    const entries = entriesContainer.value.querySelectorAll(".timeline-entry");
+    const entry = entries[index] as HTMLElement;
     if (entry) {
-      entry.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      smoothScrollIntoView(entry, { behavior: "smooth", block: "center" });
     }
-  }
-})
+  },
+});
 </script>
 
 <style scoped>
@@ -318,7 +303,7 @@ defineExpose({
 
 .timeline-progress-fill {
   height: 100%;
-  background: var(--primary-color, #4CAF50);
+  background: var(--primary-color, #4caf50);
   transition: width 0.3s ease;
 }
 
@@ -377,7 +362,7 @@ defineExpose({
 
 .timeline-entry.is-current {
   background: var(--primary-light, #e8f5e9);
-  border-left: 3px solid var(--primary-color, #4CAF50);
+  border-left: 3px solid var(--primary-color, #4caf50);
 }
 
 .timeline-entry.is-past {
@@ -398,7 +383,7 @@ defineExpose({
 }
 
 .timeline-entry.is-current .entry-marker {
-  background: var(--primary-color, #4CAF50);
+  background: var(--primary-color, #4caf50);
   box-shadow: 0 0 0 4px var(--primary-light, #e8f5e9);
 }
 

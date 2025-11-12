@@ -1,0 +1,284 @@
+/**
+ * Gap fallback for browsers that don't support flexbox/grid gap
+ * Targets Safari < 14.1 (iOS < 14.5)
+ * 
+ * This file provides fallback styles using margin for browsers
+ * that don't support CSS gap property in flexbox/grid layouts.
+ */
+
+/* ============================================================================
+   FALLBACK PATTERNS FOR GAP
+   ============================================================================ */
+
+/**
+ * Pattern 1: Flexbox row with gap
+ * Fallback: Use margin-right on children except last
+ */
+.toolbar-section,
+.editor-toolbar-group,
+.editor-footer-actions,
+.modal-actions,
+.button-group {
+  display: flex;
+}
+
+/* Fallback for gap: 8px */
+.toolbar-section > *:not(:last-child),
+.editor-toolbar-group > *:not(:last-child),
+.editor-footer-actions > *:not(:last-child),
+.modal-actions > *:not(:last-child),
+.button-group > *:not(:last-child) {
+  margin-right: 8px;
+}
+
+/* Progressive enhancement: Use gap if supported */
+@supports (gap: 1px) {
+  .toolbar-section > *:not(:last-child),
+  .editor-toolbar-group > *:not(:last-child),
+  .editor-footer-actions > *:not(:last-child),
+  .modal-actions > *:not(:last-child),
+  .button-group > *:not(:last-child) {
+    margin-right: 0;
+  }
+}
+
+/**
+ * Pattern 2: Flexbox column with gap
+ * Fallback: Use margin-bottom on children except last
+ */
+.sidebar-content,
+.comment-thread,
+.form-group,
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fallback for gap: 12px */
+.sidebar-content > *:not(:last-child),
+.comment-thread > *:not(:last-child) {
+  margin-bottom: 12px;
+}
+
+/* Fallback for gap: 10px */
+.form-group > *:not(:last-child) {
+  margin-bottom: 10px;
+}
+
+/* Progressive enhancement */
+@supports (gap: 1px) {
+  .sidebar-content > *:not(:last-child),
+  .comment-thread > *:not(:last-child),
+  .form-group > *:not(:last-child),
+  .settings-panel > *:not(:last-child) {
+    margin-bottom: 0;
+  }
+}
+
+/**
+ * Pattern 3: Grid with gap
+ * Fallback: Use margin on all children with negative margin on container
+ */
+.emoji-grid,
+.color-picker-grid,
+.template-grid {
+  display: grid;
+}
+
+/* Fallback for gap: 8px using negative margins */
+.emoji-grid {
+  margin: -4px; /* Half of gap */
+}
+
+.emoji-grid > * {
+  margin: 4px; /* Half of gap */
+}
+
+@supports (gap: 1px) {
+  .emoji-grid {
+    margin: 0;
+  }
+
+  .emoji-grid > * {
+    margin: 0;
+  }
+}
+
+/**
+ * Pattern 4: Specific gap sizes
+ */
+
+/* Gap: 4px */
+.toolbar-compact > *:not(:last-child),
+.inline-controls > *:not(:last-child) {
+  margin-right: 4px;
+}
+
+@supports (gap: 1px) {
+  .toolbar-compact > *:not(:last-child),
+  .inline-controls > *:not(:last-child) {
+    margin-right: 0;
+  }
+}
+
+/* Gap: 16px */
+.spacing-lg > *:not(:last-child) {
+  margin-right: 16px;
+}
+
+@supports (gap: 1px) {
+  .spacing-lg > *:not(:last-child) {
+    margin-right: 0;
+  }
+}
+
+/* ============================================================================
+   UTILITY CLASSES FOR GAP FALLBACK
+   ============================================================================ */
+
+/**
+ * Add these utility classes when needed:
+ * 
+ * .gap-fallback-4  - 4px gap with margin fallback
+ * .gap-fallback-8  - 8px gap with margin fallback
+ * .gap-fallback-12 - 12px gap with margin fallback
+ * .gap-fallback-16 - 16px gap with margin fallback
+ */
+
+.gap-fallback-4 {
+  display: flex;
+}
+
+.gap-fallback-4 > *:not(:last-child) {
+  margin-right: 4px;
+}
+
+@supports (gap: 1px) {
+  .gap-fallback-4 {
+    gap: 4px;
+  }
+
+  .gap-fallback-4 > *:not(:last-child) {
+    margin-right: 0;
+  }
+}
+
+.gap-fallback-8 {
+  display: flex;
+}
+
+.gap-fallback-8 > *:not(:last-child) {
+  margin-right: 8px;
+}
+
+@supports (gap: 1px) {
+  .gap-fallback-8 {
+    gap: 8px;
+  }
+
+  .gap-fallback-8 > *:not(:last-child) {
+    margin-right: 0;
+  }
+}
+
+.gap-fallback-12 {
+  display: flex;
+}
+
+.gap-fallback-12 > *:not(:last-child) {
+  margin-right: 12px;
+}
+
+@supports (gap: 1px) {
+  .gap-fallback-12 {
+    gap: 12px;
+  }
+
+  .gap-fallback-12 > *:not(:last-child) {
+    margin-right: 0;
+  }
+}
+
+.gap-fallback-16 {
+  display: flex;
+}
+
+.gap-fallback-16 > *:not(:last-child) {
+  margin-right: 16px;
+}
+
+@supports (gap: 1px) {
+  .gap-fallback-16 {
+    gap: 16px;
+  }
+
+  .gap-fallback-16 > *:not(:last-child) {
+    margin-right: 0;
+  }
+}
+
+/* Column direction fallbacks */
+.gap-fallback-column-8 {
+  display: flex;
+  flex-direction: column;
+}
+
+.gap-fallback-column-8 > *:not(:last-child) {
+  margin-bottom: 8px;
+}
+
+@supports (gap: 1px) {
+  .gap-fallback-column-8 {
+    gap: 8px;
+  }
+
+  .gap-fallback-column-8 > *:not(:last-child) {
+    margin-bottom: 0;
+  }
+}
+
+.gap-fallback-column-12 {
+  display: flex;
+  flex-direction: column;
+}
+
+.gap-fallback-column-12 > *:not(:last-child) {
+  margin-bottom: 12px;
+}
+
+@supports (gap: 1px) {
+  .gap-fallback-column-12 {
+    gap: 12px;
+  }
+
+  .gap-fallback-column-12 > *:not(:last-child) {
+    margin-bottom: 0;
+  }
+}
+
+/* ============================================================================
+   NOTES FOR DEVELOPERS
+   ============================================================================ */
+
+/**
+ * How to use gap fallback:
+ * 
+ * Option 1: Let autoprefixer handle it (recommended)
+ * - Modern autoprefixer can add fallbacks automatically
+ * - Make sure browserslistrc includes "Safari >= 12"
+ * 
+ * Option 2: Use @supports (this file's approach)
+ * - Provides margin fallback for old browsers
+ * - Removes margin when gap is supported
+ * - No JavaScript required
+ * 
+ * Option 3: Use utility classes
+ * - Add .gap-fallback-{size} to containers
+ * - Works consistently across all browsers
+ * 
+ * Browser Support:
+ * - Chrome 84+ (2020)
+ * - Firefox 63+ (2018)
+ * - Safari 14.1+ (iOS 14.5+, macOS Big Sur)
+ * - Edge 84+ (2020)
+ */

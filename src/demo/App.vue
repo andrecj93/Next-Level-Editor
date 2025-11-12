@@ -466,6 +466,7 @@ import {
   getTemplateById,
   getDefaultTemplate,
 } from "./examples/exampleTemplates";
+import { smoothScrollIntoView } from "../utils/scroll";
 
 const activeTab = ref("editor");
 
@@ -537,7 +538,10 @@ const scrollToEditor = () => {
   setTimeout(() => {
     const editorSection = document.querySelector(".editor-section");
     if (editorSection) {
-      editorSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      smoothScrollIntoView(editorSection as HTMLElement, {
+        behavior: "smooth",
+        block: "start",
+      });
     }
   }, 100);
 };

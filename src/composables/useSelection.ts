@@ -3,6 +3,7 @@ import {
   saveSelection as saveSelectionUtil,
   restoreSelection,
 } from "../utils/formatting";
+import { smoothScrollIntoView } from "../utils/scroll";
 
 export function useSelection(editorContent: Ref<HTMLElement | null>) {
   const savedRange = ref<Range | null>(null);
@@ -323,8 +324,8 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
         tempElement.style.position = "absolute";
         range.insertNode(tempElement);
 
-        // Scroll to element with smooth behavior
-        tempElement.scrollIntoView({
+        // Scroll to element with smooth behavior (cross-browser compatible)
+        smoothScrollIntoView(tempElement, {
           behavior: "smooth",
           block: "nearest",
           inline: "nearest",

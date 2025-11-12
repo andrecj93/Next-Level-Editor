@@ -1,4 +1,5 @@
 import type { Ref } from "vue";
+import { smoothScrollIntoView } from "../utils/scroll";
 
 interface FindReplaceOptions {
   editorContent: Ref<HTMLElement | null>;
@@ -32,7 +33,7 @@ export function useFindReplace(options: FindReplaceOptions) {
     }
 
     // Escape special regex characters
-    pattern = pattern.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+    pattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
     const regex = new RegExp(pattern, flags);
     return html.replace(regex, replaceText);
@@ -78,21 +79,19 @@ export function useFindReplace(options: FindReplaceOptions) {
 
         // Scroll to the match with better visibility
         if (element) {
-          // Use requestAnimationFrame for smoother scrolling
-          requestAnimationFrame(() => {
-            element?.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-              inline: "nearest",
-            });
-
-            // Highlight the match temporarily
-            const originalBg = element.style.backgroundColor;
-            element.style.backgroundColor = "rgba(255, 255, 0, 0.3)";
-            setTimeout(() => {
-              element.style.backgroundColor = originalBg;
-            }, 1000);
+          // Use smoothScrollIntoView for cross-browser compatibility
+          smoothScrollIntoView(element, {
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest",
           });
+
+          // Highlight the match temporarily
+          const originalBg = element.style.backgroundColor;
+          element.style.backgroundColor = "rgba(255, 255, 0, 0.3)";
+          setTimeout(() => {
+            element.style.backgroundColor = originalBg;
+          }, 1000);
         }
       }
     } catch (error) {

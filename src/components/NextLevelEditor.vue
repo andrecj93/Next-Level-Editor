@@ -10,10 +10,7 @@
     <AriaLiveRegion />
 
     <!-- Context Hints (Smart Toolbar Feature) -->
-    <div
-      v-if="getContextHints().length > 0"
-      class="context-hints"
-    >
+    <div v-if="getContextHints().length > 0" class="context-hints">
       <span
         v-for="(hint, index) in getContextHints()"
         :key="index"
@@ -76,16 +73,10 @@
     />
 
     <!-- Word Count Footer -->
-    <EditorFooter
-      :word-count="wordCount"
-      :character-count="characterCount"
-    />
+    <EditorFooter :word-count="wordCount" :character-count="characterCount" />
 
     <!-- Floating Toolbar -->
-    <FloatingToolbar
-      :show="showFloatingToolbar"
-      :actions="floatingActions"
-    />
+    <FloatingToolbar :show="showFloatingToolbar" :actions="floatingActions" />
 
     <!-- Context Menu -->
     <ContextMenu
@@ -206,6 +197,7 @@ import {
   applyBackgroundColor,
   applyFontSize,
 } from "../utils/commands";
+import { smoothScrollIntoView } from "../utils/scroll";
 import { useTheme } from "../composables/useTheme";
 import { useAutoSave } from "../composables/useAutoSave";
 import { useSmartToolbar } from "../composables/useSmartToolbar";
@@ -314,7 +306,7 @@ const comments = props.enableComments
         color: "#3b82f6",
       },
     })
-  : null;
+  : (null as ReturnType<typeof useComments> | null);
 
 // Comments UI state
 const showCommentsSidebar = ref(props.enableComments ?? false);
@@ -688,6 +680,7 @@ const {
 
 // Command Palette Commands using composable
 const { commands: commandPaletteCommands } = useCommandPaletteCommands({
+  editorContent,
   insertLink,
   insertImage,
   openTableModal,
@@ -801,7 +794,7 @@ function handleSelectThread(threadId: string) {
   if (!comments) return;
   const thread = comments.threads.value.find((t) => t.id === threadId);
   if (thread?.highlightElement) {
-    thread.highlightElement.scrollIntoView({
+    smoothScrollIntoView(thread.highlightElement, {
       behavior: "smooth",
       block: "center",
     });
@@ -931,3 +924,4 @@ useEditorSetup({
 
 <style src="../styles/NextLevelEditor.css"></style>
 <style src="../styles/editor-variables.css"></style>
+<style src="../styles/gap-fallback.css"></style>

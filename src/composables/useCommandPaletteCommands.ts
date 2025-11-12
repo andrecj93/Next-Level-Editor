@@ -1,6 +1,8 @@
-import { computed } from "vue";
+import { computed, type Ref } from "vue";
+import { applyInlineStyle, toggleBlock, toggleList } from "../utils/formatting";
 
 interface CommandPaletteCommandsOptions {
+  editorContent: Ref<HTMLElement | null>;
   insertLink: () => void;
   insertImage: () => void;
   openTableModal: () => void;
@@ -41,6 +43,7 @@ export function useCommandPaletteCommands(
   options: CommandPaletteCommandsOptions
 ) {
   const {
+    editorContent,
     insertLink,
     insertImage,
     openTableModal,
@@ -76,7 +79,11 @@ export function useCommandPaletteCommands(
       icon: "**B**",
       category: "Formatting",
       shortcut: "Ctrl+B",
-      action: () => document.execCommand("bold"),
+      action: () => {
+        if (editorContent.value) {
+          applyInlineStyle(editorContent.value, "strong");
+        }
+      },
     },
     {
       id: "format-italic",
@@ -85,7 +92,11 @@ export function useCommandPaletteCommands(
       icon: "*I*",
       category: "Formatting",
       shortcut: "Ctrl+I",
-      action: () => document.execCommand("italic"),
+      action: () => {
+        if (editorContent.value) {
+          applyInlineStyle(editorContent.value, "em");
+        }
+      },
     },
     {
       id: "format-underline",
@@ -94,7 +105,11 @@ export function useCommandPaletteCommands(
       icon: "__U__",
       category: "Formatting",
       shortcut: "Ctrl+U",
-      action: () => document.execCommand("underline"),
+      action: () => {
+        if (editorContent.value) {
+          applyInlineStyle(editorContent.value, "u");
+        }
+      },
     },
     // Heading Commands
     {
@@ -104,7 +119,11 @@ export function useCommandPaletteCommands(
       icon: "H1",
       category: "Structure",
       shortcut: "Ctrl+Alt+1",
-      action: () => document.execCommand("formatBlock", false, "h1"),
+      action: () => {
+        if (editorContent.value) {
+          toggleBlock(editorContent.value, "h1");
+        }
+      },
     },
     {
       id: "heading-2",
@@ -113,7 +132,11 @@ export function useCommandPaletteCommands(
       icon: "H2",
       category: "Structure",
       shortcut: "Ctrl+Alt+2",
-      action: () => document.execCommand("formatBlock", false, "h2"),
+      action: () => {
+        if (editorContent.value) {
+          toggleBlock(editorContent.value, "h2");
+        }
+      },
     },
     {
       id: "heading-3",
@@ -122,7 +145,11 @@ export function useCommandPaletteCommands(
       icon: "H3",
       category: "Structure",
       shortcut: "Ctrl+Alt+3",
-      action: () => document.execCommand("formatBlock", false, "h3"),
+      action: () => {
+        if (editorContent.value) {
+          toggleBlock(editorContent.value, "h3");
+        }
+      },
     },
     // List Commands
     {
@@ -131,7 +158,11 @@ export function useCommandPaletteCommands(
       description: "Create an unordered list",
       icon: "•",
       category: "Lists",
-      action: () => document.execCommand("insertUnorderedList"),
+      action: () => {
+        if (editorContent.value) {
+          toggleList(editorContent.value, "ul");
+        }
+      },
     },
     {
       id: "list-numbered",
@@ -139,7 +170,11 @@ export function useCommandPaletteCommands(
       description: "Create an ordered list",
       icon: "1.",
       category: "Lists",
-      action: () => document.execCommand("insertOrderedList"),
+      action: () => {
+        if (editorContent.value) {
+          toggleList(editorContent.value, "ol");
+        }
+      },
     },
     // Insert Commands
     {

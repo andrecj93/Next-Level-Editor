@@ -13,6 +13,7 @@ import {
   getCellProperties,
   getTableProperties,
 } from "../utils/commands";
+import { smoothScrollIntoView } from "../utils/scroll";
 
 interface TableManagementOptions {
   editorContent: Ref<HTMLElement | null>;
@@ -47,7 +48,10 @@ export function useTableManagement(options: TableManagementOptions) {
         const tables = editorContent.value?.querySelectorAll("table");
         if (tables && tables.length > 0) {
           const lastTable = tables[tables.length - 1];
-          lastTable.scrollIntoView({ behavior: "smooth", block: "center" });
+          smoothScrollIntoView(lastTable, {
+            behavior: "smooth",
+            block: "center",
+          });
         }
       });
     });

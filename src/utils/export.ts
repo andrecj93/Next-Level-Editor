@@ -223,7 +223,7 @@ export function downloadFile(content: string | Blob, filename: string, mimeType:
   link.download = filename
   document.body.appendChild(link)
   link.click()
-  document.body.removeChild(link)
+  link.remove()
   URL.revokeObjectURL(url)
 }
 
@@ -323,7 +323,7 @@ export async function exportAsPdf(element: HTMLElement, filename: string = 'docu
     })
 
     // Remove temporary div
-    document.body.removeChild(tempDiv)
+    tempDiv.remove()
 
     // Calculate PDF dimensions
     const imgWidth = 210 // A4 width in mm

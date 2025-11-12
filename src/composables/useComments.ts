@@ -1,4 +1,4 @@
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch } from "vue";
 import type { Ref } from "vue";
 
 /**
@@ -76,6 +76,36 @@ export interface UseCommentsOptions {
  */
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * Remove highlight element from DOM
+ */
+function removeHighlightInternal(element: HTMLElement): void {
+  if (!element.parentNode) return;
+
+  // Move children out of span
+  while (element.firstChild) {
+    element.parentNode.insertBefore(element.firstChild, element);
+  }
+
+  // Remove span
+  element.remove();
+}
+
+/**
+ * Extract mentions from comment text
+ */
+function extractMentionsFromText(text: string): string[] {
+  const mentionRegex = /@(\w+)/g;
+  const mentions: string[] = [];
+  let match;
+
+  while ((match = mentionRegex.exec(text)) !== null) {
+    mentions.push(match[1]);
+  }
+
+  return mentions;
 }
 
 /**
@@ -233,21 +263,6 @@ export function useComments(options: UseCommentsOptions = {}) {
     });
 
     return span;
-  }
-
-  /**
-   * Remove highlight element
-   */
-  function removeHighlightInternal(element: HTMLElement): void {
-    if (!element.parentNode) return;
-
-    // Move children out of span
-    while (element.firstChild) {
-      element.parentNode.insertBefore(element.firstChild, element);
-    }
-
-    // Remove span
-    element.remove();
   }
 
   /**
@@ -521,34 +536,6 @@ export function useComments(options: UseCommentsOptions = {}) {
    */
   function setActiveThread(threadId: string | null): void {
     activeThreadId.value = threadId;
-
-    if (threadId) {
-      // Scroll thread into view if needed
-      nextTick(() => {
-        const thread = threads.value.find((t) => t.id === threadId);
-        if (thread?.highlightElement) {
-          thread.highlightElement.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-        }
-      });
-    }
-  }
-
-  /**
-   * Extract mentions from text
-   */
-  function extractMentionsFromText(text: string): string[] {
-    const mentionRegex = /@(\w+)/g;
-    const mentions: string[] = [];
-    let match;
-
-    while ((match = mentionRegex.exec(text)) !== null) {
-      mentions.push(match[1]);
-    }
-
-    return mentions;
   }
 
   /**

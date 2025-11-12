@@ -159,14 +159,25 @@
     padding: 8px;
   }
 
-  /* Icon-only buttons */
-  button:has(svg:only-child),
-  button:has(i:only-child),
-  [role="button"]:has(svg:only-child),
-  [role="button"]:has(i:only-child) {
+  /* Icon-only buttons - with fallback for Firefox < 121, Safari < 15.4 */
+  /* Add class .icon-only-button to buttons with only icon */
+  button.icon-only-button,
+  [role="button"].icon-only-button {
     min-width: 44px;
     min-height: 44px;
     padding: 10px;
+  }
+
+  /* Progressive enhancement with :has() for modern browsers */
+  @supports selector(:has(svg)) {
+    button:has(svg:only-child),
+    button:has(i:only-child),
+    [role="button"]:has(svg:only-child),
+    [role="button"]:has(i:only-child) {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 10px;
+    }
   }
 
   /* Form controls */
@@ -177,12 +188,24 @@
     /* Wrapper should be 44x44 */
   }
 
-  label:has(input[type="checkbox"]),
-  label:has(input[type="radio"]) {
+  /* Checkbox/Radio labels - with fallback */
+  label.checkbox-label,
+  label.radio-label {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
     gap: 8px;
+  }
+
+  /* Progressive enhancement with :has() */
+  @supports selector(:has(input)) {
+    label:has(input[type="checkbox"]),
+    label:has(input[type="radio"]) {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
   }
 
   /* Dropdown/Select controls */
@@ -366,8 +389,16 @@ body.debug-touch-targets .touch-expand-lg::before {
     outline: 2px solid orange !important;
   }
 
-  body.debug-touch-targets button:has(svg:only-child),
-  body.debug-touch-targets [role="button"]:has(svg:only-child) {
+  /* Debug: Icon-only buttons */
+  body.debug-touch-targets button.icon-only-button,
+  body.debug-touch-targets [role="button"].icon-only-button {
     background-color: rgba(0, 0, 255, 0.1);
+  }
+
+  @supports selector(:has(svg)) {
+    body.debug-touch-targets button:has(svg:only-child),
+    body.debug-touch-targets [role="button"]:has(svg:only-child) {
+      background-color: rgba(0, 0, 255, 0.1);
+    }
   }
 }

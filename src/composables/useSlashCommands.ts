@@ -1,5 +1,6 @@
 import { ref, nextTick } from "vue";
 import { getSelectionRange } from "../utils/formatting";
+import { smoothScrollIntoView } from "../utils/scroll";
 
 export interface SlashCommandOption {
   id: string;
@@ -226,7 +227,7 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     if (element) {
       // Use requestAnimationFrame instead of nextTick for better performance
       requestAnimationFrame(() => {
-        element?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        smoothScrollIntoView(element, { behavior: "smooth", block: "nearest" });
       });
     }
   };

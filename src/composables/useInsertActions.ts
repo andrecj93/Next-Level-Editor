@@ -8,6 +8,7 @@ import {
   insertPageBreak,
   insertTableOfContents,
 } from "../utils/pageManagement";
+import { smoothScrollIntoView } from "../utils/scroll";
 import {
   insertEmbeddedResizable,
   type EmbeddedContentOptions,
@@ -97,7 +98,7 @@ export function useInsertActions(options: InsertActionsOptions) {
             const lastContainer = embeddedContainers[
               embeddedContainers.length - 1
             ] as HTMLElement;
-            lastContainer.scrollIntoView({
+            smoothScrollIntoView(lastContainer, {
               behavior: "smooth",
               block: "center",
             });
@@ -163,7 +164,7 @@ export function useInsertActions(options: InsertActionsOptions) {
               const lastContainer = embeddedContainers[
                 embeddedContainers.length - 1
               ] as HTMLElement;
-              lastContainer.scrollIntoView({
+              smoothScrollIntoView(lastContainer, {
                 behavior: "smooth",
                 block: "center",
               });
@@ -197,7 +198,7 @@ export function useInsertActions(options: InsertActionsOptions) {
               const lastContainer = embeddedContainers[
                 embeddedContainers.length - 1
               ] as HTMLElement;
-              lastContainer.scrollIntoView({
+              smoothScrollIntoView(lastContainer, {
                 behavior: "smooth",
                 block: "center",
               });
@@ -231,7 +232,7 @@ export function useInsertActions(options: InsertActionsOptions) {
               const lastContainer = embeddedContainers[
                 embeddedContainers.length - 1
               ] as HTMLElement;
-              lastContainer.scrollIntoView({
+              smoothScrollIntoView(lastContainer, {
                 behavior: "smooth",
                 block: "center",
               });
@@ -321,7 +322,10 @@ export function useInsertActions(options: InsertActionsOptions) {
           const tables = editorContent.value?.querySelectorAll("table");
           if (tables && tables.length > 0) {
             const lastTable = tables[tables.length - 1];
-            lastTable.scrollIntoView({ behavior: "smooth", block: "center" });
+            smoothScrollIntoView(lastTable, {
+              behavior: "smooth",
+              block: "center",
+            });
 
             // Focus first cell in the table
             const firstCell = lastTable.querySelector("td, th");
@@ -379,7 +383,7 @@ export function useInsertActions(options: InsertActionsOptions) {
           const codeBlocks = editorContent.value?.querySelectorAll("pre");
           if (codeBlocks && codeBlocks.length > 0) {
             const lastCodeBlock = codeBlocks[codeBlocks.length - 1];
-            lastCodeBlock.scrollIntoView({
+            smoothScrollIntoView(lastCodeBlock, {
               behavior: "smooth",
               block: "center",
             });

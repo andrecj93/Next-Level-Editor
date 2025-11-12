@@ -37,6 +37,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import type { AutocompleteType } from "../composables/useSmartAutocomplete";
+import { smoothScrollIntoView } from "../utils/scroll";
 
 /**
  * Autocomplete suggestion
@@ -160,7 +161,7 @@ const scrollToSelected = () => {
       ".suggestion-item.selected"
     );
     if (selectedElement) {
-      selectedElement.scrollIntoView({
+      smoothScrollIntoView(selectedElement as HTMLElement, {
         block: "nearest",
         behavior: "smooth",
       });
