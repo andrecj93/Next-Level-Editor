@@ -1,16 +1,23 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("File Manager Modal", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/?empty=true");
+
+    // Wait for editor to load
+    await page.waitForSelector(".editor-content");
+
+    // Wait for toolbar to be fully ready
+    await page.waitForTimeout(500);
+  });
+
   test("should open file manager when clicking Insert → File Manager", async ({
     page,
   }) => {
-    await page.goto("http://localhost:5173/");
-
-    // Wait for editor to load
-    await page.waitForSelector('[contenteditable="true"]');
-
     // Click Insert dropdown
-    const insertButton = page.locator("button").filter({ hasText: /^Insert$/ });
+    const insertButton = page
+      .locator('button:has-text("Insert"), [data-tooltip*="Insert"]')
+      .first();
     await insertButton.click();
 
     // Wait for dropdown menu
@@ -22,28 +29,31 @@ test.describe("File Manager Modal", () => {
       .filter({ hasText: "File Manager" });
     await fileManagerOption.click();
 
+    // Wait for modal to appear
+    await page.waitForTimeout(500);
+
     // Verify modal is visible
-    const modal = page.locator('[role="dialog"]');
+    const modal = page.locator("dialog.file-manager-modal");
+    await expect(modal).toBeVisible({ timeout: 2000 });
     await expect(modal).toContainText("File Manager");
 
     // Verify modal has toolbar
     await expect(page.locator('button:has-text("Upload Files")')).toBeVisible();
 
     // Verify modal has close button
-    const closeButton = page.locator('button:has-text("×")');
+    const closeButton = page.locator(
+      'button.close-button, button:has-text("✕")'
+    );
     await expect(closeButton).toBeVisible();
   });
 
   test("should close file manager when clicking close button", async ({
     page,
   }) => {
-    await page.goto("http://localhost:5173/");
-
-    // Wait for editor to load
-    await page.waitForSelector('[contenteditable="true"]');
-
     // Open file manager
-    const insertButton = page.locator("button").filter({ hasText: /^Insert$/ });
+    const insertButton = page
+      .locator('button:has-text("Insert"), [data-tooltip*="Insert"]')
+      .first();
     await insertButton.click();
     await page.waitForSelector(".dropdown-menu");
     const fileManagerOption = page
@@ -51,12 +61,18 @@ test.describe("File Manager Modal", () => {
       .filter({ hasText: "File Manager" });
     await fileManagerOption.click();
 
+    // Wait for modal to appear
+    await page.waitForTimeout(500);
+
     // Wait for modal
-    const modal = page.locator('[role="dialog"]');
+    const modal = page.locator("dialog.file-manager-modal");
+    await expect(modal).toBeVisible({ timeout: 2000 });
     await expect(modal).toContainText("File Manager");
 
     // Click close button
-    const closeButton = page.locator('button:has-text("×")');
+    const closeButton = page.locator(
+      'button.close-button, button:has-text("✕")'
+    );
     await closeButton.click();
 
     // Modal should be hidden
@@ -64,13 +80,10 @@ test.describe("File Manager Modal", () => {
   });
 
   test("should allow file upload via click button", async ({ page }) => {
-    await page.goto("http://localhost:5173/");
-
-    // Wait for editor to load
-    await page.waitForSelector('[contenteditable="true"]');
-
     // Open file manager
-    const insertButton = page.locator("button").filter({ hasText: /^Insert$/ });
+    const insertButton = page
+      .locator('button:has-text("Insert"), [data-tooltip*="Insert"]')
+      .first();
     await insertButton.click();
     await page.waitForSelector(".dropdown-menu");
     const fileManagerOption = page
@@ -107,13 +120,10 @@ test.describe("File Manager Modal", () => {
   });
 
   test("should allow drag and drop file upload", async ({ page }) => {
-    await page.goto("http://localhost:5173/");
-
-    // Wait for editor to load
-    await page.waitForSelector('[contenteditable="true"]');
-
     // Open file manager
-    const insertButton = page.locator("button").filter({ hasText: /^Insert$/ });
+    const insertButton = page
+      .locator('button:has-text("Insert"), [data-tooltip*="Insert"]')
+      .first();
     await insertButton.click();
     await page.waitForSelector(".dropdown-menu");
     const fileManagerOption = page
@@ -138,13 +148,10 @@ test.describe("File Manager Modal", () => {
   });
 
   test("should insert file into editor", async ({ page }) => {
-    await page.goto("http://localhost:5173/");
-
-    // Wait for editor to load
-    await page.waitForSelector('[contenteditable="true"]');
-
     // Open file manager
-    const insertButton = page.locator("button").filter({ hasText: /^Insert$/ });
+    const insertButton = page
+      .locator('button:has-text("Insert"), [data-tooltip*="Insert"]')
+      .first();
     await insertButton.click();
     await page.waitForSelector(".dropdown-menu");
     const fileManagerOption = page
@@ -182,13 +189,10 @@ test.describe("File Manager Modal", () => {
   });
 
   test("should delete file from manager", async ({ page }) => {
-    await page.goto("http://localhost:5173/");
-
-    // Wait for editor to load
-    await page.waitForSelector('[contenteditable="true"]');
-
     // Open file manager
-    const insertButton = page.locator("button").filter({ hasText: /^Insert$/ });
+    const insertButton = page
+      .locator('button:has-text("Insert"), [data-tooltip*="Insert"]')
+      .first();
     await insertButton.click();
     await page.waitForSelector(".dropdown-menu");
     const fileManagerOption = page
@@ -212,19 +216,24 @@ test.describe("File Manager Modal", () => {
     // Wait for file to appear
     await page.waitForTimeout(1000);
 
-    // Find delete button
-    const deleteButton = page
-      .locator("button")
-      .filter({ hasText: /🗑️/ })
+    // Verify file exists
+    const fileItem = page
+      .locator(".file-name", { hasText: "test.txt" })
       .first();
-    await deleteButton.click();
+    await expect(fileItem).toBeVisible();
 
-    // Confirm deletion
-    page.once("dialog", (dialog) => dialog.accept());
+    // Setup dialog handler BEFORE clicking delete
+    page.on("dialog", (dialog) => {
+      dialog.accept();
+    });
+
+    // Find the file card containing test.txt and click its delete button
+    const fileCard = page.locator(".file-card").filter({ hasText: "test.txt" });
+    const deleteButton = fileCard.locator('button[title="Delete"]');
+    await deleteButton.click({ force: true });
 
     // File should disappear
-    await page.waitForTimeout(500);
-    const fileItem = page.locator("text=test.txt");
+    await page.waitForTimeout(1000);
     await expect(fileItem).not.toBeVisible();
   });
 });

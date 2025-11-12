@@ -256,7 +256,7 @@ test.describe("Next Level Editor - Bug Fixes", () => {
       }
 
       // Toolbar should be visible initially
-      const toolbar = page.locator(".editor-toolbar");
+      const toolbar = page.locator(".editor-toolbar-modern");
       await expect(toolbar).toBeVisible();
 
       // Scroll the editor content
@@ -291,15 +291,10 @@ test.describe("Next Level Editor - Bug Fixes", () => {
     }) => {
       const editor = page.locator(".editor-content");
 
-      // Switch to split view
-      const splitButton = page
-        .locator('.view-mode-btn:has-text("Split")')
-        .first();
-      await splitButton.click();
-      await page.waitForTimeout(500);
+      // Click on editor first to focus
+      await editor.click();
 
       // Clear editor
-      await editor.click();
       await page.keyboard.press("Control+A");
       await page.keyboard.press("Delete");
       await page.waitForTimeout(200);
@@ -315,6 +310,13 @@ test.describe("Next Level Editor - Bug Fixes", () => {
       await editor.pressSequentially("Test Heading");
       await page.waitForTimeout(300);
 
+      // Switch to split view to see preview
+      const splitButton = page
+        .locator('.view-mode-btn:has-text("Split")')
+        .first();
+      await splitButton.click();
+      await page.waitForTimeout(500);
+
       // Check preview panel for the heading
       const previewPanel = page.locator(".preview-panel");
       await expect(previewPanel).toBeVisible();
@@ -329,14 +331,9 @@ test.describe("Next Level Editor - Bug Fixes", () => {
     test("should update HTML output after list creation via slash command", async ({
       page,
     }) => {
-      // Switch to split view
-      const splitButton = page
-        .locator('.view-mode-btn:has-text("Split")')
-        .first();
-      await splitButton.click();
-      await page.waitForTimeout(500);
-
       const editor = page.locator(".editor-content");
+
+      // Click on editor first to focus
       await editor.click();
 
       // Clear
@@ -354,6 +351,13 @@ test.describe("Next Level Editor - Bug Fixes", () => {
 
       await editor.pressSequentially("First item");
       await page.waitForTimeout(300);
+
+      // Switch to split view to see preview
+      const splitButton = page
+        .locator('.view-mode-btn:has-text("Split")')
+        .first();
+      await splitButton.click();
+      await page.waitForTimeout(500);
 
       // Preview should show list
       const previewPanel = page.locator(".preview-panel");
