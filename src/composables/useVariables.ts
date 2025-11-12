@@ -214,7 +214,7 @@ export function useVariables() {
    * Replace variables in text with their values
    */
   const replaceVariables = (text: string): string => {
-    return text.replaceAll(
+    return text.replace(
       /\{\{\s*([a-zA-Z0-9._-]+)\s*\}\}/g,
       (match, varName) => {
         const variable = getVariable(varName.trim());

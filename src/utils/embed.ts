@@ -24,8 +24,8 @@ const VIMEO_PATTERNS = [
  */
 export function extractYouTubeId(url: string): string | null {
   for (const pattern of YOUTUBE_PATTERNS) {
-    const match = url.match(pattern)
-    if (match && match[1]) {
+    const match = new RegExp(pattern).exec(url)
+    if (match?.[1]) {
       return match[1]
     }
   }
@@ -37,8 +37,8 @@ export function extractYouTubeId(url: string): string | null {
  */
 export function extractVimeoId(url: string): string | null {
   for (const pattern of VIMEO_PATTERNS) {
-    const match = url.match(pattern)
-    if (match && match[1]) {
+    const match = new RegExp(pattern).exec(url)
+    if (match?.[1]) {
       return match[1]
     }
   }

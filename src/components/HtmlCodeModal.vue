@@ -88,12 +88,12 @@ const highlightedHtml = computed(() => {
       );
     } else {
       // Fallback: return escaped HTML for display
-      return props.htmlContent.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+      return props.htmlContent.replace("<", "&lt;").replace(">", "&gt;");
     }
   } catch (error) {
     console.error("Failed to highlight HTML:", error);
     // Fallback: return escaped HTML for display
-    return props.htmlContent.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    return props.htmlContent.replace("<", "&lt;").replace(">", "&gt;");
   }
 });
 

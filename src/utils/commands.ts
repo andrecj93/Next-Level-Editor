@@ -45,7 +45,7 @@ export function getCharacterCountWithoutSpaces(html: string): number {
   const temp = document.createElement('div')
   temp.innerHTML = html
   const text = temp.innerText || temp.textContent || ''
-  return text.replaceAll(/\s/g, '').length
+  return text.replace(/\s/g, '').length
 }
 
 /**
@@ -344,7 +344,7 @@ export function searchAndReplace(
   let flags = 'g'
   if (!options.caseSensitive) flags += 'i'
 
-  let pattern = searchText.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+  let pattern = searchText.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
   if (options.wholeWord) {
     pattern = `\\b${pattern}\\b`
   }

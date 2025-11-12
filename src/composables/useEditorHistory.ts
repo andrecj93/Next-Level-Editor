@@ -22,7 +22,7 @@ export function useEditorHistory() {
     const temp = document.createElement("div");
     temp.innerHTML = html;
     // Normalize whitespace
-    const text = temp.innerText.replaceAll(/\s+/g, " ").trim();
+    const text = temp.innerText.replace(/\s+/g, " ").trim();
     return text.length > 60
       ? `${text.slice(0, 57)}...`
       : text || "Empty content";

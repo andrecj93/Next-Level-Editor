@@ -245,7 +245,7 @@ function getInitials(name: string): string {
 
 function renderCommentContent(content: string): string {
   // Replace @mentions with styled spans
-  return content.replaceAll(
+  return content.replace(
     /@(\w+)/g,
     '<span class="comment-mention">@$1</span>'
   );

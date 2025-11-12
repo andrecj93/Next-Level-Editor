@@ -198,13 +198,13 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
   const splitIntoSentences = (text: string): string[] => {
     // Handle common abbreviations
     const processed = text
-      .replaceAll("Mr.", "Mr")
-      .replaceAll("Mrs.", "Mrs")
-      .replaceAll("Dr.", "Dr")
-      .replaceAll("Ms.", "Ms")
-      .replaceAll("etc.", "etc")
-      .replaceAll("i.e.", "ie")
-      .replaceAll("e.g.", "eg");
+      .replace("Mr.", "Mr")
+      .replace("Mrs.", "Mrs")
+      .replace("Dr.", "Dr")
+      .replace("Ms.", "Ms")
+      .replace("etc.", "etc")
+      .replace("i.e.", "ie")
+      .replace("e.g.", "eg");
 
     // Split on sentence boundaries
     const sentences = processed
@@ -221,7 +221,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
   const splitIntoWords = (text: string): string[] => {
     return text
       .toLowerCase()
-      .replaceAll(/[^\w\s]/g, " ")
+      .replace(/[^\w\s]/g, " ")
       .split(/\s+/)
       .filter((w) => w.length > 0);
   };
@@ -255,7 +255,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
     const paragraphs = text.split(/\n\n+/).filter((p) => p.trim().length > 0);
 
     const characters = text.length;
-    const charactersNoSpaces = text.replaceAll(/\s/g, "").length;
+    const charactersNoSpaces = text.replace(/\s/g, "").length;
 
     // Count syllables
     const syllables = words.reduce(

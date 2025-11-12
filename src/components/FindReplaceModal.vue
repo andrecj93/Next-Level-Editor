@@ -191,7 +191,7 @@ const updateMatches = () => {
   let flags = "g";
   if (!caseSensitive.value) flags += "i";
 
-  let pattern = findText.value.replaceAll(
+  let pattern = findText.value.replace(
     /[.*+?^${}()|[\]\\]/g,
     String.raw`\$&`
   );
