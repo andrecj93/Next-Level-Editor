@@ -79,6 +79,7 @@ export type {
 export { default as CommentsSidebar } from "./components/CommentsSidebar.vue";
 export { default as CommentThreadCard } from "./components/CommentThreadCard.vue";
 export { default as CommentReplyForm } from "./components/CommentReplyForm.vue";
+export { default as CommentModal } from "./components/CommentModal.vue";
 
 // Export variables system
 export { useVariables } from "./composables/useVariables";

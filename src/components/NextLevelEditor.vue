@@ -174,6 +174,15 @@
       @create-comment="handleCreateComment"
     />
 
+    <!-- Comment Modal (opt-in feature) -->
+    <CommentModal
+      v-if="enableComments && comments"
+      :is-open="showCommentModal"
+      :selected-text="selectedTextForComment"
+      @submit="handleCommentSubmit"
+      @cancel="handleCommentCancel"
+    />
+
     <!-- Variable Autocomplete (opt-in feature) -->
     <VariableAutocomplete
       v-if="enableVariables && variablesComposable"
@@ -241,6 +250,7 @@ import SkipLinks from "./SkipLinks.vue";
 import AriaLiveRegion from "./AriaLiveRegion.vue";
 import WritingStatsPanel from "./WritingStatsPanel.vue";
 import CommentsSidebar from "./CommentsSidebar.vue";
+import CommentModal from "./CommentModal.vue";
 import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
@@ -310,6 +320,8 @@ const comments = props.enableComments
 
 // Comments UI state
 const showCommentsSidebar = ref(props.enableComments ?? false);
+const showCommentModal = ref(false);
+const selectedTextForComment = ref("");
 
 // Variables System (opt-in feature)
 const variablesComposable = props.enableVariables ? useVariables() : null;
@@ -823,17 +835,55 @@ function handleAddReply(threadId: string, content: string, mentions: string[]) {
 
 function handleCreateComment() {
   if (!comments) return;
+  
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed) {
     showToastNotification("Please select text to comment on", "error");
     return;
   }
 
-  const content = prompt("Enter your comment:");
-  if (content) {
-    comments.addThread(content, []);
-    showToastNotification("Comment added", "success");
+  // Capture the selection using the comments composable
+  const captured = comments.startAddComment();
+  if (!captured) {
+    showToastNotification("Failed to capture selection", "error");
+    return;
   }
+
+  // Store the selected text for display in modal
+  selectedTextForComment.value = selection.toString();
+
+  // Show the comment modal
+  showCommentModal.value = true;
+}
+
+function handleCommentSubmit(content: string, mentions: string[]) {
+  if (!comments) return;
+
+  // Add the thread with the captured selection
+  const thread = comments.addThread(content, mentions);
+  
+  if (thread) {
+    showToastNotification("Comment added successfully", "success");
+    // Ensure sidebar is visible to show the new comment
+    showCommentsSidebar.value = true;
+  } else {
+    showToastNotification("Failed to add comment", "error");
+  }
+
+  // Close the modal
+  showCommentModal.value = false;
+  selectedTextForComment.value = "";
+}
+
+function handleCommentCancel() {
+  if (!comments) return;
+  
+  // Clear the selection capture
+  comments.clearSelection();
+  
+  // Close the modal
+  showCommentModal.value = false;
+  selectedTextForComment.value = "";
 }
 
 // Variable handlers
