@@ -1,8 +1,5 @@
 import { type Ref, nextTick } from "vue";
-import {
-  insertLink as insertLinkUtil,
-  insertImage as insertImageUtil,
-} from "../utils/formatting";
+import { insertLink as insertLinkUtil } from "../utils/formatting";
 import {
   insertHorizontalRule,
   insertTable as insertTableUtil,
@@ -11,6 +8,10 @@ import {
   insertPageBreak,
   insertTableOfContents,
 } from "../utils/pageManagement";
+import {
+  insertEmbeddedResizable,
+  type EmbeddedContentOptions,
+} from "../utils/embeddedResizable";
 
 interface InsertActionsOptions {
   editorContent: Ref<HTMLElement | null>;
@@ -71,18 +72,35 @@ export function useInsertActions(options: InsertActionsOptions) {
     if (!editorContent.value) return;
 
     performWithSelection(
-      (root) => {
-        insertImageUtil(root, url, alt);
+      () => {
+        // Insert image wrapped in embedded resizable container
+        const options: EmbeddedContentOptions = {
+          type: "image",
+          src: url,
+          alt,
+          width: 500,
+          height: 400,
+          maintainAspectRatio: true,
+          alignment: "center",
+        };
+        insertEmbeddedResizable(options);
         captureSnapshot();
       },
       () => {
         // After action callback
         nextTick(() => {
-          // Find the newly inserted image and scroll to it
-          const images = editorContent.value?.querySelectorAll("img");
-          if (images && images.length > 0) {
-            const lastImage = images[images.length - 1];
-            lastImage.scrollIntoView({ behavior: "smooth", block: "center" });
+          // Find the newly inserted embedded container and scroll to it
+          const embeddedContainers = editorContent.value?.querySelectorAll(
+            ".embedded-resizable-container"
+          );
+          if (embeddedContainers && embeddedContainers.length > 0) {
+            const lastContainer = embeddedContainers[
+              embeddedContainers.length - 1
+            ] as HTMLElement;
+            lastContainer.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
           }
         });
       }
@@ -96,27 +114,18 @@ export function useInsertActions(options: InsertActionsOptions) {
   const handleInsertEmbed = (html: string) => {
     if (!editorContent.value) return;
     performWithSelection(() => {
-      const selection = globalThis.getSelection();
-      if (!selection?.rangeCount) return;
-
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-
-      // Create a temporary container to parse the HTML
-      const temp = document.createElement("div");
-      temp.innerHTML = html;
-
-      // Insert the content
-      const fragment = document.createDocumentFragment();
-      while (temp.firstChild) {
-        fragment.appendChild(temp.firstChild);
-      }
-      range.insertNode(fragment);
-
-      // Move cursor after inserted content
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
+      // Insert video/embed wrapped in embedded resizable container
+      const options: EmbeddedContentOptions = {
+        type: "embed",
+        src: html,
+        alt: "Video embed",
+        width: 640,
+        height: 360,
+        maintainAspectRatio: true,
+        alignment: "center",
+      };
+      insertEmbeddedResizable(options);
+      captureSnapshot();
     });
     closeEmbedModal();
   };
@@ -129,27 +138,107 @@ export function useInsertActions(options: InsertActionsOptions) {
 
     // Insert file based on its type
     if (file.type.startsWith("image/")) {
-      // Insert as image
-      performWithSelection((root) =>
-        insertImageUtil(root, file.url, file.name)
+      // Insert image wrapped in embedded resizable container
+      performWithSelection(
+        () => {
+          const options: EmbeddedContentOptions = {
+            type: "image",
+            src: file.url,
+            alt: file.name || "Uploaded image",
+            width: 500,
+            height: 400,
+            maintainAspectRatio: true,
+            alignment: "center",
+          };
+          insertEmbeddedResizable(options);
+          captureSnapshot();
+        },
+        () => {
+          // After action callback
+          nextTick(() => {
+            const embeddedContainers = editorContent.value?.querySelectorAll(
+              ".embedded-resizable-container"
+            );
+            if (embeddedContainers && embeddedContainers.length > 0) {
+              const lastContainer = embeddedContainers[
+                embeddedContainers.length - 1
+              ] as HTMLElement;
+              lastContainer.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+            }
+          });
+        }
+      );
+    } else if (file.type.startsWith("video/")) {
+      // Insert video wrapped in embedded resizable container
+      performWithSelection(
+        () => {
+          const options: EmbeddedContentOptions = {
+            type: "video",
+            src: file.url,
+            alt: file.name || "Uploaded video",
+            width: 640,
+            height: 360,
+            maintainAspectRatio: true,
+            alignment: "center",
+          };
+          insertEmbeddedResizable(options);
+          captureSnapshot();
+        },
+        () => {
+          // After action callback
+          nextTick(() => {
+            const embeddedContainers = editorContent.value?.querySelectorAll(
+              ".embedded-resizable-container"
+            );
+            if (embeddedContainers && embeddedContainers.length > 0) {
+              const lastContainer = embeddedContainers[
+                embeddedContainers.length - 1
+              ] as HTMLElement;
+              lastContainer.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+            }
+          });
+        }
       );
     } else {
-      // Insert as link for other file types
-      performWithSelection(() => {
-        const selection = globalThis.getSelection();
-        if (!selection?.rangeCount) return;
-
-        const range = selection.getRangeAt(0);
-        const link = document.createElement("a");
-        link.href = file.url;
-        link.textContent = file.name;
-        link.download = file.name;
-        link.target = "_blank";
-
-        range.deleteContents();
-        range.insertNode(link);
-        range.collapse(false);
-      });
+      // Insert as downloadable file wrapped in embedded resizable container
+      performWithSelection(
+        () => {
+          const options: EmbeddedContentOptions = {
+            type: "file",
+            src: file.url,
+            alt: file.name || "Download file",
+            width: 300,
+            height: 200,
+            maintainAspectRatio: false,
+            alignment: "center",
+          };
+          insertEmbeddedResizable(options);
+          captureSnapshot();
+        },
+        () => {
+          // After action callback
+          nextTick(() => {
+            const embeddedContainers = editorContent.value?.querySelectorAll(
+              ".embedded-resizable-container"
+            );
+            if (embeddedContainers && embeddedContainers.length > 0) {
+              const lastContainer = embeddedContainers[
+                embeddedContainers.length - 1
+              ] as HTMLElement;
+              lastContainer.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+            }
+          });
+        }
+      );
     }
 
     closeFileManagerModal();
