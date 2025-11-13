@@ -835,12 +835,12 @@ const { handleKeydown } = useKeyboardShortcuts({
 function handleSelectThread(threadId: string) {
   if (!comments) return;
   comments.setActiveThread(threadId);
-  
+
   const thread = comments.threads.value.find((t) => t.id === threadId);
   if (thread?.highlightElement) {
     // Add temporary pulse highlight
-    thread.highlightElement.classList.add('comment-highlight-pulse');
-    
+    thread.highlightElement.classList.add("comment-highlight-pulse");
+
     smoothScrollIntoView(thread.highlightElement, {
       behavior: "smooth",
       block: "center",
@@ -848,7 +848,7 @@ function handleSelectThread(threadId: string) {
 
     // Remove pulse after animation
     setTimeout(() => {
-      thread.highlightElement?.classList.remove('comment-highlight-pulse');
+      thread.highlightElement?.classList.remove("comment-highlight-pulse");
     }, 2000);
   }
 }
@@ -1104,7 +1104,8 @@ useEditorSetup({
 }
 
 @keyframes commentPulse {
-  0%, 100% {
+  0%,
+  100% {
     background-color: transparent;
     box-shadow: none;
   }
