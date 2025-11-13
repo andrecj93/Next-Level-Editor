@@ -9,17 +9,6 @@
     <!-- Accessibility: ARIA Live Regions -->
     <AriaLiveRegion />
 
-    <!-- Context Hints (Smart Toolbar Feature) -->
-    <div v-if="getContextHints().length > 0" class="context-hints">
-      <span
-        v-for="(hint, index) in getContextHints()"
-        :key="index"
-        class="context-hint"
-      >
-        💡 {{ hint }}
-      </span>
-    </div>
-
     <!-- Editor Toolbar -->
     <EditorToolbar
       :is-toolbar-section-visible="isToolbarSectionVisible"
@@ -346,7 +335,7 @@ const comments = props.enableComments
   : (null as ReturnType<typeof useComments> | null);
 
 // Comments UI state
-const showCommentsSidebar = ref(props.enableComments ?? false);
+const showCommentsSidebar = ref(false);
 const showCommentModal = ref(false);
 const selectedTextForComment = ref("");
 
@@ -410,7 +399,6 @@ const { showCommandPalette, closeCommandPalette, addToRecent } =
 const {
   updateContext: updateToolbarContext,
   isVisible: isToolbarSectionVisible,
-  getContextHints,
 } = useSmartToolbar();
 
 // View mode management using composable
