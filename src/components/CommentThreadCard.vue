@@ -137,6 +137,38 @@
       {{ thread.comments.length === 2 ? "reply" : "replies" }}
     </button>
 
+    <!-- Add Reply Button (always visible when not showing form) -->
+    <button
+      v-if="!showReplyForm"
+      class="comment-add-reply-btn"
+      @click.stop="showReplyForm = true"
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path
+          d="M8 2v12M2 8h12"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+      </svg>
+      Write a reply
+    </button>
+
+    <!-- Reply Form (when active) -->
+    <div v-if="showReplyForm" class="comment-reply-standalone">
+      <div class="comment-avatar-wrapper">
+        <div class="comment-avatar comment-avatar-small">
+          <span>U</span>
+        </div>
+      </div>
+      <div class="comment-body">
+        <CommentReplyForm
+          @submit="handleReplySubmit"
+          @cancel="showReplyForm = false"
+        />
+      </div>
+    </div>
+
     <!-- Expanded Replies -->
     <Transition name="expand">
       <div
@@ -186,38 +218,6 @@
             </span>
           </div>
         </div>
-
-        <!-- Reply Form (when expanded) -->
-        <div v-if="showReplyForm" class="comment-reply">
-          <div class="comment-avatar-wrapper">
-            <div class="comment-avatar comment-avatar-small">
-              <span>U</span>
-            </div>
-          </div>
-          <div class="comment-body">
-            <CommentReplyForm
-              @submit="handleReplySubmit"
-              @cancel="showReplyForm = false"
-            />
-          </div>
-        </div>
-
-        <!-- Add Reply Button -->
-        <button
-          v-if="!showReplyForm"
-          class="comment-add-reply-btn"
-          @click.stop="showReplyForm = true"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M8 2v12M2 8h12"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-          Write a reply
-        </button>
 
         <!-- Collapse Button -->
         <button class="comment-collapse-btn" @click="handleToggle">
@@ -586,6 +586,17 @@ function renderCommentContent(content: string): string {
 
 .comment-reply:last-child {
   margin-bottom: 0;
+}
+
+/* Standalone Reply Form */
+.comment-reply-standalone {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--editor-bg-secondary, #f9fafb);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
 }
 
 /* Add Reply Button */

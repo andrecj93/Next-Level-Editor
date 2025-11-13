@@ -76,10 +76,10 @@ export function createEmbeddedResizable(
       width: ${width}px;
       height: ${height}px;
       ${marginStyle}
-      border: 2px solid transparent;
+      border: 2px dashed rgba(102, 126, 234, 0.3);
       border-radius: 8px;
       overflow: hidden;
-      transition: border-color 0.2s ease;
+      transition: all 0.2s ease;
       cursor: pointer;
     "
     contenteditable="false"
@@ -129,6 +129,7 @@ function addEmbeddedInteractivity(element: HTMLElement): void {
   element.addEventListener("click", (e) => {
     e.stopPropagation();
     isSelected = true;
+    element.style.borderStyle = "solid";
     element.style.borderColor = "#667eea";
     element.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.2)";
     element.style.zIndex = "100";
@@ -138,7 +139,8 @@ function addEmbeddedInteractivity(element: HTMLElement): void {
   const handleDeselect = (e: MouseEvent) => {
     if (!element.contains(e.target as Node)) {
       isSelected = false;
-      element.style.borderColor = "transparent";
+      element.style.borderStyle = "dashed";
+      element.style.borderColor = "rgba(102, 126, 234, 0.3)";
       element.style.boxShadow = "none";
       element.style.zIndex = "auto";
     }
@@ -164,7 +166,8 @@ function addEmbeddedInteractivity(element: HTMLElement): void {
         break;
       case "Escape":
         isSelected = false;
-        element.style.borderColor = "transparent";
+        element.style.borderStyle = "dashed";
+        element.style.borderColor = "rgba(102, 126, 234, 0.3)";
         element.style.boxShadow = "none";
         break;
       case "ArrowLeft":
@@ -197,13 +200,15 @@ function addEmbeddedInteractivity(element: HTMLElement): void {
   // Hover effect
   element.addEventListener("mouseenter", () => {
     if (!isSelected) {
-      element.style.borderColor = "rgba(102, 126, 234, 0.3)";
+      element.style.borderStyle = "dashed";
+      element.style.borderColor = "#667eea";
     }
   });
 
   element.addEventListener("mouseleave", () => {
     if (!isSelected) {
-      element.style.borderColor = "transparent";
+      element.style.borderStyle = "dashed";
+      element.style.borderColor = "rgba(102, 126, 234, 0.3)";
     }
   });
 }

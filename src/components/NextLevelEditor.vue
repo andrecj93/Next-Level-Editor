@@ -52,6 +52,7 @@
       :placeholder="placeholder"
       :code-content="codeContent"
       :html-content="htmlContent"
+      :split-right-mode="splitRightMode"
       @input="onInput"
       @blur="onBlur"
       @focus="onFocus"
@@ -59,6 +60,8 @@
       @contextmenu="handleContextMenu"
       @code-input="onCodeInput"
       @code-blur="onCodeBlur"
+      @split-right-mode-change="handleSplitRightModeChange"
+      @split-editor-input="onSplitEditorInput"
     />
 
     <!-- Word Count Footer -->
@@ -141,11 +144,12 @@
 
     <!-- Writing Stats Panel (opt-in feature) -->
     <WritingStatsPanel
-      v-if="showWritingStats && writingAssistant"
+      v-if="showWritingStats && writingAssistant && showWritingStatsPanel"
       :stats="writingAssistant.stats.value"
       :readability="writingAssistant.readability.value"
       :sentence-analysis="writingAssistant.sentenceAnalysis.value"
       :word-analysis="writingAssistant.wordAnalysis.value"
+      @close="showWritingStatsPanel = false"
     />
 
     <!-- Comments Sidebar (opt-in feature) -->
@@ -210,11 +214,36 @@
         </span>
       </button>
     </Transition>
+
+    <!-- Writing Stats Toggle FAB (opt-in feature) -->
+    <Transition name="fab-fade">
+      <button
+        v-if="showWritingStats && writingAssistant"
+        class="writing-stats-toggle-fab"
+        aria-label="Toggle writing statistics"
+        :title="
+          showWritingStatsPanel
+            ? 'Hide writing statistics'
+            : 'Show writing statistics'
+        "
+        @click="showWritingStatsPanel = !showWritingStatsPanel"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M3 3v18h18M7 16l4-6 4 4 4-7"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRef } from "vue";
+import { ref, computed, toRef, nextTick } from "vue";
 
 import {
   applyTextAlignment,
@@ -319,7 +348,8 @@ const { theme, toggleTheme: toggleThemeComposable } = useTheme();
 // Accessibility (WCAG AAA)
 useAccessibility();
 
-// Writing Assistant (opt-in feature)
+// Writing Assistant (opt-in feature) - local state for toggle
+const showWritingStatsPanel = ref(false);
 const writingAssistant = props.showWritingStats ? useWritingAssistant() : null;
 
 // Comments System (opt-in feature)
@@ -407,6 +437,9 @@ const { viewMode } = useViewMode({
   htmlContent,
   codeContent,
 });
+
+// Split view right panel mode
+const splitRightMode = ref<"preview" | "editor">("preview");
 
 // Modal management using composable - pass rememberSelection to save cursor position
 const {
@@ -803,6 +836,33 @@ const onInput = () => {
   }
 };
 
+// Handle split view right panel mode change
+function handleSplitRightModeChange(mode: "preview" | "editor") {
+  splitRightMode.value = mode;
+  // Sync content when switching to editor mode
+  if (mode === "editor") {
+    nextTick(() => {
+      if (editorPanelsRef.value?.splitEditorRef && editorContent.value) {
+        editorPanelsRef.value.splitEditorRef.innerHTML =
+          editorContent.value.innerHTML;
+      }
+    });
+  }
+}
+
+// Handle split editor input - sync back to main code editor
+function onSplitEditorInput(event: Event) {
+  const target = event.target as HTMLElement;
+  if (target && codeContent.value !== target.innerHTML) {
+    const newContent = target.innerHTML;
+    // Update code content from split editor
+    codeContent.value = formatHtml(newContent);
+    // Emit the change
+    emit("update:modelValue", newContent);
+    triggerAutoSave(newContent);
+  }
+}
+
 // Keyboard Shortcuts - Using useKeyboardShortcuts composable
 const { handleKeydown } = useKeyboardShortcuts({
   editorContent,
@@ -1052,6 +1112,37 @@ useEditorSetup({
 }
 
 .comments-toggle-fab:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+/* Writing Stats Toggle FAB */
+.writing-stats-toggle-fab {
+  position: fixed;
+  bottom: 110px;
+  right: 32px;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 9998;
+}
+
+.writing-stats-toggle-fab:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 16px 48px rgba(16, 185, 129, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+}
+
+.writing-stats-toggle-fab:active {
   transform: translateY(-2px) scale(0.98);
 }
 

@@ -1,9 +1,6 @@
+<!-- eslint-disable vue/html-self-closing -->
 <template>
-  <div
-    v-if="isOpen"
-    class="modal-overlay"
-    @click="handleOverlayClick"
-  >
+  <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
     <dialog
       open
       class="modal-content file-manager-modal"
@@ -11,9 +8,7 @@
       @click.stop
     >
       <div class="modal-header">
-        <h3 id="modal-title">
-          📁 File Manager
-        </h3>
+        <h3 id="modal-title">📁 File Manager</h3>
         <button
           class="close-button"
           aria-label="Close modal"
@@ -35,7 +30,7 @@
                 multiple
                 style="display: none"
                 @change="handleFileSelect"
-              >
+              />
               <button
                 type="button"
                 class="btn btn-primary"
@@ -83,18 +78,10 @@
           @drop.prevent="handleDrop"
         >
           <div class="drop-zone-content">
-            <div class="drop-icon">
-              📁
-            </div>
-            <p class="drop-text">
-              Drag and drop files here
-            </p>
-            <p class="drop-subtext">
-              or click "Upload Files" to browse
-            </p>
-            <p class="drop-info">
-              Max file size: {{ maxFileSizeFormatted }}
-            </p>
+            <div class="drop-icon">📁</div>
+            <p class="drop-text">Drag and drop files here</p>
+            <p class="drop-subtext">or click "Upload Files" to browse</p>
+            <p class="drop-info">Max file size: {{ maxFileSizeFormatted }}</p>
           </div>
         </div>
 
@@ -108,10 +95,7 @@
           @drop.prevent="handleDrop"
         >
           <!-- Grid View -->
-          <div
-            v-if="viewMode === 'grid'"
-            class="file-grid"
-          >
+          <div v-if="viewMode === 'grid'" class="file-grid">
             <div
               v-for="file in files"
               :key="file.id"
@@ -127,26 +111,20 @@
                   type="checkbox"
                   :checked="selectedFiles.includes(file.id)"
                   @click.stop="toggleFileSelection(file.id)"
-                >
+                />
               </div>
               <div class="file-preview">
                 <img
                   v-if="file.thumbnail"
                   :src="file.thumbnail"
                   :alt="file.name"
-                >
-                <div
-                  v-else
-                  class="file-icon"
-                >
+                />
+                <div v-else class="file-icon">
                   {{ getFileIcon(file.type) }}
                 </div>
               </div>
               <div class="file-info">
-                <div
-                  class="file-name"
-                  :title="file.name"
-                >
+                <div class="file-name" :title="file.name">
                   {{ file.name }}
                 </div>
                 <div class="file-meta">
@@ -173,10 +151,7 @@
           </div>
 
           <!-- List View -->
-          <div
-            v-else
-            class="file-list"
-          >
+          <div v-else class="file-list">
             <table>
               <thead>
                 <tr>
@@ -185,18 +160,12 @@
                       type="checkbox"
                       :checked="allFilesSelected"
                       @change="toggleSelectAll"
-                    >
+                    />
                   </th>
                   <th>Name</th>
-                  <th style="width: 100px">
-                    Size
-                  </th>
-                  <th style="width: 150px">
-                    Uploaded
-                  </th>
-                  <th style="width: 120px">
-                    Actions
-                  </th>
+                  <th style="width: 100px">Size</th>
+                  <th style="width: 150px">Uploaded</th>
+                  <th style="width: 120px">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -212,7 +181,7 @@
                       type="checkbox"
                       :checked="selectedFiles.includes(file.id)"
                       @click.stop="toggleFileSelection(file.id)"
-                    >
+                    />
                   </td>
                   <td class="file-name-cell">
                     <span class="file-icon-inline">{{
@@ -245,30 +214,21 @@
         </div>
 
         <!-- Storage Info -->
-        <div
-          v-if="files.length > 0"
-          class="storage-info"
-        >
-          <span>{{ files.length }} file(s) •
-            {{ formatFileSize(totalSize) }} used</span>
+        <div v-if="files.length > 0" class="storage-info">
+          <span
+            >{{ files.length }} file(s) •
+            {{ formatFileSize(totalSize) }} used</span
+          >
         </div>
 
         <!-- Error Message -->
-        <div
-          v-if="errorMessage"
-          class="error-message"
-        >
+        <div v-if="errorMessage" class="error-message">
           ⚠️ {{ errorMessage }}
         </div>
       </div>
 
       <div class="modal-footer">
-        <button
-          class="cancel-button"
-          @click="close"
-        >
-          Close
-        </button>
+        <button class="cancel-button" @click="close">Close</button>
       </div>
     </dialog>
   </div>
@@ -456,6 +416,13 @@ function close() {
   animation: fadeIn 0.2s ease-out;
 }
 
+.modal-content {
+  border: none;
+  padding: 0;
+  margin: auto;
+  position: relative;
+}
+
 .file-manager-modal {
   background: var(--editor-bg);
   border-radius: 12px;
@@ -466,6 +433,8 @@ function close() {
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   animation: slideIn 0.3s ease-out;
+  border: none;
+  padding: 0;
 }
 
 /* Modal Header */
@@ -473,15 +442,29 @@ function close() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 24px 28px 20px;
+  border-bottom: 3px solid transparent;
+  border-image: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+  border-image-slice: 1;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.05) 0%,
+    rgba(139, 92, 246, 0.05) 50%,
+    rgba(236, 72, 153, 0.05) 100%
+  );
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-color);
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .close-button {
@@ -533,29 +516,53 @@ function close() {
 .btn {
   padding: 10px 20px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 .btn-primary {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
   color: #ffffff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .btn-primary:hover {
-  background: var(--primary-hover);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
 }
 
 .btn-danger {
-  background: #dc2626; /* Darker red for better contrast */
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: #ffffff;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .btn-danger:hover {
-  background: #dc2626;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
 }
 
 .view-toggle {
