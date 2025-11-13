@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/html-self-closing -->
 <template>
   <Transition name="modal-fade">
     <div
@@ -22,12 +23,7 @@
           <div class="comment-modal-header">
             <div class="comment-modal-title-wrapper">
               <div class="comment-icon">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <path
                     d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
                     stroke="currentColor"
@@ -52,12 +48,7 @@
               aria-label="Close comment modal"
               @click="handleCancel"
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-              >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path
                   d="M15 5L5 15M5 5l10 10"
                   stroke="currentColor"
@@ -71,12 +62,7 @@
           <!-- Selected Text Preview -->
           <div v-if="selectedText" class="comment-selected-text">
             <div class="selected-text-header">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-              >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M13.5 8.5L9 13l-4.5-4.5m0-5L9 8l4.5-4.5"
                   stroke="currentColor"
@@ -117,12 +103,7 @@
                 class="comment-mention-dropdown"
               >
                 <div class="mention-dropdown-header">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                  >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <circle
                       cx="7"
                       cy="5"
@@ -152,7 +133,7 @@
                       v-if="suggestion.avatarUrl"
                       :src="suggestion.avatarUrl"
                       :alt="suggestion.name"
-                    >
+                    />
                     <span v-else>
                       {{ getInitials(suggestion.name) }}
                     </span>
@@ -161,10 +142,7 @@
                     <div class="comment-mention-name">
                       {{ suggestion.name }}
                     </div>
-                    <div
-                      v-if="suggestion.email"
-                      class="comment-mention-email"
-                    >
+                    <div v-if="suggestion.email" class="comment-mention-email">
                       {{ suggestion.email }}
                     </div>
                   </div>
@@ -192,12 +170,7 @@
             <div class="comment-modal-helper">
               <div class="helper-tips">
                 <span class="helper-tip">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                  >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <circle
                       cx="7"
                       cy="7"
@@ -236,12 +209,7 @@
               :disabled="!content.trim()"
               @click="handleSubmit"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-              >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M14 2L7 9m7-7l-5 13-2-6-6-2 13-5z"
                   stroke="currentColor"
@@ -514,12 +482,7 @@ function getInitials(name: string): string {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(
-    90deg,
-    #3b82f6 0%,
-    #8b5cf6 50%,
-    #ec4899 100%
-  );
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
 }
 
 /* Header */
@@ -623,11 +586,7 @@ function getInitials(name: string): string {
     rgba(139, 92, 246, 0.05) 100%
   );
   border-left: 3px solid;
-  border-image: linear-gradient(
-    180deg,
-    #3b82f6 0%,
-    #8b5cf6 100%
-  ) 1;
+  border-image: linear-gradient(180deg, #3b82f6 0%, #8b5cf6 100%) 1;
   border-radius: 0 8px 8px 0;
   max-height: 120px;
   overflow-y: auto;
@@ -653,7 +612,8 @@ function getInitials(name: string): string {
   border-radius: 12px;
   background: var(--editor-bg, #ffffff);
   color: var(--text-color, #1f2937);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   font-size: 15px;
   line-height: 1.6;
   resize: vertical;
