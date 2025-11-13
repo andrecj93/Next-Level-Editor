@@ -194,6 +194,38 @@
       @select="handleVariableSelect"
       @close="closeVariableAutocomplete"
     />
+
+    <!-- Comments Toggle FAB (opt-in feature) -->
+    <Transition name="fab-fade">
+      <button
+        v-if="enableComments && !showCommentsSidebar && comments"
+        class="comments-toggle-fab"
+        aria-label="Open comments"
+        title="Open comments"
+        @click="showCommentsSidebar = true"
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <path
+            d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span
+          v-if="comments.threads.value.some(t => t.status === 'open')"
+          class="comments-toggle-badge"
+        >
+          {{ comments.threads.value.filter(t => t.status === 'open').length }}
+        </span>
+      </button>
+    </Transition>
   </div>
 </template>
 
@@ -976,3 +1008,91 @@ useEditorSetup({
 <style src="../styles/NextLevelEditor.css"></style>
 <style src="../styles/editor-variables.css"></style>
 <style src="../styles/gap-fallback.css"></style>
+
+<style scoped>
+/* FAB Transition */
+.fab-fade-enter-active,
+.fab-fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fab-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.8) translateY(20px);
+}
+
+.fab-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.8) translateY(20px);
+}
+
+/* Comments Toggle FAB */
+.comments-toggle-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.4), 
+              0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 9998;
+}
+
+.comments-toggle-fab:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 16px 48px rgba(59, 130, 246, 0.5), 
+              0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+}
+
+.comments-toggle-fab:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+.comments-toggle-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  background: #ef4444;
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4), 
+              0 0 0 3px var(--editor-bg, #ffffff);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .comments-toggle-fab {
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+  }
+}
+</style>
