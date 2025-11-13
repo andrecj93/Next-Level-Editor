@@ -204,12 +204,7 @@
         title="Open comments"
         @click="showCommentsSidebar = true"
       >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-        >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path
             d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
             stroke="currentColor"
@@ -219,10 +214,10 @@
           />
         </svg>
         <span
-          v-if="comments.threads.value.some(t => t.status === 'open')"
+          v-if="comments.threads.value.some((t) => t.status === 'open')"
           class="comments-toggle-badge"
         >
-          {{ comments.threads.value.filter(t => t.status === 'open').length }}
+          {{ comments.threads.value.filter((t) => t.status === "open").length }}
         </span>
       </button>
     </Transition>
@@ -1041,16 +1036,16 @@ useEditorSetup({
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.4), 
-              0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 9998;
 }
 
 .comments-toggle-fab:hover {
   transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 16px 48px rgba(59, 130, 246, 0.5), 
-              0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  box-shadow: 0 16px 48px rgba(59, 130, 246, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
 }
 
 .comments-toggle-fab:active {
@@ -1072,13 +1067,14 @@ useEditorSetup({
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4), 
-              0 0 0 3px var(--editor-bg, #ffffff);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4),
+    0 0 0 3px var(--editor-bg, #ffffff);
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {

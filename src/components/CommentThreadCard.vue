@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/html-self-closing -->
 <template>
   <div
     class="comment-thread-card"
@@ -11,17 +12,12 @@
     >
       <div class="comment-quote-bar" />
       <div class="comment-quote-content">
-        <div class="comment-quote-text">
-          "{{ thread.rangeData.text }}"
-        </div>
+        <div class="comment-quote-text">"{{ thread.rangeData.text }}"</div>
       </div>
     </div>
 
     <!-- Main Comment -->
-    <div
-      class="comment-main"
-      @click="handleToggle"
-    >
+    <div class="comment-main" @click="handleToggle">
       <div class="comment-avatar-wrapper">
         <div
           class="comment-avatar"
@@ -31,13 +27,13 @@
             v-if="thread.comments[0]?.author.avatarUrl"
             :src="thread.comments[0].author.avatarUrl"
             :alt="thread.comments[0]?.author.name"
-          >
+          />
           <span v-else>
-            {{ getInitials(thread.comments[0]?.author.name || '') }}
+            {{ getInitials(thread.comments[0]?.author.name || "") }}
           </span>
         </div>
       </div>
-      
+
       <div class="comment-body">
         <div class="comment-header">
           <div class="comment-meta">
@@ -48,11 +44,8 @@
               {{ formatTime(thread.createdAt) }}
             </span>
           </div>
-          
-          <div
-            class="comment-actions"
-            @click.stop
-          >
+
+          <div class="comment-actions" @click.stop>
             <button
               v-if="thread.status === 'open'"
               class="comment-action-btn"
@@ -60,12 +53,7 @@
               title="Mark as resolved"
               @click="emit('resolve', thread.id)"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-              >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M13 4L6 11L3 8"
                   stroke="currentColor"
@@ -82,12 +70,7 @@
               title="Reopen thread"
               @click="emit('reopen', thread.id)"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-              >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M8 2v12M2 8h12"
                   stroke="currentColor"
@@ -102,12 +85,7 @@
               title="Delete thread"
               @click="handleDelete"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-              >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M2 4h12M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"
                   stroke="currentColor"
@@ -125,16 +103,8 @@
         />
 
         <!-- Status Badge -->
-        <div
-          v-if="thread.status === 'resolved'"
-          class="comment-status-badge"
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 12 12"
-            fill="none"
-          >
+        <div v-if="thread.status === 'resolved'" class="comment-status-badge">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path
               d="M10 3L4.5 8.5L2 6"
               stroke="currentColor"
@@ -154,12 +124,7 @@
       class="comment-replies-toggle"
       @click="handleToggle"
     >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 16 16"
-        fill="none"
-      >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path
           d="M2 8h8M8 2L14 8l-6 6"
           stroke="currentColor"
@@ -168,7 +133,8 @@
           stroke-linejoin="round"
         />
       </svg>
-      View {{ thread.comments.length - 1 }} {{ thread.comments.length === 2 ? 'reply' : 'replies' }}
+      View {{ thread.comments.length - 1 }}
+      {{ thread.comments.length === 2 ? "reply" : "replies" }}
     </button>
 
     <!-- Expanded Replies -->
@@ -191,13 +157,13 @@
                 v-if="comment.author.avatarUrl"
                 :src="comment.author.avatarUrl"
                 :alt="comment.author.name"
-              >
+              />
               <span v-else>
                 {{ getInitials(comment.author.name) }}
               </span>
             </div>
           </div>
-          
+
           <div class="comment-body">
             <div class="comment-header">
               <div class="comment-meta">
@@ -214,21 +180,15 @@
               class="comment-text"
               v-html="renderCommentContent(comment.content)"
             />
-            
-            <span
-              v-if="comment.isEdited"
-              class="comment-edited"
-            >
+
+            <span v-if="comment.isEdited" class="comment-edited">
               (edited)
             </span>
           </div>
         </div>
 
         <!-- Reply Form (when expanded) -->
-        <div
-          v-if="showReplyForm"
-          class="comment-reply"
-        >
+        <div v-if="showReplyForm" class="comment-reply">
           <div class="comment-avatar-wrapper">
             <div class="comment-avatar comment-avatar-small">
               <span>U</span>
@@ -248,12 +208,7 @@
           class="comment-add-reply-btn"
           @click.stop="showReplyForm = true"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-          >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path
               d="M8 2v12M2 8h12"
               stroke="currentColor"
@@ -265,16 +220,8 @@
         </button>
 
         <!-- Collapse Button -->
-        <button
-          class="comment-collapse-btn"
-          @click="handleToggle"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-          >
+        <button class="comment-collapse-btn" @click="handleToggle">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
               d="M11 9L7 5L3 9"
               stroke="currentColor"
@@ -361,10 +308,7 @@ function getInitials(name: string): string {
 
 function renderCommentContent(content: string): string {
   // Replace @mentions with styled spans
-  return content.replace(
-    /@(\w+)/g,
-    '<span class="comment-mention">@$1</span>'
-  );
+  return content.replace(/@(\w+)/g, '<span class="comment-mention">@$1</span>');
 }
 </script>
 
@@ -414,14 +358,22 @@ function renderCommentContent(content: string): string {
   gap: 12px;
   margin-bottom: 12px;
   padding: 12px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.03) 0%, rgba(139, 92, 246, 0.03) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.03) 0%,
+    rgba(139, 92, 246, 0.03) 100%
+  );
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .comment-quote:hover {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, rgba(139, 92, 246, 0.06) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.06) 0%,
+    rgba(139, 92, 246, 0.06) 100%
+  );
 }
 
 .comment-quote-bar {
@@ -656,7 +608,11 @@ function renderCommentContent(content: string): string {
 }
 
 .comment-add-reply-btn:hover {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.05) 0%,
+    rgba(139, 92, 246, 0.05) 100%
+  );
   border-color: #3b82f6;
   border-style: solid;
   color: #3b82f6;
@@ -696,10 +652,18 @@ function renderCommentContent(content: string): string {
 }
 
 :global(.dark-mode) .comment-quote {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.08) 0%,
+    rgba(139, 92, 246, 0.08) 100%
+  );
 }
 
 :global(.dark-mode) .comment-quote:hover {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.12) 0%,
+    rgba(139, 92, 246, 0.12) 100%
+  );
 }
 </style>

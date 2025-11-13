@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="comments-sidebar"
-    :class="{ 'comments-sidebar-open': isOpen }"
-  >
+  <div class="comments-sidebar" :class="{ 'comments-sidebar-open': isOpen }">
     <!-- Backdrop for mobile -->
     <div
       v-if="isOpen"
@@ -16,12 +13,7 @@
       <div class="comments-sidebar-header">
         <div class="comments-header-top">
           <div class="comments-header-icon">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path
                 d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
                 stroke="currentColor"
@@ -31,20 +23,13 @@
               />
             </svg>
           </div>
-          <h3 class="comments-sidebar-title">
-            Comments
-          </h3>
+          <h3 class="comments-sidebar-title">Comments</h3>
           <button
             class="comments-sidebar-close"
             aria-label="Close comments sidebar"
             @click="closeSidebar"
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-            >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path
                 d="M15 5L5 15M5 5l10 10"
                 stroke="currentColor"
@@ -81,12 +66,7 @@
         <template v-if="currentThreads.length === 0">
           <div class="comments-empty-state">
             <div class="comments-empty-icon">
-              <svg
-                width="64"
-                height="64"
-                viewBox="0 0 64 64"
-                fill="none"
-              >
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
                 <circle
                   cx="32"
                   cy="32"
@@ -102,24 +82,9 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
-                <circle
-                  cx="24"
-                  cy="28"
-                  r="2"
-                  fill="currentColor"
-                />
-                <circle
-                  cx="32"
-                  cy="28"
-                  r="2"
-                  fill="currentColor"
-                />
-                <circle
-                  cx="40"
-                  cy="28"
-                  r="2"
-                  fill="currentColor"
-                />
+                <circle cx="24" cy="28" r="2" fill="currentColor" />
+                <circle cx="32" cy="28" r="2" fill="currentColor" />
+                <circle cx="40" cy="28" r="2" fill="currentColor" />
               </svg>
             </div>
             <p class="comments-empty-text">
@@ -159,12 +124,7 @@
         title="Add new comment"
         @click="createNewComment"
       >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-        >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path
             d="M12 5v14m-7-7h14"
             stroke="currentColor"
@@ -406,7 +366,11 @@ function createNewComment() {
 }
 
 .comments-tab.active {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.1) 0%,
+    rgba(139, 92, 246, 0.1) 100%
+  );
   color: #3b82f6;
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
 }
@@ -462,7 +426,8 @@ function createNewComment() {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -499,14 +464,16 @@ function createNewComment() {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 10;
 }
 
 .comments-fab:hover {
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
 }
 
 .comments-fab:active {
