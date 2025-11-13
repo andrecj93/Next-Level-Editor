@@ -218,6 +218,11 @@ function deleteThread(threadId: string) {
 
 function addReply(threadId: string, content: string, mentions: string[]) {
   emit("add-reply", threadId, content, mentions);
+  // Ensure thread stays expanded after adding reply
+  if (!expandedThreads.value.has(threadId)) {
+    expandedThreads.value.add(threadId);
+    expandedThreads.value = new Set(expandedThreads.value);
+  }
 }
 
 function createNewComment() {
@@ -232,10 +237,15 @@ function createNewComment() {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 420px;
+  width: 0;
   z-index: 9999;
   pointer-events: none;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible;
+}
+
+.comments-sidebar-open {
+  width: 420px;
+  pointer-events: all;
 }
 
 .comments-sidebar-content {
@@ -243,7 +253,7 @@ function createNewComment() {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 100%;
+  width: 420px;
   background: var(--editor-bg, #ffffff);
   border-left: 1px solid var(--border-color, #e5e7eb);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
@@ -290,25 +300,30 @@ function createNewComment() {
 .comments-header-top {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 20px 24px 16px;
+  gap: 10px;
+  padding: 16px 20px 12px;
 }
 
 .comments-header-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.comments-header-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .comments-sidebar-title {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text-color, #111827);
   margin: 0;
@@ -316,11 +331,11 @@ function createNewComment() {
 }
 
 .comments-sidebar-close {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -328,6 +343,11 @@ function createNewComment() {
   color: var(--text-muted, #6b7280);
   transition: all 0.2s ease;
   flex-shrink: 0;
+}
+
+.comments-sidebar-close svg {
+  width: 18px;
+  height: 18px;
 }
 
 .comments-sidebar-close:hover {
@@ -339,7 +359,7 @@ function createNewComment() {
 .comments-tabs {
   display: flex;
   gap: 4px;
-  padding: 0 24px 16px;
+  padding: 0 20px 12px;
 }
 
 .comments-tab {
@@ -347,12 +367,12 @@ function createNewComment() {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 6px;
+  padding: 8px 12px;
   border: none;
   background: transparent;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 6px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-muted, #6b7280);
   cursor: pointer;

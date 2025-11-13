@@ -664,6 +664,8 @@ const {
   isInlineActionActive,
   insertLink,
   isAddingComment: comments?.isAddingComment,
+  enableComments: props.enableComments,
+  onAddComment: handleCreateComment,
 });
 
 // Toolbar Items - Using useToolbarItems composable
@@ -832,12 +834,22 @@ const { handleKeydown } = useKeyboardShortcuts({
 // Comments handlers
 function handleSelectThread(threadId: string) {
   if (!comments) return;
+  comments.setActiveThread(threadId);
+  
   const thread = comments.threads.value.find((t) => t.id === threadId);
   if (thread?.highlightElement) {
+    // Add temporary pulse highlight
+    thread.highlightElement.classList.add('comment-highlight-pulse');
+    
     smoothScrollIntoView(thread.highlightElement, {
       behavior: "smooth",
       block: "center",
     });
+
+    // Remove pulse after animation
+    setTimeout(() => {
+      thread.highlightElement?.classList.remove('comment-highlight-pulse');
+    }, 2000);
   }
 }
 
@@ -858,7 +870,10 @@ function handleDeleteThread(threadId: string) {
 
 function handleAddReply(threadId: string, content: string, mentions: string[]) {
   if (!comments) return;
-  comments.addReply(threadId, content, mentions);
+  const reply = comments.addReply(threadId, content, mentions);
+  if (reply) {
+    showToastNotification("Reply added successfully", "success");
+  }
 }
 
 function handleCreateComment() {
@@ -1079,6 +1094,24 @@ useEditorSetup({
   }
   50% {
     transform: scale(1.1);
+  }
+}
+
+/* Comment Highlight Pulse */
+:deep(.comment-highlight-pulse) {
+  animation: commentPulse 2s ease-in-out;
+  position: relative;
+}
+
+@keyframes commentPulse {
+  0%, 100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+  50% {
+    background-color: rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+    border-radius: 4px;
   }
 }
 

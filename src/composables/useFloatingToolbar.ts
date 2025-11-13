@@ -6,6 +6,8 @@ export interface UseFloatingToolbarOptions {
   isInlineActionActive: (tag: string) => boolean;
   insertLink: () => void;
   isAddingComment?: Ref<boolean>;
+  onAddComment?: () => void;
+  enableComments?: boolean;
 }
 
 /**
@@ -61,39 +63,54 @@ export function useFloatingToolbar(options?: UseFloatingToolbarOptions) {
    * Only available when options are provided
    */
   const floatingActions = options
-    ? computed<ToolbarAction[]>(() => [
-        {
-          id: "bold",
-          label: "Bold",
-          icon: "<strong>B</strong>",
-          tooltip: "Bold (Ctrl+B)",
-          onClick: () => options.handleInlineAction("strong"),
-          isActive: () => options.isInlineActionActive("strong"),
-        },
-        {
-          id: "italic",
-          label: "Italic",
-          icon: "<em>I</em>",
-          tooltip: "Italic (Ctrl+I)",
-          onClick: () => options.handleInlineAction("em"),
-          isActive: () => options.isInlineActionActive("em"),
-        },
-        {
-          id: "underline",
-          label: "Underline",
-          icon: "<u>U</u>",
-          tooltip: "Underline (Ctrl+U)",
-          onClick: () => options.handleInlineAction("u"),
-          isActive: () => options.isInlineActionActive("u"),
-        },
-        {
-          id: "link",
-          label: "Link",
-          icon: "🔗",
-          tooltip: "Insert link",
-          onClick: options.insertLink,
-        },
-      ])
+    ? computed<ToolbarAction[]>(() => {
+        const actions: ToolbarAction[] = [
+          {
+            id: "bold",
+            label: "Bold",
+            icon: "<strong>B</strong>",
+            tooltip: "Bold (Ctrl+B)",
+            onClick: () => options.handleInlineAction("strong"),
+            isActive: () => options.isInlineActionActive("strong"),
+          },
+          {
+            id: "italic",
+            label: "Italic",
+            icon: "<em>I</em>",
+            tooltip: "Italic (Ctrl+I)",
+            onClick: () => options.handleInlineAction("em"),
+            isActive: () => options.isInlineActionActive("em"),
+          },
+          {
+            id: "underline",
+            label: "Underline",
+            icon: "<u>U</u>",
+            tooltip: "Underline (Ctrl+U)",
+            onClick: () => options.handleInlineAction("u"),
+            isActive: () => options.isInlineActionActive("u"),
+          },
+          {
+            id: "link",
+            label: "Link",
+            icon: "🔗",
+            tooltip: "Insert link",
+            onClick: options.insertLink,
+          },
+        ];
+
+        // Add comment button if comments are enabled
+        if (options.enableComments && options.onAddComment) {
+          actions.push({
+            id: "comment",
+            label: "Comment",
+            icon: "💬",
+            tooltip: "Add comment",
+            onClick: options.onAddComment,
+          });
+        }
+
+        return actions;
+      })
     : computed(() => []);
 
   return {
