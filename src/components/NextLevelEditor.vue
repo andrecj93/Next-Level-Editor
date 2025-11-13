@@ -636,6 +636,7 @@ const {
   handleInlineAction,
   isInlineActionActive,
   insertLink,
+  isAddingComment: comments?.isAddingComment,
 });
 
 // Toolbar Items - Using useToolbarItems composable

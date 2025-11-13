@@ -1,10 +1,11 @@
-import { ref, computed } from "vue";
+import { ref, computed, type Ref } from "vue";
 import type { ToolbarAction } from "../types/toolbar";
 
 export interface UseFloatingToolbarOptions {
   handleInlineAction: (tag: string) => void;
   isInlineActionActive: (tag: string) => boolean;
   insertLink: () => void;
+  isAddingComment?: Ref<boolean>;
 }
 
 /**
@@ -19,6 +20,12 @@ export function useFloatingToolbar(options?: UseFloatingToolbarOptions) {
    * Update floating toolbar visibility based on current selection
    */
   const updateFloatingToolbar = () => {
+    // Don't show floating toolbar if user is adding a comment
+    if (options?.isAddingComment?.value) {
+      showFloatingToolbar.value = false;
+      return;
+    }
+
     const selection = globalThis.getSelection();
 
     // Clear any existing timer
