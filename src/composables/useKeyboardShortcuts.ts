@@ -157,6 +157,17 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     ensureVisibleElement(currentBlock);
     populateNewElement(newParagraph, afterContent);
 
+    // Clear inherited inline styles from headings or styled blocks
+    // Reset font-size, color, background-color to allow normal paragraph styling
+    const currentTag = currentBlock.tagName.toLowerCase();
+    if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(currentTag)) {
+      // Clear inline styles that shouldn't carry over from headings
+      newParagraph.style.fontSize = "";
+      newParagraph.style.fontWeight = "";
+      newParagraph.style.color = "";
+      newParagraph.style.backgroundColor = "";
+    }
+
     if (currentBlock.nextSibling) {
       currentBlock.parentNode?.insertBefore(
         newParagraph,

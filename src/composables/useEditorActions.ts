@@ -215,6 +215,7 @@ export function useEditorActions(options: UseEditorActionsOptions) {
       range.deleteContents();
       range.insertNode(textNode);
 
+      // Move cursor after the emoji
       range.setStartAfter(textNode);
       range.collapse(true);
       selection.removeAllRanges();

@@ -567,11 +567,12 @@
   border: none;
   border-top: 2px solid var(--editor-border);
   margin: 24px 0;
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 .theme-dark .editor-content :deep(hr) {
-  opacity: 0.3;
+  border-top-color: #475569;
+  opacity: 1;
 }
 
 /* Fullscreen Mode */

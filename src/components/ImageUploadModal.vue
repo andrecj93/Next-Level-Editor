@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/html-self-closing -->
 <template>
   <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
     <div
