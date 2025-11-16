@@ -50,15 +50,13 @@
   />
 
   <!-- Emoji Picker -->
-  <Teleport to="body">
-    <div v-if="showEmojiPicker" class="emoji-picker-overlay">
-      <EmojiPicker
-        :show="showEmojiPicker"
-        @select="$emit('insert-emoji', $event)"
-        @close="$emit('close-emoji-picker')"
-      />
-    </div>
-  </Teleport>
+  <div v-if="showEmojiPicker" class="emoji-picker-overlay">
+    <EmojiPicker
+      :show="showEmojiPicker"
+      @select="$emit('insert-emoji', $event)"
+      @close="$emit('close-emoji-picker')"
+    />
+  </div>
 
   <!-- Image Upload Modal -->
   <ImageUploadModal

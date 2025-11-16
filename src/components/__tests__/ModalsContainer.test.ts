@@ -184,7 +184,7 @@ describe("ModalsContainer", () => {
         },
       });
 
-      expect(wrapper.find(".emoji-picker-container").exists()).toBe(true);
+      expect(wrapper.find(".emoji-picker-overlay").exists()).toBe(true);
       expect(wrapper.find(".mock-emoji-picker").exists()).toBe(true);
     });
 
@@ -196,7 +196,7 @@ describe("ModalsContainer", () => {
         },
       });
 
-      expect(wrapper.find(".emoji-picker-container").exists()).toBe(false);
+      expect(wrapper.find(".emoji-picker-overlay").exists()).toBe(false);
     });
   });
 
