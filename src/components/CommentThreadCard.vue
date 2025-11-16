@@ -269,7 +269,6 @@ const showReplyForm = ref(false);
 // Methods
 function handleToggle() {
   emit("toggle", props.thread.id);
-  emit("select", props.thread.id);
 }
 
 function handleDelete() {
