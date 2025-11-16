@@ -336,19 +336,35 @@ function renderCommentContent(content: string): string {
 
 /* Thread Card */
 .comment-thread-card {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-  transition: all 0.2s ease;
+  padding: 20px;
+  margin: 12px;
+  border: 2px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   background: var(--editor-bg, #ffffff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .comment-thread-card:hover {
-  background: var(--hover-bg, #f9fafb);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.02) 0%,
+    rgba(139, 92, 246, 0.02) 100%
+  );
+  border-color: #3b82f6;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.12);
+  transform: translateY(-2px);
 }
 
 .comment-thread-card-expanded {
-  background: var(--hover-bg, #f9fafb);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.03) 0%,
+    rgba(139, 92, 246, 0.03) 100%
+  );
+  border-color: #3b82f6;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
   cursor: default;
 }
 
@@ -592,11 +608,30 @@ function renderCommentContent(content: string): string {
 .comment-reply-standalone {
   display: flex;
   gap: 12px;
-  margin-top: 12px;
-  padding: 12px;
-  background: var(--editor-bg-secondary, #f9fafb);
-  border-radius: 8px;
-  border: 1px solid var(--border-color, #e5e7eb);
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.03) 0%,
+    rgba(139, 92, 246, 0.03) 100%
+  );
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+
+.comment-reply-standalone::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 10px;
+  padding: 2px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.3;
 }
 
 /* Add Reply Button */

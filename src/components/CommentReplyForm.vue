@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/html-self-closing -->
 <template>
   <div class="comment-reply-form">
     <textarea
@@ -29,7 +30,7 @@
             v-if="suggestion.avatarUrl"
             :src="suggestion.avatarUrl"
             :alt="suggestion.name"
-          >
+          />
           <span v-else>
             {{ getInitials(suggestion.name) }}
           </span>
@@ -38,10 +39,7 @@
           <div class="comment-mention-name">
             {{ suggestion.name }}
           </div>
-          <div
-            v-if="suggestion.email"
-            class="comment-mention-email"
-          >
+          <div v-if="suggestion.email" class="comment-mention-email">
             {{ suggestion.email }}
           </div>
         </div>
@@ -50,11 +48,7 @@
 
     <!-- Actions -->
     <div class="comment-reply-actions">
-      <button
-        class="comment-reply-cancel"
-        type="button"
-        @click="handleCancel"
-      >
+      <button class="comment-reply-cancel" type="button" @click="handleCancel">
         Cancel
       </button>
       <button
@@ -236,22 +230,28 @@ function getInitials(name: string): string {
 
 .comment-reply-textarea {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--secondary-bg);
-  color: var(--text-color);
+  padding: 12px 14px;
+  border: 2px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: var(--editor-bg, #ffffff);
+  color: var(--text-color, #1f2937);
   font-family: inherit;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   resize: vertical;
-  min-height: 60px;
+  min-height: 80px;
+  transition: all 0.2s ease;
 }
 
 .comment-reply-textarea:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: transparent;
+  background: var(--editor-bg, #ffffff);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.comment-reply-textarea:hover:not(:focus) {
+  border-color: #3b82f6;
 }
 
 .comment-mention-dropdown {
@@ -324,42 +324,69 @@ function getInitials(name: string): string {
 .comment-reply-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .comment-reply-cancel,
 .comment-reply-submit {
-  padding: 6px 12px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.comment-reply-cancel::before,
+.comment-reply-submit::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.comment-reply-cancel:hover::before,
+.comment-reply-submit:hover:not(:disabled)::before {
+  width: 300px;
+  height: 300px;
 }
 
 .comment-reply-cancel {
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-muted, #6b7280);
+  border: 1px solid var(--border-color, #e5e7eb);
 }
 
 .comment-reply-cancel:hover {
-  background: var(--hover-bg);
-  color: var(--text-color);
+  background: var(--hover-bg, #f3f4f6);
+  color: var(--text-color, #1f2937);
+  border-color: var(--border-color, #d1d5db);
 }
 
 .comment-reply-submit {
-  background: var(--primary-color);
-  color: white;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .comment-reply-submit:hover:not(:disabled) {
-  opacity: 0.9;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
 }
 
 .comment-reply-submit:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 </style>

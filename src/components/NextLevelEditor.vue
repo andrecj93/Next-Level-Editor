@@ -803,7 +803,7 @@ const {
   onBlur,
   onMouseUp,
   onSelectionChange,
-  onCodeInput,
+  onCodeInput: onCodeInputBase,
   onCodeBlur,
 } = useEditorEvents({
   editorContent,
@@ -833,6 +833,26 @@ const onInput = () => {
   // Wrap variables in content
   if (variablesComposable && editorContent.value) {
     variablesComposable.wrapVariablesInContent(editorContent.value);
+  }
+
+  // Update writing statistics
+  if (writingAssistant && editorContent.value) {
+    writingAssistant.analyze(editorContent.value.innerHTML);
+  }
+};
+
+// Wrap onCodeInput to sync with split editor in editor mode
+const onCodeInput = (event: Event) => {
+  onCodeInputBase(event);
+
+  // If split view is active with editor mode on right, sync the split editor
+  if (viewMode.value === "split" && splitRightMode.value === "editor") {
+    nextTick(() => {
+      if (editorPanelsRef.value?.splitEditorRef && editorContent.value) {
+        editorPanelsRef.value.splitEditorRef.innerHTML =
+          editorContent.value.innerHTML;
+      }
+    });
   }
 };
 

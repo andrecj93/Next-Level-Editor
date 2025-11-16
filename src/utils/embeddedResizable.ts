@@ -124,6 +124,9 @@ export function insertEmbeddedResizable(options: EmbeddedContentOptions): void {
  */
 function addEmbeddedInteractivity(element: HTMLElement): void {
   let isSelected = false;
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
 
   // Click to select
   element.addEventListener("click", (e) => {
@@ -133,6 +136,40 @@ function addEmbeddedInteractivity(element: HTMLElement): void {
     element.style.borderColor = "#667eea";
     element.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.2)";
     element.style.zIndex = "100";
+    element.style.cursor = "move";
+  });
+
+  // Mouse down to start drag
+  element.addEventListener("mousedown", (e: MouseEvent) => {
+    if (!isSelected) return;
+
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+
+    element.style.cursor = "grabbing";
+    e.preventDefault();
+  });
+
+  // Mouse move to drag
+  document.addEventListener("mousemove", (e: MouseEvent) => {
+    if (!isDragging || !isSelected) return;
+
+    const deltaX = e.clientX - dragStartX;
+    const deltaY = e.clientY - dragStartY;
+
+    // Update position using transform to avoid layout shifts
+    element.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+  });
+
+  // Mouse up to stop drag
+  document.addEventListener("mouseup", () => {
+    if (isDragging) {
+      isDragging = false;
+      if (isSelected) {
+        element.style.cursor = "move";
+      }
+    }
   });
 
   // Deselect when clicking outside
@@ -143,6 +180,7 @@ function addEmbeddedInteractivity(element: HTMLElement): void {
       element.style.borderColor = "rgba(102, 126, 234, 0.3)";
       element.style.boxShadow = "none";
       element.style.zIndex = "auto";
+      element.style.cursor = "pointer";
     }
   };
 
@@ -169,6 +207,7 @@ function addEmbeddedInteractivity(element: HTMLElement): void {
         element.style.borderStyle = "dashed";
         element.style.borderColor = "rgba(102, 126, 234, 0.3)";
         element.style.boxShadow = "none";
+        element.style.cursor = "pointer";
         break;
       case "ArrowLeft":
         if (e.shiftKey) {

@@ -1,9 +1,5 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="modal-overlay"
-    @click="handleOverlayClick"
-  >
+  <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
     <div
       class="modal-content"
       role="dialog"
@@ -12,14 +8,8 @@
       @click.stop
     >
       <div class="modal-header">
-        <h3 id="modal-title">
-          Insert Image
-        </h3>
-        <button
-          class="close-button"
-          aria-label="Close modal"
-          @click="close"
-        >
+        <h3 id="modal-title">Insert Image</h3>
+        <button class="close-button" aria-label="Close modal" @click="close">
           ×
         </button>
       </div>
@@ -34,7 +24,7 @@
             type="url"
             placeholder="https://example.com/image.jpg"
             @input="handleUrlChange"
-          >
+          />
         </div>
 
         <!-- File Upload -->
@@ -42,7 +32,7 @@
           <div class="divider">
             <span>OR</span>
           </div>
-          
+
           <label class="file-upload-label">
             <input
               ref="fileInput"
@@ -50,7 +40,7 @@
               accept="image/*"
               style="display: none"
               @change="handleFileUpload"
-            >
+            />
             <button
               type="button"
               class="upload-button"
@@ -69,49 +59,39 @@
             v-model="altText"
             type="text"
             placeholder="Description of the image"
-          >
+          />
         </div>
 
         <!-- Image Preview -->
-        <div
-          v-if="previewUrl"
-          class="preview-section"
-        >
+        <div v-if="previewUrl" class="preview-section">
           <h4>Preview:</h4>
           <div class="preview-container">
             <img
               :src="previewUrl"
               :alt="altText || 'Image preview'"
               @error="handleImageError"
-            >
+            />
           </div>
-          <p
-            v-if="imageError"
-            class="error-message"
-          >
+          <p v-if="imageError" class="error-message">
             ⚠️ Failed to load image. Please check the URL.
           </p>
         </div>
       </div>
 
       <div class="modal-footer">
-        <p
-          v-if="!previewUrl"
-          class="footer-hint"
-        >
+        <p v-if="!previewUrl" class="footer-hint">
           💡 Enter a URL or upload a file to enable the Insert button
         </p>
         <div class="footer-buttons">
+          <button class="cancel-button" @click="close">Cancel</button>
           <button
-            class="cancel-button"
-            @click="close"
-          >
-            Cancel
-          </button>
-          <button 
-            class="insert-button" 
+            class="insert-button"
             :disabled="!previewUrl"
-            :title="!previewUrl ? 'Please provide an image URL or upload a file first' : 'Insert this image into the editor'"
+            :title="
+              !previewUrl
+                ? 'Please provide an image URL or upload a file first'
+                : 'Insert this image into the editor'
+            "
             @click="insertImage"
           >
             ✓ Insert Image
@@ -123,100 +103,103 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch } from "vue";
 
 const props = defineProps<{
-  isOpen: boolean
-}>()
+  isOpen: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'insert', url: string, alt: string): void
-}>()
+  (e: "close"): void;
+  (e: "insert", url: string, alt: string): void;
+}>();
 
-const imageUrl = ref('')
-const altText = ref('')
-const previewUrl = ref('')
-const imageError = ref(false)
-const fileInput = ref<HTMLInputElement | null>(null)
+const imageUrl = ref("");
+const altText = ref("");
+const previewUrl = ref("");
+const imageError = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
 
 /**
  * Handle URL input change
  */
 const handleUrlChange = () => {
-  imageError.value = false
-  previewUrl.value = imageUrl.value
-}
+  imageError.value = false;
+  previewUrl.value = imageUrl.value;
+};
 
 /**
  * Handle file upload
  */
 const handleFileUpload = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  
-  if (file && file.type.startsWith('image/')) {
-    const reader = new FileReader()
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+
+  if (file && file.type.startsWith("image/")) {
+    const reader = new FileReader();
     reader.onload = (e) => {
-      imageUrl.value = e.target?.result as string
-      previewUrl.value = e.target?.result as string
-      imageError.value = false
-    }
-    reader.readAsDataURL(file)
+      imageUrl.value = e.target?.result as string;
+      previewUrl.value = e.target?.result as string;
+      imageError.value = false;
+    };
+    reader.readAsDataURL(file);
   }
-}
+};
 
 /**
  * Handle image load error
  */
 const handleImageError = () => {
-  imageError.value = true
-}
+  imageError.value = true;
+};
 
 /**
  * Insert the image
  */
 const insertImage = () => {
   if (previewUrl.value) {
-    emit('insert', previewUrl.value, altText.value)
-    resetForm()
+    emit("insert", previewUrl.value, altText.value);
+    resetForm();
   }
-}
+};
 
 /**
  * Close modal
  */
 const close = () => {
-  emit('close')
-  resetForm()
-}
+  emit("close");
+  resetForm();
+};
 
 /**
  * Handle overlay click
  */
 const handleOverlayClick = () => {
-  close()
-}
+  close();
+};
 
 /**
  * Reset form
  */
 const resetForm = () => {
-  imageUrl.value = ''
-  altText.value = ''
-  previewUrl.value = ''
-  imageError.value = false
+  imageUrl.value = "";
+  altText.value = "";
+  previewUrl.value = "";
+  imageError.value = false;
   if (fileInput.value) {
-    fileInput.value.value = ''
+    fileInput.value.value = "";
   }
-}
+};
 
 // Reset form when modal opens
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    resetForm()
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen) {
+      resetForm();
+    }
   }
-})
+);
 </script>
 
 <style scoped>
@@ -326,7 +309,7 @@ watch(() => props.isOpen, (isOpen) => {
 
 .divider::before,
 .divider::after {
-  content: '';
+  content: "";
   flex: 1;
   border-bottom: 1px solid var(--border-color);
 }
@@ -429,12 +412,34 @@ watch(() => props.isOpen, (isOpen) => {
 
 .cancel-button,
 .insert-button {
-  padding: 10px 20px;
-  border-radius: 6px;
+  padding: 10px 24px;
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cancel-button::before,
+.insert-button::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.cancel-button:hover::before,
+.insert-button:hover:not(:disabled)::before {
+  width: 300px;
+  height: 300px;
 }
 
 .cancel-button {
@@ -445,26 +450,35 @@ watch(() => props.isOpen, (isOpen) => {
 
 .cancel-button:hover {
   background: var(--hover-bg);
+  border-color: var(--text-muted);
 }
 
 .insert-button {
-  background: var(--primary-color);
-  color: white;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: #ffffff;
   border: none;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .insert-button:hover:not(:disabled) {
-  background: var(--primary-hover);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
 }
 
 .insert-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
+  background: #9ca3af;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideIn {
