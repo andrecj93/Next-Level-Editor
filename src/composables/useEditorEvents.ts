@@ -125,6 +125,9 @@ export function useEditorEvents({
       editorContent.value.innerHTML = target.value;
       htmlContent.value = target.value;
     }
+
+    // Capture snapshot for undo/redo functionality in code view
+    captureSnapshot();
   };
 
   /**

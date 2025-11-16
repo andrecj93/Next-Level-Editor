@@ -877,6 +877,13 @@ function onSplitEditorInput(event: Event) {
     const newContent = target.innerHTML;
     // Update code content from split editor
     codeContent.value = formatHtml(newContent);
+    // Update the main editor content
+    if (editorContent.value) {
+      editorContent.value.innerHTML = newContent;
+      htmlContent.value = newContent;
+    }
+    // Capture snapshot for undo/redo
+    captureSnapshot();
     // Emit the change
     emit("update:modelValue", newContent);
     triggerAutoSave(newContent);

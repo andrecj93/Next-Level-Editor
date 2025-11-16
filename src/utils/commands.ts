@@ -273,6 +273,46 @@ export function insertHorizontalRule() {
 }
 
 /**
+ * Check if cursor is inside a list and exit list context if needed
+ * @returns The range to use for insertion (either original or adjusted)
+ */
+function exitListContextIfNeeded(selection: Selection): Range | null {
+  if (!selection || selection.rangeCount === 0) return null;
+
+  const range = selection.getRangeAt(0);
+  let node: Node | null = range.startContainer;
+
+  // Find if we're inside a list item
+  let listItem: HTMLElement | null = null;
+  let list: HTMLElement | null = null;
+
+  while (node && node.nodeType !== Node.DOCUMENT_NODE) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement;
+      if (element.tagName === "LI") {
+        listItem = element;
+      } else if (element.tagName === "UL" || element.tagName === "OL") {
+        list = element;
+        break;
+      }
+    }
+    node = node.parentNode;
+  }
+
+  // If we're inside a list, insert after the list instead
+  if (list && listItem) {
+    const newRange = document.createRange();
+    newRange.setStartAfter(list);
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    return newRange;
+  }
+
+  return range;
+}
+
+/**
  * Insert a table at the current cursor position
  * @param root - Editor root element
  * @param rows - Number of rows
@@ -288,7 +328,9 @@ export function insertTable(
   const selection = globalThis.getSelection();
   if (!selection || selection.rangeCount === 0) return;
 
-  const range = selection.getRangeAt(0);
+  // Exit list context if we're inside a list
+  const range = exitListContextIfNeeded(selection);
+  if (!range) return;
 
   const table = document.createElement("table");
   table.style.width = "100%";

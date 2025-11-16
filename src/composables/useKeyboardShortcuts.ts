@@ -115,6 +115,43 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     currentBlock: HTMLElement,
     selection: Selection
   ) => {
+    // Check if current list item is empty
+    const isCurrentEmpty = isEmptyContent(currentBlock);
+
+    if (isCurrentEmpty) {
+      // Exit the list by creating a paragraph after the list
+      const listParent = currentBlock.parentNode as HTMLElement; // ul or ol
+
+      // Remove the empty list item
+      currentBlock.remove();
+
+      // Create a new paragraph after the list
+      const newParagraph = document.createElement("p");
+      newParagraph.innerHTML = "<br>";
+
+      if (listParent.parentNode) {
+        listParent.parentNode.insertBefore(
+          newParagraph,
+          listParent.nextSibling
+        );
+      }
+
+      // Move cursor to the new paragraph
+      const newRange = document.createRange();
+      newRange.setStart(newParagraph, 0);
+      newRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+
+      if (editorContent.value) {
+        editorContent.value.dispatchEvent(
+          new Event("input", { bubbles: true })
+        );
+      }
+      return;
+    }
+
+    // Normal behavior: create new list item
     const afterRange = document.createRange();
     afterRange.setStart(range.startContainer, range.startOffset);
     afterRange.setEnd(currentBlock, currentBlock.childNodes.length);
@@ -157,8 +194,8 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     ensureVisibleElement(currentBlock);
     populateNewElement(newParagraph, afterContent);
 
-    // Clear inherited inline styles from headings or styled blocks
-    // Reset font-size, color, background-color to allow normal paragraph styling
+    // Clear inherited inline styles from headings, lists, or styled blocks
+    // Reset font-size, color, background-color, indents to allow normal paragraph styling
     const currentTag = currentBlock.tagName.toLowerCase();
     if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(currentTag)) {
       // Clear inline styles that shouldn't carry over from headings
@@ -166,6 +203,17 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       newParagraph.style.fontWeight = "";
       newParagraph.style.color = "";
       newParagraph.style.backgroundColor = "";
+      newParagraph.style.marginLeft = "";
+      newParagraph.style.paddingLeft = "";
+      newParagraph.style.textIndent = "";
+      newParagraph.style.textAlign = "";
+    }
+
+    // Clear list-specific styling if transitioning from list context
+    if (currentBlock.closest("ul, ol")) {
+      newParagraph.style.marginLeft = "";
+      newParagraph.style.paddingLeft = "";
+      newParagraph.style.textIndent = "";
     }
 
     if (currentBlock.nextSibling) {
@@ -283,12 +331,11 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       const range = selection.getRangeAt(0);
       const container = range.startContainer;
 
-      // Get the text before the cursor
+      // Get the text before the cursor in the current node
       let textBefore = "";
       if (container.nodeType === Node.TEXT_NODE) {
         textBefore = (container as Text).data.substring(0, range.startOffset);
       } else if (container.nodeType === Node.ELEMENT_NODE) {
-        // If cursor is in an element node, check if it's empty or at the start
         const element = container as HTMLElement;
         const textContent = element.textContent || "";
         textBefore = textContent.substring(0, range.startOffset);
@@ -298,20 +345,31 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       const inListItem = isInListItem(range);
       const { block: currentBlock } = findCurrentBlock(range.startContainer);
 
+      // Get full block text content
+      let blockText = "";
+      if (currentBlock) {
+        blockText = currentBlock.textContent || "";
+      }
+
       // Allow slash commands if:
       // 1. Line is empty or whitespace only
-      // 2. Text ends with whitespace (space, newline, etc)
-      // 3. At the start of a list item or block element
-      // 4. In an empty block element (paragraph, heading, etc.)
+      // 2. Text before cursor is empty or whitespace
+      // 3. Block is empty (contains only <br> or whitespace)
+      // 4. At the start of a line (after newline)
+      // 5. In an empty list item
       const isEmptyLine = textBefore.trim().length === 0;
       const endsWithWhitespace = /\s$/.test(textBefore);
-      const isEmptyBlock = currentBlock && isEmptyContent(currentBlock);
+      const isEmptyBlock =
+        currentBlock &&
+        (isEmptyContent(currentBlock) || blockText.trim().length === 0);
+      const isEmptyListItem =
+        inListItem && currentBlock && blockText.trim().length === 0;
 
       if (
         isEmptyLine ||
         endsWithWhitespace ||
         isEmptyBlock ||
-        (inListItem && textBefore.trim() === "")
+        isEmptyListItem
       ) {
         event.preventDefault();
         event.stopPropagation();
