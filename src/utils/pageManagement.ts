@@ -18,7 +18,33 @@ export function insertPageBreak(selection: Selection | null): void {
     return;
   }
 
-  const range = selection.getRangeAt(0);
+  let range = selection.getRangeAt(0);
+
+  // Check if we're inside a list and exit if needed
+  let node: Node | null = range.startContainer;
+  let list: HTMLElement | null = null;
+
+  while (node && node.nodeType !== Node.DOCUMENT_NODE) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement;
+      if (element.tagName === "UL" || element.tagName === "OL") {
+        list = element;
+        break;
+      }
+    }
+    node = node.parentNode;
+  }
+
+  // If we're in a list, insert after the list
+  if (list) {
+    const newRange = document.createRange();
+    newRange.setStartAfter(list);
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    range = newRange;
+  }
+
   range.deleteContents();
 
   // Create page break element

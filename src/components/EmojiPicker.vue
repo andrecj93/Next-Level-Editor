@@ -1,15 +1,12 @@
 <template>
-  <div
-    v-if="show"
-    class="emoji-picker"
-  >
+  <div v-if="show" class="emoji-picker">
     <div class="emoji-picker-header">
       <input
         v-model="searchQuery"
         type="text"
         class="emoji-search"
         placeholder="Search emoji..."
-      >
+      />
       <button
         class="close-emoji-btn"
         aria-label="Close emoji picker"
@@ -42,10 +39,7 @@
         {{ emoji.emoji }}
       </button>
 
-      <div
-        v-if="filteredEmojis.length === 0"
-        class="no-results"
-      >
+      <div v-if="filteredEmojis.length === 0" class="no-results">
         No emoji found
       </div>
     </div>
@@ -309,18 +303,49 @@ watch(
 
 <style scoped>
 .emoji-picker {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  margin-bottom: 8px;
+  position: relative;
   width: 320px;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: var(--radius-xl, 12px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  z-index: 10001;
+}
+
+:global(.theme-dark) .emoji-picker {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+:global(.theme-dark) .emoji-picker-header,
+:global(.theme-dark) .emoji-categories {
+  border-color: #374151;
+}
+
+:global(.theme-dark) .emoji-search {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+:global(.theme-dark) .category-btn:hover,
+:global(.theme-dark) .emoji-btn:hover {
+  background: #374151;
+}
+
+:global(.theme-dark) .category-btn.active {
+  background: #1e3a8a;
+}
+
+:global(.theme-dark) .close-emoji-btn:hover {
+  background: #374151;
+  color: #f9fafb;
+}
+
+:global(.theme-dark) .no-results {
+  color: #9ca3af;
 }
 
 .emoji-picker-header {

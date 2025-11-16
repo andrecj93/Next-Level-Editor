@@ -231,6 +231,10 @@ export function applyBackgroundColor(_root: HTMLElement, color: string) {
   if (range.collapsed) {
     const span = document.createElement("span");
     span.style.backgroundColor = color;
+    // Ensure text contrast in dark mode
+    span.style.color = getContrastColor(color);
+    span.style.padding = "2px 4px";
+    span.style.borderRadius = "2px";
     span.textContent = "\u200B";
     range.insertNode(span);
     range.selectNodeContents(span);
@@ -240,6 +244,10 @@ export function applyBackgroundColor(_root: HTMLElement, color: string) {
   } else {
     const span = document.createElement("span");
     span.style.backgroundColor = color;
+    // Ensure text contrast in dark mode
+    span.style.color = getContrastColor(color);
+    span.style.padding = "2px 4px";
+    span.style.borderRadius = "2px";
     const contents = range.extractContents();
     span.appendChild(contents);
     range.insertNode(span);
@@ -250,6 +258,36 @@ export function applyBackgroundColor(_root: HTMLElement, color: string) {
     selection.removeAllRanges();
     selection.addRange(newRange);
   }
+}
+
+/**
+ * Get contrast color (black or white) based on background luminance
+ */
+function getContrastColor(bgColor: string): string {
+  // Convert hex to RGB
+  let r = 0,
+    g = 0,
+    b = 0;
+
+  if (bgColor.startsWith("#")) {
+    const hex = bgColor.replace("#", "");
+    r = parseInt(hex.substr(0, 2), 16);
+    g = parseInt(hex.substr(2, 2), 16);
+    b = parseInt(hex.substr(4, 2), 16);
+  } else if (bgColor.startsWith("rgb")) {
+    const matches = bgColor.match(/\d+/g);
+    if (matches && matches.length >= 3) {
+      r = parseInt(matches[0]);
+      g = parseInt(matches[1]);
+      b = parseInt(matches[2]);
+    }
+  }
+
+  // Calculate luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+  // Return black for light backgrounds, white for dark backgrounds
+  return luminance > 0.5 ? "#000000" : "#ffffff";
 }
 
 /**
@@ -282,16 +320,13 @@ function exitListContextIfNeeded(selection: Selection): Range | null {
   const range = selection.getRangeAt(0);
   let node: Node | null = range.startContainer;
 
-  // Find if we're inside a list item
-  let listItem: HTMLElement | null = null;
+  // Find if we're inside a list
   let list: HTMLElement | null = null;
 
   while (node && node.nodeType !== Node.DOCUMENT_NODE) {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const element = node as HTMLElement;
-      if (element.tagName === "LI") {
-        listItem = element;
-      } else if (element.tagName === "UL" || element.tagName === "OL") {
+      if (element.tagName === "UL" || element.tagName === "OL") {
         list = element;
         break;
       }
@@ -300,7 +335,7 @@ function exitListContextIfNeeded(selection: Selection): Range | null {
   }
 
   // If we're inside a list, insert after the list instead
-  if (list && listItem) {
+  if (list) {
     const newRange = document.createRange();
     newRange.setStartAfter(list);
     newRange.collapse(true);

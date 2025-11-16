@@ -50,13 +50,15 @@
   />
 
   <!-- Emoji Picker -->
-  <div v-if="showEmojiPicker" class="emoji-picker-container">
-    <EmojiPicker
-      :show="showEmojiPicker"
-      @select="$emit('insert-emoji', $event)"
-      @close="$emit('close-emoji-picker')"
-    />
-  </div>
+  <Teleport to="body">
+    <div v-if="showEmojiPicker" class="emoji-picker-overlay">
+      <EmojiPicker
+        :show="showEmojiPicker"
+        @select="$emit('insert-emoji', $event)"
+        @close="$emit('close-emoji-picker')"
+      />
+    </div>
+  </Teleport>
 
   <!-- Image Upload Modal -->
   <ImageUploadModal
@@ -104,7 +106,9 @@
   <!-- Auto-save Indicator -->
   <div v-if="isSaving || lastSaved" class="auto-save-indicator">
     <span v-if="isSaving" class="saving">💾 Saving...</span>
-    <span v-else-if="lastSaved" :key="lastSaved.getTime()" class="saved">✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span>
+    <span v-else-if="lastSaved" :key="lastSaved.getTime()" class="saved"
+      >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span
+    >
   </div>
 
   <!-- Toast Notification -->
@@ -192,3 +196,13 @@ defineEmits<{
   "execute-command": [command: any];
 }>();
 </script>
+
+<style scoped>
+.emoji-picker-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10000;
+}
+</style>

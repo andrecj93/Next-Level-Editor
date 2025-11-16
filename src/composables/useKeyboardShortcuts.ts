@@ -125,9 +125,15 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       // Remove the empty list item
       currentBlock.remove();
 
-      // Create a new paragraph after the list
+      // Create a new paragraph after the list with clean formatting
       const newParagraph = document.createElement("p");
       newParagraph.innerHTML = "<br>";
+
+      // Explicitly clear any inherited styles
+      newParagraph.style.marginLeft = "";
+      newParagraph.style.paddingLeft = "";
+      newParagraph.style.textIndent = "";
+      newParagraph.style.listStyleType = "none";
 
       if (listParent.parentNode) {
         listParent.parentNode.insertBefore(
@@ -302,6 +308,8 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     // Handle list items specially
     if (currentBlock && currentBlockTag === "li") {
       handleEnterInListItem(range, currentBlock, selection);
+      // Capture snapshot after Enter in list
+      onCaptureSnapshot();
       return;
     }
 
@@ -320,6 +328,9 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     if (editorContent.value) {
       editorContent.value.dispatchEvent(new Event("input", { bubbles: true }));
     }
+
+    // Capture snapshot after Enter
+    onCaptureSnapshot();
   };
 
   /**
@@ -327,56 +338,45 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
    */
   const handleSlashCommand = (event: KeyboardEvent) => {
     const selection = globalThis.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const container = range.startContainer;
+    if (!selection || selection.rangeCount === 0) return false;
 
-      // Get the text before the cursor in the current node
-      let textBefore = "";
-      if (container.nodeType === Node.TEXT_NODE) {
-        textBefore = (container as Text).data.substring(0, range.startOffset);
-      } else if (container.nodeType === Node.ELEMENT_NODE) {
-        const element = container as HTMLElement;
-        const textContent = element.textContent || "";
-        textBefore = textContent.substring(0, range.startOffset);
-      }
+    const range = selection.getRangeAt(0);
+    const container = range.startContainer;
 
-      // Check if we're in a special context
-      const inListItem = isInListItem(range);
-      const { block: currentBlock } = findCurrentBlock(range.startContainer);
-
-      // Get full block text content
-      let blockText = "";
-      if (currentBlock) {
-        blockText = currentBlock.textContent || "";
-      }
-
-      // Allow slash commands if:
-      // 1. Line is empty or whitespace only
-      // 2. Text before cursor is empty or whitespace
-      // 3. Block is empty (contains only <br> or whitespace)
-      // 4. At the start of a line (after newline)
-      // 5. In an empty list item
-      const isEmptyLine = textBefore.trim().length === 0;
-      const endsWithWhitespace = /\s$/.test(textBefore);
-      const isEmptyBlock =
-        currentBlock &&
-        (isEmptyContent(currentBlock) || blockText.trim().length === 0);
-      const isEmptyListItem =
-        inListItem && currentBlock && blockText.trim().length === 0;
-
-      if (
-        isEmptyLine ||
-        endsWithWhitespace ||
-        isEmptyBlock ||
-        isEmptyListItem
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        openCommandMenu();
-        return true;
-      }
+    // Get the text before the cursor in the current node
+    let textBefore = "";
+    if (container.nodeType === Node.TEXT_NODE) {
+      textBefore = (container as Text).data.substring(0, range.startOffset);
+    } else if (container.nodeType === Node.ELEMENT_NODE) {
+      const element = container as HTMLElement;
+      const textContent = element.textContent || "";
+      textBefore = textContent.substring(0, range.startOffset);
     }
+
+    // Get the current block context
+    const { block: currentBlock } = findCurrentBlock(range.startContainer);
+
+    // Get full block text content
+    let blockText = "";
+    if (currentBlock) {
+      blockText = currentBlock.textContent || "";
+    }
+
+    // Allow slash commands if:
+    // 1. Text before cursor is empty or whitespace only
+    // 2. Block text is empty (for completely empty blocks)
+    // 3. After whitespace (space or newline)
+    const isAtStart = textBefore.trim().length === 0;
+    const isEmptyBlock = blockText.trim().length === 0;
+    const afterWhitespace = textBefore.length > 0 && /\s$/.test(textBefore);
+
+    if (isAtStart || isEmptyBlock || afterWhitespace) {
+      event.preventDefault();
+      event.stopPropagation();
+      openCommandMenu();
+      return true;
+    }
+
     return false;
   };
 
@@ -409,7 +409,10 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       : indentListItem(editorContent.value);
 
     if (success) {
+      // Always capture snapshot after indentation changes
       onCaptureSnapshot();
+      // Dispatch input event to ensure UI updates
+      editorContent.value.dispatchEvent(new Event("input", { bubbles: true }));
     }
     return true;
   };
