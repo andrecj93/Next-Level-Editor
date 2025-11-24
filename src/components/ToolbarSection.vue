@@ -1,22 +1,16 @@
 <template>
-  <div class="toolbar-divider" />
-
   <!-- Dropdown Section -->
-  <div
+  <ToolbarDropdown
     v-if="type === 'dropdown'"
     :class="{ 'toolbar-section-disabled': !visible }"
-    @mousedown.prevent="$emit('remember-selection')"
-  >
-    <ToolbarDropdown
-      :label="label"
-      :icon="icon"
-      :tooltip="
-        visible ? tooltip : `${tooltip} (not available for current selection)`
-      "
-      :items="items"
-      :disabled="!visible"
-    />
-  </div>
+    :label="label"
+    :icon="icon"
+    :tooltip="
+      visible ? tooltip : `${tooltip} (not available for current selection)`
+    "
+    :items="items"
+    :disabled="!visible"
+  />
 
   <!-- Button Group Section -->
   <div
@@ -49,7 +43,6 @@
   <div
     v-else-if="type === 'custom'"
     :class="{ 'toolbar-section-disabled': !visible }"
-    @mousedown.prevent="$emit('remember-selection')"
   >
     <slot />
   </div>

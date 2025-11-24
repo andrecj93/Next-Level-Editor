@@ -334,8 +334,42 @@
         </svg>
       </button>
 
-      <!-- Theme Toggle -->
+      <!-- Fullscreen Toggle -->
       <div class="toolbar-divider" />
+      <button
+        class="toolbar-btn-modern fullscreen-toggle"
+        data-tooltip="Toggle fullscreen mode"
+        aria-label="Toggle fullscreen mode"
+        :aria-pressed="isFullScreen"
+        @click="$emit('toggle-fullscreen')"
+      >
+        <svg
+          v-if="!isFullScreen"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            d="M2 3v4H3V4h3V3H2zm11 0h-4v1h3v3h1V3zM3 9H2v4h4v-1H3V9zm10 0v3h-3v1h4V9h-1z"
+          />
+        </svg>
+        <svg
+          v-else
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            d="M3 2v1h3v3h1V2H3zm7 0v4h1V3h3V2h-4zM3 10H2v4h4v-1H3v-3zm10 0v3h-3v1h4v-4h-1z"
+          />
+        </svg>
+      </button>
+
+      <!-- Theme Toggle -->
       <button
         class="toolbar-btn-modern theme-toggle"
         data-tooltip="Toggle theme"
@@ -394,6 +428,7 @@ interface Props {
   toolActions: ToolbarAction[];
   viewMode: "editor" | "code" | "split" | "preview";
   theme: "light" | "dark";
+  isFullScreen: boolean;
 }
 
 defineProps<Props>();
@@ -408,5 +443,6 @@ defineEmits<{
   "view-mode-change": [mode: "editor" | "code" | "split" | "preview"];
   "format-html": [];
   "toggle-theme": [];
+  "toggle-fullscreen": [];
 }>();
 </script>

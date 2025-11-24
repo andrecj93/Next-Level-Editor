@@ -647,14 +647,35 @@
   background: var(--editor-bg);
   display: flex;
   flex-direction: column;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
 }
 
 .next-level-editor.fullscreen .editor-content {
   flex: 1;
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   padding: 48px 24px;
+}
+
+.next-level-editor.fullscreen .editor-panels {
+  flex: 1;
+}
+
+/* Fullscreen Toggle Button Styling */
+.toolbar-btn-modern.fullscreen-toggle {
+  transition: all 0.2s ease;
+}
+
+.toolbar-btn-modern.fullscreen-toggle[aria-pressed="true"] {
+  background: var(--toolbar-hover);
+  color: var(--toolbar-accent);
+}
+
+.toolbar-btn-modern.fullscreen-toggle:hover {
+  transform: scale(1.05);
 }
 
 /* Emoji Picker Container */
@@ -706,7 +727,7 @@
   min-height: 52px;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 100;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
@@ -825,7 +846,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 1000;
+  z-index: 10000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -845,7 +866,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
-  z-index: 1001;
+  z-index: 10001;
 }
 
 .toolbar-btn-modern[data-tooltip]:hover::before {
@@ -945,7 +966,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 1000;
+  z-index: 10000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -965,7 +986,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
-  z-index: 1001;
+  z-index: 10001;
 }
 
 .view-mode-btn[data-tooltip]:hover::before {
@@ -1237,7 +1258,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 1000;
+  z-index: 10000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -1257,7 +1278,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
-  z-index: 1001;
+  z-index: 10001;
 }
 
 .dropdown-trigger[data-tooltip]:hover::before {

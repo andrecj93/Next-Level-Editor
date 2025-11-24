@@ -27,6 +27,7 @@
       :tool-actions="toolActions"
       :view-mode="viewMode"
       :theme="theme"
+      :is-full-screen="isFullScreen"
       @remember-selection="rememberSelection"
       @toggle-colors-dropdown="showColorsDropdown = !showColorsDropdown"
       @text-color-change="handleTextColor"
@@ -36,6 +37,7 @@
       @view-mode-change="(mode) => (viewMode = mode)"
       @format-html="handleFormatHtml"
       @toggle-theme="toggleTheme"
+      @toggle-fullscreen="toggleFullScreen"
     />
 
     <CommandMenu

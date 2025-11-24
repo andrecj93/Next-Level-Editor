@@ -12,6 +12,7 @@
       :aria-expanded="isOpen"
       :aria-haspopup="true"
       :disabled="disabled"
+      @mousedown.prevent
       @click.stop="!disabled ? toggle() : null"
     >
       <span
