@@ -15,7 +15,7 @@
         type="dropdown"
         :visible="isToolbarSectionVisible('format')"
         label="Format"
-        icon='<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1H2V3zm0 3h12v1H2V6zm0 3h12v1H2V9zm0 3h8v1H2v-1z"/></svg>'
+        icon="<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 16 16&quot; fill=&quot;currentColor&quot;><path d=&quot;M2 3h12v1H2V3zm0 3h12v1H2V6zm0 3h12v1H2V9zm0 3h8v1H2v-1z&quot;/></svg>"
         tooltip="Paragraph format"
         :items="formatDropdownItems"
         @remember-selection="$emit('remember-selection')"
@@ -34,7 +34,7 @@
         type="dropdown"
         :visible="isToolbarSectionVisible('alignment')"
         label="Align"
-        icon='<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2V2zm0 3h12v1H2V5zm0 3h12v1H2V8zm0 3h12v1H2v-1z"/></svg>'
+        icon="<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 16 16&quot; fill=&quot;currentColor&quot;><path d=&quot;M2 2h12v1H2V2zm0 3h12v1H2V5zm0 3h12v1H2V8zm0 3h12v1H2v-1z&quot;/></svg>"
         tooltip="Text alignment"
         :items="alignmentDropdownItems"
         @remember-selection="$emit('remember-selection')"
@@ -60,7 +60,7 @@
         type="dropdown"
         :visible="isToolbarSectionVisible('insert')"
         label="Insert"
-        icon='<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3v5H3v1h5v5h1V9h5V8H9V3H8z"/></svg>'
+        icon="<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 16 16&quot; fill=&quot;currentColor&quot;><path d=&quot;M8 3v5H3v1h5v5h1V9h5V8H9V3H8z&quot;/></svg>"
         tooltip="Insert content"
         :items="insertDropdownItems"
         @remember-selection="$emit('remember-selection')"
@@ -127,7 +127,7 @@
       <ToolbarSection
         type="dropdown"
         label="Size"
-        icon='<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h6v2H6v8H4V4H2V2zm6 4h6v2h-2v6h-2V8h-2V6z"/></svg>'
+        icon="<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 16 16&quot; fill=&quot;currentColor&quot;><path d=&quot;M2 2h6v2H6v8H4V4H2V2zm6 4h6v2h-2v6h-2V8h-2V6z&quot;/></svg>"
         tooltip="Font size"
         :items="fontSizeDropdownItems"
         @remember-selection="$emit('remember-selection')"
@@ -188,7 +188,7 @@
       <ToolbarSection
         type="dropdown"
         label="Tools"
-        icon='<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h6v1H2v13h12V9h1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5zm8 0l5.5 5.5-1 1L12 6v4h-1V6L9.5 7.5l-1-1L14 1h-5z"/></svg>'
+        icon="<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 16 16&quot; fill=&quot;currentColor&quot;><path d=&quot;M1 1h6v1H2v13h12V9h1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5zm8 0l5.5 5.5-1 1L12 6v4h-1V6L9.5 7.5l-1-1L14 1h-5z&quot;/></svg>"
         tooltip="Productivity tools"
         :items="productivityDropdownItems"
         @remember-selection="$emit('remember-selection')"

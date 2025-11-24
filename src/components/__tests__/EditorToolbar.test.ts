@@ -65,6 +65,7 @@ describe("EditorToolbar", () => {
     ],
     viewMode: "editor" as const,
     theme: "light" as const,
+    isFullScreen: false,
   };
 
   beforeEach(() => {
@@ -355,6 +356,60 @@ describe("EditorToolbar", () => {
       await themeToggle.trigger("click");
       expect(wrapper.emitted("toggle-theme")).toBeTruthy();
       expect(wrapper.emitted("toggle-theme")?.length).toBe(1);
+    });
+  });
+
+  describe("Fullscreen Toggle", () => {
+    it("should render fullscreen toggle button", () => {
+      const fullscreenToggle = wrapper.find(".fullscreen-toggle");
+      expect(fullscreenToggle.exists()).toBe(true);
+      expect(fullscreenToggle.attributes("aria-label")).toBe(
+        "Toggle fullscreen mode"
+      );
+    });
+
+    it("should show expand icon when not in fullscreen", () => {
+      const fullscreenToggle = wrapper.find(".fullscreen-toggle");
+      const svg = fullscreenToggle.find("svg");
+      expect(svg.exists()).toBe(true);
+    });
+
+    it("should show collapse icon when in fullscreen", async () => {
+      await wrapper.setProps({ isFullScreen: true });
+      const fullscreenToggle = wrapper.find(".fullscreen-toggle");
+      const svgs = fullscreenToggle.findAll("svg");
+      expect(svgs.length).toBeGreaterThan(0);
+    });
+
+    it("should set aria-pressed to false when not in fullscreen", () => {
+      const fullscreenToggle = wrapper.find(".fullscreen-toggle");
+      expect(fullscreenToggle.attributes("aria-pressed")).toBe("false");
+    });
+
+    it("should set aria-pressed to true when in fullscreen", async () => {
+      await wrapper.setProps({ isFullScreen: true });
+      const fullscreenToggle = wrapper.find(".fullscreen-toggle");
+      expect(fullscreenToggle.attributes("aria-pressed")).toBe("true");
+    });
+
+    it("should emit toggle-fullscreen when fullscreen button clicked", async () => {
+      const fullscreenToggle = wrapper.find(".fullscreen-toggle");
+      await fullscreenToggle.trigger("click");
+      expect(wrapper.emitted("toggle-fullscreen")).toBeTruthy();
+      expect(wrapper.emitted("toggle-fullscreen")?.length).toBe(1);
+    });
+
+    it("should update isFullScreen prop", async () => {
+      await wrapper.setProps({ isFullScreen: true });
+      expect(wrapper.vm.$props.isFullScreen).toBe(true);
+    });
+
+    it("should handle multiple fullscreen toggle clicks", async () => {
+      const fullscreenToggle = wrapper.find(".fullscreen-toggle");
+      await fullscreenToggle.trigger("click");
+      await fullscreenToggle.trigger("click");
+      await fullscreenToggle.trigger("click");
+      expect(wrapper.emitted("toggle-fullscreen")?.length).toBe(3);
     });
   });
 

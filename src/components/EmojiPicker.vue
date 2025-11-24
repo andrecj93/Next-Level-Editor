@@ -6,7 +6,7 @@
         type="text"
         class="emoji-search"
         placeholder="Search emoji..."
-      />
+      >
       <button
         class="close-emoji-btn"
         aria-label="Close emoji picker"
