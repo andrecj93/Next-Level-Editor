@@ -115,7 +115,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .floating-toolbar {
   position: absolute;
-  z-index: 1000;
+  z-index: 999;
   background: rgba(17, 24, 39, 0.95);
   backdrop-filter: blur(8px);
   border-radius: var(--radius-lg, 10px);
@@ -125,6 +125,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3),
               0 10px 10px -5px rgba(0, 0, 0, 0.2);
   transform: translateX(-50%);
+  pointer-events: auto;
 }
 
 .floating-toolbar::before {
