@@ -125,21 +125,11 @@ onBeforeUnmount(() => {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3),
               0 10px 10px -5px rgba(0, 0, 0, 0.2);
   transform: translateX(-50%);
-  pointer-events: auto;
-}
-
-.floating-toolbar::before {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 6px;
-  border-style: solid;
-  border-color: rgba(17, 24, 39, 0.95) transparent transparent transparent;
+  pointer-events: none;
 }
 
 .floating-btn {
+  pointer-events: auto;
   min-width: 36px;
   min-height: 36px;
   padding: 6px 12px;
