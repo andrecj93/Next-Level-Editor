@@ -119,6 +119,14 @@ const menuStyle = computed(() => {
 const toggle = () => {
   isOpen.value = !isOpen.value;
   emit("update:modelValue", isOpen.value);
+
+  // Hide floating toolbar when dropdown opens to prevent pointer event interference
+  if (isOpen.value) {
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+    }
+  }
 };
 
 const close = () => {
