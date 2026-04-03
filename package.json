@@ -86,6 +86,6 @@
     "html-docx-js-typescript": "^0.1.5",
     "html2canvas": "^1.4.1",
     "jsdom": "^27.1.0",
-    "jspdf": "^3.0.3"
+    "jspdf": "^4.1.0"
   }
 }
