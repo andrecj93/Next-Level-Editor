@@ -152,6 +152,8 @@
       :readability="writingAssistant.readability.value"
       :sentence-analysis="writingAssistant.sentenceAnalysis.value"
       :word-analysis="writingAssistant.wordAnalysis.value"
+      :issues="writingAssistant.issues.value"
+      :seo="writingAssistant.seo.value"
       @close="showWritingStatsPanel = false"
     />
 
@@ -246,7 +248,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRef, nextTick } from "vue";
+import { ref, computed, toRef, nextTick, onMounted, watch } from "vue";
 
 import {
   applyTextAlignment,
@@ -1152,6 +1154,29 @@ function handleGlobalDocumentClick(event: MouseEvent) {
     showColorsDropdown.value = false;
   }
   handleDocumentClick(event);
+}
+
+// Writing Assistant: analyze the initial content on mount and whenever the
+// content is replaced externally (v-model). Previously the stats were only
+// computed inside onInput, so they stayed empty for pre-existing content until
+// the user typed a character.
+if (writingAssistant) {
+  const analyzeCurrentContent = () => {
+    writingAssistant?.analyze(
+      editorContent.value?.innerHTML ?? props.modelValue ?? ""
+    );
+  };
+  onMounted(() => nextTick(analyzeCurrentContent));
+  watch(
+    () => props.modelValue,
+    (value) => {
+      // Only react to external updates (the editor's own edits already run
+      // analyze via onInput and don't change props.modelValue synchronously).
+      if (editorContent.value && value !== editorContent.value.innerHTML) {
+        nextTick(analyzeCurrentContent);
+      }
+    }
+  );
 }
 
 // Editor Setup and Cleanup - Using useEditorSetup composable

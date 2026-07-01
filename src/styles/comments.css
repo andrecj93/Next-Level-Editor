@@ -35,28 +35,31 @@
   box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.3);
 }
 
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  .comment-highlight {
-    background-color: rgba(255, 213, 79, 0.2);
-    border-bottom-color: #ffb300;
-  }
-
-  .comment-highlight:hover {
-    background-color: rgba(255, 213, 79, 0.3);
-  }
-
-  .comment-highlight.comment-highlight-resolved {
-    background-color: rgba(76, 175, 80, 0.1);
-    border-bottom-color: #66bb6a;
-  }
-
-  .comment-highlight.comment-highlight-resolved:hover {
-    background-color: rgba(76, 175, 80, 0.2);
-  }
+/* Dark mode adjustments — keyed to the editor's own theme class (.theme-dark)
+   rather than the OS-level prefers-color-scheme, so highlights match the theme
+   the editor toggle is set to. */
+.theme-dark .comment-highlight {
+  background-color: rgba(255, 213, 79, 0.2);
+  border-bottom-color: #ffb300;
 }
 
-/* Comment Threads Sidebar */
+.theme-dark .comment-highlight:hover {
+  background-color: rgba(255, 213, 79, 0.3);
+}
+
+.theme-dark .comment-highlight.comment-highlight-resolved {
+  background-color: rgba(76, 175, 80, 0.1);
+  border-bottom-color: #66bb6a;
+}
+
+.theme-dark .comment-highlight.comment-highlight-resolved:hover {
+  background-color: rgba(76, 175, 80, 0.2);
+}
+
+/* Comment Threads Sidebar.
+   NOTE: the live sidebar positioning lives in CommentsSidebar.vue (a
+   full-height right drawer); this global rule is a legacy fallback kept for
+   any standalone use. */
 .comments-sidebar {
   position: fixed;
   top: 80px;
