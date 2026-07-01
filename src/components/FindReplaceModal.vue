@@ -108,16 +108,16 @@ interface Props {
   content: string;
 }
 
+interface ReplaceData {
+  findText: string;
+  replaceText: string;
+  options: { caseSensitive: boolean; wholeWord: boolean };
+}
+
 interface Emits {
   (e: "close"): void;
-  (
-    e: "replace",
-    data: {
-      findText: string;
-      replaceText: string;
-      options: { caseSensitive: boolean; wholeWord: boolean };
-    }
-  ): void;
+  (e: "replace", data: ReplaceData): void;
+  (e: "replace-all", data: ReplaceData): void;
   (e: "find", data: { findText: string; direction: "next" | "previous" }): void;
 }
 
@@ -166,18 +166,18 @@ const replaceOne = () => {
 
 const replaceAll = () => {
   if (!findText.value || matches.value === 0) return;
-  // Replace all occurrences by repeatedly calling replace
-  const totalMatches = matches.value;
-  for (let i = 0; i < totalMatches; i++) {
-    emit("replace", {
-      findText: findText.value,
-      replaceText: replaceText.value,
-      options: {
-        caseSensitive: caseSensitive.value,
-        wholeWord: wholeWord.value,
-      },
-    });
-  }
+  // A single replace-all pass handles every occurrence. (The previous code
+  // looped `matches` times over an already-global replace, which corrupted
+  // text whenever the replacement contained the search term and fired N
+  // redundant DOM rewrites / snapshots.)
+  emit("replace-all", {
+    findText: findText.value,
+    replaceText: replaceText.value,
+    options: {
+      caseSensitive: caseSensitive.value,
+      wholeWord: wholeWord.value,
+    },
+  });
   updateMatches();
 };
 

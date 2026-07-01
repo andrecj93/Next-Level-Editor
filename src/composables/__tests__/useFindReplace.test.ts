@@ -51,7 +51,7 @@ describe("useFindReplace", () => {
       expect(result).toBe("<p>Hi world, HELLO universe</p>");
     });
 
-    it("should attempt to replace whole words (note: current implementation has a bug)", () => {
+    it("should replace only whole words when wholeWord is true", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
@@ -64,10 +64,9 @@ describe("useFindReplace", () => {
         { caseSensitive: false, wholeWord: true }
       );
 
-      // Bug: The current implementation escapes the pattern AFTER adding \b
-      // So \b gets escaped to \\\\b, making wholeWord not work
-      // This test verifies the current (buggy) behavior
-      expect(result).toBe("<p>cat category scattered</p>");
+      // Only the standalone word "cat" is replaced; "category"/"scattered" are
+      // left untouched.
+      expect(result).toBe("<p>dog category scattered</p>");
     });
 
     it("should replace partial matches when wholeWord is false", () => {
@@ -163,7 +162,7 @@ describe("useFindReplace", () => {
       expect(result).toBe("<p>Hello </p>");
     });
 
-    it("should combine case-sensitive and whole word options (note: current wholeWord has a bug)", () => {
+    it("should combine case-sensitive and whole word options", () => {
       const { searchAndReplace } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
@@ -176,9 +175,40 @@ describe("useFindReplace", () => {
         { caseSensitive: true, wholeWord: true }
       );
 
-      // Bug: wholeWord doesn't work due to escaping order issue
-      // This test verifies the current (buggy) behavior
-      expect(result).toBe("<p>Test test Testing tested</p>");
+      // Only the standalone lowercase "test" matches: "Test" differs by case,
+      // "Testing"/"tested" are not whole words.
+      expect(result).toBe("<p>Test exam Testing tested</p>");
+    });
+
+    it("should treat $-sequences in the replacement literally", () => {
+      const { searchAndReplace } = useFindReplace({
+        editorContent: ref(editorElement),
+        captureSnapshot: mockCaptureSnapshot,
+      });
+
+      const result = searchAndReplace("<p>foo</p>", "foo", "$&$1bar", {
+        caseSensitive: false,
+        wholeWord: false,
+      });
+
+      expect(result).toBe("<p>$&$1bar</p>");
+    });
+
+    it("should replace only the first match when replaceAll is false", () => {
+      const { searchAndReplace } = useFindReplace({
+        editorContent: ref(editorElement),
+        captureSnapshot: mockCaptureSnapshot,
+      });
+
+      const result = searchAndReplace(
+        "<p>foo foo foo</p>",
+        "foo",
+        "bar",
+        { caseSensitive: false, wholeWord: false },
+        false
+      );
+
+      expect(result).toBe("<p>bar foo foo</p>");
     });
   });
 
@@ -328,7 +358,7 @@ describe("useFindReplace", () => {
       expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
     });
 
-    it("should attempt to replace whole words (note: current implementation has a bug)", () => {
+    it("should replace the first whole word only", () => {
       editorElement.innerHTML = "<p>cat category cats</p>";
 
       const { handleReplace } = useFindReplace({
@@ -342,8 +372,8 @@ describe("useFindReplace", () => {
         options: { caseSensitive: false, wholeWord: true },
       });
 
-      // Bug: wholeWord doesn't work due to escaping order issue
-      expect(editorElement.innerHTML).toBe("<p>cat category cats</p>");
+      // Whole-word now works, and single Replace only touches the first match.
+      expect(editorElement.innerHTML).toBe("<p>dog category cats</p>");
       expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
     });
 
@@ -383,7 +413,7 @@ describe("useFindReplace", () => {
       expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
     });
 
-    it("should replace multiple occurrences", () => {
+    it("should replace only the first occurrence (single Replace)", () => {
       editorElement.innerHTML = "<p>test test test</p>";
 
       const { handleReplace } = useFindReplace({
@@ -397,7 +427,8 @@ describe("useFindReplace", () => {
         options: { caseSensitive: false, wholeWord: false },
       });
 
-      expect(editorElement.innerHTML).toBe("<p>result result result</p>");
+      // Single "Replace" must not behave like "Replace All".
+      expect(editorElement.innerHTML).toBe("<p>result test test</p>");
       expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
     });
   });
@@ -439,7 +470,7 @@ describe("useFindReplace", () => {
       expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
     });
 
-    it("should respect whole word option for replace all (note: current implementation has a bug)", () => {
+    it("should respect whole word option for replace all", () => {
       editorElement.innerHTML = "<p>cat cats category</p>";
 
       const { handleReplaceAll } = useFindReplace({
@@ -453,8 +484,27 @@ describe("useFindReplace", () => {
         options: { caseSensitive: false, wholeWord: true },
       });
 
-      // Bug: wholeWord doesn't work due to escaping order issue
-      expect(editorElement.innerHTML).toBe("<p>cat cats category</p>");
+      // Only the standalone whole word "cat" is replaced.
+      expect(editorElement.innerHTML).toBe("<p>dog cats category</p>");
+      expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not corrupt text when the replacement contains the search term", () => {
+      editorElement.innerHTML = "<p>cat cat cat</p>";
+
+      const { handleReplaceAll } = useFindReplace({
+        editorContent: ref(editorElement),
+        captureSnapshot: mockCaptureSnapshot,
+      });
+
+      // Regression: a looped global replace used to runaway-expand this.
+      handleReplaceAll({
+        findText: "cat",
+        replaceText: "cats",
+        options: { caseSensitive: false, wholeWord: false },
+      });
+
+      expect(editorElement.innerHTML).toBe("<p>cats cats cats</p>");
       expect(mockCaptureSnapshot).toHaveBeenCalledTimes(1);
     });
 
@@ -582,12 +632,12 @@ describe("useFindReplace", () => {
       const longText = "a".repeat(10000);
       editorElement.innerHTML = `<p>${longText}</p>`;
 
-      const { handleReplace } = useFindReplace({
+      const { handleReplaceAll } = useFindReplace({
         editorContent: ref(editorElement),
         captureSnapshot: mockCaptureSnapshot,
       });
 
-      handleReplace({
+      handleReplaceAll({
         findText: "a",
         replaceText: "b",
         options: { caseSensitive: false, wholeWord: false },

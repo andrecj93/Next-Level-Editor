@@ -14,6 +14,7 @@
     @close="$emit('close-find-replace-modal')"
     @find="$emit('find', $event)"
     @replace="$emit('replace', $event)"
+    @replace-all="$emit('replace-all', $event)"
   />
 
   <!-- Code Block Modal -->
@@ -166,6 +167,7 @@ defineEmits<{
   "close-find-replace-modal": [];
   find: [data: any];
   replace: [data: any];
+  "replace-all": [data: any];
   "close-code-block-modal": [];
   "insert-code-block": [data: any];
   "add-row-above": [];

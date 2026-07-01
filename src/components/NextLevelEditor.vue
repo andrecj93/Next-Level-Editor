@@ -113,6 +113,7 @@
       @close-find-replace-modal="closeFindReplaceModal"
       @find="handleFind"
       @replace="handleReplace"
+      @replace-all="handleReplaceAll"
       @close-code-block-modal="closeCodeBlockModal"
       @insert-code-block="handleInsertCodeBlock"
       @add-row-above="handleAddRowAbove"
@@ -595,7 +596,7 @@ const {
 });
 
 // Find & Replace using composable
-const { handleFind, handleReplace } = useFindReplace({
+const { handleFind, handleReplace, handleReplaceAll } = useFindReplace({
   editorContent,
   captureSnapshot,
 });
