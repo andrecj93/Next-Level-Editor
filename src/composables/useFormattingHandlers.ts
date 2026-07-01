@@ -20,7 +20,6 @@ export function useFormattingHandlers({
   handleTextColorBase,
   handleBackgroundColorBase,
   handlePasteFormatBase,
-  showColorsDropdown,
   formatPainterActive,
 }: UseFormattingHandlersParams) {
   /**
@@ -51,23 +50,20 @@ export function useFormattingHandlers({
   };
 
   /**
-   * Apply text color and close dropdown after a delay
+   * Apply text color. The colors dropdown intentionally stays open so the user
+   * can keep fine-tuning via the picker/HEX input; it is dismissed by an
+   * outside click or Escape (handled in the editor's global handlers).
    */
   const handleTextColor = (color: string) => {
     handleTextColorBase(color);
-    setTimeout(() => {
-      showColorsDropdown.value = false;
-    }, 300);
   };
 
   /**
-   * Apply background color and close dropdown after a delay
+   * Apply background (highlight) color. See handleTextColor for why the
+   * dropdown is not auto-closed here.
    */
   const handleBackgroundColor = (color: string) => {
     handleBackgroundColorBase(color);
-    setTimeout(() => {
-      showColorsDropdown.value = false;
-    }, 300);
   };
 
   /**

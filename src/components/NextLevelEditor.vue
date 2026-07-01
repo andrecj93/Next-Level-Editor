@@ -1074,6 +1074,85 @@ function closeVariableAutocomplete() {
   showVariableAutocomplete.value = false;
 }
 
+// Dismiss the top-most open overlay (modal / context menu / designer /
+// dropdown). Returns true if something was closed so callers can stop.
+function closeTopMostOverlay(): boolean {
+  if (showContextMenu.value) {
+    closeContextMenu();
+    return true;
+  }
+  if (showTableDesigner.value) {
+    showTableDesigner.value = false;
+    return true;
+  }
+  if (showColorsDropdown.value) {
+    showColorsDropdown.value = false;
+    return true;
+  }
+  if (showEmojiPicker.value) {
+    showEmojiPicker.value = false;
+    return true;
+  }
+  if (showTableModal.value) {
+    closeTableModal();
+    return true;
+  }
+  if (showTablePropertiesModal.value) {
+    closeTablePropertiesModal();
+    return true;
+  }
+  if (showCodeBlockModal.value) {
+    closeCodeBlockModal();
+    return true;
+  }
+  if (showImageUploadModal.value) {
+    closeImageUploadModal();
+    return true;
+  }
+  if (showEmbedModal.value) {
+    closeEmbedModal();
+    return true;
+  }
+  if (showFileManagerModal.value) {
+    closeFileManagerModal();
+    return true;
+  }
+  if (showTemplateModal.value) {
+    closeTemplateModal();
+    return true;
+  }
+  if (showHtmlCodeModal.value) {
+    closeHtmlCodeModal();
+    return true;
+  }
+  if (showFindReplaceModal.value) {
+    closeFindReplaceModal();
+    return true;
+  }
+  return false;
+}
+
+// Application-level Escape handler: dismiss the top-most open overlay first,
+// then fall through to the slash-command menu handler.
+function handleGlobalEscape(event: KeyboardEvent) {
+  if (event.key === "Escape" && closeTopMostOverlay()) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  handleEscape(event);
+}
+
+// Application-level document click: close the (hand-rolled) Colors dropdown on
+// any outside click, then run the slash-command document handler. Clicks inside
+// the trigger/menu are stopped via @click.stop and never reach here.
+function handleGlobalDocumentClick(event: MouseEvent) {
+  if (showColorsDropdown.value) {
+    showColorsDropdown.value = false;
+  }
+  handleDocumentClick(event);
+}
+
 // Editor Setup and Cleanup - Using useEditorSetup composable
 useEditorSetup({
   editorContent,
@@ -1086,8 +1165,8 @@ useEditorSetup({
   enableSpellCheck,
   setupImageResizing,
   cleanupImageResize,
-  handleDocumentClick,
-  handleEscape,
+  handleDocumentClick: handleGlobalDocumentClick,
+  handleEscape: handleGlobalEscape,
   onSelectionChange,
 });
 </script>
