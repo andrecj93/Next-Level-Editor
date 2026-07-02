@@ -28,6 +28,16 @@ export interface AnnouncementOptions {
  */
 export type NavigationDirection = "next" | "previous" | "first" | "last";
 
+// Announcement state is SHARED across all useAccessibility() instances. The
+// composable is a factory (fresh state per call), but AriaLiveRegion, the editor
+// orchestrator and SkipLinks each call it separately; without a shared array an
+// announce() from one instance never reaches the aria-live regions rendered by
+// AriaLiveRegion, so screen-reader users got no spoken feedback. [#2]
+const sharedAnnouncements = ref<
+  Array<{ id: number; message: string; priority: AriaLive }>
+>([]);
+const sharedAnnouncementId = ref(0);
+
 /**
  * Professional accessibility system for WCAG AAA compliance
  *
@@ -49,11 +59,10 @@ export type NavigationDirection = "next" | "previous" | "first" | "last";
  * - Reduced motion preferences
  */
 export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
-  // Announcement state
-  const announcements = ref<
-    Array<{ id: number; message: string; priority: AriaLive }>
-  >([]);
-  const announcementId = ref(0);
+  // Announcement state — shared singleton so all instances (editor, SkipLinks,
+  // AriaLiveRegion) read/write the same array. [#2]
+  const announcements = sharedAnnouncements;
+  const announcementId = sharedAnnouncementId;
 
   // Focus state
   const focusedElement = ref<HTMLElement | null>(null);
