@@ -1,6 +1,7 @@
 import { ref, watch, nextTick, type Ref } from "vue";
 import { useHtmlSanitizer } from "./useHtmlSanitizer";
 import { useEditorHistory } from "./useEditorHistory";
+import { initializeEmbeddedElements } from "../utils/embeddedResizable";
 
 interface UseEditorContentOptions {
   editorContent: Ref<HTMLDivElement | null>;
@@ -30,6 +31,16 @@ export function useEditorContent(options: UseEditorContentOptions) {
   const htmlContent = ref("");
   const codeContent = ref("");
 
+  // Re-bind interactivity to embedded media (images/videos) after any innerHTML
+  // reset. Setting innerHTML discards the JS listeners attached at insert time,
+  // so without this, inserted media goes inert (loses selection/resize) after
+  // undo/redo, code-view round-trips, or loading saved content. [#17]
+  const reinitEmbeds = () => {
+    if (editorContent.value) {
+      initializeEmbeddedElements(editorContent.value);
+    }
+  };
+
   /**
    * Apply sanitized content to the editor
    */
@@ -42,6 +53,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
       editorContent.value.innerHTML = sanitized;
     }
     htmlContent.value = sanitized;
+    reinitEmbeds();
   };
 
   /**
@@ -81,6 +93,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
     codeContent.value = html;
     const sanitized = sanitizeHtml(html);
     onUpdate(sanitized);
+    reinitEmbeds();
   };
 
   /**
@@ -105,6 +118,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
     if (editorContent.value) {
       editorContent.value.innerHTML = code;
       htmlContent.value = code;
+      reinitEmbeds();
     }
   };
 

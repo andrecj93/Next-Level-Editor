@@ -138,10 +138,19 @@ export function insertEmbeddedResizable(options: EmbeddedContentOptions): void {
   selection.addRange(range);
 }
 
+// Tracks elements that already have interactivity bound so re-initialization
+// (after undo/redo/reload) never double-binds the same live element. A WeakSet
+// keyed by instance is used so the flag is NOT persisted in innerHTML — new
+// element instances created by an innerHTML reset are correctly re-initialized.
+const initializedEmbeds = new WeakSet<HTMLElement>();
+
 /**
  * Add interactivity to an embedded element (selection, resize handles, etc.)
  */
 function addEmbeddedInteractivity(element: HTMLElement): void {
+  if (initializedEmbeds.has(element)) return;
+  initializedEmbeds.add(element);
+
   let isSelected = false;
   let isDragging = false;
   let dragStartX = 0;
