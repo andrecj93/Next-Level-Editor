@@ -67,29 +67,34 @@ export function useEditorContent(options: UseEditorContentOptions) {
   };
 
   /**
+   * Apply a restored history snapshot to the editor and keep every derived
+   * reactive ref in sync. Previously undo/redo only wrote innerHTML and emitted
+   * the change, leaving htmlContent (which drives the live preview and the
+   * footer word/character counts) and codeContent (code view) stale until the
+   * next keystroke.
+   */
+  const applyRestoredSnapshot = (html: string) => {
+    if (editorContent.value) {
+      editorContent.value.innerHTML = html;
+    }
+    htmlContent.value = html;
+    codeContent.value = html;
+    const sanitized = sanitizeHtml(html);
+    onUpdate(sanitized);
+  };
+
+  /**
    * Handle undo operation
    */
   const undo = () => {
-    performUndo((html: string) => {
-      if (editorContent.value) {
-        editorContent.value.innerHTML = html;
-      }
-      const sanitized = sanitizeHtml(html);
-      onUpdate(sanitized);
-    });
+    performUndo(applyRestoredSnapshot);
   };
 
   /**
    * Handle redo operation
    */
   const redo = () => {
-    performRedo((html: string) => {
-      if (editorContent.value) {
-        editorContent.value.innerHTML = html;
-      }
-      const sanitized = sanitizeHtml(html);
-      onUpdate(sanitized);
-    });
+    performRedo(applyRestoredSnapshot);
   };
 
   /**
