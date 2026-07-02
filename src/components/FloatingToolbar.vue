@@ -104,11 +104,17 @@ const handleResize = () => {
 onMounted(() => {
   window.addEventListener('resize', handleResize)
   window.addEventListener('scroll', handleResize, true)
+  // Reposition to follow the selection while the bubble is already visible
+  // (e.g. extending the selection or selecting a different span). Previously
+  // the position was only computed on the show false->true transition, so the
+  // bubble stayed anchored over the original selection.
+  document.addEventListener('selectionchange', handleResize)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('scroll', handleResize, true)
+  document.removeEventListener('selectionchange', handleResize)
 })
 </script>
 
