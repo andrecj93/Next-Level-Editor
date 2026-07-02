@@ -230,6 +230,14 @@ export function useVariables() {
   const wrapVariablesInContent = (editor: HTMLElement | null) => {
     if (!editor) return;
 
+    // The text node that currently holds the caret must not be rewritten:
+    // replacing it with a fragment destroys the node under the cursor and jumps
+    // the caret to the start of the editor while the user is still typing the
+    // variable. It gets wrapped on a later pass once the caret moves away.
+    const selection = globalThis.getSelection?.();
+    const caretNode =
+      selection && selection.rangeCount > 0 ? selection.anchorNode : null;
+
     const walker = document.createTreeWalker(
       editor,
       NodeFilter.SHOW_TEXT,
@@ -240,6 +248,7 @@ export function useVariables() {
 
     let node: Node | null;
     while ((node = walker.nextNode())) {
+      if (node === caretNode) continue;
       const text = node.textContent || "";
       const matches = parseVariables(text);
       if (matches.length > 0) {
