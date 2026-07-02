@@ -880,25 +880,37 @@ function handleSplitRightModeChange(mode: "preview" | "editor") {
   }
 }
 
-// Handle split editor input - sync back to main code editor
+// Handle split editor input - sync back through the shared content pipeline so
+// the input is sanitized and history/emit stay consistent with every other
+// input path (previously it hand-rolled an UNSANITIZED emit after
+// captureSnapshot, which overrode the sanitized value).
 function onSplitEditorInput(event: Event) {
   const target = event.target as HTMLElement;
-  if (target && codeContent.value !== target.innerHTML) {
-    const newContent = target.innerHTML;
-    // Update code content from split editor
-    codeContent.value = formatHtml(newContent);
-    // Update the main editor content
-    if (editorContent.value) {
-      editorContent.value.innerHTML = newContent;
-      htmlContent.value = newContent;
-    }
-    // Capture snapshot for undo/redo
-    captureSnapshot();
-    // Emit the change
-    emit("update:modelValue", newContent);
-    triggerAutoSave(newContent);
+  if (!editorContent.value || editorContent.value.innerHTML === target.innerHTML) {
+    return;
   }
+  // Push the split-editor content into the main (hidden) editor, then run the
+  // shared capture+sanitize+emit path.
+  editorContent.value.innerHTML = target.innerHTML;
+  codeContent.value = formatHtml(target.innerHTML);
+  captureSnapshot();
 }
+
+// Keep the visible split editor in sync with content changes that do not
+// originate from typing in it (undo/redo, template insertion, external v-model
+// updates). Guarded so it never clobbers the caret while the user is editing
+// the split pane. [#24]
+watch(htmlContent, (newHtml) => {
+  if (viewMode.value !== "split" || splitRightMode.value !== "editor") return;
+  const splitEl = editorPanelsRef.value?.splitEditorRef;
+  if (
+    splitEl &&
+    document.activeElement !== splitEl &&
+    splitEl.innerHTML !== newHtml
+  ) {
+    splitEl.innerHTML = newHtml;
+  }
+});
 
 // Keyboard Shortcuts - Using useKeyboardShortcuts composable
 const { handleKeydown } = useKeyboardShortcuts({
