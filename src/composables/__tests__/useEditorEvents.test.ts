@@ -275,7 +275,7 @@ describe("useEditorEvents", () => {
   });
 
   describe("checkForTableSelection", () => {
-    it("should show table designer when table and cell are selected", () => {
+    it("should track table and cell on mouse up without auto-opening the designer", () => {
       const table = document.createElement("table");
       const cell = document.createElement("td");
       table.appendChild(cell);
@@ -330,11 +330,12 @@ describe("useEditorEvents", () => {
 
       onMouseUp();
 
-      expect(showTableDesigner.value).toBe(true);
+      // #12: the designer must NOT auto-open on a left-click/mouseup in a cell
+      // (it opens only on an explicit right-click), but the active table/cell
+      // are still tracked for table operations.
+      expect(showTableDesigner.value).toBe(false);
       expect(currentTable.value).toBe(table);
       expect(currentCell.value).toBe(cell);
-      expect(tableDesignerPosition.value.x).toBe(210);
-      expect(tableDesignerPosition.value.y).toBe(50);
 
       table.remove();
     });

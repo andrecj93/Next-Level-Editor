@@ -40,6 +40,60 @@ const ESTIMATED_MENU_HEIGHT = 320;
 const VIEWPORT_MARGIN = 8;
 
 /**
+ * When the selection is collapsed, select the word under the given pointer
+ * position so a right-click formatting action targets the clicked word (like
+ * native editors). An existing non-empty selection is left untouched.
+ */
+function selectWordUnderPointer(event: MouseEvent): void {
+  const selection = globalThis.getSelection?.();
+  if (!selection) return;
+  if (!selection.isCollapsed && selection.toString().trim().length > 0) return;
+
+  const doc = document as Document & {
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    caretPositionFromPoint?: (
+      x: number,
+      y: number
+    ) => { offsetNode: Node; offset: number } | null;
+  };
+
+  let range: Range | null = null;
+  if (typeof doc.caretRangeFromPoint === "function") {
+    range = doc.caretRangeFromPoint(event.clientX, event.clientY);
+  } else if (typeof doc.caretPositionFromPoint === "function") {
+    const pos = doc.caretPositionFromPoint(event.clientX, event.clientY);
+    if (pos) {
+      range = document.createRange();
+      range.setStart(pos.offsetNode, pos.offset);
+      range.collapse(true);
+    }
+  }
+  if (!range) return;
+
+  const node = range.startContainer;
+  if (node.nodeType === Node.TEXT_NODE) {
+    const text = node.textContent || "";
+    const isWordChar = (c: string) => /\w/.test(c);
+    let start = range.startOffset;
+    let end = range.startOffset;
+    while (start > 0 && isWordChar(text[start - 1])) start--;
+    while (end < text.length && isWordChar(text[end])) end++;
+    if (end > start) {
+      const wordRange = document.createRange();
+      wordRange.setStart(node, start);
+      wordRange.setEnd(node, end);
+      selection.removeAllRanges();
+      selection.addRange(wordRange);
+      return;
+    }
+  }
+
+  // No word to expand to: at least place the caret where the user clicked.
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+/**
  * Serialize the current selection to an HTML string, preserving inline
  * formatting (bold/italic/links/etc.) rather than flattening to plain text.
  */
@@ -116,15 +170,27 @@ export function useContextMenu(options: ContextMenuOptions) {
   const showContextMenu = ref(false);
   const contextMenuPosition = ref({ top: 0, left: 0 });
 
+  // Whether there is a usable text selection, captured reactively when the menu
+  // opens. The computed below reads the live DOM selection which is not a Vue
+  // dependency, so without this ref the disabled states would be cached from an
+  // earlier evaluation and mis-gate (e.g. Bold stays disabled even after the
+  // right-click selected the word under the pointer). [#15]
+  const selectionActive = ref(false);
+
+  const computeSelectionActive = (): boolean => {
+    const selection = globalThis.getSelection();
+    return Boolean(
+      selection &&
+        !selection.isCollapsed &&
+        selection.toString().trim().length > 0
+    );
+  };
+
   /**
    * Context menu items based on current selection
    */
   const contextMenuItems = computed<ContextMenuItem[]>(() => {
-    const selection = globalThis.getSelection();
-    const hasSelection =
-      selection &&
-      !selection.isCollapsed &&
-      selection.toString().trim().length > 0;
+    const hasSelection = selectionActive.value;
 
     // #28: programmatic paste requires the async Clipboard read API, which is
     // only available in secure contexts on Chromium browsers.
@@ -310,6 +376,16 @@ export function useContextMenu(options: ContextMenuOptions) {
       }
       // Table context could not be resolved: fall through to the context menu.
     }
+
+    // If nothing is selected, select the word under the pointer so that
+    // formatting items (Bold/Italic/Underline) act on what the user actually
+    // right-clicked, matching native editors. An existing non-empty selection
+    // is left untouched. [#15]
+    selectWordUnderPointer(event);
+
+    // Capture the selection state now so the menu's disabled gating reflects
+    // what is actually selected at open time (see selectionActive). [#15]
+    selectionActive.value = computeSelectionActive();
 
     // Save the current selection before showing the context menu
     rememberSelection();
