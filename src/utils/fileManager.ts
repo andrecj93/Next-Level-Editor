@@ -251,12 +251,43 @@ class FileManagerService {
   }
 
   private saveToStorage(): void {
+    const data = Array.from(this.files.values());
+
     try {
-      const data = Array.from(this.files.values());
       localStorage.setItem(this.options.storageKey, JSON.stringify(data));
+      return;
     } catch (error) {
-      console.error("Failed to save files to storage:", error);
+      // Likely a QuotaExceededError caused by large data-URL blobs.
+      // Fall through to a degraded save so existing files aren't lost.
+      console.warn(
+        "Failed to persist files to storage, retrying without inline data:",
+        error
+      );
     }
+
+    // Degrade gracefully: keep metadata but drop heavy inline data-URLs so the
+    // file list survives a reload even when the quota is exceeded.
+    try {
+      const metadataOnly = data.map((file) => ({
+        ...file,
+        url: this.isDataUrl(file.url) ? "" : file.url,
+        thumbnail:
+          file.thumbnail && this.isDataUrl(file.thumbnail)
+            ? undefined
+            : file.thumbnail,
+      }));
+      localStorage.setItem(
+        this.options.storageKey,
+        JSON.stringify(metadataOnly)
+      );
+    } catch (error) {
+      // Nothing more we can do; keep the in-memory files intact and don't throw.
+      console.warn("Failed to persist file metadata to storage:", error);
+    }
+  }
+
+  private isDataUrl(value: string | undefined): boolean {
+    return typeof value === "string" && value.startsWith("data:");
   }
 }
 

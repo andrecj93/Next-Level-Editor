@@ -519,7 +519,8 @@ const {
   applyTextAlignment,
   applyTextColor,
   applyBackgroundColor,
-  applyFontSize
+  applyFontSize,
+  performWithSelection
 );
 
 // Image resize composable
@@ -748,7 +749,9 @@ const {
 
 // Command Palette Commands using composable
 const { commands: commandPaletteCommands } = useCommandPaletteCommands({
-  editorContent,
+  handleInlineAction,
+  handleBlockAction,
+  handleListAction,
   insertLink,
   insertImage,
   openTableModal,

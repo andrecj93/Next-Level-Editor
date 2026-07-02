@@ -41,10 +41,49 @@ const ELEMENT_ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
   th: new Set(["colspan", "rowspan", "style"]),
   span: new Set(["style"]),
   p: new Set(["style"]),
+  h1: new Set(["style"]),
+  h2: new Set(["style"]),
+  h3: new Set(["style"]),
+  li: new Set(["style"]),
+  ul: new Set(["style"]),
+  ol: new Set(["style"]),
+  blockquote: new Set(["style"]),
 };
 
 const SAFE_URL_PATTERN = /^(?:(?:https?|mailto|tel):|\/\/|\/|#)/i;
 const SAFE_DATA_IMAGE_PATTERN = /^data:image\/(?:[a-z0-9.+-]+);base64,/i;
+
+const STYLE_ALLOWED_PROPERTIES = new Set([
+  "text-align",
+  "color",
+  "background-color",
+  "font-size",
+]);
+const UNSAFE_STYLE_VALUE_PATTERN = /url\(|expression\(|javascript:|[<>]/i;
+
+/**
+ * Reduce a raw style attribute to a small allowlist of safe CSS declarations.
+ * Any property outside STYLE_ALLOWED_PROPERTIES, or any value containing a
+ * dangerous token (url(), expression(), javascript:, angle brackets), is dropped.
+ * Returns the sanitized style string (declarations joined by "; ") or "" when
+ * nothing safe remains.
+ */
+const sanitizeStyleValue = (styleValue: string): string => {
+  const safeDeclarations: string[] = [];
+  for (const declaration of styleValue.split(";")) {
+    const separatorIndex = declaration.indexOf(":");
+    if (separatorIndex === -1) continue;
+
+    const property = declaration.slice(0, separatorIndex).trim().toLowerCase();
+    const value = declaration.slice(separatorIndex + 1).trim();
+    if (!property || !value) continue;
+    if (!STYLE_ALLOWED_PROPERTIES.has(property)) continue;
+    if (UNSAFE_STYLE_VALUE_PATTERN.test(value)) continue;
+
+    safeDeclarations.push(`${property}: ${value}`);
+  }
+  return safeDeclarations.join("; ");
+};
 
 /**
  * Composable for HTML sanitization in the editor
@@ -139,6 +178,15 @@ export function useHtmlSanitizer() {
         }
 
         const attributeValue = attribute.value.trim();
+        if (attributeName === "style") {
+          const safeStyle = sanitizeStyleValue(attributeValue);
+          if (safeStyle) {
+            element.setAttribute("style", safeStyle);
+          } else {
+            element.removeAttribute(attribute.name);
+          }
+          continue;
+        }
         if (!validateAttributeValue(element, attributeName, attributeValue)) {
           element.removeAttribute(attribute.name);
         }

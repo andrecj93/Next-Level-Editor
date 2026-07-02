@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from "vue";
+import { watch, onBeforeUnmount } from "vue";
 import type { ContextMenuItem } from "../types/contextMenu";
 
 interface Props {
@@ -85,6 +85,12 @@ watch(
     }
   }
 );
+
+// Ensure the document click listener is removed if the component is
+// unmounted while the menu is still open (the watch only removes it on close).
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleDocumentClick);
+});
 </script>
 
 <style scoped>

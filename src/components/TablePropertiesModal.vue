@@ -323,9 +323,22 @@ const tableProps = ref<TableProperties>({
   borderCollapse: true
 })
 
+// Keep the visible section in sync with the requested mode. activeTab is only
+// initialised once at setup (when props.mode is still the default), so without
+// this the modal could open in "table" mode while still showing the cell form.
+const syncActiveTab = () => {
+  if (props.mode === "table" || props.mode === "cell") {
+    activeTab.value = props.mode;
+  } else if (activeTab.value !== "cell" && activeTab.value !== "table") {
+    activeTab.value = "cell";
+  }
+};
+watch(() => props.mode, syncActiveTab, { immediate: true });
+
 // Watch for prop changes
 watch(() => props.show, (newShow) => {
   if (newShow) {
+    syncActiveTab();
     // Reset to initial values
     cellProps.value = {
       backgroundColor: props.initialCellProps?.backgroundColor || '',

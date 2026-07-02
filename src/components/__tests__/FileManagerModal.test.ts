@@ -529,12 +529,15 @@ describe("FileManagerModal", () => {
       expect(dropInfo.text()).toContain("10 MB");
     });
 
-    it("should compute totalSize from fileManager", () => {
-      vi.mocked(fileManager.getTotalSize).mockReturnValue(1048576);
-      wrapper = createWrapper({ isOpen: true });
+    it("should compute totalSize reactively from the loaded files", async () => {
+      vi.mocked(fileManager.getFiles).mockReturnValue(mockFiles);
+      wrapper = createWrapper({ isOpen: false });
+
+      await wrapper.setProps({ isOpen: true });
       const vm = wrapper.vm as any;
 
-      expect(vm.totalSize).toBe(1048576);
+      // Sum of mockFiles sizes: 1024 + 2048 + 1048576
+      expect(vm.totalSize).toBe(1024 + 2048 + 1048576);
     });
   });
 

@@ -161,27 +161,34 @@ export function useContextMenu(options: ContextMenuOptions) {
       // Show the TableDesigner at the cursor position for table-specific actions
       const table = getSelectedTable();
       const cell = getSelectedCell();
+      const editorRect = editorContent.value?.getBoundingClientRect();
 
-      if (table && cell) {
+      // Only show the table designer when we can fully resolve the table
+      // context (table, cell and editor bounds). Otherwise fall through to the
+      // regular context menu so the right-click is not swallowed by both.
+      if (table && cell && editorRect) {
         currentTable.value = table;
         currentCell.value = cell;
 
         // Position the designer at the mouse cursor
-        const editorRect = editorContent.value?.getBoundingClientRect();
-        if (editorRect) {
-          tableDesignerPosition.value = {
-            x: event.clientX - editorRect.left,
-            y: event.clientY - editorRect.top,
-          };
-          showTableDesigner.value = true;
-        }
+        tableDesignerPosition.value = {
+          x: event.clientX - editorRect.left,
+          y: event.clientY - editorRect.top,
+        };
+        // Ensure the two menus never fight: the table designer wins here,
+        // so the generic context menu stays hidden.
+        showContextMenu.value = false;
+        showTableDesigner.value = true;
+        return;
       }
-      return;
+      // Table context could not be resolved: fall through to the context menu.
     }
 
     // Save the current selection before showing the context menu
     rememberSelection();
 
+    // Ensure only the context menu is shown (never alongside the designer).
+    showTableDesigner.value = false;
     showContextMenu.value = true;
     contextMenuPosition.value = {
       top: event.clientY,

@@ -164,8 +164,22 @@ export function htmlToMarkdown(html: string): string {
           return `~~${children}~~`
         case 'code':
           return `\`${children}\``
-        case 'pre':
-          return `\`\`\`\n${children}\n\`\`\`\n\n`
+        case 'pre': {
+          // If the <pre> wraps a single <code>, emit a clean fenced block using
+          // the raw text content, avoiding the backtick-wrapped inner conversion.
+          const codeChildren = Array.from(element.children).filter(
+            child => child.tagName.toLowerCase() === 'code'
+          )
+          const onlyCode =
+            codeChildren.length === 1 &&
+            Array.from(element.childNodes).every(
+              child =>
+                child.nodeType === Node.ELEMENT_NODE ||
+                !(child.textContent || '').trim()
+            )
+          const code = onlyCode ? element.textContent || '' : children
+          return `\`\`\`\n${code}\n\`\`\`\n\n`
+        }
         case 'blockquote':
           return `> ${children}\n\n`
         case 'a': {
@@ -182,12 +196,34 @@ export function htmlToMarkdown(html: string): string {
         case 'ol':
           return `${children}\n`
         case 'li': {
+          // Render the li's own inline content separately from any nested lists
+          // so nested <ul>/<ol> can be indented instead of glued onto the item.
+          let ownContent = ''
+          let nestedContent = ''
+          Array.from(element.childNodes).forEach(child => {
+            const childTag =
+              child.nodeType === Node.ELEMENT_NODE
+                ? (child as HTMLElement).tagName.toLowerCase()
+                : ''
+            if (childTag === 'ul' || childTag === 'ol') {
+              nestedContent += convert(child)
+            } else {
+              ownContent += convert(child)
+            }
+          })
+
+          // Indent each line of nested-list output by two spaces.
+          const indentedNested = nestedContent
+            .split('\n')
+            .map(line => (line ? `  ${line}` : line))
+            .join('\n')
+
           const parent = element.parentElement
-          if (parent?.tagName.toLowerCase() === 'ol') {
-            const index = Array.from(parent.children).indexOf(element) + 1
-            return `${index}. ${children}\n`
-          }
-          return `- ${children}\n`
+          const marker =
+            parent?.tagName.toLowerCase() === 'ol'
+              ? `${Array.from(parent.children).indexOf(element) + 1}. `
+              : '- '
+          return `${marker}${ownContent}\n${indentedNested}`
         }
         case 'hr':
           return '---\n\n'
@@ -340,7 +376,7 @@ export async function exportAsPdf(element: HTMLElement, filename: string = 'docu
     pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
     heightLeft -= pageHeight
 
-    while (heightLeft >= 0) {
+    while (heightLeft > 0) {
       position = heightLeft - imgHeight
       pdf.addPage()
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)

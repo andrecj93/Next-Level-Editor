@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ref } from "vue";
 import { useCommandPaletteCommands } from "../useCommandPaletteCommands";
 
 function createMockCallbacks() {
   return {
-    editorContent: ref<HTMLElement | null>(null),
+    handleInlineAction: vi.fn(),
+    handleBlockAction: vi.fn(),
+    handleListAction: vi.fn(),
     insertLink: vi.fn(),
     insertImage: vi.fn(),
     openTableModal: vi.fn(),

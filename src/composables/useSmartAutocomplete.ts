@@ -159,11 +159,11 @@ export function useSmartAutocomplete(
     if (text.includes('"')) {
       let converted = text;
 
-      // Opening double quote (after space or start)
-      converted = converted.replace(/(^|\s)"/g, '$1"');
+      // Opening double quote (after space or start) - curly (U+201C)
+      converted = converted.replace(/(^|\s)"/g, "$1“");
 
-      // Closing double quote (before space, punctuation, or end)
-      converted = converted.replace(/"($|\s|[.,!?;:])/g, '"$1');
+      // Closing double quote (before space, punctuation, or end) - curly (U+201D)
+      converted = converted.replace(/"($|\s|[.,!?;:])/g, "”$1");
 
       if (converted !== text) {
         return {

@@ -4,6 +4,11 @@ import { copyFormat, pasteFormat } from "../utils/formatPainter";
 type FontSize = "small" | "normal" | "large" | "huge";
 type TextAlignment = "left" | "center" | "right" | "justify";
 
+type PerformWithSelection = (
+  action: (root: HTMLElement) => void,
+  afterAction?: () => void
+) => void;
+
 export function useFormattingActions(
   editorContent: Ref<HTMLElement | null>,
   fontSize: Ref<FontSize>,
@@ -11,7 +16,8 @@ export function useFormattingActions(
   applyTextAlignment: (root: HTMLElement, alignment: TextAlignment) => void,
   applyTextColor: (root: HTMLElement, color: string) => void,
   applyBackgroundColor: (root: HTMLElement, color: string) => void,
-  applyFontSize: (root: HTMLElement, size: FontSize) => void
+  applyFontSize: (root: HTMLElement, size: FontSize) => void,
+  performWithSelection?: PerformWithSelection
 ) {
   const handleTextAlignment = (alignment: TextAlignment) => {
     if (!editorContent.value) return;
@@ -21,10 +27,17 @@ export function useFormattingActions(
 
   const handleTextColor = (color: string) => {
     if (!editorContent.value) return;
-    // Focus the editor first to restore selection
+    // Route through the remembered selection so the color lands where the user
+    // last had the caret/selection in the editor. The color picker's HEX input
+    // steals focus, wiping the live selection, so reading it directly (as the
+    // old focus()+setTimeout path did) applied color to the wrong place.
+    if (performWithSelection) {
+      performWithSelection((root) => applyTextColor(root, color), captureSnapshot);
+      return;
+    }
+    // Fallback when no selection restorer is wired in.
     editorContent.value.focus();
     const root = editorContent.value;
-    // Small delay to ensure focus is applied
     setTimeout(() => {
       const selection = globalThis.getSelection();
       if (!selection || selection.rangeCount === 0) return;
@@ -35,10 +48,18 @@ export function useFormattingActions(
 
   const handleBackgroundColor = (color: string) => {
     if (!editorContent.value) return;
-    // Focus the editor first to restore selection
+    // See handleTextColor: apply against the remembered selection instead of the
+    // live one (which the color picker's HEX input has already stolen).
+    if (performWithSelection) {
+      performWithSelection(
+        (root) => applyBackgroundColor(root, color),
+        captureSnapshot
+      );
+      return;
+    }
+    // Fallback when no selection restorer is wired in.
     editorContent.value.focus();
     const root = editorContent.value;
-    // Small delay to ensure focus is applied
     setTimeout(() => {
       const selection = globalThis.getSelection();
       if (!selection || selection.rangeCount === 0) return;
