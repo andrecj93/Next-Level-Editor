@@ -72,6 +72,12 @@
     <!-- Floating Toolbar -->
     <FloatingToolbar :show="showFloatingToolbar" :actions="floatingActions" />
 
+    <!-- Mobile bottom toolbar (self-hides on non-touch/desktop) -->
+    <MobileToolbar
+      :is-active="mobileIsActive"
+      @action="handleMobileAction"
+    />
+
     <!-- Context Menu -->
     <ContextMenu
       :show="showContextMenu"
@@ -289,6 +295,7 @@ import { formatHtml } from "../utils/export";
 import { useCommandPalette } from "../composables/useCommandPalette";
 import { useSlashCommands } from "../composables/useSlashCommands";
 import FloatingToolbar from "./FloatingToolbar.vue";
+import MobileToolbar from "./MobileToolbar.vue";
 import ContextMenu from "./ContextMenu.vue";
 import ModalsContainer from "./ModalsContainer.vue";
 import EditorToolbar from "./EditorToolbar.vue";
@@ -780,6 +787,92 @@ const { commands: commandPaletteCommands } = useCommandPaletteCommands({
 function handleCommandExecute(command: any) {
   addToRecent(command.id);
   command.action();
+}
+
+// Dispatch MobileToolbar button actions to the real editor handlers. Previously
+// the mobile toolbar was never rendered and its buttons emitted a bare action id
+// that nothing listened for, so every button was a no-op. [#6/#45]
+function handleMobileAction(actionId: string) {
+  switch (actionId) {
+    case "bold":
+      handleInlineAction("strong");
+      break;
+    case "italic":
+      handleInlineAction("em");
+      break;
+    case "underline":
+      handleInlineAction("u");
+      break;
+    case "strikethrough":
+      handleInlineAction("s");
+      break;
+    case "code":
+      handleInlineAction("code");
+      break;
+    case "blockquote":
+      handleBlockAction("blockquote");
+      break;
+    case "paragraph":
+      handleBlockAction("p");
+      break;
+    case "h1":
+    case "h2":
+    case "h3":
+      handleBlockAction(actionId);
+      break;
+    case "bullet-list":
+      handleListAction("ul");
+      break;
+    case "numbered-list":
+      handleListAction("ol");
+      break;
+    case "link":
+      insertLink();
+      break;
+    case "image":
+      insertImage();
+      break;
+    case "table":
+      openTableModal();
+      break;
+    case "code-block":
+      openCodeBlockModal();
+      break;
+    case "emoji":
+      toggleEmojiPicker();
+      break;
+    case "find":
+      openFindReplaceModal();
+      break;
+    case "undo":
+      undo();
+      break;
+    case "redo":
+      redo();
+      break;
+    default:
+      // checklist / export / settings / shortcuts have no handler yet.
+      break;
+  }
+}
+
+// Resolve the active state for MobileToolbar format buttons so they highlight
+// like the desktop toolbar (reactive via useActiveStates' selectionTick). [#16]
+function mobileIsActive(actionId: string): boolean {
+  switch (actionId) {
+    case "bold":
+      return isInlineActionActive("strong");
+    case "italic":
+      return isInlineActionActive("em");
+    case "underline":
+      return isInlineActionActive("u");
+    case "strikethrough":
+      return isInlineActionActive("s");
+    case "code":
+      return isInlineActionActive("code");
+    default:
+      return false;
+  }
 }
 
 // Command menu (Slash commands) - Using useSlashCommands composable

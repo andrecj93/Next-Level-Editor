@@ -203,12 +203,15 @@ interface Props {
   visible?: boolean;
   defaultTab?: string;
   enableHaptics?: boolean;
+  /** Resolves whether a format action (by id) is active at the caret. */
+  isActive?: (actionId: string) => boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   visible: true,
   defaultTab: "format",
   enableHaptics: true,
+  isActive: undefined,
 });
 
 // Emits
@@ -264,35 +267,35 @@ const formatActions = [
     label: "Bold",
     icon: "<strong>B</strong>",
     onClick: () => executeAction("bold"),
-    isActive: () => false,
+    isActive: () => props.isActive?.("bold") ?? false,
   },
   {
     id: "italic",
     label: "Italic",
     icon: "<em>I</em>",
     onClick: () => executeAction("italic"),
-    isActive: () => false,
+    isActive: () => props.isActive?.("italic") ?? false,
   },
   {
     id: "underline",
     label: "Underline",
     icon: "<u>U</u>",
     onClick: () => executeAction("underline"),
-    isActive: () => false,
+    isActive: () => props.isActive?.("underline") ?? false,
   },
   {
     id: "strikethrough",
     label: "Strikethrough",
     icon: "<s>S</s>",
     onClick: () => executeAction("strikethrough"),
-    isActive: () => false,
+    isActive: () => props.isActive?.("strikethrough") ?? false,
   },
   {
     id: "code",
     label: "Code",
     icon: "<code>&lt;/&gt;</code>",
     onClick: () => executeAction("code"),
-    isActive: () => false,
+    isActive: () => props.isActive?.("code") ?? false,
   },
   {
     id: "link",
