@@ -72,24 +72,56 @@ const handleDocumentClick = () => {
   }
 };
 
+// #31: close the menu when the underlying page scrolls or the window resizes -
+// in both cases the anchor point the menu was positioned at is no longer valid.
+const handleDismiss = () => {
+  if (props.show) {
+    emit("close");
+  }
+};
+
+// #31: close the menu on Escape pressed while it is open. Listening on the
+// menu container keeps this scoped to the menu; a keydown anywhere in the
+// document while the menu is open should still dismiss it.
+const handleKeydown = (event: KeyboardEvent) => {
+  if (props.show && event.key === "Escape") {
+    emit("close");
+  }
+};
+
+const addDismissListeners = () => {
+  document.addEventListener("click", handleDocumentClick);
+  // `scroll` fires on inner scrollable elements too, so capture it.
+  window.addEventListener("scroll", handleDismiss, true);
+  window.addEventListener("resize", handleDismiss);
+  document.addEventListener("keydown", handleKeydown);
+};
+
+const removeDismissListeners = () => {
+  document.removeEventListener("click", handleDocumentClick);
+  window.removeEventListener("scroll", handleDismiss, true);
+  window.removeEventListener("resize", handleDismiss);
+  document.removeEventListener("keydown", handleKeydown);
+};
+
 watch(
   () => props.show,
   (newShow) => {
     if (newShow) {
-      // Add click listener to close menu when clicking outside
+      // Defer so the opening right-click/keypress does not immediately close it.
       setTimeout(() => {
-        document.addEventListener("click", handleDocumentClick);
+        addDismissListeners();
       }, 0);
     } else {
-      document.removeEventListener("click", handleDocumentClick);
+      removeDismissListeners();
     }
   }
 );
 
-// Ensure the document click listener is removed if the component is
-// unmounted while the menu is still open (the watch only removes it on close).
+// Ensure listeners are removed if the component is unmounted while the menu is
+// still open (the watch only removes them on close).
 onBeforeUnmount(() => {
-  document.removeEventListener("click", handleDocumentClick);
+  removeDismissListeners();
 });
 </script>
 

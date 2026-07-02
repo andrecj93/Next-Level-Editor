@@ -388,6 +388,72 @@ const getBlockAncestor = (
 };
 
 /**
+ * Collect every block-level element that a range intersects, from the
+ * outermost block containing the start to the outermost block containing the
+ * end. Only the top-most block within the root is kept for each intersected
+ * block so that nested blocks are not converted twice. Mirrors the multi-block
+ * collection performed by applyTextAlignment.
+ */
+const getBlocksInRange = (range: Range, root: HTMLElement): HTMLElement[] => {
+  const blocks: HTMLElement[] = [];
+  const seen = new Set<HTMLElement>();
+
+  const addBlock = (node: Node | null) => {
+    const block = node ? getBlockAncestor(node, root) : null;
+    if (block && !seen.has(block)) {
+      seen.add(block);
+      blocks.push(block);
+    }
+  };
+
+  // Walk every element inside the root, keeping the ones the range intersects.
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
+    acceptNode: (node) => {
+      const element = node as HTMLElement;
+      if (!BLOCK_TAGS.has(element.tagName.toLowerCase())) {
+        return NodeFilter.FILTER_SKIP;
+      }
+      return range.intersectsNode(element)
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_SKIP;
+    },
+  });
+
+  let current: Node | null = walker.nextNode();
+  while (current) {
+    // Normalise to the outermost block ancestor so nested blocks collapse
+    // onto a single entry (e.g. a <li> inside a <div>).
+    addBlock(current);
+    current = walker.nextNode();
+  }
+
+  // Guarantee the blocks holding the range boundaries are included even when
+  // the boundary sits on a text node the walker never visits directly.
+  addBlock(range.startContainer);
+  addBlock(range.endContainer);
+
+  // Preserve document order (the trailing boundary additions may append out of
+  // order relative to the walk).
+  blocks.sort((a, b) => {
+    if (a === b) return 0;
+    const position = a.compareDocumentPosition(b);
+    return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+  });
+
+  return blocks;
+};
+
+const selectElements = (elements: HTMLElement[]) => {
+  const selection = getSelection();
+  if (!selection || elements.length === 0) return;
+  const newRange = document.createRange();
+  newRange.setStartBefore(elements[0]);
+  newRange.setEndAfter(elements[elements.length - 1]);
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+};
+
+/**
  * Unnest a list item by converting it to a block element outside the list
  * Returns the new block element
  */
@@ -431,6 +497,30 @@ const unnestListItem = (li: HTMLElement, tagName: string): HTMLElement => {
   return newBlock;
 };
 
+/**
+ * Convert a single block element to the target tag, handling the special case
+ * of unnesting a list item when converting to a heading. Returns the resulting
+ * block element.
+ */
+const convertBlock = (
+  block: HTMLElement,
+  targetTag: string,
+  fallbackTag: string
+): HTMLElement => {
+  const currentTag = block.tagName.toLowerCase();
+
+  // Special handling for list items - unnest them when converting to headings
+  if (
+    currentTag === "li" &&
+    ["h1", "h2", "h3", "h4", "h5", "h6"].includes(targetTag)
+  ) {
+    return unnestListItem(block, targetTag);
+  }
+
+  const newTag = currentTag === targetTag ? fallbackTag : targetTag;
+  return replaceTag(block, newTag);
+};
+
 export const toggleBlock = (
   root: HTMLElement,
   tagName: string,
@@ -440,34 +530,28 @@ export const toggleBlock = (
   if (!range) return;
   ensureRangeWithinRoot(range, root);
 
+  const targetTag = tagName.toLowerCase();
+
+  // Multi-block selection: convert every block-level element the range
+  // intersects, then reselect the converted blocks (mirrors applyTextAlignment).
+  if (!range.collapsed) {
+    const blocks = getBlocksInRange(range, root);
+    if (blocks.length > 1) {
+      const converted = blocks.map((block) =>
+        convertBlock(block, targetTag, fallbackTag)
+      );
+      selectElements(converted);
+      return;
+    }
+  }
+
   const block = getBlockAncestor(range.startContainer, root);
   if (!block) {
     wrapSelection(root, tagName);
     return;
   }
 
-  const currentTag = block.tagName.toLowerCase();
-  const targetTag = tagName.toLowerCase();
-
-  // Special handling for list items - unnest them when converting to headings
-  if (
-    currentTag === "li" &&
-    ["h1", "h2", "h3", "h4", "h5", "h6"].includes(targetTag)
-  ) {
-    const replaced = unnestListItem(block, targetTag);
-    const selection = getSelection();
-    if (selection) {
-      const newRange = document.createRange();
-      newRange.selectNodeContents(replaced);
-      newRange.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-    }
-    return;
-  }
-
-  const newTag = currentTag === targetTag ? fallbackTag : targetTag;
-  const replaced = replaceTag(block, newTag);
+  const replaced = convertBlock(block, targetTag, fallbackTag);
 
   const selection = getSelection();
   if (selection) {
@@ -511,20 +595,116 @@ const unwrapList = (list: HTMLElement) => {
   list.replaceWith(fragment);
 };
 
+const isListTag = (element: HTMLElement | null): element is HTMLElement =>
+  Boolean(element) && ["ul", "ol"].includes(element!.tagName.toLowerCase());
+
+const getListAncestor = (
+  node: Node,
+  root: HTMLElement
+): HTMLElement | null =>
+  getClosestElement(node, (element) => isListTag(element), root);
+
+/**
+ * Wrap a collection of block-level elements into a single list, with one <li>
+ * per block. The list replaces the first block in the DOM and the remaining
+ * blocks are moved into it. Returns the created list.
+ */
+const wrapBlocksIntoList = (
+  blocks: HTMLElement[],
+  listTag: "ul" | "ol"
+): HTMLElement => {
+  const list = document.createElement(listTag);
+  blocks.forEach((block) => {
+    const listItem = document.createElement("li");
+    while (block.firstChild) {
+      listItem.appendChild(block.firstChild);
+    }
+    list.appendChild(listItem);
+  });
+  blocks[0].replaceWith(list);
+  blocks.slice(1).forEach((block) => block.remove());
+  return list;
+};
+
+/**
+ * Convert a single list item back into a paragraph, splitting the surrounding
+ * list if necessary (via unnestListItem). Returns the created paragraph.
+ */
+const convertListItemToParagraph = (li: HTMLElement): HTMLElement =>
+  unnestListItem(li, "p");
+
 export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
   const range = getSelectionRange();
   if (!range) return;
   ensureRangeWithinRoot(range, root);
 
-  const listAncestor = getClosestElement(
-    range.startContainer,
-    (element) => element.tagName.toLowerCase() === listTag,
-    root
-  );
+  // Detect an existing list ancestor of EITHER type at the caret/start.
+  const listAncestor = getListAncestor(range.startContainer, root);
 
   if (listAncestor) {
+    const currentListTag = listAncestor.tagName.toLowerCase();
+
+    // Fix #3: switching list type (e.g. caret in a <ul>, click Numbered)
+    // retags the list in place instead of nesting one list inside another.
+    if (currentListTag !== listTag) {
+      const retagged = replaceTag(listAncestor, listTag);
+      const li = getClosestElement(
+        range.startContainer,
+        (element) => element.tagName.toLowerCase() === "li",
+        retagged
+      );
+      const selection = getSelection();
+      if (selection && li) {
+        const newRange = document.createRange();
+        newRange.selectNodeContents(li);
+        newRange.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+      }
+      return;
+    }
+
+    // Same list type -> toggle OFF.
+    const li = getClosestElement(
+      range.startContainer,
+      (element) => element.tagName.toLowerCase() === "li",
+      listAncestor
+    );
+
+    // Fix #7: a collapsed caret only converts/outdents the current <li>,
+    // splitting the list if needed. The whole list is unwrapped only when the
+    // selection spans it (multi-item selection).
+    const blocks = range.collapsed ? [] : getBlocksInRange(range, root);
+    const spansMultipleItems =
+      blocks.filter((block) => block.tagName.toLowerCase() === "li").length > 1;
+
+    if (!spansMultipleItems && li) {
+      const paragraph = convertListItemToParagraph(li);
+      const selection = getSelection();
+      if (selection) {
+        const newRange = document.createRange();
+        newRange.selectNodeContents(paragraph);
+        newRange.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+      }
+      return;
+    }
+
     unwrapList(listAncestor);
     return;
+  }
+
+  // Fix #2: multi-block selection wraps ALL intersected blocks into ONE list.
+  if (!range.collapsed) {
+    const blocks = getBlocksInRange(range, root).filter(
+      (block) => block.tagName.toLowerCase() !== "li"
+    );
+    if (blocks.length > 1) {
+      const list = wrapBlocksIntoList(blocks, listTag);
+      selectElements(Array.from(list.children) as HTMLElement[]);
+      return;
+    }
   }
 
   const block = getBlockAncestor(range.startContainer, root);

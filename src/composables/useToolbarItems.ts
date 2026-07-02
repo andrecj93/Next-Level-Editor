@@ -1,6 +1,182 @@
 import { computed, type Ref } from "vue";
 import { indentListItem, outdentListItem } from "../utils/formatting";
 
+/** Block-level tags that carry text alignment. */
+const ALIGNABLE_BLOCK_TAGS = new Set([
+  "p",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "div",
+  "li",
+  "blockquote",
+]);
+
+/**
+ * Walk up from a node to find the nearest alignable block element within root.
+ */
+const getAlignableBlock = (
+  node: Node | null,
+  root: HTMLElement | null
+): HTMLElement | null => {
+  let current: Node | null = node;
+  while (current && current !== root) {
+    if (
+      current.nodeType === Node.ELEMENT_NODE &&
+      ALIGNABLE_BLOCK_TAGS.has((current as HTMLElement).tagName.toLowerCase())
+    ) {
+      return current as HTMLElement;
+    }
+    current = current.parentNode;
+  }
+  return null;
+};
+
+/**
+ * Resolve the effective text alignment of the block at the current caret.
+ * Reads the inline style first, then falls back to the computed style. When
+ * no explicit alignment is set the browser default (left) is assumed.
+ */
+export const getCaretAlignment = (
+  root: HTMLElement | null
+): "left" | "center" | "right" | "justify" | null => {
+  if (!root) return null;
+  const selection = globalThis.getSelection?.();
+  if (!selection || selection.rangeCount === 0) return null;
+
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer)) return null;
+
+  const block = getAlignableBlock(range.startContainer, root);
+  if (!block) return null;
+
+  let align = block.style.textAlign;
+  if (!align && typeof globalThis.getComputedStyle === "function") {
+    align = globalThis.getComputedStyle(block).textAlign;
+  }
+
+  switch (align) {
+    case "center":
+    case "right":
+    case "justify":
+      return align;
+    case "start":
+    case "left":
+    case "":
+    case undefined:
+      return "left";
+    default:
+      return "left";
+  }
+};
+
+/**
+ * Find the <li> containing the current caret within root, if any.
+ */
+const getCaretListItem = (root: HTMLElement | null): HTMLElement | null => {
+  if (!root) return null;
+  const selection = globalThis.getSelection?.();
+  if (!selection || selection.rangeCount === 0) return null;
+
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer)) return null;
+
+  let current: Node | null = range.startContainer;
+  while (current && current !== root) {
+    if (
+      current.nodeType === Node.ELEMENT_NODE &&
+      (current as HTMLElement).tagName.toLowerCase() === "li"
+    ) {
+      return current as HTMLElement;
+    }
+    current = current.parentNode;
+  }
+  return null;
+};
+
+/**
+ * Whether the caret's list item can be indented: it must be a list item that
+ * has a preceding sibling list item to nest under (mirrors indentListItem).
+ */
+export const canIndentListItem = (root: HTMLElement | null): boolean => {
+  const li = getCaretListItem(root);
+  if (!li) return false;
+  const prev = li.previousElementSibling;
+  if (!prev || prev.tagName.toLowerCase() !== "li") return false;
+  const parent = li.parentElement;
+  return Boolean(
+    parent && ["ul", "ol"].includes(parent.tagName.toLowerCase())
+  );
+};
+
+/**
+ * Whether the caret's list item can be outdented: it must live inside a nested
+ * list whose grandparent is another list item (mirrors outdentListItem).
+ */
+export const canOutdentListItem = (root: HTMLElement | null): boolean => {
+  const li = getCaretListItem(root);
+  if (!li) return false;
+  const parentList = li.parentElement;
+  if (
+    !parentList ||
+    !["ul", "ol"].includes(parentList.tagName.toLowerCase())
+  ) {
+    return false;
+  }
+  const grandparentLi = parentList.parentElement;
+  if (!grandparentLi || grandparentLi.tagName.toLowerCase() !== "li") {
+    return false;
+  }
+  const greatGrandparentList = grandparentLi.parentElement;
+  return Boolean(
+    greatGrandparentList &&
+      ["ul", "ol"].includes(greatGrandparentList.tagName.toLowerCase())
+  );
+};
+
+/** Inline em values applyFontSize writes, keyed by bucket. */
+const FONT_SIZE_EM: Record<"small" | "normal" | "large" | "huge", string> = {
+  small: "0.875em",
+  normal: "1em",
+  large: "1.25em",
+  huge: "1.75em",
+};
+
+/**
+ * Resolve the font-size bucket at the caret by walking up to the nearest
+ * element carrying an inline font-size and reverse-mapping the em value that
+ * applyFontSize wrote. Returns null when the caret is not inside a sized span,
+ * so callers can fall back to the last-applied size (#19/#24).
+ */
+export const getCaretFontSize = (
+  root: HTMLElement | null
+): "small" | "normal" | "large" | "huge" | null => {
+  if (!root) return null;
+  const selection = globalThis.getSelection?.();
+  if (!selection || selection.rangeCount === 0) return null;
+
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer)) return null;
+
+  let current: Node | null = range.startContainer;
+  while (current && current !== root) {
+    if (current.nodeType === Node.ELEMENT_NODE) {
+      const inline = (current as HTMLElement).style?.fontSize;
+      if (inline) {
+        const match = (
+          Object.keys(FONT_SIZE_EM) as Array<keyof typeof FONT_SIZE_EM>
+        ).find((bucket) => FONT_SIZE_EM[bucket] === inline);
+        if (match) return match;
+      }
+    }
+    current = current.parentNode;
+  }
+  return null;
+};
+
 interface ToolbarItemsOptions {
   editorContent: Ref<HTMLDivElement | null>;
   fontSize: Ref<"small" | "normal" | "large" | "huge">;
@@ -160,51 +336,60 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       label: "Align Left",
       icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2V2zm0 3h8v1H2V5zm0 3h12v1H2V8zm0 3h8v1H2v-1zm0 3h12v1H2v-1z"/></svg>',
       onClick: () => handleTextAlignment("left"),
+      isActive: () => getCaretAlignment(editorContent.value) === "left",
     },
     {
       id: "align-center",
       label: "Center",
       icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2V2zm2 3h8v1H4V5zm-2 3h12v1H2V8zm2 3h8v1H4v-1zm-2 3h12v1H2v-1z"/></svg>',
       onClick: () => handleTextAlignment("center"),
+      isActive: () => getCaretAlignment(editorContent.value) === "center",
     },
     {
       id: "align-right",
       label: "Align Right",
       icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2V2zm4 3h8v1H6V5zm-4 3h12v1H2V8zm4 3h8v1H6v-1zm-4 3h12v1H2v-1z"/></svg>',
       onClick: () => handleTextAlignment("right"),
+      isActive: () => getCaretAlignment(editorContent.value) === "right",
     },
     {
       id: "align-justify",
       label: "Justify",
       icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2V2zm0 3h12v1H2V5zm0 3h12v1H2V8zm0 3h12v1H2v-1zm0 3h12v1H2v-1z"/></svg>',
       onClick: () => handleTextAlignment("justify"),
+      isActive: () => getCaretAlignment(editorContent.value) === "justify",
     },
   ]);
+
+  // Prefer the caret's actual font size, falling back to the last applied
+  // value when the caret is not inside a sized span (#19/#24).
+  const activeFontSize = () =>
+    getCaretFontSize(editorContent.value) ?? fontSize.value;
 
   const fontSizeDropdownItems = computed(() => [
     {
       id: "size-small",
       label: "Small",
       onClick: () => handleFontSize("small"),
-      isActive: () => fontSize.value === "small",
+      isActive: () => activeFontSize() === "small",
     },
     {
       id: "size-normal",
       label: "Normal",
       onClick: () => handleFontSize("normal"),
-      isActive: () => fontSize.value === "normal",
+      isActive: () => activeFontSize() === "normal",
     },
     {
       id: "size-large",
       label: "Large",
       onClick: () => handleFontSize("large"),
-      isActive: () => fontSize.value === "large",
+      isActive: () => activeFontSize() === "large",
     },
     {
       id: "size-huge",
       label: "Huge",
       onClick: () => handleFontSize("huge"),
-      isActive: () => fontSize.value === "huge",
+      isActive: () => activeFontSize() === "huge",
     },
   ]);
 
@@ -230,7 +415,10 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       label: "Increase Indent",
       icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v1H3V2zm0 3h10v1H3V5zm0 3h10v1H3V8zm0 3h10v1H3v-1zm0 3h10v1H3v-1zM1 5.5l2 2-2 2v-4z"/></svg>',
       tooltip: "Increase indent (Tab)",
+      // Only act when the caret is in an indentable list item (#21)
+      isDisabled: () => !canIndentListItem(editorContent.value),
       onClick: () => {
+        if (!canIndentListItem(editorContent.value)) return;
         if (editorContent.value && indentListItem(editorContent.value)) {
           captureSnapshot();
         }
@@ -241,7 +429,10 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       label: "Decrease Indent",
       icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v1H3V2zm0 3h10v1H3V5zm0 3h10v1H3V8zm0 3h10v1H3v-1zm0 3h10v1H3v-1zM3 5.5l-2 2 2 2v-4z"/></svg>',
       tooltip: "Decrease indent (Shift+Tab)",
+      // Outdent is disabled unless the caret sits in a nested list item (#21)
+      isDisabled: () => !canOutdentListItem(editorContent.value),
       onClick: () => {
+        if (!canOutdentListItem(editorContent.value)) return;
         if (editorContent.value && outdentListItem(editorContent.value)) {
           captureSnapshot();
         }
@@ -403,6 +594,8 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
         ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M13 3l-8 8-3-3-1 1 4 4 9-9-1-1z"/></svg>'
         : '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h1v12H2V2zm11 0h1v12h-1V2zM5 5h6v1H5V5zm0 3h6v1H5V8zm0 3h6v1H5v-1z"/></svg>',
       onClick: handleToggleSpellCheck,
+      // Reflect current spellcheck state in the Tools dropdown (#26)
+      isActive: () => spellCheckEnabled.value,
     },
     { divider: true },
     {

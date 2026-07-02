@@ -91,7 +91,8 @@ const contextConfigs: Record<ContentContext, ToolbarConfig> = {
     format: true,
     textFormatting: true,
     alignment: true,
-    lists: false,
+    // Lists are enabled so a heading can be converted into a list (#18)
+    lists: true,
     insert: false,
     colors: true,
     link: true,
@@ -102,7 +103,8 @@ const contextConfigs: Record<ContentContext, ToolbarConfig> = {
   list: {
     format: true,
     textFormatting: true,
-    alignment: false,
+    // Alignment is enabled inside lists because applyTextAlignment supports <li> (#8)
+    alignment: true,
     lists: true,
     insert: true,
     colors: true,

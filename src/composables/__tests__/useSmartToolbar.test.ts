@@ -252,18 +252,51 @@ describe('useSmartToolbar', () => {
     it('should return correct config for heading context', () => {
       const { config, updateContext } = useSmartToolbar()
       mockEditor.innerHTML = '<h2>Heading</h2>'
-      
+
       const range = document.createRange()
       const h2 = mockEditor.querySelector('h2')!
       range.selectNodeContents(h2)
       window.getSelection()!.removeAllRanges()
       window.getSelection()!.addRange(range)
-      
+
       updateContext(mockEditor)
-      
+
       expect(config.value.textFormatting).toBe(true)
-      expect(config.value.lists).toBe(false)
+      // Lists must be enabled so a heading can be converted into a list (#18)
+      expect(config.value.lists).toBe(true)
       expect(config.value.insert).toBe(false)
+    })
+
+    it('should enable alignment inside list context (#8)', () => {
+      const { config, updateContext } = useSmartToolbar()
+      mockEditor.innerHTML = '<ul><li>Item</li></ul>'
+
+      const range = document.createRange()
+      const li = mockEditor.querySelector('li')!
+      range.selectNodeContents(li)
+      window.getSelection()!.removeAllRanges()
+      window.getSelection()!.addRange(range)
+
+      updateContext(mockEditor)
+
+      expect(config.value.lists).toBe(true)
+      // applyTextAlignment supports <li>, so alignment must stay enabled (#8)
+      expect(config.value.alignment).toBe(true)
+    })
+
+    it('should enable list buttons inside heading context (#18)', () => {
+      const { config, updateContext } = useSmartToolbar()
+      mockEditor.innerHTML = '<h1>Title</h1>'
+
+      const range = document.createRange()
+      const h1 = mockEditor.querySelector('h1')!
+      range.selectNodeContents(h1)
+      window.getSelection()!.removeAllRanges()
+      window.getSelection()!.addRange(range)
+
+      updateContext(mockEditor)
+
+      expect(config.value.lists).toBe(true)
     })
 
     it('should return correct config for code context', () => {

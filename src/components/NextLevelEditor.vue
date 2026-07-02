@@ -650,6 +650,8 @@ const {
   currentTable,
   currentCell,
   tableDesignerPosition,
+  captureSnapshot,
+  emitUpdate: (value: string) => emit("update:modelValue", value),
 });
 
 // Export actions using composable
