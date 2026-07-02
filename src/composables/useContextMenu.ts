@@ -186,6 +186,11 @@ export function useContextMenu(options: ContextMenuOptions) {
     );
   };
 
+  // The element that was right-clicked, so the menu can offer target-specific
+  // actions (link / image). Captured in handleContextMenu. [#10]
+  const contextTargetLink = ref<HTMLAnchorElement | null>(null);
+  const contextTargetImage = ref<HTMLImageElement | null>(null);
+
   /**
    * Context menu items based on current selection
    */
@@ -196,7 +201,7 @@ export function useContextMenu(options: ContextMenuOptions) {
     // only available in secure contexts on Chromium browsers.
     const pasteSupported = Boolean(navigator.clipboard?.readText);
 
-    return [
+    const items: ContextMenuItem[] = [
       {
         id: "cut",
         label: "Cut",
@@ -340,6 +345,63 @@ export function useContextMenu(options: ContextMenuOptions) {
         onClick: insertImage,
       },
     ];
+
+    // Target-specific actions for a right-clicked link. [#10]
+    const link = contextTargetLink.value;
+    if (link) {
+      items.push(
+        { divider: true },
+        {
+          id: "open-link",
+          label: "Open Link",
+          icon: "↗️",
+          onClick: () => {
+            window.open(link.href, "_blank", "noopener,noreferrer");
+          },
+        },
+        {
+          id: "copy-link",
+          label: "Copy Link Address",
+          icon: "🔗",
+          onClick: () => {
+            void navigator.clipboard?.writeText(link.href);
+          },
+        },
+        {
+          id: "remove-link",
+          label: "Remove Link",
+          icon: "⛔",
+          onClick: () => {
+            const parent = link.parentNode;
+            if (!parent) return;
+            while (link.firstChild) {
+              parent.insertBefore(link.firstChild, link);
+            }
+            parent.removeChild(link);
+            commitContentChange();
+          },
+        }
+      );
+    }
+
+    // Target-specific actions for a right-clicked image. [#10]
+    const image = contextTargetImage.value;
+    if (image) {
+      items.push(
+        { divider: true },
+        {
+          id: "remove-image",
+          label: "Remove Image",
+          icon: "🗑️",
+          onClick: () => {
+            image.remove();
+            commitContentChange();
+          },
+        }
+      );
+    }
+
+    return items;
   });
 
   /**
@@ -347,6 +409,16 @@ export function useContextMenu(options: ContextMenuOptions) {
    */
   const handleContextMenu = (event: MouseEvent) => {
     event.preventDefault();
+
+    // Resolve the right-clicked link/image so the menu can offer target-specific
+    // actions (Open/Copy/Remove Link, Remove Image). [#10]
+    const targetEl =
+      event.target instanceof Element
+        ? event.target
+        : (event.target as Node | null)?.parentElement ?? null;
+    contextTargetLink.value = targetEl?.closest("a") ?? null;
+    contextTargetImage.value =
+      targetEl?.tagName === "IMG" ? (targetEl as HTMLImageElement) : null;
 
     // Check if the right-click is on a table element
     const target = event.target;
