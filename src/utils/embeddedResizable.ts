@@ -14,6 +14,19 @@ export interface EmbeddedContentOptions {
 }
 
 /**
+ * Escape a value for safe interpolation into an HTML attribute. Without this,
+ * an embed's raw iframe HTML (full of double-quotes) breaks out of data-src and
+ * corrupts the container tag (lost tabindex, spilled sibling nodes).
+ */
+function escapeAttr(value: string): string {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
  * Create an embedded resizable container with content
  */
 export function createEmbeddedResizable(
@@ -34,17 +47,23 @@ export function createEmbeddedResizable(
   // Generate content based on type
   switch (type) {
     case "image":
-      contentHtml = `<img src="${src}" alt="${alt}" style="width: 100%; height: 100%; object-fit: contain;" />`;
+      contentHtml = `<img src="${escapeAttr(src)}" alt="${escapeAttr(
+        alt
+      )}" style="width: 100%; height: 100%; object-fit: contain;" />`;
       break;
     case "video":
-      contentHtml = `<video src="${src}" controls style="width: 100%; height: 100%; object-fit: contain;"></video>`;
+      contentHtml = `<video src="${escapeAttr(
+        src
+      )}" controls style="width: 100%; height: 100%; object-fit: contain;"></video>`;
       break;
     case "embed":
       // Assume src is already HTML for embeds (like YouTube iframes)
       contentHtml = src;
       break;
     case "file":
-      contentHtml = `<a href="${src}" download="${alt}" target="_blank" style="display: flex; align-items: center; justify-content: center; height: 100%; text-decoration: none; color: inherit;">
+      contentHtml = `<a href="${escapeAttr(src)}" download="${escapeAttr(
+        alt
+      )}" target="_blank" style="display: flex; align-items: center; justify-content: center; height: 100%; text-decoration: none; color: inherit;">
         <div style="text-align: center;">
           <div style="font-size: 48px; margin-bottom: 8px;">📎</div>
           <div style="font-weight: 600;">${alt || "Download File"}</div>
@@ -62,10 +81,10 @@ export function createEmbeddedResizable(
   }
 
   // Create the embedded resizable container
-  return `<div 
-    class="embedded-resizable-container" 
+  return `<div
+    class="embedded-resizable-container"
     data-type="${type}"
-    data-src="${src}"
+    data-src="${type === "embed" ? "" : escapeAttr(src)}"
     data-width="${width}"
     data-height="${height}"
     data-maintain-aspect="${maintainAspectRatio}"
