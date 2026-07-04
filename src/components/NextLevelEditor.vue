@@ -466,7 +466,6 @@ const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
   async (content: string, version: number) => {
     // Emit the content for parent to save
     emit("update:modelValue", content);
-    console.log("Auto-saved at:", new Date().toLocaleTimeString());
     return { success: true, serverVersion: version + 1 };
   },
   { delay: 2000 } // 2 second delay

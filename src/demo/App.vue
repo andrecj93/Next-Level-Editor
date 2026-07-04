@@ -548,11 +548,11 @@ const scrollToEditor = () => {
 };
 
 const handleFocus = () => {
-  console.log("Editor focused");
+  // Editor focused — hook for host apps.
 };
 
 const handleBlur = () => {
-  console.log("Editor blurred");
+  // Editor blurred — hook for host apps.
 };
 
 // Demo @mention provider: in a real app this would query your user directory.
