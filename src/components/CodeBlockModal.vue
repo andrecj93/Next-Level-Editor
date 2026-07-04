@@ -166,7 +166,7 @@ const highlightedCode = computed(() => {
   try {
     const grammar = Prism.languages[selectedLanguage.value] || Prism.languages.plaintext
     return Prism.highlight(code.value, grammar, selectedLanguage.value)
-  } catch (e) {
+  } catch {
     return code.value
   }
 })
