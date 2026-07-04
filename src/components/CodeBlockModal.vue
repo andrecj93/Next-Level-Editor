@@ -4,6 +4,7 @@
       <div
         v-if="show"
         class="modal-overlay"
+        :class="theme"
         @click="handleOverlayClick"
       >
         <div
@@ -121,6 +122,7 @@ import 'prismjs/components/prism-bash'
 
 interface Props {
   show: boolean
+  theme?: string
 }
 
 interface Emits {
@@ -128,7 +130,9 @@ interface Emits {
   (e: 'insert', data: { code: string; language: string }): void
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+  theme: 'theme-light'
+})
 const emit = defineEmits<Emits>()
 
 const codeInput = ref<HTMLTextAreaElement | null>(null)
@@ -223,7 +227,7 @@ watch(() => codeInput.value, (input) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay-backdrop);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -233,9 +237,9 @@ watch(() => codeInput.value, (input) => {
 }
 
 .modal-content {
-  background: white;
-  border-radius: var(--radius-xl, 12px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2xl);
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
@@ -246,14 +250,14 @@ watch(() => codeInput.value, (input) => {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .close-btn {
@@ -261,7 +265,7 @@ watch(() => codeInput.value, (input) => {
   height: 32px;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 20px;
   cursor: pointer;
   border-radius: var(--radius-md, 8px);
@@ -272,8 +276,8 @@ watch(() => codeInput.value, (input) => {
 }
 
 .close-btn:hover {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .modal-body {
@@ -289,23 +293,24 @@ watch(() => codeInput.value, (input) => {
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-text);
 }
 
 .language-select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  background: white;
+  background: var(--color-background);
+  color: var(--color-text);
   cursor: pointer;
   transition: border-color var(--transition-fast, 150ms) ease;
 }
 
 .language-select:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -313,8 +318,10 @@ watch(() => codeInput.value, (input) => {
   width: 100%;
   min-height: 200px;
   padding: 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
+  background: var(--color-background);
+  color: var(--color-text);
   font-family: 'Fira Code', 'Monaco', 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.6;
@@ -324,7 +331,7 @@ watch(() => codeInput.value, (input) => {
 
 .code-textarea:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -337,14 +344,14 @@ watch(() => codeInput.value, (input) => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   margin-bottom: 12px;
 }
 
 .code-preview {
   border-radius: var(--radius-md, 8px);
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
 }
 
 .code-preview pre {
@@ -365,7 +372,7 @@ watch(() => codeInput.value, (input) => {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
 }
 
 .btn {
@@ -384,21 +391,21 @@ watch(() => codeInput.value, (input) => {
 }
 
 .btn-cancel {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .btn-cancel:hover {
-  background: #e5e7eb;
+  background: var(--color-border);
 }
 
 .btn-primary {
-  background: #3b82f6;
+  background: var(--color-primary);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #2563eb;
+  background: var(--color-primary-dark);
 }
 
 .modal-fade-enter-active,

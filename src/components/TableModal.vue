@@ -4,6 +4,7 @@
       <div
         v-if="show"
         class="modal-overlay"
+        :class="theme"
         @click="handleOverlayClick"
       >
         <div
@@ -99,6 +100,7 @@ import { ref, computed } from 'vue'
 
 interface Props {
   show: boolean
+  theme?: string
 }
 
 interface Emits {
@@ -106,7 +108,9 @@ interface Emits {
   (e: 'insert', data: { rows: number; cols: number; includeHeader: boolean }): void
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+  theme: 'theme-light'
+})
 const emit = defineEmits<Emits>()
 
 const rows = ref(3)
@@ -144,7 +148,7 @@ const insertTable = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay-backdrop);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -154,9 +158,9 @@ const insertTable = () => {
 }
 
 .modal-content {
-  background: white;
-  border-radius: var(--radius-xl, 12px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2xl);
   max-width: 400px;
   width: 100%;
   max-height: 90vh;
@@ -168,14 +172,14 @@ const insertTable = () => {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .close-btn {
@@ -183,7 +187,7 @@ const insertTable = () => {
   height: 32px;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 20px;
   cursor: pointer;
   border-radius: var(--radius-md, 8px);
@@ -194,8 +198,8 @@ const insertTable = () => {
 }
 
 .close-btn:hover {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .modal-body {
@@ -211,21 +215,23 @@ const insertTable = () => {
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-text);
 }
 
 .number-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
+  background: var(--color-background);
+  color: var(--color-text);
   transition: border-color var(--transition-fast, 150ms) ease;
 }
 
 .number-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -249,13 +255,13 @@ const insertTable = () => {
 
 .checkbox-group span {
   font-size: 14px;
-  color: #374151;
+  color: var(--color-text);
 }
 
 .table-preview {
   margin-top: 24px;
   padding: 16px;
-  background: #f9fafb;
+  background: var(--color-surface-raised);
   border-radius: var(--radius-md, 8px);
 }
 
@@ -264,26 +270,26 @@ const insertTable = () => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   margin-bottom: 12px;
 }
 
 .preview-grid {
   display: grid;
   gap: 2px;
-  background: #d1d5db;
-  border: 1px solid #d1d5db;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .preview-cell {
   aspect-ratio: 2;
-  background: white;
+  background: var(--color-surface);
 }
 
 .preview-cell.header {
-  background: #e5e7eb;
+  background: var(--color-surface-raised);
 }
 
 .modal-footer {
@@ -291,7 +297,7 @@ const insertTable = () => {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
 }
 
 .btn {
@@ -305,21 +311,21 @@ const insertTable = () => {
 }
 
 .btn-cancel {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .btn-cancel:hover {
-  background: #e5e7eb;
+  background: var(--color-border);
 }
 
 .btn-primary {
-  background: #3b82f6;
+  background: var(--color-primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #2563eb;
+  background: var(--color-primary-dark);
 }
 
 .modal-fade-enter-active,

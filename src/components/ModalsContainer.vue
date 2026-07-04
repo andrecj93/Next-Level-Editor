@@ -3,6 +3,7 @@
   <!-- Table Modal -->
   <TableModal
     :show="showTableModal"
+    :theme="theme"
     @close="$emit('close-table-modal')"
     @insert="$emit('insert-table', $event)"
   />
@@ -10,6 +11,7 @@
   <!-- Find & Replace Modal -->
   <FindReplaceModal
     :show="showFindReplaceModal"
+    :theme="theme"
     :content="editorContent"
     @close="$emit('close-find-replace-modal')"
     @find="$emit('find', $event)"
@@ -20,6 +22,7 @@
   <!-- Code Block Modal -->
   <CodeBlockModal
     :show="showCodeBlockModal"
+    :theme="theme"
     @close="$emit('close-code-block-modal')"
     @insert="$emit('insert-code-block', $event)"
   />
@@ -43,6 +46,7 @@
   <!-- Table Properties Modal -->
   <TablePropertiesModal
     :show="showTablePropertiesModal"
+    :theme="theme"
     :mode="tablePropertiesMode"
     :initial-cell-props="initialCellProps"
     :initial-table-props="initialTableProps"
@@ -90,6 +94,7 @@
   <!-- HTML Code Modal -->
   <HtmlCodeModal
     :show="showHtmlCodeModal"
+    :theme="theme"
     :html-content="formattedHtmlContent"
     @close="$emit('close-html-code-modal')"
   />
@@ -133,6 +138,11 @@ import HtmlCodeModal from "./HtmlCodeModal.vue";
 import CommandPalette from "./CommandPalette.vue";
 
 interface Props {
+  /** Editor theme class ('theme-dark' | 'theme-light'), forwarded to the
+      teleported modals so they can carry it on their own root (teleporting to
+      <body> escapes the editor's theme scope). Optional so existing callers /
+      tests that omit it still type-check; modals default to light. */
+  theme?: string;
   showTableModal: boolean;
   showFindReplaceModal: boolean;
   showCodeBlockModal: boolean;

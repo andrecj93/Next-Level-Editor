@@ -4,6 +4,7 @@
       <div
         v-if="show"
         class="context-menu"
+        :class="theme"
         :style="{
           top: `${position.top}px`,
           left: `${position.left}px`,
@@ -48,11 +49,14 @@ interface Props {
   show: boolean;
   position: { top: number; left: number };
   items: ContextMenuItem[];
+  theme?: string;
 }
 
 type Emits = (e: "close") => void;
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  theme: "theme-light",
+});
 const emit = defineEmits<Emits>();
 
 const handleItemClick = (item: ContextMenuItem) => {
@@ -129,10 +133,10 @@ onBeforeUnmount(() => {
 .context-menu {
   position: fixed;
   min-width: 200px;
-  background: var(--editor-bg, #ffffff);
-  border: 1px solid var(--editor-border, #d8dde6);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   padding: 4px;
   z-index: 10000;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -146,7 +150,7 @@ onBeforeUnmount(() => {
   padding: 8px 12px;
   border: none;
   background: transparent;
-  color: var(--toolbar-text, #1f2937);
+  color: var(--color-text);
   font-size: 14px;
   text-align: left;
   cursor: pointer;
@@ -155,7 +159,7 @@ onBeforeUnmount(() => {
 }
 
 .context-menu-item:hover:not(:disabled) {
-  background: var(--toolbar-hover, rgba(59, 130, 246, 0.1));
+  background: var(--color-surface-raised);
 }
 
 .context-menu-item:disabled {
@@ -182,7 +186,7 @@ onBeforeUnmount(() => {
 
 .context-menu-divider {
   height: 1px;
-  background: var(--editor-border, #d8dde6);
+  background: var(--color-border);
   margin: 4px 8px;
 }
 
@@ -199,13 +203,5 @@ onBeforeUnmount(() => {
 .context-menu-leave-to {
   opacity: 0;
   transform: scale(0.95);
-}
-
-/* Dark theme support */
-:deep(.theme-dark) .context-menu {
-  --editor-bg: #0f172a;
-  --editor-border: #1e293b;
-  --toolbar-text: #e2e8f0;
-  --toolbar-hover: rgba(96, 165, 250, 0.2);
 }
 </style>

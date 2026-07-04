@@ -4,6 +4,7 @@
       <div
         v-if="show"
         class="modal-overlay"
+        :class="theme"
         @click="handleOverlayClick"
       >
         <div
@@ -67,11 +68,14 @@ import "prismjs/components/prism-markup";
 interface Props {
   show: boolean;
   htmlContent: string;
+  theme?: string;
 }
 
 type Emits = (e: "close") => void;
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  theme: "theme-light",
+});
 const emit = defineEmits<Emits>();
 
 const copyButtonText = ref("📋 Copy");
@@ -163,12 +167,12 @@ watch(
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--editor-border, #d8dde6);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .code-label {
   font-weight: 600;
-  color: var(--toolbar-text, #1f2937);
+  color: var(--color-text);
   font-size: 14px;
 }
 
@@ -176,7 +180,7 @@ watch(
   padding: 6px 12px;
   font-size: 13px;
   border-radius: 6px;
-  background: var(--toolbar-accent, #2563eb);
+  background: var(--color-primary);
   color: #ffffff;
   border: none;
   cursor: pointer;
@@ -184,7 +188,7 @@ watch(
 }
 
 .btn-copy:hover {
-  opacity: 0.9;
+  background: var(--color-primary-dark);
   transform: translateY(-1px);
 }
 
@@ -195,10 +199,12 @@ watch(
 .code-display {
   flex: 1;
   overflow: auto;
+  /* Fixed dark code viewer: pairs with the Prism "tomorrow" theme whose
+     token colors are light-on-dark, so this surface stays dark in both themes. */
   background: #2d2d2d;
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid var(--editor-border, #d8dde6);
+  border: 1px solid var(--color-border);
 }
 
 .code-display pre {
@@ -214,14 +220,5 @@ watch(
 .code-display code {
   display: block;
   color: #f8f8f2;
-}
-
-/* Dark mode adjustments */
-.theme-dark .code-label {
-  color: var(--toolbar-text, #e2e8f0);
-}
-
-.theme-dark .code-header {
-  border-bottom-color: var(--editor-border, #1e293b);
 }
 </style>

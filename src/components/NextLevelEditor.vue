@@ -103,11 +103,13 @@
       :show="showContextMenu"
       :position="contextMenuPosition"
       :items="contextMenuItems"
+      :theme="themeClass"
       @close="closeContextMenu"
     />
 
     <!-- Modals Container -->
     <ModalsContainer
+      :theme="themeClass"
       :show-table-modal="showTableModal"
       :show-find-replace-modal="showFindReplaceModal"
       :show-code-block-modal="showCodeBlockModal"

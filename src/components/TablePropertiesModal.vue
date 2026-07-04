@@ -4,6 +4,7 @@
       <div
         v-if="show"
         class="modal-overlay"
+        :class="theme"
         @click="handleOverlayClick"
       >
         <div
@@ -288,6 +289,7 @@ interface Props {
   mode: 'cell' | 'table' | 'both'
   initialCellProps?: Partial<CellProperties>
   initialTableProps?: Partial<TableProperties>
+  theme?: string
 }
 
 interface Emits {
@@ -298,7 +300,8 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   mode: 'both',
   initialCellProps: () => ({}),
-  initialTableProps: () => ({})
+  initialTableProps: () => ({}),
+  theme: 'theme-light'
 })
 
 const emit = defineEmits<Emits>()
@@ -391,7 +394,7 @@ const applyProperties = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay-backdrop);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -401,9 +404,9 @@ const applyProperties = () => {
 }
 
 .modal-content {
-  background: white;
-  border-radius: var(--radius-xl, 12px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2xl);
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
@@ -415,14 +418,14 @@ const applyProperties = () => {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .close-btn {
@@ -430,7 +433,7 @@ const applyProperties = () => {
   height: 32px;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 20px;
   cursor: pointer;
   border-radius: var(--radius-md, 8px);
@@ -441,8 +444,8 @@ const applyProperties = () => {
 }
 
 .close-btn:hover {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .modal-body {
@@ -453,14 +456,14 @@ const applyProperties = () => {
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid var(--color-border);
 }
 
 .tab {
   padding: 10px 20px;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -470,12 +473,12 @@ const applyProperties = () => {
 }
 
 .tab:hover {
-  color: #3b82f6;
+  color: var(--color-primary);
 }
 
 .tab.active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
 }
 
 .properties-section {
@@ -493,7 +496,7 @@ const applyProperties = () => {
 .property-group > label {
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-text);
 }
 
 .property-group label {
@@ -512,7 +515,7 @@ const applyProperties = () => {
 .color-input {
   width: 50px;
   height: 38px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
   padding: 2px;
@@ -521,47 +524,52 @@ const applyProperties = () => {
 .text-input {
   flex: 1;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
+  background: var(--color-background);
+  color: var(--color-text);
   transition: border-color var(--transition-fast, 150ms) ease;
 }
 
 .text-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .number-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
+  background: var(--color-background);
+  color: var(--color-text);
   transition: border-color var(--transition-fast, 150ms) ease;
 }
 
 .number-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .select-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  background: white;
+  background: var(--color-background);
+  color: var(--color-text);
   cursor: pointer;
   transition: border-color var(--transition-fast, 150ms) ease;
 }
 
 .select-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -573,9 +581,9 @@ const applyProperties = () => {
 .btn-option {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  background: white;
-  color: #374151;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -585,21 +593,21 @@ const applyProperties = () => {
 }
 
 .btn-option:hover {
-  background: #f9fafb;
-  border-color: #3b82f6;
+  background: var(--color-surface-raised);
+  border-color: var(--color-primary);
 }
 
 .btn-option.active {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
 }
 
 .btn-clear {
   padding: 8px 16px;
-  border: 1px solid #d1d5db;
-  background: white;
-  color: #6b7280;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -608,8 +616,8 @@ const applyProperties = () => {
 }
 
 .btn-clear:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .checkbox-input {
@@ -623,7 +631,7 @@ const applyProperties = () => {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
 }
 
 .btn {
@@ -637,21 +645,21 @@ const applyProperties = () => {
 }
 
 .btn-cancel {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .btn-cancel:hover {
-  background: #e5e7eb;
+  background: var(--color-border);
 }
 
 .btn-primary {
-  background: #3b82f6;
-  color: white;
+  background: var(--color-primary);
+  color: #fff;
 }
 
 .btn-primary:hover {
-  background: #2563eb;
+  background: var(--color-primary-dark);
 }
 
 .modal-fade-enter-active,
@@ -672,90 +680,5 @@ const applyProperties = () => {
 .modal-fade-enter-from .modal-content,
 .modal-fade-leave-to .modal-content {
   transform: scale(0.95);
-}
-
-/* Dark mode support */
-.theme-dark .modal-content {
-  background: var(--toolbar-bg, #111827);
-  color: var(--toolbar-text, #e2e8f0);
-}
-
-.theme-dark .modal-header {
-  border-bottom-color: var(--editor-border, #1e293b);
-}
-
-.theme-dark .modal-header h3 {
-  color: var(--toolbar-text, #e2e8f0);
-}
-
-.theme-dark .tabs {
-  border-bottom-color: var(--editor-border, #1e293b);
-}
-
-.theme-dark .tab {
-  color: #9ca3af;
-}
-
-.theme-dark .tab:hover,
-.theme-dark .tab.active {
-  color: #60a5fa;
-}
-
-.theme-dark .tab.active {
-  border-bottom-color: #60a5fa;
-}
-
-.theme-dark .property-group > label {
-  color: var(--toolbar-text, #e2e8f0);
-}
-
-.theme-dark .text-input,
-.theme-dark .number-input,
-.theme-dark .select-input,
-.theme-dark .color-input {
-  background: var(--editor-bg, #0f172a);
-  border-color: var(--editor-border, #1e293b);
-  color: var(--toolbar-text, #e2e8f0);
-}
-
-.theme-dark .btn-option {
-  background: var(--editor-bg, #0f172a);
-  border-color: var(--editor-border, #1e293b);
-  color: var(--toolbar-text, #e2e8f0);
-}
-
-.theme-dark .btn-option:hover {
-  background: #1e293b;
-  border-color: #60a5fa;
-}
-
-.theme-dark .btn-option.active {
-  background: #60a5fa;
-  color: white;
-  border-color: #60a5fa;
-}
-
-.theme-dark .btn-clear {
-  background: var(--editor-bg, #0f172a);
-  border-color: var(--editor-border, #1e293b);
-  color: #9ca3af;
-}
-
-.theme-dark .btn-clear:hover {
-  background: #1e293b;
-  color: var(--toolbar-text, #e2e8f0);
-}
-
-.theme-dark .modal-footer {
-  border-top-color: var(--editor-border, #1e293b);
-}
-
-.theme-dark .btn-cancel {
-  background: #1e293b;
-  color: var(--toolbar-text, #e2e8f0);
-}
-
-.theme-dark .btn-cancel:hover {
-  background: #334155;
 }
 </style>
