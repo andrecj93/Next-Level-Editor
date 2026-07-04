@@ -168,21 +168,20 @@ const handleSkip = (targetId: string) => {
 }
 
 /**
- * Dark mode adjustments
+ * Dark mode adjustments — keyed to the editor's own theme class (.theme-dark
+ * on the .next-level-editor root), not the OS prefers-color-scheme setting.
  */
-@media (prefers-color-scheme: dark) {
-  .skip-link {
-    background: #3b82f6;
-    color: #000000;
-  }
+.theme-dark .skip-link {
+  background: #3b82f6;
+  color: #000000;
+}
 
-  .skip-link:hover {
-    background: #60a5fa;
-  }
+.theme-dark .skip-link:hover {
+  background: #60a5fa;
+}
 
-  .skip-link:focus {
-    outline-color: #000000;
-  }
+.theme-dark .skip-link:focus {
+  outline-color: #000000;
 }
 
 /**

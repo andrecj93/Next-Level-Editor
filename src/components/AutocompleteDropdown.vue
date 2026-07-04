@@ -315,51 +315,50 @@ onUnmounted(() => {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  .autocomplete-dropdown {
-    background: #1e1e1e;
-    border-color: #3a3a3a;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  }
+/* Dark mode — keyed to the editor's own theme class (.theme-dark on the
+   .next-level-editor root), not the OS prefers-color-scheme setting. */
+.theme-dark .autocomplete-dropdown {
+  background: #1e1e1e;
+  border-color: #3a3a3a;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
 
-  .suggestion-item {
-    border-color: #2a2a2a;
-  }
+.theme-dark .suggestion-item {
+  border-color: #2a2a2a;
+}
 
-  .suggestion-item:hover,
-  .suggestion-item.selected {
-    background: #2a2a2a;
-  }
+.theme-dark .suggestion-item:hover,
+.theme-dark .suggestion-item.selected {
+  background: #2a2a2a;
+}
 
-  .suggestion-item.selected {
-    background: #1a3a52;
-    border-left-color: #60a5fa;
-  }
+.theme-dark .suggestion-item.selected {
+  background: #1a3a52;
+  border-left-color: #60a5fa;
+}
 
-  .suggestion-label {
-    color: #e0e0e0;
-  }
+.theme-dark .suggestion-label {
+  color: #e0e0e0;
+}
 
-  .suggestion-type {
-    color: #999;
-    background: #2a2a2a;
-  }
+.theme-dark .suggestion-type {
+  color: #999;
+  background: #2a2a2a;
+}
 
-  .dropdown-footer {
-    background: #252525;
-    border-color: #3a3a3a;
-  }
+.theme-dark .dropdown-footer {
+  background: #252525;
+  border-color: #3a3a3a;
+}
 
-  .help-text {
-    color: #999;
-  }
+.theme-dark .help-text {
+  color: #999;
+}
 
-  .help-text kbd {
-    background: #1e1e1e;
-    border-color: #3a3a3a;
-    color: #e0e0e0;
-  }
+.theme-dark .help-text kbd {
+  background: #1e1e1e;
+  border-color: #3a3a3a;
+  color: #e0e0e0;
 }
 
 /* Scrollbar styling */

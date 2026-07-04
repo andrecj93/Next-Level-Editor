@@ -35,13 +35,13 @@
   --focus-bg-high-contrast: #ffff00;
 }
 
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --focus-color: #60a5fa;
-    --focus-color-high-contrast: #ffffff;
-    --focus-bg-high-contrast: #000000;
-  }
+/* Dark mode adjustments — keyed to the editor's own theme class (.theme-dark
+   on the .next-level-editor root), not the OS prefers-color-scheme setting.
+   Custom properties set here inherit to every element inside the dark editor. */
+.theme-dark {
+  --focus-color: #60a5fa;
+  --focus-color-high-contrast: #ffffff;
+  --focus-bg-high-contrast: #000000;
 }
 
 /* ============================================
