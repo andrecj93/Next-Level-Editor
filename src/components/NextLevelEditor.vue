@@ -44,6 +44,7 @@
       :show="showCommandMenu"
       :position="commandMenuPosition"
       :options="commandOptions"
+      :selected-index="commandSelectedIndex"
       @select="handleCommandOption"
     />
 
@@ -981,8 +982,10 @@ const {
   showCommandMenu,
   commandMenuPosition,
   commandOptions,
+  selectedIndex: commandSelectedIndex,
   openCommandMenu,
   handleCommandOption,
+  handleMenuKeydown: handleSlashMenuKeydown,
   handleDocumentClick,
   handleEscape,
 } = useSlashCommands({
@@ -1146,6 +1149,7 @@ const { handleKeydown } = useKeyboardShortcuts({
   },
   handleInlineAction,
   handleBlockAction,
+  handleSlashMenuKeydown,
 });
 
 // Comments handlers

@@ -24,6 +24,11 @@ interface KeyboardShortcutsOptions {
   openFindReplaceModal: () => void;
   handleInlineAction: (tag: string) => void;
   handleBlockAction: (tag: string) => void;
+  /**
+   * Optional hook to keyboard-drive the open slash-command menu. Runs before
+   * the editor's own Enter/Tab handling; returns true when it consumed the key.
+   */
+  handleSlashMenuKeydown?: (event: KeyboardEvent) => boolean;
 }
 
 /**
@@ -79,6 +84,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     openFindReplaceModal,
     handleInlineAction,
     handleBlockAction,
+    handleSlashMenuKeydown,
   } = options;
 
   /**
@@ -529,6 +535,12 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
    * Main keyboard event handler
    */
   const handleKeydown = (event: KeyboardEvent) => {
+    // Let the slash-command menu (when open) claim Arrow/Enter/Tab/Escape first,
+    // so Enter selects a command instead of inserting a new paragraph.
+    if (handleSlashMenuKeydown && handleSlashMenuKeydown(event)) {
+      return;
+    }
+
     // Handle Enter key
     if (
       event.key === "Enter" &&

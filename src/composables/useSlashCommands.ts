@@ -42,6 +42,8 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     left: number;
     maxHeight?: number;
   }>({ top: 0, left: 0 });
+  /** Keyboard-highlighted option in the slash menu (Word/Notion parity). */
+  const selectedIndex = ref(0);
 
   const insertBlockquote = () => {
     performWithSelection((root) => {
@@ -162,6 +164,7 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
       const rect = getCaretRect(range);
       const clamped = clampMenuPosition(rect.bottom + 8, rect.left);
       showCommandMenu.value = true;
+      selectedIndex.value = 0;
       commandMenuPosition.value = {
         top: clamped.top + window.scrollY,
         left: clamped.left + window.scrollX,
@@ -316,13 +319,47 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     }
   };
 
+  /**
+   * Keyboard-drive the open slash menu. Called at the top of the editor's
+   * keydown so it wins over the default Enter/Tab behaviour. Returns true when
+   * it consumed the event (the caller should then stop further handling).
+   */
+  const handleMenuKeydown = (event: KeyboardEvent): boolean => {
+    if (!showCommandMenu.value) return false;
+    const count = commandOptions.length;
+    if (count === 0) return false;
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        selectedIndex.value = (selectedIndex.value + 1) % count;
+        return true;
+      case "ArrowUp":
+        event.preventDefault();
+        selectedIndex.value = (selectedIndex.value - 1 + count) % count;
+        return true;
+      case "Enter":
+      case "Tab":
+        event.preventDefault();
+        handleCommandOption(commandOptions[selectedIndex.value]);
+        return true;
+      case "Escape":
+        event.preventDefault();
+        closeCommandMenu();
+        return true;
+      default:
+        return false;
+    }
+  };
+
   return {
     showCommandMenu,
     commandMenuPosition,
     commandOptions,
+    selectedIndex,
     openCommandMenu,
     closeCommandMenu,
     handleCommandOption,
+    handleMenuKeydown,
     handleDocumentClick,
     handleEscape,
   };

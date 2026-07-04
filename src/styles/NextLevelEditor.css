@@ -252,8 +252,15 @@
   transition: background 0.2s ease;
 }
 
-.command-menu li:hover {
+.command-menu li:hover,
+.command-menu li.selected {
   background: var(--toolbar-hover);
+}
+
+/* Keyboard-highlighted item gets an accent rail so it reads as "active"
+   distinct from a passive hover. */
+.command-menu li.selected {
+  box-shadow: inset 3px 0 0 0 var(--toolbar-accent);
 }
 
 .command-title {
