@@ -28,6 +28,9 @@
   --history-bg: rgba(59, 130, 246, 0.08);
   --history-active: #3b82f6;
   --checklist-border: #d1d5db;
+  /* Comfortable reading measure for the editing/preview surface (Word/Notion/
+     Medium keep body text in a centered column rather than edge-to-edge). */
+  --content-measure: 820px;
   border: 1px solid var(--editor-border);
   border-radius: 12px;
   overflow: hidden;
@@ -269,7 +272,11 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 20px;
+  /* Centered document column with generous top/bottom breathing room. */
+  width: 100%;
+  max-width: var(--content-measure);
+  margin-inline: auto;
+  padding: 40px clamp(20px, 4vw, 40px) 96px;
   font-size: 16px;
   line-height: 1.7;
   color: var(--content-color);
@@ -311,53 +318,53 @@
   outline: none;
 }
 
-.editor-content :deep(h1),
-.editor-content :deep(h2),
-.editor-content :deep(h3),
-.editor-content :deep(h4),
-.editor-content :deep(h5),
-.editor-content :deep(h6) {
+.editor-content h1,
+.editor-content h2,
+.editor-content h3,
+.editor-content h4,
+.editor-content h5,
+.editor-content h6 {
   margin: 18px 0 10px;
   font-weight: 700;
   line-height: 1.25;
 }
 
-.editor-content :deep(h1) {
+.editor-content h1 {
   font-size: 2.2em;
 }
 
-.editor-content :deep(h2) {
+.editor-content h2 {
   font-size: 1.8em;
 }
 
-.editor-content :deep(h3) {
+.editor-content h3 {
   font-size: 1.4em;
 }
 
-.editor-content :deep(p) {
+.editor-content p {
   margin: 10px 0;
 }
 
-.editor-content :deep(ul),
-.editor-content :deep(ol) {
+.editor-content ul,
+.editor-content ol {
   margin: 12px 0;
   padding-left: 26px;
 }
 
-.editor-content :deep(li) {
+.editor-content li {
   margin: 4px 0;
 }
 
-.editor-content :deep(a) {
+.editor-content a {
   color: var(--toolbar-accent);
   text-decoration: underline;
 }
 
-.editor-content :deep(a):hover {
+.editor-content a:hover {
   color: #1d4ed8;
 }
 
-.editor-content :deep(img) {
+.editor-content img {
   max-width: 100%;
   height: auto;
   display: block;
@@ -365,7 +372,7 @@
   border-radius: 6px;
 }
 
-.editor-content :deep(code) {
+.editor-content code {
   background: rgba(15, 23, 42, 0.08);
   padding: 3px 8px;
   border-radius: 4px;
@@ -373,83 +380,83 @@
   font-size: 0.92em;
 }
 
-.theme-dark .editor-content :deep(code) {
+.theme-dark .editor-content code {
   background: rgba(148, 163, 184, 0.2);
 }
 
-.editor-content :deep(pre) {
+.editor-content pre {
   background: rgba(15, 23, 42, 0.08);
   padding: 16px;
   border-radius: 10px;
   overflow: auto;
 }
 
-.theme-dark .editor-content :deep(pre) {
+.theme-dark .editor-content pre {
   background: rgba(148, 163, 184, 0.12);
 }
 
 /* Highlight colors - improve visibility in dark mode */
-.theme-dark .editor-content :deep(span[style*="background-color: yellow"]),
+.theme-dark .editor-content span[style*="background-color: yellow"],
 .theme-dark
   .editor-content
-  :deep(span[style*="background-color: rgb(255, 255, 0)"]),
-.theme-dark .editor-content :deep(span[style*="background-color:#ffff00"]),
-.theme-dark .editor-content :deep(span[style*="background-color: #ffff00"]) {
+  span[style*="background-color: rgb(255, 255, 0)"],
+.theme-dark .editor-content span[style*="background-color:#ffff00"],
+.theme-dark .editor-content span[style*="background-color: #ffff00"] {
   background-color: #854d0e !important;
   color: #fef08a !important;
 }
 
-.theme-dark .editor-content :deep(span[style*="background-color: lightblue"]),
+.theme-dark .editor-content span[style*="background-color: lightblue"],
 .theme-dark
   .editor-content
-  :deep(span[style*="background-color: rgb(173, 216, 230)"]),
-.theme-dark .editor-content :deep(span[style*="background-color:#add8e6"]),
-.theme-dark .editor-content :deep(span[style*="background-color: #add8e6"]) {
+  span[style*="background-color: rgb(173, 216, 230)"],
+.theme-dark .editor-content span[style*="background-color:#add8e6"],
+.theme-dark .editor-content span[style*="background-color: #add8e6"] {
   background-color: #075985 !important;
   color: #bae6fd !important;
 }
 
-.theme-dark .editor-content :deep(span[style*="background-color: lightgreen"]),
+.theme-dark .editor-content span[style*="background-color: lightgreen"],
 .theme-dark
   .editor-content
-  :deep(span[style*="background-color: rgb(144, 238, 144)"]),
-.theme-dark .editor-content :deep(span[style*="background-color:#90ee90"]),
-.theme-dark .editor-content :deep(span[style*="background-color: #90ee90"]) {
+  span[style*="background-color: rgb(144, 238, 144)"],
+.theme-dark .editor-content span[style*="background-color:#90ee90"],
+.theme-dark .editor-content span[style*="background-color: #90ee90"] {
   background-color: #166534 !important;
   color: #bbf7d0 !important;
 }
 
-.theme-dark .editor-content :deep(span[style*="background-color: pink"]),
+.theme-dark .editor-content span[style*="background-color: pink"],
 .theme-dark
   .editor-content
-  :deep(span[style*="background-color: rgb(255, 192, 203)"]),
-.theme-dark .editor-content :deep(span[style*="background-color:#ffc0cb"]),
-.theme-dark .editor-content :deep(span[style*="background-color: #ffc0cb"]) {
+  span[style*="background-color: rgb(255, 192, 203)"],
+.theme-dark .editor-content span[style*="background-color:#ffc0cb"],
+.theme-dark .editor-content span[style*="background-color: #ffc0cb"] {
   background-color: #9f1239 !important;
   color: #fecdd3 !important;
 }
 
-.theme-dark .editor-content :deep(span[style*="background-color: lightyellow"]),
+.theme-dark .editor-content span[style*="background-color: lightyellow"],
 .theme-dark
   .editor-content
-  :deep(span[style*="background-color: rgb(255, 255, 224)"]),
-.theme-dark .editor-content :deep(span[style*="background-color:#ffffe0"]),
-.theme-dark .editor-content :deep(span[style*="background-color: #ffffe0"]) {
+  span[style*="background-color: rgb(255, 255, 224)"],
+.theme-dark .editor-content span[style*="background-color:#ffffe0"],
+.theme-dark .editor-content span[style*="background-color: #ffffe0"] {
   background-color: #713f12 !important;
   color: #fef3c7 !important;
 }
 
-.theme-dark .editor-content :deep(span[style*="background-color: orange"]),
+.theme-dark .editor-content span[style*="background-color: orange"],
 .theme-dark
   .editor-content
-  :deep(span[style*="background-color: rgb(255, 165, 0)"]),
-.theme-dark .editor-content :deep(span[style*="background-color:#ffa500"]),
-.theme-dark .editor-content :deep(span[style*="background-color: #ffa500"]) {
+  span[style*="background-color: rgb(255, 165, 0)"],
+.theme-dark .editor-content span[style*="background-color:#ffa500"],
+.theme-dark .editor-content span[style*="background-color: #ffa500"] {
   background-color: #9a3412 !important;
   color: #fed7aa !important;
 }
 
-.editor-content :deep(blockquote) {
+.editor-content blockquote {
   border-left: 4px solid var(--toolbar-accent);
   margin: 16px 0;
   padding-left: 16px;
@@ -458,18 +465,18 @@
   background: rgba(59, 130, 246, 0.06);
 }
 
-.theme-dark .editor-content :deep(blockquote) {
+.theme-dark .editor-content blockquote {
   background: rgba(59, 130, 246, 0.12);
 }
 
-.editor-content :deep(table) {
+.editor-content table {
   width: 100%;
   border-collapse: collapse;
   margin: 16px 0;
   font-size: 0.95em;
 }
 
-.editor-content :deep(table th) {
+.editor-content table th {
   background: rgba(59, 130, 246, 0.08);
   font-weight: 600;
   text-align: left;
@@ -477,25 +484,25 @@
   border: 1px solid var(--editor-border);
 }
 
-.theme-dark .editor-content :deep(table th) {
+.theme-dark .editor-content table th {
   background: rgba(96, 165, 250, 0.12);
 }
 
-.editor-content :deep(table td) {
+.editor-content table td {
   padding: 8px 12px;
   border: 1px solid var(--editor-border);
 }
 
-.editor-content :deep(table tr:hover) {
+.editor-content table tr:hover {
   background: rgba(59, 130, 246, 0.03);
 }
 
-.theme-dark .editor-content :deep(table tr:hover) {
+.theme-dark .editor-content table tr:hover {
   background: rgba(96, 165, 250, 0.05);
 }
 
 /* Resizable Image Styles */
-.editor-content :deep(.editor-image-wrapper) {
+.editor-content .editor-image-wrapper {
   display: inline-block;
   position: relative;
   max-width: 100%;
@@ -505,17 +512,17 @@
   transition: all 0.2s ease;
 }
 
-.editor-content :deep(.editor-image-wrapper:hover) {
+.editor-content .editor-image-wrapper:hover {
   border-color: var(--toolbar-accent);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 
-.editor-content :deep(.editor-image-wrapper.selected) {
+.editor-content .editor-image-wrapper.selected {
   border-color: var(--toolbar-accent);
   box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
 }
 
-.editor-content :deep(.editor-image-resizable) {
+.editor-content .editor-image-resizable {
   max-width: 100%;
   height: auto;
   display: block;
@@ -523,7 +530,7 @@
   cursor: pointer;
 }
 
-.editor-content :deep(.editor-image-wrapper)::after {
+.editor-content .editor-image-wrapper::after {
   content: "↔️ Drag to resize";
   position: absolute;
   bottom: 8px;
@@ -538,11 +545,11 @@
   transition: opacity 0.2s;
 }
 
-.editor-content :deep(.editor-image-wrapper:hover)::after {
+.editor-content .editor-image-wrapper:hover::after {
   opacity: 1;
 }
 
-.editor-content :deep(.image-resize-handle) {
+.editor-content .image-resize-handle {
   position: absolute;
   width: 12px;
   height: 12px;
@@ -554,30 +561,30 @@
   transition: opacity 0.2s;
 }
 
-.editor-content :deep(.editor-image-wrapper:hover .image-resize-handle),
-.editor-content :deep(.editor-image-wrapper.selected .image-resize-handle) {
+.editor-content .editor-image-wrapper:hover .image-resize-handle,
+.editor-content .editor-image-wrapper.selected .image-resize-handle {
   opacity: 1;
 }
 
-.editor-content :deep(.image-resize-handle.bottom-right) {
+.editor-content .image-resize-handle.bottom-right {
   bottom: -6px;
   right: -6px;
   cursor: nwse-resize;
 }
 
-.editor-content :deep(.image-resize-handle.bottom-left) {
+.editor-content .image-resize-handle.bottom-left {
   bottom: -6px;
   left: -6px;
   cursor: nesw-resize;
 }
 
-.editor-content :deep(.image-resize-handle.top-right) {
+.editor-content .image-resize-handle.top-right {
   top: -6px;
   right: -6px;
   cursor: nesw-resize;
 }
 
-.editor-content :deep(.image-resize-handle.top-left) {
+.editor-content .image-resize-handle.top-left {
   top: -6px;
   left: -6px;
   cursor: nwse-resize;
@@ -631,14 +638,14 @@
 }
 
 /* Horizontal Rule Styles */
-.editor-content :deep(hr) {
+.editor-content hr {
   border: none;
   border-top: 2px solid var(--editor-border);
   margin: 24px 0;
   opacity: 0.6;
 }
 
-.theme-dark .editor-content :deep(hr) {
+.theme-dark .editor-content hr {
   border-top-color: #475569;
   opacity: 1;
 }
@@ -1064,7 +1071,11 @@
 .preview-content-wrapper {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  /* Match the editor's centered document measure so preview reads identically. */
+  width: 100%;
+  max-width: var(--content-measure);
+  margin-inline: auto;
+  padding: 40px clamp(20px, 4vw, 40px) 96px;
   font-size: 16px;
   line-height: 1.7;
   color: var(--content-color);
@@ -1076,53 +1087,53 @@
 }
 
 /* Preview content styling (matches editor content) */
-.preview-content-wrapper :deep(h1),
-.preview-content-wrapper :deep(h2),
-.preview-content-wrapper :deep(h3),
-.preview-content-wrapper :deep(h4),
-.preview-content-wrapper :deep(h5),
-.preview-content-wrapper :deep(h6) {
+.preview-content-wrapper h1,
+.preview-content-wrapper h2,
+.preview-content-wrapper h3,
+.preview-content-wrapper h4,
+.preview-content-wrapper h5,
+.preview-content-wrapper h6 {
   margin: 18px 0 10px;
   font-weight: 700;
   line-height: 1.25;
 }
 
-.preview-content-wrapper :deep(h1) {
+.preview-content-wrapper h1 {
   font-size: 2.2em;
 }
 
-.preview-content-wrapper :deep(h2) {
+.preview-content-wrapper h2 {
   font-size: 1.8em;
 }
 
-.preview-content-wrapper :deep(h3) {
+.preview-content-wrapper h3 {
   font-size: 1.4em;
 }
 
-.preview-content-wrapper :deep(p) {
+.preview-content-wrapper p {
   margin: 10px 0;
 }
 
-.preview-content-wrapper :deep(ul),
-.preview-content-wrapper :deep(ol) {
+.preview-content-wrapper ul,
+.preview-content-wrapper ol {
   margin: 12px 0;
   padding-left: 26px;
 }
 
-.preview-content-wrapper :deep(li) {
+.preview-content-wrapper li {
   margin: 4px 0;
 }
 
-.preview-content-wrapper :deep(a) {
+.preview-content-wrapper a {
   color: var(--toolbar-accent);
   text-decoration: underline;
 }
 
-.preview-content-wrapper :deep(a):hover {
+.preview-content-wrapper a:hover {
   color: #1d4ed8;
 }
 
-.preview-content-wrapper :deep(img) {
+.preview-content-wrapper img {
   max-width: 100%;
   height: auto;
   display: block;
@@ -1130,7 +1141,7 @@
   border-radius: 6px;
 }
 
-.preview-content-wrapper :deep(code) {
+.preview-content-wrapper code {
   background: var(--code-bg);
   padding: 2px 6px;
   border-radius: 4px;
@@ -1138,7 +1149,7 @@
   font-size: 0.9em;
 }
 
-.preview-content-wrapper :deep(pre) {
+.preview-content-wrapper pre {
   background: var(--code-bg);
   padding: 16px;
   border-radius: 8px;
@@ -1146,12 +1157,12 @@
   margin: 16px 0;
 }
 
-.preview-content-wrapper :deep(pre code) {
+.preview-content-wrapper pre code {
   background: transparent;
   padding: 0;
 }
 
-.preview-content-wrapper :deep(blockquote) {
+.preview-content-wrapper blockquote {
   margin: 16px 0;
   padding: 12px 20px;
   border-left: 4px solid var(--toolbar-accent);
@@ -1159,25 +1170,25 @@
   font-style: italic;
 }
 
-.preview-content-wrapper :deep(table) {
+.preview-content-wrapper table {
   width: 100%;
   border-collapse: collapse;
   margin: 16px 0;
 }
 
-.preview-content-wrapper :deep(table th),
-.preview-content-wrapper :deep(table td) {
+.preview-content-wrapper table th,
+.preview-content-wrapper table td {
   border: 1px solid var(--editor-border);
   padding: 10px;
   text-align: left;
 }
 
-.preview-content-wrapper :deep(table th) {
+.preview-content-wrapper table th {
   background: var(--toolbar-bg);
   font-weight: 600;
 }
 
-.preview-content-wrapper :deep(hr) {
+.preview-content-wrapper hr {
   border: none;
   border-top: 2px solid var(--editor-border);
   margin: 24px 0;
@@ -1408,7 +1419,7 @@
 }
 
 /* Page Break Styles */
-.editor-content :deep(.page-break) {
+.editor-content .page-break {
   margin: 24px 0;
   padding: 16px 12px;
   border: 2px dashed var(--editor-border);
@@ -1424,7 +1435,7 @@
   min-height: 60px;
 }
 
-.editor-content :deep(.page-break-label) {
+.editor-content .page-break-label {
   display: inline-block;
   padding: 6px 16px;
   background: var(--toolbar-accent);
@@ -1438,7 +1449,7 @@
   white-space: nowrap;
 }
 
-.editor-content :deep(.page-break-line) {
+.editor-content .page-break-line {
   width: 100%;
   margin: 0;
   border: none;
@@ -1447,19 +1458,19 @@
 }
 
 @media print {
-  .editor-content :deep(.page-break) {
+  .editor-content .page-break {
     page-break-after: always;
     border: none;
     background: none;
   }
 
-  .editor-content :deep(.page-break-label) {
+  .editor-content .page-break-label {
     display: none;
   }
 }
 
 /* Table of Contents Styles */
-.editor-content :deep(.table-of-contents) {
+.editor-content .table-of-contents {
   background: var(--toolbar-bg);
   border: 1px solid var(--editor-border);
   border-radius: var(--radius-md);
@@ -1467,7 +1478,7 @@
   margin: 24px 0;
 }
 
-.editor-content :deep(.table-of-contents h2) {
+.editor-content .table-of-contents h2 {
   margin: 0 0 16px 0;
   font-size: 1.25rem;
   color: var(--content-color);
@@ -1475,17 +1486,17 @@
   padding-bottom: 8px;
 }
 
-.editor-content :deep(.table-of-contents ul) {
+.editor-content .table-of-contents ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.editor-content :deep(.table-of-contents li) {
+.editor-content .table-of-contents li {
   margin: 8px 0;
 }
 
-.editor-content :deep(.table-of-contents a) {
+.editor-content .table-of-contents a {
   color: var(--toolbar-accent);
   text-decoration: none;
   transition: all var(--transition-fast);
@@ -1494,12 +1505,12 @@
   border-radius: var(--radius-sm);
 }
 
-.editor-content :deep(.table-of-contents a:hover) {
+.editor-content .table-of-contents a:hover {
   background: var(--toolbar-hover);
   transform: translateX(4px);
 }
 
-.theme-dark .editor-content :deep(.table-of-contents) {
+.theme-dark .editor-content .table-of-contents {
   background: rgba(30, 41, 59, 0.5);
 }
 
