@@ -544,6 +544,15 @@ function createNewComment() {
     width: 100%;
   }
 
+  .comments-sidebar-open {
+    width: 100%;
+  }
+
+  .comments-sidebar-content {
+    width: 100%;
+    max-width: 100vw;
+  }
+
   .comments-sidebar-backdrop {
     display: block;
   }

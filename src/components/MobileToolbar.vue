@@ -1,9 +1,10 @@
 <template>
-  <div
-    v-if="showToolbar"
-    class="mobile-toolbar"
-    :class="{ 'toolbar-collapsed': isCollapsed }"
-  >
+  <Teleport to="body">
+    <div
+      v-if="showToolbar"
+      class="mobile-toolbar"
+      :class="{ 'toolbar-collapsed': isCollapsed, 'theme-dark': isDark }"
+    >
     <!-- Toolbar Header -->
     <div class="toolbar-header">
       <button
@@ -185,17 +186,18 @@
     </div>
 
     <!-- Haptic Feedback Indicator (for debugging) -->
-    <div
-      v-if="showHapticIndicator"
-      class="haptic-indicator"
-    >
-      <div class="haptic-pulse" />
+      <div
+        v-if="showHapticIndicator"
+        class="haptic-indicator"
+      >
+        <div class="haptic-pulse" />
+      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useDeviceDetection } from "../composables/useDeviceDetection";
 
 // Props
@@ -230,6 +232,33 @@ const showHapticIndicator = ref(false);
 
 // Show toolbar only on mobile devices
 const showToolbar = computed(() => props.visible && showMobileToolbar.value);
+
+// Because the toolbar teleports to <body>, it escapes the editor's
+// `.theme-dark` scope. Mirror the editor root's theme onto our own root so the
+// global themed tokens (mapped in the <style> block) resolve to dark values.
+const isDark = ref(false);
+let themeObserver: MutationObserver | null = null;
+
+const syncTheme = () => {
+  isDark.value = !!document.querySelector(".next-level-editor.theme-dark");
+};
+
+onMounted(() => {
+  syncTheme();
+  const editorEl = document.querySelector(".next-level-editor");
+  if (editorEl) {
+    themeObserver = new MutationObserver(syncTheme);
+    themeObserver.observe(editorEl, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+  }
+});
+
+onUnmounted(() => {
+  themeObserver?.disconnect();
+  themeObserver = null;
+});
 
 // Tabs configuration
 const tabs = [
@@ -479,6 +508,22 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
    ============================================ */
 
 .mobile-toolbar {
+  /* This root is teleported to <body>, so it no longer inherits the
+     editor-scoped toolbar/editor vars. Map every local var to a GLOBAL themed
+     token from tokens.css instead: those live on :root (so the teleported node
+     still inherits them) and flip under the .theme-dark class we mirror onto
+     this root, keeping the whole toolbar theme-correct. */
+  --toolbar-bg: var(--color-surface-raised); /* chrome (header/tabs) surface */
+  --toolbar-border: var(--color-border);
+  --toolbar-header-bg: var(--secondary-bg);
+  --toolbar-tabs-bg: var(--secondary-bg);
+  --toolbar-content-bg: var(--color-surface); /* content surface */
+  --tab-active-bg: var(--color-surface); /* active tab connects to content surface */
+  --button-bg: var(--color-surface);
+  --button-border: var(--color-border);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+
   position: fixed;
   bottom: 0;
   left: 0;

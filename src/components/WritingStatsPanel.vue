@@ -683,7 +683,7 @@ const getSEOClass = (score: number): string => {
 .grade-value {
   font-size: 36px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--color-primary);
 }
 
 .grade-label {
@@ -1071,6 +1071,33 @@ const getSEOClass = (score: number): string => {
   background: #1e293b;
   border-color: #475569;
   color: #bfdbfe;
+}
+
+/* Grade readability number: token-driven, tinted lighter in dark mode */
+.theme-dark .grade-value {
+  color: #93b4fc;
+}
+
+/* SEO donut number: dark charcoal fill is invisible on the deep-blue section */
+.theme-dark .percentage {
+  fill: var(--color-text);
+}
+
+/* Issue titles: dark-red on the dark-red issues section is unreadable */
+.theme-dark .issue-title {
+  color: #fca5a5;
+}
+
+/* Most-common word pills: pale lavender is washed out on the dark panel */
+.theme-dark .word-tag {
+  background: #312e4a;
+  color: #c4b5fd;
+}
+
+/* Repeated-word chips: light-pink disappears on the dark-red section */
+.theme-dark .repeated-word {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fecaca;
 }
 
 /* Scrollbar */
