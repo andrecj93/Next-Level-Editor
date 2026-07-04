@@ -528,7 +528,7 @@ function createNewComment() {
 }
 
 /* Dark mode */
-:global(.dark-mode) .comments-sidebar-content {
+.theme-dark .comments-sidebar-content {
   --editor-bg: #1f2937;
   --secondary-bg: #111827;
   --border-color: #374151;

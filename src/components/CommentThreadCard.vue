@@ -697,7 +697,7 @@ function renderCommentContent(content: string): string {
 }
 
 /* Dark Mode */
-:global(.dark-mode) .comment-thread-card {
+.theme-dark .comment-thread-card {
   --editor-bg: #1f2937;
   --hover-bg: #374151;
   --border-color: #4b5563;
@@ -705,7 +705,7 @@ function renderCommentContent(content: string): string {
   --text-muted: #9ca3af;
 }
 
-:global(.dark-mode) .comment-quote {
+.theme-dark .comment-quote {
   background: linear-gradient(
     135deg,
     rgba(59, 130, 246, 0.08) 0%,
@@ -713,7 +713,7 @@ function renderCommentContent(content: string): string {
   );
 }
 
-:global(.dark-mode) .comment-quote:hover {
+.theme-dark .comment-quote:hover {
   background: linear-gradient(
     135deg,
     rgba(59, 130, 246, 0.12) 0%,

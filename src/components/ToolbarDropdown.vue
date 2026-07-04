@@ -330,7 +330,7 @@ watch(
 }
 
 /* Dark mode */
-.dark .dropdown-trigger {
+.theme-dark .dropdown-trigger {
   --toolbar-btn-bg: #2d2d2d;
   --toolbar-btn-hover: #3a3a3a;
   --toolbar-btn-active: #1a3a52;
@@ -339,12 +339,12 @@ watch(
   --text-color: #e0e0e0;
 }
 
-.dark .dropdown-trigger[data-tooltip]::after {
+.theme-dark .dropdown-trigger[data-tooltip]::after {
   background: rgba(15, 23, 42, 0.95);
   color: #e2e8f0;
 }
 
-.dark .dropdown-menu {
+.theme-dark .dropdown-menu {
   --dropdown-bg: #2d2d2d;
   --dropdown-item-hover: #3a3a3a;
   --dropdown-item-active: #1a3a52;

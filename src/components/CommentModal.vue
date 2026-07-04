@@ -905,7 +905,7 @@ function getInitials(name: string): string {
 }
 
 /* Dark mode support */
-:global(.dark-mode) .comment-modal {
+.theme-dark .comment-modal {
   --editor-bg: #1f2937;
   --secondary-bg: #111827;
   --border-color: #374151;
@@ -914,7 +914,7 @@ function getInitials(name: string): string {
   --hover-bg: #374151;
 }
 
-:global(.dark-mode) .comment-selected-text-content {
+.theme-dark .comment-selected-text-content {
   background: linear-gradient(
     135deg,
     rgba(59, 130, 246, 0.1) 0%,
@@ -922,8 +922,8 @@ function getInitials(name: string): string {
   );
 }
 
-:global(.dark-mode) .comment-mention-item:hover,
-:global(.dark-mode) .comment-mention-item.active {
+.theme-dark .comment-mention-item:hover,
+.theme-dark .comment-mention-item.active {
   background: linear-gradient(
     90deg,
     rgba(59, 130, 246, 0.15) 0%,
