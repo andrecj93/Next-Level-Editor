@@ -22,7 +22,7 @@
   --toolbar-accent: #3b82f6;
   --toolbar-hover: rgba(59, 130, 246, 0.12);
   --content-color: #1f2937;
-  --placeholder-color: #9ca3af;
+  --placeholder-color: #6b7280; /* ~4.8:1 on white — WCAG AA (was #9ca3af, 2.5:1) */
   --tooltip-bg: rgba(17, 24, 39, 0.92);
   --tooltip-text: #f9fafb;
   --history-bg: rgba(59, 130, 246, 0.08);
@@ -49,7 +49,7 @@
   --toolbar-accent: #60a5fa;
   --toolbar-hover: rgba(96, 165, 250, 0.2);
   --content-color: #e2e8f0;
-  --placeholder-color: #475569;
+  --placeholder-color: #7c8aa0; /* ~4.7:1 on #0f172a — WCAG AA (was #475569, 2.4:1) */
   --tooltip-bg: rgba(15, 23, 42, 0.95);
   --tooltip-text: #e2e8f0;
   --history-bg: rgba(96, 165, 250, 0.12);
@@ -341,6 +341,21 @@
   font-size: 1.4em;
 }
 
+.editor-content h4 {
+  font-size: 1.15em;
+}
+
+.editor-content h5 {
+  font-size: 1em;
+}
+
+.editor-content h6 {
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+}
+
 .editor-content p {
   margin: 10px 0;
 }
@@ -356,12 +371,20 @@
 }
 
 .editor-content a {
-  color: var(--toolbar-accent);
+  color: #1d4ed8; /* ~5.6:1 on the light editor surface — WCAG AA */
   text-decoration: underline;
 }
 
+.theme-dark .editor-content a {
+  color: #60a5fa;
+}
+
 .editor-content a:hover {
-  color: #1d4ed8;
+  color: #1e40af;
+}
+
+.theme-dark .editor-content a:hover {
+  color: #93c5fd;
 }
 
 .editor-content img {
@@ -382,6 +405,30 @@
 
 .theme-dark .editor-content code {
   background: rgba(148, 163, 184, 0.2);
+}
+
+/* Code inside a <pre> block must not get the inline-code pill (double
+   background/padding/radius); let the <pre> own the surface. */
+.editor-content pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+/* Branded text selection (matches the accent used for variable pills) instead
+   of the untuned browser default — especially poor on the dark surface. */
+.editor-content ::selection {
+  background: rgba(59, 130, 246, 0.24);
+}
+.editor-content ::-moz-selection {
+  background: rgba(59, 130, 246, 0.24);
+}
+.theme-dark .editor-content ::selection {
+  background: rgba(96, 165, 250, 0.32);
+}
+.theme-dark .editor-content ::-moz-selection {
+  background: rgba(96, 165, 250, 0.32);
 }
 
 .editor-content pre {
@@ -796,13 +843,17 @@
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Deliberately NOT 'all' — animating outline/transform lags the focus ring
+     and makes hover bob. Only tween paint properties. */
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
 
 .toolbar-btn-modern:hover {
   background: var(--toolbar-hover);
-  transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
@@ -811,8 +862,8 @@
 }
 
 .toolbar-btn-modern:active {
-  transform: translateY(0);
-  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--toolbar-hover);
+  transition: background 0.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .toolbar-btn-modern.active {
@@ -1211,13 +1262,15 @@
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 34px;
 }
 
 .dropdown-trigger:hover {
   background: var(--toolbar-hover);
-  transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
