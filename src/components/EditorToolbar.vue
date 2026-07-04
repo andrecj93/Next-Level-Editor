@@ -184,10 +184,11 @@
         </button>
       </div>
 
-      <!-- Tools Dropdown -->
+      <!-- Tools Dropdown (menu of stateful actions — keep the static label) -->
       <ToolbarSection
         type="dropdown"
         label="Tools"
+        preserve-label
         icon="<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 16 16&quot; fill=&quot;currentColor&quot;><path d=&quot;M1 1h6v1H2v13h12V9h1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5zm8 0l5.5 5.5-1 1L12 6v4h-1V6L9.5 7.5l-1-1L14 1h-5z&quot;/></svg>"
         tooltip="Productivity tools"
         :items="productivityDropdownItems"

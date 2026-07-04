@@ -208,7 +208,7 @@ export function useContextMenu(options: ContextMenuOptions) {
         icon: "✂️",
         shortcut: "Ctrl+X",
         disabled: !hasSelection,
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+         
         onClick: async () => {
           const sel = globalThis.getSelection();
           if (!sel || sel.rangeCount === 0) return;
@@ -242,7 +242,7 @@ export function useContextMenu(options: ContextMenuOptions) {
         icon: "📋",
         shortcut: "Ctrl+C",
         disabled: !hasSelection,
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+         
         onClick: async () => {
           const sel = globalThis.getSelection();
           if (!sel || sel.rangeCount === 0) return;
@@ -271,7 +271,7 @@ export function useContextMenu(options: ContextMenuOptions) {
         // (Chrome/Edge). Where it is not (Safari/Firefox), keep it disabled -
         // those browsers require a real paste event (Ctrl+V/Cmd+V).
         disabled: !pasteSupported,
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+         
         onClick: async () => {
           if (!pasteSupported) return;
 

@@ -10,6 +10,7 @@
     "
     :items="items"
     :disabled="!visible"
+    :preserve-label="preserveLabel"
   />
 
   <!-- Button Group Section -->
@@ -59,6 +60,8 @@ interface Props {
   icon?: string;
   tooltip?: string;
   items?: ToolbarAction[] | any[];
+  /** Keep the static trigger label (see ToolbarDropdown.preserveLabel). */
+  preserveLabel?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -67,6 +70,7 @@ withDefaults(defineProps<Props>(), {
   icon: "",
   tooltip: "",
   items: () => [],
+  preserveLabel: false,
 });
 
 defineEmits<{

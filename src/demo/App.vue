@@ -300,6 +300,7 @@
             :show-writing-stats="editorConfig.showWritingStats"
             :enable-comments="editorConfig.enableComments"
             :enable-variables="editorConfig.enableVariables"
+            :mention-search="demoMentionSearch"
             @focus="handleFocus"
             @blur="handleBlur"
           />
@@ -552,6 +553,22 @@ const handleFocus = () => {
 
 const handleBlur = () => {
   console.log("Editor blurred");
+};
+
+// Demo @mention provider: in a real app this would query your user directory.
+const demoTeam = [
+  { id: "u1", name: "Ada Lovelace", email: "ada@example.com" },
+  { id: "u2", name: "Alan Turing", email: "alan@example.com" },
+  { id: "u3", name: "Grace Hopper", email: "grace@example.com" },
+  { id: "u4", name: "Margaret Hamilton", email: "margaret@example.com" },
+];
+const demoMentionSearch = (query: string) => {
+  const q = query.toLowerCase();
+  return demoTeam.filter(
+    (user) =>
+      user.name.toLowerCase().includes(q) ||
+      user.email.toLowerCase().includes(q)
+  );
 };
 </script>
 

@@ -85,12 +85,20 @@ interface Props {
   items: DropdownItem[];
   modelValue?: boolean;
   disabled?: boolean;
+  /**
+   * Keep the static label as the trigger text. By default the trigger shows
+   * the active item's label (select-like dropdowns such as Format/Size); menus
+   * with stateful toggle items (e.g. Tools > Spell Check) must opt out so the
+   * trigger doesn't get hijacked by whichever item happens to be active.
+   */
+  preserveLabel?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   icon: "",
   tooltip: "",
   disabled: false,
+  preserveLabel: false,
 });
 
 const emit = defineEmits<{
@@ -106,6 +114,7 @@ const hasActiveItem = computed(() => {
 });
 
 const displayLabel = computed(() => {
+  if (props.preserveLabel) return props.label;
   const activeItem = props.items.find((item) => item.isActive?.());
   return activeItem?.label || props.label;
 });

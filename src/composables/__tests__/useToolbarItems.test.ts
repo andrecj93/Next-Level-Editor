@@ -50,6 +50,7 @@ function createOptions(editor: HTMLDivElement | null) {
     isFullScreen: ref(false),
     spellCheckEnabled: ref(false),
     captureSnapshot: noop,
+    toggleHistoryTimeline: noop,
   };
 }
 

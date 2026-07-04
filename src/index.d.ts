@@ -13,9 +13,25 @@ declare const plugin: Plugin
 
 export default plugin
 
+export interface MentionSuggestion {
+  id: string
+  name: string
+  email?: string
+  avatarUrl?: string
+}
+
 export interface NextLevelEditorProps {
   modelValue?: string
   placeholder?: string
+  width?: string
+  height?: string
+  showWritingStats?: boolean
+  enableComments?: boolean
+  enableVariables?: boolean
+  /** Host-supplied @mention provider for comment mentions. */
+  mentionSearch?: (
+    query: string
+  ) => Promise<MentionSuggestion[]> | MentionSuggestion[]
 }
 
 export interface NextLevelEditorEmits {

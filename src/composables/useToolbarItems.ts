@@ -215,6 +215,7 @@ interface ToolbarItemsOptions {
   isFullScreen: Ref<boolean>;
   spellCheckEnabled: Ref<boolean>;
   captureSnapshot: () => void;
+  toggleHistoryTimeline: () => void;
 }
 
 /**
@@ -258,6 +259,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     isFullScreen,
     spellCheckEnabled,
     captureSnapshot,
+    toggleHistoryTimeline,
   } = options;
 
   const formatDropdownItems = computed(() => [
@@ -603,6 +605,12 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       label: "Templates",
       icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h4v4H2V2zm5 0h4v4H7V2zm5 0h2v4h-2V2zM2 7h4v4H2V7zm5 0h4v4H7V7zm5 0h2v4h-2V7zM2 12h4v2H2v-2zm5 0h4v2H7v-2zm5 0h2v2h-2v-2z"/></svg>',
       onClick: openTemplateModal,
+    },
+    {
+      id: "history-timeline",
+      label: "History Timeline",
+      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 1 0 7 7h-1.5A5.5 5.5 0 1 1 8 2.5V1zm0 3v4l3 2 .75-1.23L9.5 7.5V4H8zM8 1v1.5A5.5 5.5 0 0 1 13.5 8H15a7 7 0 0 0-7-7z"/></svg>',
+      onClick: toggleHistoryTimeline,
     },
   ]);
 

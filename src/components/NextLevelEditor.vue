@@ -78,6 +78,26 @@
       @action="handleMobileAction"
     />
 
+    <!-- History Timeline panel (toggled from the Tools dropdown) -->
+    <div v-if="showHistoryTimeline" class="history-timeline-panel">
+      <HistoryTimeline
+        :history="timelineEntries"
+        :current-index="historyIndex"
+        :can-go-back="historyIndex > 0"
+        :can-go-forward="historyIndex < history.length - 1"
+        :has-history="history.length > 0"
+        :history-size="history.length"
+        :timeline-progress="timelineProgress"
+        @go-to-entry="jumpToHistory"
+        @go-back="undo"
+        @go-forward="redo"
+        @go-to-first="jumpToHistory(0)"
+        @go-to-latest="jumpToHistory(history.length - 1)"
+        @clear="clearHistory"
+        @export="handleExportHistory"
+      />
+    </div>
+
     <!-- Context Menu -->
     <ContextMenu
       :show="showContextMenu"
@@ -169,6 +189,7 @@
       :threads="comments.threads.value"
       :active-thread-id="comments.activeThread.value?.id ?? null"
       :is-open="showCommentsSidebar"
+      :mention-search="mentionSearch"
       @close="showCommentsSidebar = false"
       @select-thread="handleSelectThread"
       @resolve-thread="handleResolveThread"
@@ -183,6 +204,7 @@
       v-if="enableComments && comments"
       :is-open="showCommentModal"
       :selected-text="selectedTextForComment"
+      :mention-search="mentionSearch"
       @submit="handleCommentSubmit"
       @cancel="handleCommentCancel"
     />
@@ -269,7 +291,6 @@ import { useSmartToolbar } from "../composables/useSmartToolbar";
 import { useEditorContent } from "../composables/useEditorContent";
 import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
 import { useAccessibility } from "../composables/useAccessibility";
-import { useImageResize } from "../composables/useImageResize";
 import { useEditorSetup } from "../composables/useEditorSetup";
 import { useToolbarItems } from "../composables/useToolbarItems";
 import { useActiveStates } from "../composables/useActiveStates";
@@ -296,6 +317,7 @@ import { useCommandPalette } from "../composables/useCommandPalette";
 import { useSlashCommands } from "../composables/useSlashCommands";
 import FloatingToolbar from "./FloatingToolbar.vue";
 import MobileToolbar from "./MobileToolbar.vue";
+import HistoryTimeline from "./HistoryTimeline.vue";
 import ContextMenu from "./ContextMenu.vue";
 import ModalsContainer from "./ModalsContainer.vue";
 import EditorToolbar from "./EditorToolbar.vue";
@@ -311,7 +333,9 @@ import CommentModal from "./CommentModal.vue";
 import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
+import type { MentionSuggestion } from "../composables/useComments";
 import { useVariables } from "../composables/useVariables";
+import { useSmartAutocomplete } from "../composables/useSmartAutocomplete";
 
 interface Props {
   modelValue?: string;
@@ -321,6 +345,14 @@ interface Props {
   showWritingStats?: boolean;
   enableComments?: boolean;
   enableVariables?: boolean;
+  /**
+   * Host-supplied @mention provider for comments: given the text typed after
+   * "@", return the users to suggest. Without it the mention dropdown stays
+   * empty. [#4]
+   */
+  mentionSearch?: (
+    query: string
+  ) => Promise<MentionSuggestion[]> | MentionSuggestion[];
 }
 
 interface Emits {
@@ -336,12 +368,18 @@ const props = withDefaults(defineProps<Props>(), {
   height: undefined,
   showWritingStats: false,
   enableComments: false,
+  mentionSearch: undefined,
 });
 
 const emit = defineEmits<Emits>();
 
 const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
 const editorContent = computed(() => editorPanelsRef.value?.editorRef || null);
+
+// Smart autocomplete engine (markdown shortcuts, URL/email auto-link, curly
+// quotes, smart punctuation). Invoked from the wrapped onInput below. [#1]
+const { handleInput: handleSmartAutocomplete } =
+  useSmartAutocomplete(editorContent);
 
 // Selection management using composable
 const { rememberSelection: rememberSelectionBase, performWithSelection } =
@@ -362,6 +400,9 @@ useAccessibility();
 
 // Writing Assistant (opt-in feature) - local state for toggle
 const showWritingStatsPanel = ref(false);
+
+// History Timeline panel visibility (toggled from the Tools dropdown). [#14]
+const showHistoryTimeline = ref(false);
 const writingAssistant = props.showWritingStats ? useWritingAssistant() : null;
 
 // Comments System (opt-in feature)
@@ -373,6 +414,10 @@ const comments = props.enableComments
         name: "Current User",
         color: "#3b82f6",
       },
+      // Route @mention lookups through the host-supplied provider. [#4]
+      onMentionTriggered: props.mentionSearch
+        ? async (query: string) => props.mentionSearch!(query)
+        : undefined,
     })
   : (null as ReturnType<typeof useComments> | null);
 
@@ -411,12 +456,41 @@ const {
   captureAndEmit: captureSnapshot,
   undo,
   redo,
+  jumpToHistory,
+  clearHistory,
 } = useEditorContent({
   editorContent,
   modelValue: toRef(props, "modelValue"),
   onUpdate: (value) => emit("update:modelValue", value),
   triggerAutoSave,
 });
+
+// History Timeline adapters: map the live undo/redo history (the single source
+// of truth) onto the HistoryTimeline component's entry shape. [#14]
+const timelineEntries = computed(() =>
+  history.value.map((entry) => ({
+    id: entry.id,
+    content: entry.preview,
+    timestamp: entry.timestamp,
+  }))
+);
+const timelineProgress = computed(() =>
+  history.value.length > 1
+    ? (historyIndex.value / (history.value.length - 1)) * 100
+    : 100
+);
+
+// Download the full history as JSON (History Timeline "Export").
+function handleExportHistory() {
+  const payload = JSON.stringify(history.value, null, 2);
+  const blob = new Blob([payload], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "editor-history.json";
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 // Editor computed properties and watchers using composable
 const { themeClass, editorStyles, wordCount, characterCount } =
@@ -528,12 +602,6 @@ const {
   applyBackgroundColor,
   applyFontSize,
   performWithSelection
-);
-
-// Image resize composable
-const { setupImageResizing, cleanup: cleanupImageResize } = useImageResize(
-  editorContent,
-  captureSnapshot
 );
 
 // Formatting Handlers - Using useFormattingHandlers composable
@@ -754,6 +822,9 @@ const {
   isFullScreen,
   spellCheckEnabled,
   captureSnapshot,
+  toggleHistoryTimeline: () => {
+    showHistoryTimeline.value = !showHistoryTimeline.value;
+  },
 });
 
 // Command Palette Commands using composable
@@ -926,6 +997,14 @@ const {
 
 // Wrap onInput to include variable detection and wrapping
 const onInput = () => {
+  // Smart autocomplete (markdown shortcuts, URL/email auto-link, curly quotes,
+  // "--"/"..." punctuation) — only on WYSIWYG surfaces, never in code view.
+  // Runs BEFORE onInputBase so the converted DOM is what gets synced to
+  // v-model. Re-entrancy is handled inside the composable (isApplying guard).
+  if (viewMode.value === "editor" || viewMode.value === "split") {
+    handleSmartAutocomplete();
+  }
+
   onInputBase();
 
   // Detect variable syntax for autocomplete
@@ -1202,6 +1281,10 @@ function closeTopMostOverlay(): boolean {
     showColorsDropdown.value = false;
     return true;
   }
+  if (showHistoryTimeline.value) {
+    showHistoryTimeline.value = false;
+    return true;
+  }
   if (showEmojiPicker.value) {
     showEmojiPicker.value = false;
     return true;
@@ -1299,8 +1382,6 @@ useEditorSetup({
   captureSnapshot,
   handleKeydown,
   enableSpellCheck,
-  setupImageResizing,
-  cleanupImageResize,
   handleDocumentClick: handleGlobalDocumentClick,
   handleEscape: handleGlobalEscape,
   onSelectionChange,
@@ -1312,6 +1393,21 @@ useEditorSetup({
 <style src="../styles/gap-fallback.css"></style>
 
 <style scoped>
+/* History Timeline floating panel (toggled from the Tools dropdown) */
+.history-timeline-panel {
+  position: fixed;
+  top: 140px;
+  right: 32px;
+  width: 360px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  z-index: 9998;
+  border-radius: 14px;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  background: var(--editor-bg, #ffffff);
+}
+
 /* FAB Transition */
 .fab-fade-enter-active,
 .fab-fade-leave-active {

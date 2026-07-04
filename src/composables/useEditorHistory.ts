@@ -4,6 +4,8 @@ export interface HistoryEntry {
   id: string;
   html: string;
   preview: string;
+  /** Capture time (epoch ms) — shown by the history timeline. */
+  timestamp: number;
 }
 
 /**
@@ -46,6 +48,7 @@ export function useEditorHistory() {
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       html,
       preview,
+      timestamp: Date.now(),
     };
     history.value.push(entry);
     historyIndex.value = history.value.length - 1;
@@ -86,6 +89,34 @@ export function useEditorHistory() {
   };
 
   /**
+   * Jump directly to a history entry by index (history-timeline navigation).
+   */
+  const goToIndex = (
+    index: number,
+    callback: (html: string) => void
+  ): void => {
+    if (
+      index < 0 ||
+      index >= history.value.length ||
+      index === historyIndex.value
+    ) {
+      return;
+    }
+    historyIndex.value = index;
+    applyHistoryEntry(history.value[index], callback);
+  };
+
+  /**
+   * Clear the timeline, keeping only the current state as the sole entry so
+   * the document itself is untouched.
+   */
+  const clearHistory = (): void => {
+    const current = history.value[historyIndex.value];
+    history.value = current ? [current] : [];
+    historyIndex.value = history.value.length - 1;
+  };
+
+  /**
    * Check if undo is available
    */
   const canUndo = (): boolean => historyIndex.value > 0;
@@ -102,6 +133,8 @@ export function useEditorHistory() {
     captureSnapshot,
     undo,
     redo,
+    goToIndex,
+    clearHistory,
     canUndo,
     canRedo,
   };

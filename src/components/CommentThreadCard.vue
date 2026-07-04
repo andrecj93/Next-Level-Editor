@@ -163,6 +163,7 @@
       </div>
       <div class="comment-body">
         <CommentReplyForm
+          :mention-search="mentionSearch"
           @submit="handleReplySubmit"
           @cancel="showReplyForm = false"
         />
@@ -239,13 +240,20 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import type { CommentThread } from "../composables/useComments";
+import type {
+  CommentThread,
+  MentionSuggestion,
+} from "../composables/useComments";
 import CommentReplyForm from "./CommentReplyForm.vue";
 
 interface Props {
   thread: CommentThread;
   isActive: boolean;
   isExpanded?: boolean;
+  /** Host-supplied @mention provider, passed through to the reply form. */
+  mentionSearch?: (
+    query: string
+  ) => Promise<MentionSuggestion[]> | MentionSuggestion[];
 }
 
 interface Emits {
@@ -259,6 +267,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   isExpanded: false,
+  mentionSearch: undefined,
 });
 
 const emit = defineEmits<Emits>();

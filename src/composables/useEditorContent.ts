@@ -24,6 +24,8 @@ export function useEditorContent(options: UseEditorContentOptions) {
     captureSnapshot,
     undo: performUndo,
     redo: performRedo,
+    goToIndex: performGoToIndex,
+    clearHistory,
     canUndo,
     canRedo,
   } = useEditorHistory();
@@ -111,6 +113,15 @@ export function useEditorContent(options: UseEditorContentOptions) {
   };
 
   /**
+   * Jump directly to a history entry (history-timeline navigation). Applies the
+   * snapshot through the same pipeline as undo/redo so the preview, code view
+   * and word counts stay in sync.
+   */
+  const jumpToHistory = (index: number) => {
+    performGoToIndex(index, applyRestoredSnapshot);
+  };
+
+  /**
    * Sync code editor content to WYSIWYG editor
    */
   const syncCodeToEditor = (code: string) => {
@@ -176,6 +187,8 @@ export function useEditorContent(options: UseEditorContentOptions) {
     captureAndEmit,
     undo,
     redo,
+    jumpToHistory,
+    clearHistory,
     canUndo,
     canRedo,
     syncCodeToEditor,

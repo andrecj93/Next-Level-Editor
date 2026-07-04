@@ -106,6 +106,7 @@
             :thread="thread"
             :is-active="activeThreadId === thread.id"
             :is-expanded="expandedThreads.has(thread.id)"
+            :mention-search="mentionSearch"
             @select="selectThread"
             @toggle="toggleThread"
             @resolve="resolveThread"
@@ -139,13 +140,20 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import type { CommentThread } from "../composables/useComments";
+import type {
+  CommentThread,
+  MentionSuggestion,
+} from "../composables/useComments";
 import CommentThreadCard from "./CommentThreadCard.vue";
 
 interface Props {
   threads: CommentThread[];
   activeThreadId: string | null;
   isOpen?: boolean;
+  /** Host-supplied @mention provider, passed through to the reply forms. */
+  mentionSearch?: (
+    query: string
+  ) => Promise<MentionSuggestion[]> | MentionSuggestion[];
 }
 
 interface Emits {
@@ -160,6 +168,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   isOpen: true,
+  mentionSearch: undefined,
 });
 
 const emit = defineEmits<Emits>();
