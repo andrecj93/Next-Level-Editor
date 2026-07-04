@@ -214,8 +214,8 @@
   width: 280px;
   background: var(--editor-bg);
   border: 1px solid var(--editor-border);
-  border-radius: 12px;
-  box-shadow: 0 24px 40px -20px rgba(15, 23, 42, 0.45);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   z-index: 50;
   /* Height is capped inline by the position clamp; lay out header + list so
@@ -806,10 +806,9 @@
 
 .toolbar-divider {
   width: 1px;
-  height: 28px;
-  background: var(--editor-border);
+  height: 32px;
+  background: var(--color-divider);
   margin: 0 6px;
-  opacity: 0.6;
   align-self: center;
 }
 
@@ -960,7 +959,7 @@
 
 .view-mode-btn {
   min-width: 38px;
-  height: 32px;
+  height: 34px;
   padding: 0 10px;
   border: none;
   background: transparent;
@@ -968,7 +967,9 @@
   border-radius: 6px;
   cursor: pointer;
   font-size: 15px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   display: flex;
   align-items: center;
@@ -1362,8 +1363,8 @@
   left: 0;
   background: var(--editor-bg);
   border: 1px solid var(--editor-border);
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   z-index: 1000;
   padding: 8px;
   min-width: 200px;
