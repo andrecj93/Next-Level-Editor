@@ -3,7 +3,11 @@
     <div
       v-if="show"
       class="command-menu"
-      :style="{ top: `${position.top}px`, left: `${position.left}px` }"
+      :style="{
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+        maxHeight: position.maxHeight ? `${position.maxHeight}px` : undefined,
+      }"
     >
       <div class="command-menu-header">
         Quick Actions
@@ -41,6 +45,8 @@ export interface CommandOption {
 export interface CommandMenuPosition {
   top: number;
   left: number;
+  /** Cap so the menu scrolls internally instead of extending under fixed bars. */
+  maxHeight?: number;
 }
 
 interface Props {

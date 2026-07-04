@@ -37,7 +37,11 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
   } = options;
 
   const showCommandMenu = ref(false);
-  const commandMenuPosition = ref({ top: 0, left: 0 });
+  const commandMenuPosition = ref<{
+    top: number;
+    left: number;
+    maxHeight?: number;
+  }>({ top: 0, left: 0 });
 
   const insertBlockquote = () => {
     performWithSelection((root) => {
@@ -86,6 +90,68 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     }
   };
 
+  // Conservative menu size used to keep it fully visible before it is measured.
+  const MENU_ESTIMATED_HEIGHT = 320;
+  const MENU_ESTIMATED_WIDTH = 300;
+  const MENU_MARGIN = 8;
+
+  /**
+   * Resolve the caret rect for positioning. An empty block returns a 0x0 rect
+   * from Range.getBoundingClientRect(), which used to dump the menu at the
+   * page's top-left corner — fall back to the caret's closest element rect.
+   */
+  const getCaretRect = (range: Range): DOMRect => {
+    const rect = range.getBoundingClientRect();
+    if (rect.width !== 0 || rect.height !== 0 || rect.top !== 0) return rect;
+    const node = range.startContainer;
+    const element =
+      node.nodeType === Node.ELEMENT_NODE
+        ? (node as HTMLElement)
+        : node.parentElement;
+    return element?.getBoundingClientRect() ?? rect;
+  };
+
+  /**
+   * Clamp the menu into the usable viewport: below the sticky main toolbar,
+   * above the fixed mobile toolbar (when present), and inside the horizontal
+   * bounds. Without this, on small screens the fixed bars sat on top of the
+   * menu and intercepted every click on its items.
+   */
+  const clampMenuPosition = (viewportTop: number, viewportLeft: number) => {
+    const topBar = document
+      .querySelector(".editor-toolbar-modern")
+      ?.getBoundingClientRect();
+    const mobileBar = document
+      .querySelector(".mobile-toolbar")
+      ?.getBoundingClientRect();
+
+    const minTop = (topBar ? Math.max(0, topBar.bottom) : 0) + MENU_MARGIN;
+    const bottomLimit =
+      mobileBar && mobileBar.height > 0
+        ? mobileBar.top
+        : window.innerHeight;
+    const maxTop = Math.max(
+      minTop,
+      bottomLimit - MENU_ESTIMATED_HEIGHT - MENU_MARGIN
+    );
+    const maxLeft = Math.max(
+      MENU_MARGIN,
+      window.innerWidth - MENU_ESTIMATED_WIDTH - MENU_MARGIN
+    );
+
+    const top = Math.min(Math.max(viewportTop, minTop), maxTop);
+    // The menu may not fit at all between the bars (small screens with the
+    // mobile toolbar open) — cap its height so it scrolls internally instead
+    // of extending underneath the fixed bar, which would intercept clicks.
+    const maxHeight = Math.max(160, bottomLimit - top - MENU_MARGIN);
+
+    return {
+      top,
+      left: Math.min(Math.max(viewportLeft, MENU_MARGIN), maxLeft),
+      maxHeight,
+    };
+  };
+
   const openCommandMenu = () => {
     nextTick(() => {
       // Remove the slash if it was inserted (in case preventDefault didn't work)
@@ -93,11 +159,13 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
 
       const range = getSelectionRange();
       if (!range) return;
-      const rect = range.getBoundingClientRect();
+      const rect = getCaretRect(range);
+      const clamped = clampMenuPosition(rect.bottom + 8, rect.left);
       showCommandMenu.value = true;
       commandMenuPosition.value = {
-        top: rect.bottom + window.scrollY + 8,
-        left: rect.left + window.scrollX,
+        top: clamped.top + window.scrollY,
+        left: clamped.left + window.scrollX,
+        maxHeight: clamped.maxHeight,
       };
     });
   };
