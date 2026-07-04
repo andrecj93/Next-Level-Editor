@@ -914,7 +914,11 @@ body {
   margin-bottom: 24px;
 }
 
-.editor-section h2 {
+/* Direct child only — this styles the demo section's own <h2> heading, NOT the
+   headings the user types inside the editor (which would otherwise get a fixed
+   #333 that is invisible in the editor's dark theme). */
+.editor-section > .section-header h2,
+.editor-section > h2 {
   margin-bottom: 12px;
   color: #333;
   font-size: 2em;
