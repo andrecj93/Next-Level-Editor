@@ -1,3 +1,5 @@
+import { buildEmbedContainerStyle } from "../utils/embeddedResizable";
+
 const ALLOWED_TAGS = new Set([
   "A",
   "B",
@@ -28,10 +30,27 @@ const ALLOWED_TAGS = new Set([
   "TR",
   "TH",
   "TD",
+  // Media inside embedded-resizable containers. IFRAME src is additionally
+  // restricted to the embed-host allowlist below.
+  "VIDEO",
+  "IFRAME",
 ]);
 
 const GLOBAL_ALLOWED_ATTRIBUTES = new Set(["title"]);
 const UNWRAP_TAGS = new Set(["DIV"]);
+
+// The editor's media wrapper (created by utils/embeddedResizable.ts). Kept as
+// a special-cased DIV: its attributes are rebuilt from validated data-* values
+// rather than trusted. The transient corner resize handles must never persist.
+const EMBED_CONTAINER_CLASS = "embedded-resizable-container";
+const RESIZE_HANDLE_CLASS = "embed-resize-handle";
+const EMBED_TYPES = new Set(["image", "video", "embed", "file"]);
+const EMBED_ALIGNMENTS = new Set(["left", "center", "right"]);
+
+// Only these iframe sources may survive sanitization (YouTube/Vimeo embeds as
+// produced by utils/embed.ts).
+const SAFE_EMBED_IFRAME_PATTERN =
+  /^https:\/\/(?:www\.)?(?:youtube\.com|youtube-nocookie\.com)\/embed\/[\w-]+|^https:\/\/player\.vimeo\.com\/video\/\d+/i;
 
 const ELEMENT_ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
   a: new Set(["href", "rel", "target", "title"]),
@@ -48,6 +67,17 @@ const ELEMENT_ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
   ul: new Set(["style"]),
   ol: new Set(["style"]),
   blockquote: new Set(["style"]),
+  video: new Set(["src", "controls", "style", "width", "height"]),
+  iframe: new Set([
+    "src",
+    "width",
+    "height",
+    "frameborder",
+    "allow",
+    "allowfullscreen",
+    "title",
+    "style",
+  ]),
 };
 
 const SAFE_URL_PATTERN = /^(?:(?:https?|mailto|tel):|\/\/|\/|#)/i;
@@ -58,6 +88,11 @@ const STYLE_ALLOWED_PROPERTIES = new Set([
   "color",
   "background-color",
   "font-size",
+  // Safe sizing properties used by media inside embed containers.
+  "width",
+  "height",
+  "object-fit",
+  "display",
 ]);
 const UNSAFE_STYLE_VALUE_PATTERN = /url\(|expression\(|javascript:|[<>]/i;
 
@@ -105,17 +140,103 @@ export function useHtmlSanitizer() {
         const next = child.nextSibling;
         if (child.nodeType === Node.ELEMENT_NODE) {
           const element = child as HTMLElement;
-          if (ALLOWED_TAGS.has(element.tagName)) {
+          if (element.tagName === "DIV") {
+            if (element.classList.contains(RESIZE_HANDLE_CLASS)) {
+              // Transient resize-handle UI must never persist into content.
+              element.remove();
+            } else if (element.classList.contains(EMBED_CONTAINER_CLASS)) {
+              // Media wrapper: rebuild its attributes from validated data-*
+              // values instead of trusting them, then sanitize its children.
+              if (sanitizeEmbedContainer(element)) {
+                sanitizeTree(element);
+              } else {
+                child = element.firstChild ?? next;
+                unwrapElement(element);
+                continue;
+              }
+            } else {
+              // Unwrapping splices the children in BEFORE the saved `next`;
+              // resume iteration from the first spliced child so they are
+              // sanitized too instead of being skipped.
+              child = element.firstChild ?? next;
+              unwrapElement(element);
+              continue;
+            }
+          } else if (
+            element.tagName === "IFRAME" &&
+            !SAFE_EMBED_IFRAME_PATTERN.test(
+              element.getAttribute("src")?.trim() ?? ""
+            )
+          ) {
+            // Iframes are only allowed from the embed-host allowlist; an
+            // iframe without a safe src is useless and gets removed whole.
+            element.remove();
+          } else if (ALLOWED_TAGS.has(element.tagName)) {
             sanitizeAttributes(element);
             sanitizeTree(element);
           } else if (UNWRAP_TAGS.has(element.tagName)) {
+            child = element.firstChild ?? next;
             unwrapElement(element);
+            continue;
           } else {
             element.remove();
           }
         }
         child = next;
       }
+    };
+
+    /**
+     * Normalize an embedded-resizable media container: validate its data-*
+     * payload, drop every attribute, and rebuild the trusted set (including a
+     * deterministic style regenerated from the validated size/alignment).
+     * Returns false when the container is not salvageable (unknown type).
+     */
+    const sanitizeEmbedContainer = (element: HTMLElement): boolean => {
+      const type = (element.getAttribute("data-type") ?? "").toLowerCase();
+      if (!EMBED_TYPES.has(type)) return false;
+
+      const parseSize = (raw: string | null, fallback: number): number => {
+        const parsed = Number.parseInt(raw ?? "", 10);
+        if (Number.isNaN(parsed)) return fallback;
+        return Math.min(2000, Math.max(50, parsed));
+      };
+      const width = parseSize(element.getAttribute("data-width"), 400);
+      const height = parseSize(element.getAttribute("data-height"), 300);
+
+      const alignmentRaw = (
+        element.getAttribute("data-alignment") ?? "center"
+      ).toLowerCase();
+      const alignment = (
+        EMBED_ALIGNMENTS.has(alignmentRaw) ? alignmentRaw : "center"
+      ) as "left" | "center" | "right";
+      const maintainAspect =
+        element.getAttribute("data-maintain-aspect") === "true";
+
+      const srcRaw = (element.getAttribute("data-src") ?? "").trim();
+      const src =
+        srcRaw &&
+        (SAFE_URL_PATTERN.test(srcRaw) || SAFE_DATA_IMAGE_PATTERN.test(srcRaw))
+          ? srcRaw
+          : "";
+
+      for (const attribute of Array.from(element.attributes)) {
+        element.removeAttribute(attribute.name);
+      }
+      element.setAttribute("class", EMBED_CONTAINER_CLASS);
+      element.setAttribute("data-type", type);
+      element.setAttribute("data-src", src);
+      element.setAttribute("data-width", String(width));
+      element.setAttribute("data-height", String(height));
+      element.setAttribute("data-maintain-aspect", String(maintainAspect));
+      element.setAttribute("data-alignment", alignment);
+      element.setAttribute(
+        "style",
+        buildEmbedContainerStyle(width, height, alignment)
+      );
+      element.setAttribute("contenteditable", "false");
+      element.setAttribute("tabindex", "0");
+      return true;
     };
 
     const isAttributeAllowed = (
@@ -142,6 +263,9 @@ export function useHtmlSanitizer() {
         return SAFE_URL_PATTERN.test(attributeValue);
       }
       if (attributeName === "src") {
+        if (element.tagName === "IFRAME") {
+          return SAFE_EMBED_IFRAME_PATTERN.test(attributeValue);
+        }
         return (
           SAFE_URL_PATTERN.test(attributeValue) ||
           SAFE_DATA_IMAGE_PATTERN.test(attributeValue)
@@ -223,7 +347,11 @@ export function useHtmlSanitizer() {
     };
 
     const convertDivsToParagraphs = (root: HTMLElement) => {
-      const divs = Array.from(root.querySelectorAll("div"));
+      const divs = Array.from(root.querySelectorAll("div")).filter(
+        // Embedded-media wrappers are the one legitimate div in content; they
+        // were already normalized by sanitizeEmbedContainer above.
+        (div) => !div.classList.contains(EMBED_CONTAINER_CLASS)
+      );
       for (const div of divs) {
         const paragraph = workingDocument.createElement("p");
         while (div.firstChild) {
