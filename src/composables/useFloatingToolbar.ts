@@ -18,12 +18,34 @@ export function useFloatingToolbar(options?: UseFloatingToolbarOptions) {
   const showFloatingToolbar = ref(false);
   const floatingToolbarTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 
+  // While the user is interacting with the MAIN toolbar (e.g. a dropdown is
+  // open), the selection bubble must stay hidden — any selectionchange used to
+  // re-show it right on top of the open dropdown menu, intercepting clicks on
+  // the menu items. Suppression is set on toolbar mousedown and lifted when
+  // the user interacts with the editor surface again.
+  const floatingToolbarSuppressed = ref(false);
+
+  const suppressFloatingToolbar = () => {
+    floatingToolbarSuppressed.value = true;
+    showFloatingToolbar.value = false;
+  };
+
+  const unsuppressFloatingToolbar = () => {
+    floatingToolbarSuppressed.value = false;
+  };
+
   /**
    * Update floating toolbar visibility based on current selection
    */
   const updateFloatingToolbar = () => {
     // Don't show floating toolbar if user is adding a comment
     if (options?.isAddingComment?.value) {
+      showFloatingToolbar.value = false;
+      return;
+    }
+
+    // Suppressed while the main toolbar is being used.
+    if (floatingToolbarSuppressed.value) {
       showFloatingToolbar.value = false;
       return;
     }
@@ -118,6 +140,8 @@ export function useFloatingToolbar(options?: UseFloatingToolbarOptions) {
     floatingToolbarTimer,
     updateFloatingToolbar,
     hideFloatingToolbar,
+    suppressFloatingToolbar,
+    unsuppressFloatingToolbar,
     floatingActions,
   };
 }

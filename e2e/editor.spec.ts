@@ -248,7 +248,11 @@ test.describe('Next Level Editor - Undo/Redo', () => {
   })
 
   test('undo button should be disabled initially', async ({ page }) => {
-    const undoButton = page.locator('button[aria-label="Undo"]')
+    // Scope to the main toolbar: on touch viewports the MobileToolbar renders
+    // its own Undo button, so an unscoped aria-label match is ambiguous.
+    const undoButton = page.locator(
+      '.editor-toolbar-modern button[aria-label="Undo"]'
+    )
     await expect(undoButton).toBeDisabled()
   })
 })

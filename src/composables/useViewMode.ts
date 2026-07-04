@@ -5,6 +5,12 @@ interface ViewModeOptions {
   editorContent: Ref<HTMLElement | null>;
   htmlContent: Ref<string>;
   codeContent: Ref<string>;
+  /**
+   * Optionally supply the viewMode ref instead of creating one here — lets the
+   * host declare it early (e.g. so an active-editable computed can close over
+   * it before this composable is initialized).
+   */
+  viewModeRef?: Ref<"editor" | "code" | "split" | "preview">;
 }
 
 /**
@@ -14,7 +20,9 @@ interface ViewModeOptions {
 export function useViewMode(options: ViewModeOptions) {
   const { editorContent, htmlContent, codeContent } = options;
 
-  const viewMode = ref<"editor" | "code" | "split" | "preview">("editor");
+  const viewMode =
+    options.viewModeRef ??
+    ref<"editor" | "code" | "split" | "preview">("editor");
 
   /**
    * Restore editor content from stored HTML if empty

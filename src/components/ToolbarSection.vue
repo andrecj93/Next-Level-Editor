@@ -11,6 +11,7 @@
     :items="items"
     :disabled="!visible"
     :preserve-label="preserveLabel"
+    @remember-selection="$emit('remember-selection')"
   />
 
   <!-- Button Group Section -->

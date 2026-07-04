@@ -12,7 +12,7 @@
       :aria-expanded="isOpen"
       :aria-haspopup="true"
       :disabled="disabled"
-      @mousedown.prevent
+      @mousedown.prevent="$emit('remember-selection')"
       @click.stop="!disabled ? toggle() : null"
     >
       <span
@@ -104,6 +104,9 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   "update:modelValue": [value: boolean];
   "item-click": [item: DropdownItem];
+  // Emitted on trigger mousedown so the host can save the editor selection
+  // and suppress the floating bubble before the dropdown opens.
+  "remember-selection": [];
 }>();
 
 const dropdownRef = ref<HTMLElement | null>(null);

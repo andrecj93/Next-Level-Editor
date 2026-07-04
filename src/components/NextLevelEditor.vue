@@ -28,7 +28,7 @@
       :view-mode="viewMode"
       :theme="theme"
       :is-full-screen="isFullScreen"
-      @remember-selection="rememberSelection"
+      @remember-selection="rememberSelectionFromToolbar"
       @toggle-colors-dropdown="showColorsDropdown = !showColorsDropdown"
       @text-color-change="handleTextColor"
       @background-color-change="handleBackgroundColor"
@@ -374,7 +374,24 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
-const editorContent = computed(() => editorPanelsRef.value?.editorRef || null);
+
+// View-mode state is declared early so the active-editable computed below can
+// close over it (the refs are passed into useViewMode further down).
+const viewMode = ref<"editor" | "code" | "split" | "preview">("editor");
+const splitRightMode = ref<"preview" | "editor">("preview");
+
+// The ACTIVE editable surface. In split view with the right pane in editor
+// mode, the visible surface is splitEditorRef — the classic editorRef is a
+// display:none div there, and a hidden element cannot host a selection, so
+// every toolbar/formatting action silently no-opped in that mode. [#23]
+const editorContent = computed(() => {
+  const panels = editorPanelsRef.value;
+  if (!panels) return null;
+  if (viewMode.value === "split" && splitRightMode.value === "editor") {
+    return panels.splitEditorRef || panels.editorRef || null;
+  }
+  return panels.editorRef || null;
+});
 
 // Smart autocomplete engine (markdown shortcuts, URL/email auto-link, curly
 // quotes, smart punctuation). Invoked from the wrapped onInput below. [#1]
@@ -390,6 +407,16 @@ const rememberSelection = () => {
   rememberSelectionBase();
   // Hide floating toolbar when interacting with main toolbar to prevent pointer event interference
   showFloatingToolbar.value = false;
+};
+
+// Main-toolbar mousedown handler: SUPPRESS the bubble (not just hide it), so a
+// later selectionchange can't re-show it on top of an open dropdown menu where
+// it would intercept clicks on the menu items. Suppression lifts on the next
+// editor interaction (mouseup/focus). Kept separate from rememberSelection,
+// which is also invoked internally on editor focus/blur.
+const rememberSelectionFromToolbar = () => {
+  rememberSelectionBase();
+  suppressFloatingToolbar();
 };
 
 // Theme and UI state using composable
@@ -517,15 +544,15 @@ const {
   isVisible: isToolbarSectionVisible,
 } = useSmartToolbar();
 
-// View mode management using composable
-const { viewMode } = useViewMode({
+// View mode management using composable. The viewMode ref itself is declared
+// near the top (before the active-editable computed); this wires the mode-
+// switch content synchronization around it.
+useViewMode({
   editorContent,
   htmlContent,
   codeContent,
+  viewModeRef: viewMode,
 });
-
-// Split view right panel mode
-const splitRightMode = ref<"preview" | "editor">("preview");
 
 // Modal management using composable - pass rememberSelection to save cursor position
 const {
@@ -762,6 +789,8 @@ const {
   showFloatingToolbar,
   floatingToolbarTimer,
   updateFloatingToolbar,
+  suppressFloatingToolbar,
+  unsuppressFloatingToolbar,
   floatingActions,
 } = useFloatingToolbar({
   handleInlineAction,
@@ -973,9 +1002,9 @@ const {
 // Editor Events - Using useEditorEvents composable
 const {
   onInput: onInputBase,
-  onFocus,
+  onFocus: onFocusBase,
   onBlur,
-  onMouseUp,
+  onMouseUp: onMouseUpBase,
   onSelectionChange,
   onCodeInput: onCodeInputBase,
   onCodeBlur,
@@ -994,6 +1023,17 @@ const {
   tableDesignerPosition,
   emit,
 });
+
+// Editor interaction lifts the floating-toolbar suppression set by toolbar
+// mousedown (see rememberSelectionFromToolbar).
+const onFocus = () => {
+  unsuppressFloatingToolbar();
+  onFocusBase();
+};
+const onMouseUp = () => {
+  unsuppressFloatingToolbar();
+  onMouseUpBase();
+};
 
 // Wrap onInput to include variable detection and wrapping
 const onInput = () => {
@@ -1027,12 +1067,15 @@ const onInput = () => {
 const onCodeInput = (event: Event) => {
   onCodeInputBase(event);
 
-  // If split view is active with editor mode on right, sync the split editor
+  // If split view is active with editor mode on right, sync the split editor.
+  // With the active-editable computed, editorContent already IS the split
+  // editor in that mode (onCodeInputBase wrote into it) — only copy when they
+  // are distinct elements.
   if (viewMode.value === "split" && splitRightMode.value === "editor") {
     nextTick(() => {
-      if (editorPanelsRef.value?.splitEditorRef && editorContent.value) {
-        editorPanelsRef.value.splitEditorRef.innerHTML =
-          editorContent.value.innerHTML;
+      const splitEl = editorPanelsRef.value?.splitEditorRef;
+      if (splitEl && editorContent.value && splitEl !== editorContent.value) {
+        splitEl.innerHTML = editorContent.value.innerHTML;
       }
     });
   }
@@ -1041,29 +1084,33 @@ const onCodeInput = (event: Event) => {
 // Handle split view right panel mode change
 function handleSplitRightModeChange(mode: "preview" | "editor") {
   splitRightMode.value = mode;
-  // Sync content when switching to editor mode
+  // Populate the split editor when switching to editor mode. Read from the
+  // reactive htmlContent (single source of truth) with the hidden editor as a
+  // fallback — after the mode flips, editorContent already resolves to the
+  // split editor itself, so copying from editorContent would be a no-op self
+  // copy that left the pane empty.
   if (mode === "editor") {
     nextTick(() => {
-      if (editorPanelsRef.value?.splitEditorRef && editorContent.value) {
-        editorPanelsRef.value.splitEditorRef.innerHTML =
-          editorContent.value.innerHTML;
+      const panels = editorPanelsRef.value;
+      const splitEl = panels?.splitEditorRef;
+      if (!splitEl) return;
+      const source = htmlContent.value || panels?.editorRef?.innerHTML || "";
+      if (splitEl.innerHTML !== source) {
+        splitEl.innerHTML = source;
       }
     });
   }
 }
 
-// Handle split editor input - sync back through the shared content pipeline so
-// the input is sanitized and history/emit stay consistent with every other
-// input path (previously it hand-rolled an UNSANITIZED emit after
-// captureSnapshot, which overrode the sanitized value).
+// Handle split editor input - run the shared capture+sanitize+emit pipeline
+// (editorContent resolves to the split editor here) and keep the hidden main
+// editor mirrored so switching modes preserves content.
 function onSplitEditorInput(event: Event) {
   const target = event.target as HTMLElement;
-  if (!editorContent.value || editorContent.value.innerHTML === target.innerHTML) {
-    return;
+  const hidden = editorPanelsRef.value?.editorRef;
+  if (hidden && hidden !== target) {
+    hidden.innerHTML = target.innerHTML;
   }
-  // Push the split-editor content into the main (hidden) editor, then run the
-  // shared capture+sanitize+emit path.
-  editorContent.value.innerHTML = target.innerHTML;
   codeContent.value = formatHtml(target.innerHTML);
   captureSnapshot();
 }
