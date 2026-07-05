@@ -181,9 +181,10 @@ watch(
   align-items: center;
   gap: 6px;
   padding: 7px 11px;
-  border: 1px solid var(--border-color, #ddd);
-  background: var(--toolbar-btn-bg, white);
-  color: var(--text-color, #333);
+  /* Theme tokens so triggers reskin with any editor theme (light + dark). */
+  border: 1px solid var(--color-border, #ddd);
+  background: var(--color-surface-raised, white);
+  color: var(--toolbar-text, #333);
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
@@ -192,8 +193,8 @@ watch(
 }
 
 .dropdown-trigger:hover:not(:disabled) {
-  background: var(--toolbar-btn-hover, #f5f5f5);
-  border-color: var(--border-hover-color, #999);
+  background: var(--color-surface-overlay, #f5f5f5);
+  border-color: var(--toolbar-accent, #999);
 }
 
 .dropdown-trigger:disabled {
@@ -202,9 +203,9 @@ watch(
 }
 
 .dropdown-trigger.active {
-  background: var(--toolbar-btn-active, #e8f0fe);
-  border-color: var(--primary-color, #4285f4);
-  color: var(--primary-color, #4285f4);
+  background: var(--toolbar-hover, #e8f0fe);
+  border-color: var(--toolbar-accent, #4285f4);
+  color: var(--toolbar-accent, #4285f4);
 }
 
 .dropdown-icon {
@@ -255,8 +256,8 @@ watch(
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  background: var(--dropdown-bg, white);
-  border: 1px solid var(--border-color, #ddd);
+  background: var(--color-surface, white);
+  border: 1px solid var(--color-border, #ddd);
   border-radius: var(--radius-lg, 8px);
   box-shadow: var(--shadow-lg);
   z-index: 10000;
@@ -273,7 +274,7 @@ watch(
   padding: 8px 12px;
   border: none;
   background: transparent;
-  color: var(--text-color, #333);
+  color: var(--color-text, #333);
   cursor: pointer;
   font-size: 14px;
   text-align: left;
@@ -281,12 +282,12 @@ watch(
 }
 
 .dropdown-item:hover {
-  background: var(--dropdown-item-hover, #f5f5f5);
+  background: var(--color-surface-overlay, #f5f5f5);
 }
 
 .dropdown-item.active {
-  background: var(--dropdown-item-active, #e8f0fe);
-  color: var(--primary-color, #4285f4);
+  background: var(--toolbar-hover, #e8f0fe);
+  color: var(--toolbar-accent, #4285f4);
   font-weight: 500;
 }
 
@@ -310,7 +311,7 @@ watch(
 
 .dropdown-divider {
   height: 1px;
-  background: var(--border-color, #ddd);
+  background: var(--color-border, #ddd);
   margin: 4px 0;
 }
 
@@ -330,26 +331,10 @@ watch(
   transform: translateY(-4px);
 }
 
-/* Dark mode */
-.theme-dark .dropdown-trigger {
-  --toolbar-btn-bg: var(--color-surface-raised);
-  --toolbar-btn-hover: var(--color-surface-overlay);
-  --toolbar-btn-active: rgba(96, 165, 250, 0.18);
-  --border-color: var(--color-border);
-  --border-hover-color: var(--color-border-dark);
-  --text-color: var(--color-text);
-}
-
+/* Dark mode — trigger/menu colours now come straight from the theme tokens
+   (which flip for .theme-dark), so only the tooltip needs a dark override. */
 .theme-dark .dropdown-trigger[data-tooltip]::after {
   background: rgba(15, 23, 42, 0.95);
   color: #e2e8f0;
-}
-
-.theme-dark .dropdown-menu {
-  --dropdown-bg: var(--color-surface-raised);
-  --dropdown-item-hover: var(--color-surface-overlay);
-  --dropdown-item-active: rgba(96, 165, 250, 0.18);
-  --border-color: var(--color-border);
-  --text-color: var(--color-text);
 }
 </style>

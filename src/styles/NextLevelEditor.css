@@ -10,6 +10,12 @@
 /* Import Comments Styles */
 @import "./comments.css";
 
+/* Import editor themes (whole-editor token skins; compose with light/dark) */
+@import "./themes/classic.css";
+@import "./themes/minimal.css";
+@import "./themes/midnight.css";
+@import "./themes/warm.css";
+
 .next-level-editor {
   position: relative;
   display: flex;
@@ -1023,12 +1029,14 @@
   display: inline-flex;
 }
 .editor-toolbar-modern .export-section .dropdown-trigger {
-  background: linear-gradient(180deg, #4f8ff8 0%, var(--toolbar-accent) 100%);
+  /* Flat accent so it reskins with any theme; depth from a neutral shadow +
+     top-highlight rather than a hardcoded blue gradient. */
+  background: var(--toolbar-accent);
   border-color: transparent;
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 2px 8px -1px rgba(59, 130, 246, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px -1px rgba(15, 23, 42, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 .editor-toolbar-modern .export-section .dropdown-trigger .dropdown-arrow {
   opacity: 0.9;
@@ -1039,24 +1047,15 @@
   right: 0;
 }
 .editor-toolbar-modern .export-section .dropdown-trigger:hover:not(:disabled) {
-  background: linear-gradient(180deg, #5b96f8 0%, #3b82f6 100%);
+  filter: brightness(1.08);
   border-color: transparent;
   color: #ffffff;
-  box-shadow: 0 5px 14px -2px rgba(59, 130, 246, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  box-shadow: 0 5px 14px -2px rgba(15, 23, 42, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 .theme-dark .editor-toolbar-modern .export-section .dropdown-trigger {
-  background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
-  color: #ffffff;
-  box-shadow: 0 2px 8px -1px rgba(96, 165, 250, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
-}
-.theme-dark
-  .editor-toolbar-modern
-  .export-section
-  .dropdown-trigger:hover:not(:disabled) {
-  background: linear-gradient(180deg, #6aa5fb 0%, #3b82f6 100%);
-  color: #ffffff;
+  box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .toolbar-btn-modern:focus-visible {

@@ -1,0 +1,47 @@
+/* ============================================================
+   THEME: Warm — Editorial
+   An editorial sepia mood — Medium / iA-Writer calm, built on paper-warm creams and warm ink rather than cool grays.
+
+   A whole-editor theme is nothing but design-token overrides —
+   no component code. Applied by <NextLevelEditor theme-preset="warm" />,
+   which puts .nle-theme-warm on the editor root. It composes with the
+   light/dark toggle (.theme-dark), so each theme ships BOTH modes.
+   To add a theme: copy _TEMPLATE.css, rename, retint, and @import it
+   from NextLevelEditor.css.
+   ============================================================ */
+
+/* Light mode */
+.next-level-editor.nle-theme-warm {
+  --editor-bg: #fbf7ef;
+  --editor-border: #e2d8c5;
+  --toolbar-bg: #f4ede0;
+  --toolbar-text: #2e2a24;
+  --toolbar-accent: #a8461f;
+  --toolbar-hover: rgba(168,70,31,0.10);
+  --content-color: #2e2a24;
+  --color-surface: #fbf7ef;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: #f1e9da;
+  --color-border: #e6ddcc;
+  --color-divider: #e6ddcc;
+  --color-text: #2e2a24;
+  --color-text-secondary: #7a6f5f;
+}
+
+/* Dark mode */
+.next-level-editor.nle-theme-warm.theme-dark {
+  --editor-bg: #211c16;
+  --editor-border: #3a3225;
+  --toolbar-bg: #1a1611;
+  --toolbar-text: #ece3d4;
+  --toolbar-accent: #e0895a;
+  --toolbar-hover: rgba(224,137,90,0.20);
+  --content-color: #ece3d4;
+  --color-surface: #2a241c;
+  --color-surface-raised: #37301f;
+  --color-surface-overlay: #453c29;
+  --color-border: #3a3225;
+  --color-divider: #3a3225;
+  --color-text: #f2ebdd;
+  --color-text-secondary: #b9ab97;
+}

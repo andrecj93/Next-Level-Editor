@@ -130,6 +130,7 @@ const props = [
   { name: "placeholder", type: "string", def: "'…'", desc: "Placeholder shown when empty." },
   { name: "width", type: "string", def: "'100%'", desc: "Editor width (any CSS length)." },
   { name: "height", type: "string", def: "'600px'", desc: "Editor height (any CSS length)." },
+  { name: "themePreset", type: "string", def: "'default'", desc: "Whole-editor theme: default | classic | minimal | midnight | warm." },
   { name: "showWritingStats", type: "boolean", def: "false", desc: "Enable the writing-stats panel." },
   { name: "enableComments", type: "boolean", def: "false", desc: "Enable inline comments & mentions." },
   { name: "enableVariables", type: "boolean", def: "false", desc: "Enable {{ variable }} tokens." },

@@ -44,6 +44,17 @@ export { default as AriaLiveRegion } from "./components/AriaLiveRegion.vue";
 export { default as SkipLinks } from "./components/SkipLinks.vue";
 export { default as LandmarkRegion } from "./components/LandmarkRegion.vue";
 
+// Editor theme presets (whole-editor token skins)
+export {
+  useEditorThemes,
+  AVAILABLE_THEMES,
+  editorThemeClass,
+} from "./composables/useEditorThemes";
+export type {
+  EditorThemeMeta,
+  EditorThemePreset,
+} from "./composables/useEditorThemes";
+
 // Export mobile/touch composables
 export { useMobileGestures } from "./composables/useMobileGestures";
 export { useDeviceDetection } from "./composables/useDeviceDetection";

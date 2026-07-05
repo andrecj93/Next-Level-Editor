@@ -1,6 +1,11 @@
 <template>
   <div
-    :class="['next-level-editor', themeClass, { fullscreen: isFullScreen }]"
+    :class="[
+      'next-level-editor',
+      themeClass,
+      themePresetClass,
+      { fullscreen: isFullScreen },
+    ]"
     :style="editorStyles"
   >
     <!-- Accessibility: Skip Links -->
@@ -297,6 +302,7 @@ import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
 import { useAccessibility } from "../composables/useAccessibility";
 import { useEditorSetup } from "../composables/useEditorSetup";
 import { useToolbarItems } from "../composables/useToolbarItems";
+import { editorThemeClass } from "../composables/useEditorThemes";
 import { useActiveStates } from "../composables/useActiveStates";
 import { useSelection } from "../composables/useSelection";
 import { useModals } from "../composables/useModals";
@@ -350,6 +356,13 @@ interface Props {
   enableComments?: boolean;
   enableVariables?: boolean;
   /**
+   * Whole-editor theme preset: "classic" | "minimal" | "midnight" | "warm"
+   * (or "default"). Skins the toolbar, menus, panels and editing surface via
+   * token overrides, and composes with the light/dark toggle. See
+   * {@link AVAILABLE_THEMES}.
+   */
+  themePreset?: string;
+  /**
    * Host-supplied @mention provider for comments: given the text typed after
    * "@", return the users to suggest. Without it the mention dropdown stays
    * empty. [#4]
@@ -373,9 +386,13 @@ const props = withDefaults(defineProps<Props>(), {
   showWritingStats: false,
   enableComments: false,
   mentionSearch: undefined,
+  themePreset: "default",
 });
 
 const emit = defineEmits<Emits>();
+
+// Whole-editor theme preset → root class (composes with the light/dark class).
+const themePresetClass = computed(() => editorThemeClass(props.themePreset));
 
 const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
 

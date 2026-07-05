@@ -1,0 +1,47 @@
+/* ============================================================
+   THEME: Minimal — Google Docs
+   Modeled on Google Docs: the chrome should disappear so the document is the star.
+
+   A whole-editor theme is nothing but design-token overrides —
+   no component code. Applied by <NextLevelEditor theme-preset="minimal" />,
+   which puts .nle-theme-minimal on the editor root. It composes with the
+   light/dark toggle (.theme-dark), so each theme ships BOTH modes.
+   To add a theme: copy _TEMPLATE.css, rename, retint, and @import it
+   from NextLevelEditor.css.
+   ============================================================ */
+
+/* Light mode */
+.next-level-editor.nle-theme-minimal {
+  --editor-bg: #ffffff;
+  --editor-border: #e8eaed;
+  --toolbar-bg: #fbfbfb;
+  --toolbar-text: #202124;
+  --toolbar-accent: #1a73e8;
+  --toolbar-hover: rgba(26,115,232,0.10);
+  --content-color: #202124;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: #f1f3f4;
+  --color-border: #e8eaed;
+  --color-divider: #e8eaed;
+  --color-text: #202124;
+  --color-text-secondary: #5f6368;
+}
+
+/* Dark mode */
+.next-level-editor.nle-theme-minimal.theme-dark {
+  --editor-bg: #202124;
+  --editor-border: #2c2d30;
+  --toolbar-bg: #1b1c1e;
+  --toolbar-text: #e3e3e6;
+  --toolbar-accent: #8ab4f8;
+  --toolbar-hover: rgba(138,180,248,0.20);
+  --content-color: #e3e3e6;
+  --color-surface: #1f2023;
+  --color-surface-raised: #282a2d;
+  --color-surface-overlay: #303134;
+  --color-border: #3c3d40;
+  --color-divider: #2c2d30;
+  --color-text: #e8eaed;
+  --color-text-secondary: #a2a4a8;
+}

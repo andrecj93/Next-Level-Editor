@@ -1,0 +1,47 @@
+/* ============================================================
+   THEME: Classic — Microsoft Word
+   CLASSIC evokes Microsoft Word: a serious, trustworthy "document" tool.
+
+   A whole-editor theme is nothing but design-token overrides —
+   no component code. Applied by <NextLevelEditor theme-preset="classic" />,
+   which puts .nle-theme-classic on the editor root. It composes with the
+   light/dark toggle (.theme-dark), so each theme ships BOTH modes.
+   To add a theme: copy _TEMPLATE.css, rename, retint, and @import it
+   from NextLevelEditor.css.
+   ============================================================ */
+
+/* Light mode */
+.next-level-editor.nle-theme-classic {
+  --editor-bg: #ffffff;
+  --editor-border: #d0d7e2;
+  --toolbar-bg: #f4f6fa;
+  --toolbar-text: #26313f;
+  --toolbar-accent: #2457b8;
+  --toolbar-hover: rgba(36,87,184,0.10);
+  --content-color: #1e2a3a;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: #f0f3f8;
+  --color-border: #dde3ec;
+  --color-divider: #e4e9f1;
+  --color-text: #1e2a3a;
+  --color-text-secondary: #5a6472;
+}
+
+/* Dark mode */
+.next-level-editor.nle-theme-classic.theme-dark {
+  --editor-bg: #0d1520;
+  --editor-border: #1e293b;
+  --toolbar-bg: #101825;
+  --toolbar-text: #dbe4f0;
+  --toolbar-accent: #5b9bf0;
+  --toolbar-hover: rgba(91,155,240,0.22);
+  --content-color: #e5eaf2;
+  --color-surface: #1a2434;
+  --color-surface-raised: #243044;
+  --color-surface-overlay: #2e3c52;
+  --color-border: #30405a;
+  --color-divider: #30405a;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #a9b6c9;
+}
