@@ -221,7 +221,11 @@ const demoMentionSearch = (query: string) => {
 .fade-down-enter-from, .fade-down-leave-to { opacity: 0; transform: translateY(-8px); }
 
 @media (max-width: 640px) {
+  /* Give the template picker its own full-width row so its label isn't clipped;
+     the config/star buttons wrap onto the next line. */
+  .ctrl-group { flex: 1 1 100%; }
+  .select-wrap { flex: 1; }
   .select { min-width: 0; width: 100%; }
-  .ctrl-group { flex: 1; }
+  .ctrl-spacer { display: none; }
 }
 </style>
