@@ -92,21 +92,71 @@
             role="menu"
             @click.stop
           >
-            <div class="color-picker-wrapper">
-              <ColorPicker
-                :model-value="textColor"
-                label="Text Color"
-                icon="A"
-                @update:model-value="$emit('text-color-change', $event)"
-              />
+            <!-- Text color -->
+            <div class="colors-section">
+              <div class="colors-section-label">Text color</div>
+              <div class="colors-swatches">
+                <button
+                  v-for="c in textColorPresets"
+                  :key="c"
+                  type="button"
+                  class="colors-swatch"
+                  :class="{ active: sameColor(textColor, c) }"
+                  :style="{ background: c }"
+                  :aria-label="`Text color ${c}`"
+                  :title="c"
+                  @mousedown.prevent="$emit('remember-selection')"
+                  @click="$emit('text-color-change', c)"
+                />
+              </div>
+              <div class="colors-custom-row">
+                <ColorPicker
+                  :model-value="textColor"
+                  label="Text Color"
+                  icon="+"
+                  @update:model-value="$emit('text-color-change', $event)"
+                />
+                <span class="colors-custom-label">Custom…</span>
+              </div>
             </div>
-            <div class="color-picker-wrapper">
-              <ColorPicker
-                :model-value="backgroundColor"
-                label="Highlight"
-                icon="◼"
-                @update:model-value="$emit('background-color-change', $event)"
-              />
+
+            <!-- Highlight -->
+            <div class="colors-section">
+              <div class="colors-section-label">Highlight</div>
+              <div class="colors-swatches">
+                <button
+                  type="button"
+                  class="colors-swatch colors-swatch-none"
+                  :class="{
+                    active: !backgroundColor || backgroundColor === 'transparent',
+                  }"
+                  aria-label="No highlight"
+                  title="None"
+                  @mousedown.prevent="$emit('remember-selection')"
+                  @click="$emit('background-color-change', 'transparent')"
+                />
+                <button
+                  v-for="c in highlightColorPresets"
+                  :key="c"
+                  type="button"
+                  class="colors-swatch"
+                  :class="{ active: sameColor(backgroundColor, c) }"
+                  :style="{ background: c }"
+                  :aria-label="`Highlight ${c}`"
+                  :title="c"
+                  @mousedown.prevent="$emit('remember-selection')"
+                  @click="$emit('background-color-change', c)"
+                />
+              </div>
+              <div class="colors-custom-row">
+                <ColorPicker
+                  :model-value="backgroundColor"
+                  label="Highlight"
+                  icon="+"
+                  @update:model-value="$emit('background-color-change', $event)"
+                />
+                <span class="colors-custom-label">Custom…</span>
+              </div>
             </div>
           </div>
         </transition>
@@ -365,4 +415,34 @@ defineEmits<{
   "toggle-theme": [];
   "toggle-fullscreen": [];
 }>();
+
+// Curated quick-pick palettes for the Colors menu (custom picker still available).
+const textColorPresets = [
+  "#000000",
+  "#374151",
+  "#6b7280",
+  "#dc2626",
+  "#ea580c",
+  "#ca8a04",
+  "#16a34a",
+  "#0891b2",
+  "#2563eb",
+  "#7c3aed",
+  "#db2777",
+  "#ffffff",
+];
+const highlightColorPresets = [
+  "#fde047",
+  "#fca5a5",
+  "#fdba74",
+  "#86efac",
+  "#5eead4",
+  "#93c5fd",
+  "#c4b5fd",
+  "#f9a8d4",
+];
+
+/** Case-insensitive hex compare so an active preset is highlighted. */
+const sameColor = (a: string | undefined, b: string): boolean =>
+  !!a && a.toLowerCase() === b.toLowerCase();
 </script>

@@ -1556,7 +1556,8 @@
 }
 
 .dropdown-menu.colors-menu {
-  min-width: 280px;
+  min-width: 244px;
+  padding: 12px;
 }
 
 .color-picker-wrapper {
@@ -1565,6 +1566,95 @@
 
 .color-picker-wrapper:last-child {
   margin-bottom: 0;
+}
+
+/* Colors menu — labelled sections + a quick-pick swatch palette (Docs/Word
+   style), with the full custom picker still one click away. */
+.colors-section + .colors-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.colors-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+  margin-bottom: 9px;
+}
+
+.colors-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.colors-swatch {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.12s ease;
+}
+
+.theme-dark .colors-swatch {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.colors-swatch:hover {
+  transform: scale(1.16);
+}
+
+.colors-swatch.active {
+  box-shadow: 0 0 0 2px var(--toolbar-accent),
+    0 0 0 3px var(--color-surface-raised);
+}
+
+.colors-swatch-none {
+  position: relative;
+  background: var(--color-surface-raised);
+}
+
+.colors-swatch-none::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to top right,
+    transparent 43%,
+    #ef4444 43%,
+    #ef4444 57%,
+    transparent 57%
+  );
+}
+
+.colors-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.colors-custom-label {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .colors-swatch {
+    transition: box-shadow 0.12s ease;
+  }
+  .colors-swatch:hover {
+    transform: none;
+  }
 }
 
 .dropdown-fade-enter-active,
