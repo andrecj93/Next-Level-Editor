@@ -6,7 +6,7 @@
     <!-- Header -->
     <div class="stats-header">
       <h3 class="stats-title">
-        <span class="stats-icon">📊</span>
+        <span class="stats-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg></span>
         Writing Statistics
       </h3>
       <button
@@ -29,7 +29,7 @@
         class="stats-section"
       >
         <h4 class="section-title">
-          📝 Basic Stats
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><line x1="8" x2="16" y1="13" y2="13"/><line x1="8" x2="16" y1="17" y2="17"/></svg> Basic Stats
         </h4>
         <div class="stats-grid">
           <div class="stat-item">
@@ -67,7 +67,7 @@
         class="stats-section"
       >
         <h4 class="section-title">
-          🎯 Readability
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Readability
         </h4>
 
         <div class="readability-main">
@@ -122,7 +122,7 @@
         class="stats-section"
       >
         <h4 class="section-title">
-          ✍️ Sentences
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="3" y1="6" y2="6"/><line x1="15" x2="3" y1="12" y2="12"/><line x1="17" x2="3" y1="18" y2="18"/></svg> Sentences
         </h4>
         <div class="sentence-distribution">
           <div class="distribution-bar">
@@ -177,7 +177,7 @@
         class="stats-section"
       >
         <h4 class="section-title">
-          📚 Words
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg> Words
         </h4>
         <div class="stats-grid">
           <div class="stat-item">
@@ -228,7 +228,7 @@
         class="stats-section issues-section"
       >
         <h4 class="section-title">
-          ⚠️ Issues
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Issues
         </h4>
 
         <div
@@ -316,7 +316,7 @@
         class="stats-section seo-section"
       >
         <h4 class="section-title">
-          🔍 SEO
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> SEO
         </h4>
 
         <div class="seo-score">
@@ -525,29 +525,37 @@ const getSEOClass = (score: number): string => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  /* Match the green Writing-Stats toggle FAB so the panel reads as its popover. */
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
+  padding: 13px 16px;
+  /* Flat surface + accent icon chip — no gradient (matches the toolbar). */
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text, #111827);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
 }
 
 .stats-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .stats-icon {
-  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--toolbar-accent, #3b82f6);
 }
 
 .collapse-btn {
-  background: rgba(0, 0, 0, 0.3);
+  background: transparent;
   border: none;
-  color: #ffffff;
+  color: var(--color-text-secondary, #6b7280);
   width: 28px;
   height: 28px;
   border-radius: 6px;
@@ -556,11 +564,12 @@ const getSEOClass = (score: number): string => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--color-surface-overlay, #f3f4f6);
+  color: var(--color-text, #111827);
 }
 
 .stats-content {
@@ -581,10 +590,15 @@ const getSEOClass = (score: number): string => {
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-text, #374151);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+}
+
+.section-title svg {
+  color: var(--toolbar-accent, #3b82f6);
+  flex-shrink: 0;
 }
 
 .stats-grid {

@@ -211,7 +211,9 @@ describe("ModalsContainer", () => {
 
       const indicator = wrapper.find(".auto-save-indicator");
       expect(indicator.exists()).toBe(true);
-      expect(indicator.find(".saving").text()).toBe("💾 Saving...");
+      // Real spinner icon, not an emoji.
+      expect(indicator.find(".saving svg").exists()).toBe(true);
+      expect(indicator.find(".saving").text()).toContain("Saving");
     });
 
     it("should show saved indicator with timestamp when lastSaved is set", () => {
@@ -225,7 +227,9 @@ describe("ModalsContainer", () => {
 
       const indicator = wrapper.find(".auto-save-indicator");
       expect(indicator.exists()).toBe(true);
-      expect(indicator.find(".saved").text()).toContain("✓ Saved at");
+      // Real check icon, not an emoji.
+      expect(indicator.find(".saved svg").exists()).toBe(true);
+      expect(indicator.find(".saved").text()).toContain("Saved at");
       expect(indicator.find(".saved").text()).toContain(
         lastSaved.toLocaleTimeString()
       );

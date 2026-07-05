@@ -754,33 +754,73 @@
   z-index: 1000;
 }
 
-/* Auto-save Indicator */
+/* Auto-save Indicator — a quiet frosted status chip. Bottom-LEFT so it never
+   collides with the FAB stack on the bottom-right. */
 .auto-save-indicator {
   position: fixed;
   bottom: 20px;
-  right: 20px;
-  padding: 8px 16px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: var(--radius-lg, 10px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  font-size: 13px;
+  left: 20px;
+  padding: 7px 13px;
+  background: var(--color-surface-raised);
+  background: color-mix(in srgb, var(--color-surface-raised) 85%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full, 999px);
+  box-shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.16),
+    0 1px 3px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
   z-index: 100;
   transition: opacity var(--transition-fast, 150ms) ease;
 }
 
+@supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
+  .auto-save-indicator {
+    background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+    backdrop-filter: blur(12px) saturate(1.4);
+  }
+}
+
 .theme-dark .auto-save-indicator {
-  background: #1f2937;
-  border-color: #374151;
-  color: #e5e7eb;
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.auto-save-indicator .saving,
+.auto-save-indicator .saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .auto-save-indicator .saving {
-  color: #3b82f6;
+  color: var(--toolbar-accent);
 }
 
 .auto-save-indicator .saved {
-  color: #10b981;
+  color: var(--color-success);
+}
+
+.auto-save-indicator svg {
+  flex-shrink: 0;
+}
+
+.auto-save-indicator .asi-spinner {
+  animation: nle-autosave-spin 0.7s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes nle-autosave-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auto-save-indicator .asi-spinner {
+    animation: none;
+  }
 }
 
 /* Modern Toolbar Styles */
@@ -1717,12 +1757,14 @@
 .toast-notification {
   position: fixed;
   bottom: 24px;
-  right: 24px;
-  padding: 12px 24px;
-  border-radius: var(--radius-md);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 22px;
+  border-radius: var(--radius-full, 999px);
   font-size: 14px;
   font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.35),
+    0 2px 6px rgba(15, 23, 42, 0.14);
   z-index: 10000;
   transition: all var(--transition-fast);
 }
@@ -1744,10 +1786,10 @@
 
 .toast-fade-enter-from {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateX(-50%) translateY(20px);
 }
 
 .toast-fade-leave-to {
   opacity: 0;
-  transform: translateY(-20px);
+  transform: translateX(-50%) translateY(-20px);
 }
