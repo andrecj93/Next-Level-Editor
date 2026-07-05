@@ -41,7 +41,11 @@
           <span class="dots"><i /><i /><i /></span>
           <span class="demo-url">MyDocument.vue — Next Level Editor</span>
         </div>
-        <NextLevelEditor v-model="demoContent" width="100%" height="360px" />
+        <!-- Live editor on desktop; a static rendered preview on phones, where
+             the editor's persistent bottom toolbar would otherwise take over
+             the landing page. The full editor is one tap away in the playground. -->
+        <NextLevelEditor v-if="!compact" v-model="demoContent" width="100%" height="360px" />
+        <div v-else class="demo-static" v-html="demoContent" />
       </div>
       <p class="demo-hint">↑ That's the real editor. Select text, press <kbd>/</kbd>, or open the <button class="linklike" @click="$emit('navigate', 'playground')">full playground</button>.</p>
     </section>
@@ -98,12 +102,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import NextLevelEditor from "../../components/NextLevelEditor.vue";
 import CodeBlock from "../components/CodeBlock.vue";
 import FeatureCard from "../components/FeatureCard.vue";
 
 defineEmits<{ navigate: [id: string] }>();
+
+// Phones get a static preview instead of the live editor (its fixed bottom
+// toolbar shouldn't dominate the landing page). Resolved synchronously so there
+// is no editor→preview flash on load.
+const mql =
+  typeof window !== "undefined"
+    ? window.matchMedia("(max-width: 768px)")
+    : null;
+const compact = ref(mql?.matches ?? false);
+const onMqChange = (e: MediaQueryListEvent) => {
+  compact.value = e.matches;
+};
+onMounted(() => mql?.addEventListener("change", onMqChange));
+onUnmounted(() => mql?.removeEventListener("change", onMqChange));
 
 const demoContent = ref(
   `<h2>✍️ Edit me — I'm a real editor</h2>` +
@@ -156,10 +174,10 @@ const content = ref('<h1>Hello world</h1>')
 .hero-glow {
   position: absolute; top: -30%; left: 50%; transform: translateX(-50%);
   width: min(1100px, 120vw); height: 640px; pointer-events: none;
-  background: radial-gradient(circle at 50% 30%, rgba(139, 92, 246, 0.18), transparent 60%),
-    radial-gradient(circle at 30% 40%, rgba(99, 102, 241, 0.16), transparent 55%),
-    radial-gradient(circle at 70% 45%, rgba(217, 70, 239, 0.12), transparent 55%);
-  filter: blur(10px);
+  background: radial-gradient(circle at 50% 26%, rgba(196, 57, 44, 0.15), transparent 58%),
+    radial-gradient(circle at 30% 42%, rgba(221, 106, 58, 0.14), transparent 54%),
+    radial-gradient(circle at 72% 46%, rgba(230, 150, 90, 0.1), transparent 55%);
+  filter: blur(14px);
 }
 .hero-inner { position: relative; display: flex; flex-direction: column; align-items: center; }
 .hero-badge {
@@ -180,6 +198,14 @@ const content = ref('<h1>Hello world</h1>')
 /* LIVE DEMO */
 .demo-wrap { margin-top: 8px; }
 .demo-frame { overflow: hidden; box-shadow: var(--shadow-lg); }
+.demo-static { padding: 22px 22px 26px; line-height: 1.7; color: var(--ink); }
+.demo-static :deep(h2) { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5em; letter-spacing: -0.01em; }
+.demo-static :deep(p) { margin: 0 0 0.8em; color: var(--ink-soft); }
+.demo-static :deep(ul) { margin: 0 0 0.8em; padding-left: 20px; color: var(--ink-soft); }
+.demo-static :deep(li) { margin: 3px 0; }
+.demo-static :deep(a) { color: var(--accent); text-decoration: underline; }
+.demo-static :deep(code) { font-family: var(--font-mono); font-size: 0.86em; background: var(--brand-gradient-soft); padding: 2px 6px; border-radius: 5px; }
+.demo-static :deep(blockquote) { margin: 12px 0 0; padding: 4px 0 4px 16px; border-left: 3px solid var(--accent); font-style: italic; color: var(--ink-soft); }
 .demo-chrome { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--border); background: var(--bg-subtle); }
 .dots { display: flex; gap: 6px; }
 .dots i { width: 11px; height: 11px; border-radius: 50%; background: var(--border-strong); }
@@ -197,6 +223,9 @@ const content = ref('<h1>Hello world</h1>')
 
 /* SPLIT */
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+/* let grid items shrink below the code block's intrinsic width so a long line
+   scrolls inside the block instead of forcing the whole page wider on mobile */
+.split-copy, .split-code { min-width: 0; }
 .split-copy .h-section { margin: 12px 0 16px; }
 .split-copy code { font-family: var(--font-mono); font-size: 0.82em; background: var(--brand-gradient-soft); padding: 2px 8px; border-radius: 7px; }
 .split-list { list-style: none; padding: 0; margin: 22px 0 28px; display: flex; flex-direction: column; gap: 12px; }

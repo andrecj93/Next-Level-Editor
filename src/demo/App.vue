@@ -96,6 +96,6 @@ onMounted(() => {
 </script>
 
 <style>
-.site { min-height: 100vh; display: flex; flex-direction: column; }
+.site { min-height: 100vh; display: flex; flex-direction: column; font-family: var(--font-sans); }
 .site > main { flex: 1; }
 </style>

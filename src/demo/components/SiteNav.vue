@@ -127,9 +127,13 @@ const go = (id: string) => {
   .nav-links {
     position: absolute; top: var(--nav-h); left: 0; right: 0; flex-direction: column; align-items: stretch;
     gap: 2px; padding: 12px; background: var(--bg); border-bottom: 1px solid var(--border);
-    box-shadow: var(--shadow-md); transform: translateY(-8px); opacity: 0; pointer-events: none; transition: all 0.2s var(--ease);
+    box-shadow: var(--shadow-md); transform: translateY(-8px); opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease), visibility 0s linear 0.2s;
   }
-  .nav-links.open { transform: translateY(0); opacity: 1; pointer-events: all; }
+  .nav-links.open {
+    transform: translateY(0); opacity: 1; visibility: visible; pointer-events: all;
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease), visibility 0s;
+  }
   .nav-link { padding: 12px 14px; }
   .menu-toggle { display: grid; }
   .try-btn, .hide-sm { display: none; }
