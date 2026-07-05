@@ -28,7 +28,7 @@
       :view-mode="viewMode"
       :theme="theme"
       :is-full-screen="isFullScreen"
-      @remember-selection="rememberSelection"
+      @remember-selection="rememberSelectionFromToolbar"
       @toggle-colors-dropdown="showColorsDropdown = !showColorsDropdown"
       @text-color-change="handleTextColor"
       @background-color-change="handleBackgroundColor"
@@ -44,6 +44,7 @@
       :show="showCommandMenu"
       :position="commandMenuPosition"
       :options="commandOptions"
+      :selected-index="commandSelectedIndex"
       @select="handleCommandOption"
     />
 
@@ -72,16 +73,44 @@
     <!-- Floating Toolbar -->
     <FloatingToolbar :show="showFloatingToolbar" :actions="floatingActions" />
 
+    <!-- Mobile bottom toolbar (self-hides on non-touch/desktop) -->
+    <MobileToolbar
+      :is-active="mobileIsActive"
+      @action="handleMobileAction"
+    />
+
+    <!-- History Timeline panel (toggled from the Tools dropdown) -->
+    <div v-if="showHistoryTimeline" class="history-timeline-panel">
+      <HistoryTimeline
+        :history="timelineEntries"
+        :current-index="historyIndex"
+        :can-go-back="historyIndex > 0"
+        :can-go-forward="historyIndex < history.length - 1"
+        :has-history="history.length > 0"
+        :history-size="history.length"
+        :timeline-progress="timelineProgress"
+        @go-to-entry="jumpToHistory"
+        @go-back="undo"
+        @go-forward="redo"
+        @go-to-first="jumpToHistory(0)"
+        @go-to-latest="jumpToHistory(history.length - 1)"
+        @clear="clearHistory"
+        @export="handleExportHistory"
+      />
+    </div>
+
     <!-- Context Menu -->
     <ContextMenu
       :show="showContextMenu"
       :position="contextMenuPosition"
       :items="contextMenuItems"
+      :theme="themeClass"
       @close="closeContextMenu"
     />
 
     <!-- Modals Container -->
     <ModalsContainer
+      :theme="themeClass"
       :show-table-modal="showTableModal"
       :show-find-replace-modal="showFindReplaceModal"
       :show-code-block-modal="showCodeBlockModal"
@@ -113,6 +142,7 @@
       @close-find-replace-modal="closeFindReplaceModal"
       @find="handleFind"
       @replace="handleReplace"
+      @replace-all="handleReplaceAll"
       @close-code-block-modal="closeCodeBlockModal"
       @insert-code-block="handleInsertCodeBlock"
       @add-row-above="handleAddRowAbove"
@@ -151,6 +181,8 @@
       :readability="writingAssistant.readability.value"
       :sentence-analysis="writingAssistant.sentenceAnalysis.value"
       :word-analysis="writingAssistant.wordAnalysis.value"
+      :issues="writingAssistant.issues.value"
+      :seo="writingAssistant.seo.value"
       @close="showWritingStatsPanel = false"
     />
 
@@ -160,6 +192,7 @@
       :threads="comments.threads.value"
       :active-thread-id="comments.activeThread.value?.id ?? null"
       :is-open="showCommentsSidebar"
+      :mention-search="mentionSearch"
       @close="showCommentsSidebar = false"
       @select-thread="handleSelectThread"
       @resolve-thread="handleResolveThread"
@@ -174,6 +207,7 @@
       v-if="enableComments && comments"
       :is-open="showCommentModal"
       :selected-text="selectedTextForComment"
+      :mention-search="mentionSearch"
       @submit="handleCommentSubmit"
       @cancel="handleCommentCancel"
     />
@@ -245,7 +279,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRef, nextTick } from "vue";
+import { ref, computed, toRef, nextTick, onMounted, watch } from "vue";
 
 import {
   applyTextAlignment,
@@ -260,7 +294,6 @@ import { useSmartToolbar } from "../composables/useSmartToolbar";
 import { useEditorContent } from "../composables/useEditorContent";
 import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
 import { useAccessibility } from "../composables/useAccessibility";
-import { useImageResize } from "../composables/useImageResize";
 import { useEditorSetup } from "../composables/useEditorSetup";
 import { useToolbarItems } from "../composables/useToolbarItems";
 import { useActiveStates } from "../composables/useActiveStates";
@@ -286,6 +319,8 @@ import { formatHtml } from "../utils/export";
 import { useCommandPalette } from "../composables/useCommandPalette";
 import { useSlashCommands } from "../composables/useSlashCommands";
 import FloatingToolbar from "./FloatingToolbar.vue";
+import MobileToolbar from "./MobileToolbar.vue";
+import HistoryTimeline from "./HistoryTimeline.vue";
 import ContextMenu from "./ContextMenu.vue";
 import ModalsContainer from "./ModalsContainer.vue";
 import EditorToolbar from "./EditorToolbar.vue";
@@ -301,7 +336,9 @@ import CommentModal from "./CommentModal.vue";
 import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
+import type { MentionSuggestion } from "../composables/useComments";
 import { useVariables } from "../composables/useVariables";
+import { useSmartAutocomplete } from "../composables/useSmartAutocomplete";
 
 interface Props {
   modelValue?: string;
@@ -311,6 +348,14 @@ interface Props {
   showWritingStats?: boolean;
   enableComments?: boolean;
   enableVariables?: boolean;
+  /**
+   * Host-supplied @mention provider for comments: given the text typed after
+   * "@", return the users to suggest. Without it the mention dropdown stays
+   * empty. [#4]
+   */
+  mentionSearch?: (
+    query: string
+  ) => Promise<MentionSuggestion[]> | MentionSuggestion[];
 }
 
 interface Emits {
@@ -326,12 +371,35 @@ const props = withDefaults(defineProps<Props>(), {
   height: undefined,
   showWritingStats: false,
   enableComments: false,
+  mentionSearch: undefined,
 });
 
 const emit = defineEmits<Emits>();
 
 const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
-const editorContent = computed(() => editorPanelsRef.value?.editorRef || null);
+
+// View-mode state is declared early so the active-editable computed below can
+// close over it (the refs are passed into useViewMode further down).
+const viewMode = ref<"editor" | "code" | "split" | "preview">("editor");
+const splitRightMode = ref<"preview" | "editor">("preview");
+
+// The ACTIVE editable surface. In split view with the right pane in editor
+// mode, the visible surface is splitEditorRef — the classic editorRef is a
+// display:none div there, and a hidden element cannot host a selection, so
+// every toolbar/formatting action silently no-opped in that mode. [#23]
+const editorContent = computed(() => {
+  const panels = editorPanelsRef.value;
+  if (!panels) return null;
+  if (viewMode.value === "split" && splitRightMode.value === "editor") {
+    return panels.splitEditorRef || panels.editorRef || null;
+  }
+  return panels.editorRef || null;
+});
+
+// Smart autocomplete engine (markdown shortcuts, URL/email auto-link, curly
+// quotes, smart punctuation). Invoked from the wrapped onInput below. [#1]
+const { handleInput: handleSmartAutocomplete } =
+  useSmartAutocomplete(editorContent);
 
 // Selection management using composable
 const { rememberSelection: rememberSelectionBase, performWithSelection } =
@@ -344,6 +412,16 @@ const rememberSelection = () => {
   showFloatingToolbar.value = false;
 };
 
+// Main-toolbar mousedown handler: SUPPRESS the bubble (not just hide it), so a
+// later selectionchange can't re-show it on top of an open dropdown menu where
+// it would intercept clicks on the menu items. Suppression lifts on the next
+// editor interaction (mouseup/focus). Kept separate from rememberSelection,
+// which is also invoked internally on editor focus/blur.
+const rememberSelectionFromToolbar = () => {
+  rememberSelectionBase();
+  suppressFloatingToolbar();
+};
+
 // Theme and UI state using composable
 const { theme, toggleTheme: toggleThemeComposable } = useTheme();
 
@@ -352,6 +430,9 @@ useAccessibility();
 
 // Writing Assistant (opt-in feature) - local state for toggle
 const showWritingStatsPanel = ref(false);
+
+// History Timeline panel visibility (toggled from the Tools dropdown). [#14]
+const showHistoryTimeline = ref(false);
 const writingAssistant = props.showWritingStats ? useWritingAssistant() : null;
 
 // Comments System (opt-in feature)
@@ -363,6 +444,10 @@ const comments = props.enableComments
         name: "Current User",
         color: "#3b82f6",
       },
+      // Route @mention lookups through the host-supplied provider. [#4]
+      onMentionTriggered: props.mentionSearch
+        ? async (query: string) => props.mentionSearch!(query)
+        : undefined,
     })
   : (null as ReturnType<typeof useComments> | null);
 
@@ -384,7 +469,6 @@ const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
   async (content: string, version: number) => {
     // Emit the content for parent to save
     emit("update:modelValue", content);
-    console.log("Auto-saved at:", new Date().toLocaleTimeString());
     return { success: true, serverVersion: version + 1 };
   },
   { delay: 2000 } // 2 second delay
@@ -401,12 +485,41 @@ const {
   captureAndEmit: captureSnapshot,
   undo,
   redo,
+  jumpToHistory,
+  clearHistory,
 } = useEditorContent({
   editorContent,
   modelValue: toRef(props, "modelValue"),
   onUpdate: (value) => emit("update:modelValue", value),
   triggerAutoSave,
 });
+
+// History Timeline adapters: map the live undo/redo history (the single source
+// of truth) onto the HistoryTimeline component's entry shape. [#14]
+const timelineEntries = computed(() =>
+  history.value.map((entry) => ({
+    id: entry.id,
+    content: entry.preview,
+    timestamp: entry.timestamp,
+  }))
+);
+const timelineProgress = computed(() =>
+  history.value.length > 1
+    ? (historyIndex.value / (history.value.length - 1)) * 100
+    : 100
+);
+
+// Download the full history as JSON (History Timeline "Export").
+function handleExportHistory() {
+  const payload = JSON.stringify(history.value, null, 2);
+  const blob = new Blob([payload], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "editor-history.json";
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 // Editor computed properties and watchers using composable
 const { themeClass, editorStyles, wordCount, characterCount } =
@@ -433,15 +546,15 @@ const {
   isVisible: isToolbarSectionVisible,
 } = useSmartToolbar();
 
-// View mode management using composable
-const { viewMode } = useViewMode({
+// View mode management using composable. The viewMode ref itself is declared
+// near the top (before the active-editable computed); this wires the mode-
+// switch content synchronization around it.
+useViewMode({
   editorContent,
   htmlContent,
   codeContent,
+  viewModeRef: viewMode,
 });
-
-// Split view right panel mode
-const splitRightMode = ref<"preview" | "editor">("preview");
 
 // Modal management using composable - pass rememberSelection to save cursor position
 const {
@@ -516,13 +629,8 @@ const {
   applyTextAlignment,
   applyTextColor,
   applyBackgroundColor,
-  applyFontSize
-);
-
-// Image resize composable
-const { setupImageResizing, cleanup: cleanupImageResize } = useImageResize(
-  editorContent,
-  captureSnapshot
+  applyFontSize,
+  performWithSelection
 );
 
 // Formatting Handlers - Using useFormattingHandlers composable
@@ -595,7 +703,7 @@ const {
 });
 
 // Find & Replace using composable
-const { handleFind, handleReplace } = useFindReplace({
+const { handleFind, handleReplace, handleReplaceAll } = useFindReplace({
   editorContent,
   captureSnapshot,
 });
@@ -646,6 +754,8 @@ const {
   currentTable,
   currentCell,
   tableDesignerPosition,
+  captureSnapshot,
+  emitUpdate: (value: string) => emit("update:modelValue", value),
 });
 
 // Export actions using composable
@@ -681,6 +791,8 @@ const {
   showFloatingToolbar,
   floatingToolbarTimer,
   updateFloatingToolbar,
+  suppressFloatingToolbar,
+  unsuppressFloatingToolbar,
   floatingActions,
 } = useFloatingToolbar({
   handleInlineAction,
@@ -741,11 +853,16 @@ const {
   isFullScreen,
   spellCheckEnabled,
   captureSnapshot,
+  toggleHistoryTimeline: () => {
+    showHistoryTimeline.value = !showHistoryTimeline.value;
+  },
 });
 
 // Command Palette Commands using composable
 const { commands: commandPaletteCommands } = useCommandPaletteCommands({
-  editorContent,
+  handleInlineAction,
+  handleBlockAction,
+  handleListAction,
   insertLink,
   insertImage,
   openTableModal,
@@ -774,13 +891,101 @@ function handleCommandExecute(command: any) {
   command.action();
 }
 
+// Dispatch MobileToolbar button actions to the real editor handlers. Previously
+// the mobile toolbar was never rendered and its buttons emitted a bare action id
+// that nothing listened for, so every button was a no-op. [#6/#45]
+function handleMobileAction(actionId: string) {
+  switch (actionId) {
+    case "bold":
+      handleInlineAction("strong");
+      break;
+    case "italic":
+      handleInlineAction("em");
+      break;
+    case "underline":
+      handleInlineAction("u");
+      break;
+    case "strikethrough":
+      handleInlineAction("s");
+      break;
+    case "code":
+      handleInlineAction("code");
+      break;
+    case "blockquote":
+      handleBlockAction("blockquote");
+      break;
+    case "paragraph":
+      handleBlockAction("p");
+      break;
+    case "h1":
+    case "h2":
+    case "h3":
+      handleBlockAction(actionId);
+      break;
+    case "bullet-list":
+      handleListAction("ul");
+      break;
+    case "numbered-list":
+      handleListAction("ol");
+      break;
+    case "link":
+      insertLink();
+      break;
+    case "image":
+      insertImage();
+      break;
+    case "table":
+      openTableModal();
+      break;
+    case "code-block":
+      openCodeBlockModal();
+      break;
+    case "emoji":
+      toggleEmojiPicker();
+      break;
+    case "find":
+      openFindReplaceModal();
+      break;
+    case "undo":
+      undo();
+      break;
+    case "redo":
+      redo();
+      break;
+    default:
+      // checklist / export / settings / shortcuts have no handler yet.
+      break;
+  }
+}
+
+// Resolve the active state for MobileToolbar format buttons so they highlight
+// like the desktop toolbar (reactive via useActiveStates' selectionTick). [#16]
+function mobileIsActive(actionId: string): boolean {
+  switch (actionId) {
+    case "bold":
+      return isInlineActionActive("strong");
+    case "italic":
+      return isInlineActionActive("em");
+    case "underline":
+      return isInlineActionActive("u");
+    case "strikethrough":
+      return isInlineActionActive("s");
+    case "code":
+      return isInlineActionActive("code");
+    default:
+      return false;
+  }
+}
+
 // Command menu (Slash commands) - Using useSlashCommands composable
 const {
   showCommandMenu,
   commandMenuPosition,
   commandOptions,
+  selectedIndex: commandSelectedIndex,
   openCommandMenu,
   handleCommandOption,
+  handleMenuKeydown: handleSlashMenuKeydown,
   handleDocumentClick,
   handleEscape,
 } = useSlashCommands({
@@ -801,9 +1006,9 @@ const {
 // Editor Events - Using useEditorEvents composable
 const {
   onInput: onInputBase,
-  onFocus,
+  onFocus: onFocusBase,
   onBlur,
-  onMouseUp,
+  onMouseUp: onMouseUpBase,
   onSelectionChange,
   onCodeInput: onCodeInputBase,
   onCodeBlur,
@@ -823,8 +1028,27 @@ const {
   emit,
 });
 
+// Editor interaction lifts the floating-toolbar suppression set by toolbar
+// mousedown (see rememberSelectionFromToolbar).
+const onFocus = () => {
+  unsuppressFloatingToolbar();
+  onFocusBase();
+};
+const onMouseUp = () => {
+  unsuppressFloatingToolbar();
+  onMouseUpBase();
+};
+
 // Wrap onInput to include variable detection and wrapping
 const onInput = () => {
+  // Smart autocomplete (markdown shortcuts, URL/email auto-link, curly quotes,
+  // "--"/"..." punctuation) — only on WYSIWYG surfaces, never in code view.
+  // Runs BEFORE onInputBase so the converted DOM is what gets synced to
+  // v-model. Re-entrancy is handled inside the composable (isApplying guard).
+  if (viewMode.value === "editor" || viewMode.value === "split") {
+    handleSmartAutocomplete();
+  }
+
   onInputBase();
 
   // Detect variable syntax for autocomplete
@@ -847,12 +1071,15 @@ const onInput = () => {
 const onCodeInput = (event: Event) => {
   onCodeInputBase(event);
 
-  // If split view is active with editor mode on right, sync the split editor
+  // If split view is active with editor mode on right, sync the split editor.
+  // With the active-editable computed, editorContent already IS the split
+  // editor in that mode (onCodeInputBase wrote into it) — only copy when they
+  // are distinct elements.
   if (viewMode.value === "split" && splitRightMode.value === "editor") {
     nextTick(() => {
-      if (editorPanelsRef.value?.splitEditorRef && editorContent.value) {
-        editorPanelsRef.value.splitEditorRef.innerHTML =
-          editorContent.value.innerHTML;
+      const splitEl = editorPanelsRef.value?.splitEditorRef;
+      if (splitEl && editorContent.value && splitEl !== editorContent.value) {
+        splitEl.innerHTML = editorContent.value.innerHTML;
       }
     });
   }
@@ -861,36 +1088,52 @@ const onCodeInput = (event: Event) => {
 // Handle split view right panel mode change
 function handleSplitRightModeChange(mode: "preview" | "editor") {
   splitRightMode.value = mode;
-  // Sync content when switching to editor mode
+  // Populate the split editor when switching to editor mode. Read from the
+  // reactive htmlContent (single source of truth) with the hidden editor as a
+  // fallback — after the mode flips, editorContent already resolves to the
+  // split editor itself, so copying from editorContent would be a no-op self
+  // copy that left the pane empty.
   if (mode === "editor") {
     nextTick(() => {
-      if (editorPanelsRef.value?.splitEditorRef && editorContent.value) {
-        editorPanelsRef.value.splitEditorRef.innerHTML =
-          editorContent.value.innerHTML;
+      const panels = editorPanelsRef.value;
+      const splitEl = panels?.splitEditorRef;
+      if (!splitEl) return;
+      const source = htmlContent.value || panels?.editorRef?.innerHTML || "";
+      if (splitEl.innerHTML !== source) {
+        splitEl.innerHTML = source;
       }
     });
   }
 }
 
-// Handle split editor input - sync back to main code editor
+// Handle split editor input - run the shared capture+sanitize+emit pipeline
+// (editorContent resolves to the split editor here) and keep the hidden main
+// editor mirrored so switching modes preserves content.
 function onSplitEditorInput(event: Event) {
   const target = event.target as HTMLElement;
-  if (target && codeContent.value !== target.innerHTML) {
-    const newContent = target.innerHTML;
-    // Update code content from split editor
-    codeContent.value = formatHtml(newContent);
-    // Update the main editor content
-    if (editorContent.value) {
-      editorContent.value.innerHTML = newContent;
-      htmlContent.value = newContent;
-    }
-    // Capture snapshot for undo/redo
-    captureSnapshot();
-    // Emit the change
-    emit("update:modelValue", newContent);
-    triggerAutoSave(newContent);
+  const hidden = editorPanelsRef.value?.editorRef;
+  if (hidden && hidden !== target) {
+    hidden.innerHTML = target.innerHTML;
   }
+  codeContent.value = formatHtml(target.innerHTML);
+  captureSnapshot();
 }
+
+// Keep the visible split editor in sync with content changes that do not
+// originate from typing in it (undo/redo, template insertion, external v-model
+// updates). Guarded so it never clobbers the caret while the user is editing
+// the split pane. [#24]
+watch(htmlContent, (newHtml) => {
+  if (viewMode.value !== "split" || splitRightMode.value !== "editor") return;
+  const splitEl = editorPanelsRef.value?.splitEditorRef;
+  if (
+    splitEl &&
+    document.activeElement !== splitEl &&
+    splitEl.innerHTML !== newHtml
+  ) {
+    splitEl.innerHTML = newHtml;
+  }
+});
 
 // Keyboard Shortcuts - Using useKeyboardShortcuts composable
 const { handleKeydown } = useKeyboardShortcuts({
@@ -906,6 +1149,7 @@ const { handleKeydown } = useKeyboardShortcuts({
   },
   handleInlineAction,
   handleBlockAction,
+  handleSlashMenuKeydown,
 });
 
 // Comments handlers
@@ -1074,6 +1318,112 @@ function closeVariableAutocomplete() {
   showVariableAutocomplete.value = false;
 }
 
+// Dismiss the top-most open overlay (modal / context menu / designer /
+// dropdown). Returns true if something was closed so callers can stop.
+function closeTopMostOverlay(): boolean {
+  if (showContextMenu.value) {
+    closeContextMenu();
+    return true;
+  }
+  if (showTableDesigner.value) {
+    showTableDesigner.value = false;
+    return true;
+  }
+  if (showColorsDropdown.value) {
+    showColorsDropdown.value = false;
+    return true;
+  }
+  if (showHistoryTimeline.value) {
+    showHistoryTimeline.value = false;
+    return true;
+  }
+  if (showEmojiPicker.value) {
+    showEmojiPicker.value = false;
+    return true;
+  }
+  if (showTableModal.value) {
+    closeTableModal();
+    return true;
+  }
+  if (showTablePropertiesModal.value) {
+    closeTablePropertiesModal();
+    return true;
+  }
+  if (showCodeBlockModal.value) {
+    closeCodeBlockModal();
+    return true;
+  }
+  if (showImageUploadModal.value) {
+    closeImageUploadModal();
+    return true;
+  }
+  if (showEmbedModal.value) {
+    closeEmbedModal();
+    return true;
+  }
+  if (showFileManagerModal.value) {
+    closeFileManagerModal();
+    return true;
+  }
+  if (showTemplateModal.value) {
+    closeTemplateModal();
+    return true;
+  }
+  if (showHtmlCodeModal.value) {
+    closeHtmlCodeModal();
+    return true;
+  }
+  if (showFindReplaceModal.value) {
+    closeFindReplaceModal();
+    return true;
+  }
+  return false;
+}
+
+// Application-level Escape handler: dismiss the top-most open overlay first,
+// then fall through to the slash-command menu handler.
+function handleGlobalEscape(event: KeyboardEvent) {
+  if (event.key === "Escape" && closeTopMostOverlay()) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  handleEscape(event);
+}
+
+// Application-level document click: close the (hand-rolled) Colors dropdown on
+// any outside click, then run the slash-command document handler. Clicks inside
+// the trigger/menu are stopped via @click.stop and never reach here.
+function handleGlobalDocumentClick(event: MouseEvent) {
+  if (showColorsDropdown.value) {
+    showColorsDropdown.value = false;
+  }
+  handleDocumentClick(event);
+}
+
+// Writing Assistant: analyze the initial content on mount and whenever the
+// content is replaced externally (v-model). Previously the stats were only
+// computed inside onInput, so they stayed empty for pre-existing content until
+// the user typed a character.
+if (writingAssistant) {
+  const analyzeCurrentContent = () => {
+    writingAssistant?.analyze(
+      editorContent.value?.innerHTML ?? props.modelValue ?? ""
+    );
+  };
+  onMounted(() => nextTick(analyzeCurrentContent));
+  watch(
+    () => props.modelValue,
+    (value) => {
+      // Only react to external updates (the editor's own edits already run
+      // analyze via onInput and don't change props.modelValue synchronously).
+      if (editorContent.value && value !== editorContent.value.innerHTML) {
+        nextTick(analyzeCurrentContent);
+      }
+    }
+  );
+}
+
 // Editor Setup and Cleanup - Using useEditorSetup composable
 useEditorSetup({
   editorContent,
@@ -1084,10 +1434,8 @@ useEditorSetup({
   captureSnapshot,
   handleKeydown,
   enableSpellCheck,
-  setupImageResizing,
-  cleanupImageResize,
-  handleDocumentClick,
-  handleEscape,
+  handleDocumentClick: handleGlobalDocumentClick,
+  handleEscape: handleGlobalEscape,
   onSelectionChange,
 });
 </script>
@@ -1097,6 +1445,21 @@ useEditorSetup({
 <style src="../styles/gap-fallback.css"></style>
 
 <style scoped>
+/* History Timeline floating panel (toggled from the Tools dropdown) */
+.history-timeline-panel {
+  position: fixed;
+  top: 140px;
+  right: 32px;
+  width: 360px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  z-index: 9998;
+  border-radius: 14px;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  background: var(--editor-bg, #ffffff);
+}
+
 /* FAB Transition */
 .fab-fade-enter-active,
 .fab-fade-leave-active {

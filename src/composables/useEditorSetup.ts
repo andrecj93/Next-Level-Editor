@@ -12,8 +12,6 @@ export interface UseEditorSetupOptions {
   captureSnapshot: (emitChange?: boolean) => void;
   handleKeydown: (event: KeyboardEvent) => void;
   enableSpellCheck: () => void;
-  setupImageResizing: () => void;
-  cleanupImageResize: () => void;
   handleDocumentClick: (event: MouseEvent) => void;
   handleEscape: (event: KeyboardEvent) => void;
   onSelectionChange: () => void;
@@ -33,8 +31,6 @@ export function useEditorSetup(options: UseEditorSetupOptions) {
     captureSnapshot,
     handleKeydown,
     enableSpellCheck,
-    setupImageResizing,
-    cleanupImageResize,
     handleDocumentClick,
     handleEscape,
     onSelectionChange,
@@ -50,9 +46,6 @@ export function useEditorSetup(options: UseEditorSetupOptions) {
 
       // Initialize code editor content
       codeContent.value = formatHtml(modelValue || "");
-
-      // Setup image resizing
-      setupImageResizing();
     }
     document.addEventListener("click", handleDocumentClick);
     document.addEventListener("keydown", handleEscape);
@@ -69,7 +62,5 @@ export function useEditorSetup(options: UseEditorSetupOptions) {
     if (floatingToolbarTimer.value) {
       clearTimeout(floatingToolbarTimer.value);
     }
-    // Cleanup image resize listeners
-    cleanupImageResize();
   });
 }

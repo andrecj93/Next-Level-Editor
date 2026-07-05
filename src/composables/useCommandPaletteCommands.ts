@@ -1,8 +1,23 @@
-import { computed, type Ref } from "vue";
-import { applyInlineStyle, toggleBlock, toggleList } from "../utils/formatting";
+import { computed } from "vue";
 
 interface CommandPaletteCommandsOptions {
-  editorContent: Ref<HTMLElement | null>;
+  /**
+   * Applies an inline style (bold/italic/underline). Must route through the
+   * editor's performWithSelection mechanism so the editor selection is restored
+   * before acting — opening the palette moves focus to its search input and
+   * collapses the live selection.
+   */
+  handleInlineAction: (tag: string) => void;
+  /**
+   * Toggles a block-level element (headings, paragraph). See handleInlineAction
+   * for why selection restoration matters.
+   */
+  handleBlockAction: (tag: string, fallback?: string) => void;
+  /**
+   * Toggles a list (ul/ol). See handleInlineAction for why selection
+   * restoration matters.
+   */
+  handleListAction: (tag: "ul" | "ol") => void;
   insertLink: () => void;
   insertImage: () => void;
   openTableModal: () => void;
@@ -43,7 +58,9 @@ export function useCommandPaletteCommands(
   options: CommandPaletteCommandsOptions
 ) {
   const {
-    editorContent,
+    handleInlineAction,
+    handleBlockAction,
+    handleListAction,
     insertLink,
     insertImage,
     openTableModal,
@@ -80,9 +97,7 @@ export function useCommandPaletteCommands(
       category: "Formatting",
       shortcut: "Ctrl+B",
       action: () => {
-        if (editorContent.value) {
-          applyInlineStyle(editorContent.value, "strong");
-        }
+        handleInlineAction("strong");
       },
     },
     {
@@ -93,9 +108,7 @@ export function useCommandPaletteCommands(
       category: "Formatting",
       shortcut: "Ctrl+I",
       action: () => {
-        if (editorContent.value) {
-          applyInlineStyle(editorContent.value, "em");
-        }
+        handleInlineAction("em");
       },
     },
     {
@@ -106,9 +119,7 @@ export function useCommandPaletteCommands(
       category: "Formatting",
       shortcut: "Ctrl+U",
       action: () => {
-        if (editorContent.value) {
-          applyInlineStyle(editorContent.value, "u");
-        }
+        handleInlineAction("u");
       },
     },
     // Heading Commands
@@ -120,9 +131,7 @@ export function useCommandPaletteCommands(
       category: "Structure",
       shortcut: "Ctrl+Alt+1",
       action: () => {
-        if (editorContent.value) {
-          toggleBlock(editorContent.value, "h1");
-        }
+        handleBlockAction("h1");
       },
     },
     {
@@ -133,9 +142,7 @@ export function useCommandPaletteCommands(
       category: "Structure",
       shortcut: "Ctrl+Alt+2",
       action: () => {
-        if (editorContent.value) {
-          toggleBlock(editorContent.value, "h2");
-        }
+        handleBlockAction("h2");
       },
     },
     {
@@ -146,9 +153,7 @@ export function useCommandPaletteCommands(
       category: "Structure",
       shortcut: "Ctrl+Alt+3",
       action: () => {
-        if (editorContent.value) {
-          toggleBlock(editorContent.value, "h3");
-        }
+        handleBlockAction("h3");
       },
     },
     // List Commands
@@ -159,9 +164,7 @@ export function useCommandPaletteCommands(
       icon: "•",
       category: "Lists",
       action: () => {
-        if (editorContent.value) {
-          toggleList(editorContent.value, "ul");
-        }
+        handleListAction("ul");
       },
     },
     {
@@ -171,9 +174,7 @@ export function useCommandPaletteCommands(
       icon: "1.",
       category: "Lists",
       action: () => {
-        if (editorContent.value) {
-          toggleList(editorContent.value, "ol");
-        }
+        handleListAction("ol");
       },
     },
     // Insert Commands

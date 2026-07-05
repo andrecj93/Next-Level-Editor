@@ -89,7 +89,10 @@ jobs:
         run: npm ci
         
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+        # Install both browsers the Playwright config runs (chromium + the
+        # mobile-safari / webkit project). Installing chromium only left every
+        # mobile-safari test erroring with "Executable doesn't exist".
+        run: npx playwright install --with-deps chromium webkit
         
       - name: Run E2E tests
         run: npm run test:e2e

@@ -64,15 +64,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, onBeforeUnmount } from "vue";
 import type { MentionSuggestion } from "../composables/useComments";
+
+interface Props {
+  /**
+   * Host-supplied mention provider (e.g. useComments.searchMentions or the
+   * onMentionTriggered callback). When absent, the dropdown stays empty.
+   */
+  mentionSearch?: (
+    query: string
+  ) => Promise<MentionSuggestion[]> | MentionSuggestion[];
+}
 
 interface Emits {
   (e: "submit", content: string, mentions: string[]): void;
   (e: "cancel"): void;
 }
 
+const props = withDefaults(defineProps<Props>(), {
+  mentionSearch: undefined,
+});
+
 const emit = defineEmits<Emits>();
+
+// Debounce interval before querying the mention provider
+const MENTION_SEARCH_DEBOUNCE_MS = 150;
 
 // Refs
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
@@ -80,25 +97,55 @@ const content = ref("");
 const showMentions = ref(false);
 const mentionQuery = ref("");
 const selectedMentionIndex = ref(0);
+const mentionSuggestions = ref<MentionSuggestion[]>([]);
 
-// Mock mention suggestions (in real app, would come from useComments.searchMentions)
-const mentionSuggestions = computed<MentionSuggestion[]>(() => {
-  if (!mentionQuery.value) return [];
+let mentionSearchTimer: ReturnType<typeof setTimeout> | null = null;
+let mentionSearchToken = 0;
 
-  // Mock data - in real app, call useComments.searchMentions(mentionQuery.value)
-  const allUsers: MentionSuggestion[] = [
-    { id: "user1", name: "John Doe", email: "john@example.com" },
-    { id: "user2", name: "Jane Smith", email: "jane@example.com" },
-    { id: "user3", name: "Bob Johnson", email: "bob@example.com" },
-  ];
+function cancelMentionSearch() {
+  if (mentionSearchTimer !== null) {
+    clearTimeout(mentionSearchTimer);
+    mentionSearchTimer = null;
+  }
+}
 
-  const query = mentionQuery.value.toLowerCase();
-  return allUsers.filter(
-    (user) =>
-      user.name.toLowerCase().includes(query) ||
-      (user.email && user.email.toLowerCase().includes(query))
-  );
-});
+function resetMentions() {
+  cancelMentionSearch();
+  // Invalidate any in-flight search so stale results are dropped
+  mentionSearchToken++;
+  mentionSuggestions.value = [];
+}
+
+async function runMentionSearch(query: string) {
+  const search = props.mentionSearch;
+  if (!search) return;
+
+  const token = ++mentionSearchToken;
+  try {
+    const results = await search(query);
+    if (token !== mentionSearchToken || !showMentions.value) return;
+    mentionSuggestions.value = results ?? [];
+    selectedMentionIndex.value = 0;
+  } catch {
+    if (token === mentionSearchToken) {
+      mentionSuggestions.value = [];
+    }
+  }
+}
+
+function queueMentionSearch(query: string) {
+  cancelMentionSearch();
+
+  if (!props.mentionSearch) {
+    mentionSuggestions.value = [];
+    return;
+  }
+
+  mentionSearchTimer = setTimeout(() => {
+    mentionSearchTimer = null;
+    void runMentionSearch(query);
+  }, MENTION_SEARCH_DEBOUNCE_MS);
+}
 
 const mentionDropdownStyle = computed(() => {
   // Position dropdown above textarea
@@ -106,6 +153,10 @@ const mentionDropdownStyle = computed(() => {
     bottom: "100%",
     marginBottom: "8px",
   };
+});
+
+onBeforeUnmount(() => {
+  cancelMentionSearch();
 });
 
 // Methods
@@ -119,9 +170,11 @@ function handleInput() {
     showMentions.value = true;
     mentionQuery.value = mentionMatch[1];
     selectedMentionIndex.value = 0;
+    queueMentionSearch(mentionMatch[1]);
   } else {
     showMentions.value = false;
     mentionQuery.value = "";
+    resetMentions();
   }
 }
 
@@ -171,6 +224,7 @@ function selectMention(suggestion: MentionSuggestion) {
 
   showMentions.value = false;
   mentionQuery.value = "";
+  resetMentions();
 
   // Move cursor to end of inserted mention
   nextTick(() => {
@@ -204,6 +258,7 @@ function handleSubmit() {
   content.value = "";
   showMentions.value = false;
   mentionQuery.value = "";
+  resetMentions();
 }
 
 function handleCancel() {

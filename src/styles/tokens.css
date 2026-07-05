@@ -345,6 +345,20 @@
   --container-lg: 1024px;
   --container-xl: 1280px;
   --container-2xl: 1536px;
+
+  /* Compatibility aliases — short legacy names used by many component <style>
+     blocks (modals, popovers) that predate this token system. They were
+     referenced but never defined, so inputs lost borders and some CTAs went
+     invisible (white-on-white). Mapped to real tokens here. NOTE: var() is
+     substituted at the declaring element, so these must be repeated in the
+     .theme-dark block below to follow the theme. */
+  --text-color: var(--color-text);
+  --text-muted: var(--color-text-secondary);
+  --secondary-bg: var(--color-gray-100);
+  --border-color: var(--color-border);
+  --primary-color: var(--color-primary);
+  --primary-hover: var(--color-primary-dark);
+  --hover-bg: var(--color-gray-100);
 }
 
 /* ==========================================
@@ -392,6 +406,17 @@
 
   /* Input Focus Ring for Dark Mode */
   --input-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.3);
+
+  /* Compatibility aliases (dark) — repeated so var() re-resolves against the
+     dark palette on any element carrying .theme-dark (including teleported
+     modals that opt in). Gray-based surfaces map to dark surfaces here. */
+  --text-color: var(--color-text);
+  --text-muted: var(--color-text-secondary);
+  --secondary-bg: var(--color-surface-raised);
+  --border-color: var(--color-border);
+  --primary-color: var(--color-primary);
+  --primary-hover: var(--color-primary-dark);
+  --hover-bg: var(--color-surface-overlay);
 }
 
 /* ==========================================

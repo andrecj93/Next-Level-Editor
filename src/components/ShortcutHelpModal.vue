@@ -244,7 +244,7 @@ const openCustomization = () => {
 .search-bar {
   padding: 20px 32px;
   border-bottom: 1px solid var(--color-border, #e0e0e0);
-  background: var(--color-background-secondary, #f8f9fa);
+  background: var(--color-surface-raised, #f8f9fa);
 }
 
 .search-input {
@@ -255,7 +255,8 @@ const openCustomization = () => {
   font-size: 15px;
   outline: none;
   transition: all 0.3s;
-  background: white;
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #000);
 }
 
 .search-input:focus {
@@ -297,13 +298,13 @@ const openCustomization = () => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: var(--color-background-secondary, #f8f9fa);
+  background: var(--color-surface-raised, #f8f9fa);
   border-radius: 8px;
   transition: all 0.2s;
 }
 
 .shortcut-row:hover {
-  background: #e9ecef;
+  background: var(--color-surface-overlay, #e9ecef);
   transform: translateX(4px);
 }
 
@@ -322,7 +323,7 @@ const openCustomization = () => {
 
 .key {
   padding: 6px 12px;
-  background: white;
+  background: var(--color-surface, #fff);
   border: 2px solid var(--color-border, #e0e0e0);
   border-radius: 6px;
   font-size: 13px;
@@ -347,7 +348,7 @@ const openCustomization = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--color-background-secondary, #f8f9fa);
+  background: var(--color-surface-raised, #f8f9fa);
 }
 
 .footer-hint {
@@ -361,7 +362,7 @@ const openCustomization = () => {
 
 .footer-hint kbd {
   padding: 4px 8px;
-  background: white;
+  background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e0e0e0);
   border-radius: 4px;
   font-size: 12px;
@@ -397,7 +398,7 @@ const openCustomization = () => {
 }
 
 .shortcuts-content::-webkit-scrollbar-track {
-  background: var(--color-background-secondary, #f8f9fa);
+  background: var(--color-surface-raised, #f8f9fa);
 }
 
 .shortcuts-content::-webkit-scrollbar-thumb {

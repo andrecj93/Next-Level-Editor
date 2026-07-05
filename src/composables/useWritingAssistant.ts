@@ -121,6 +121,9 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
 
   // State
   const textContent = ref("");
+  // Last analyzed HTML — kept so the SEO computed (which needs markup, e.g.
+  // heading structure) stays reactive alongside the plain-text computeds.
+  const htmlContent = ref("");
   const isAnalyzing = ref(false);
 
   // Passive voice patterns
@@ -750,6 +753,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
     try {
       const plainText = extractPlainText(html);
       textContent.value = plainText;
+      htmlContent.value = html;
 
       const stats = calculateStats(plainText);
       const readability = calculateReadability(plainText);
@@ -795,6 +799,16 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
     return analyzeWords(textContent.value);
   });
 
+  const issues = computed(() => {
+    if (!textContent.value) return null;
+    return detectIssues(textContent.value);
+  });
+
+  const seo = computed(() => {
+    if (!htmlContent.value) return null;
+    return analyzeSEO(htmlContent.value);
+  });
+
   return {
     // State
     textContent,
@@ -822,6 +836,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
 
     // Issues detection
     detectIssues,
+    issues,
     detectPassiveVoice,
     detectAdverbs,
     detectComplexWords,
@@ -830,6 +845,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
 
     // SEO
     analyzeSEO,
+    seo,
 
     // Utilities
     splitIntoSentences,

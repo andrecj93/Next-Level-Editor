@@ -110,7 +110,7 @@
                 <input
                   type="checkbox"
                   :checked="selectedFiles.includes(file.id)"
-                  @click.stop="toggleFileSelection(file.id)"
+                  @click.stop="toggleSingleSelection(file.id)"
                 />
               </div>
               <div class="file-preview">
@@ -180,7 +180,7 @@
                     <input
                       type="checkbox"
                       :checked="selectedFiles.includes(file.id)"
-                      @click.stop="toggleFileSelection(file.id)"
+                      @click.stop="toggleSingleSelection(file.id)"
                     />
                   </td>
                   <td class="file-name-cell">
@@ -260,7 +260,9 @@ const maxFileSizeFormatted = computed(() =>
   fileManager.formatFileSize(10 * 1024 * 1024)
 );
 
-const totalSize = computed(() => fileManager.getTotalSize());
+const totalSize = computed(() =>
+  files.value.reduce((total, file) => total + file.size, 0)
+);
 
 const allFilesSelected = computed(
   () =>
@@ -340,6 +342,16 @@ function toggleFileSelection(fileId: string, event?: MouseEvent) {
     } else {
       selectedFiles.value = [fileId];
     }
+  }
+}
+
+function toggleSingleSelection(fileId: string) {
+  // Checkbox toggles only its own item without affecting other selections.
+  const index = selectedFiles.value.indexOf(fileId);
+  if (index > -1) {
+    selectedFiles.value.splice(index, 1);
+  } else {
+    selectedFiles.value.push(fileId);
   }
 }
 

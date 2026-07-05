@@ -220,7 +220,7 @@ describe("useContextMenu", () => {
         }
       }
 
-      const { contextMenuItems } = useContextMenu({
+      const { contextMenuItems, handleContextMenu } = useContextMenu({
         editorContent,
         handleInlineAction,
         insertLink,
@@ -231,6 +231,15 @@ describe("useContextMenu", () => {
         currentCell,
         tableDesignerPosition,
       });
+
+      // The disabled state is captured when the menu opens; simulate the
+      // right-click that opens it so the state reflects the current selection.
+      handleContextMenu({
+        preventDefault: () => {},
+        clientX: 10,
+        clientY: 10,
+        target: editorContent.value,
+      } as unknown as MouseEvent);
 
       const cutItem = contextMenuItems.value.find((item) => item.id === "cut");
       const copyItem = contextMenuItems.value.find(

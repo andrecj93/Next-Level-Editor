@@ -811,6 +811,41 @@ export function getCellProperties(cell: HTMLTableCellElement): {
  * @param table - The table element
  * @returns Current table properties
  */
+/**
+ * Normalize a CSS color to #rrggbb hex so it can populate an
+ * <input type="color"> (which cannot parse rgb()/rgba() strings and would
+ * otherwise fall back to black). Passes through empty values and existing hex.
+ */
+export function normalizeColorToHex(color: string): string {
+  if (!color) return "";
+  const trimmed = color.trim();
+  if (trimmed.startsWith("#")) {
+    // Expand shorthand #abc -> #aabbcc
+    if (/^#[0-9a-f]{3}$/i.test(trimmed)) {
+      return (
+        "#" +
+        trimmed
+          .slice(1)
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      ).toLowerCase();
+    }
+    return trimmed.toLowerCase();
+  }
+  const rgbMatch = trimmed.match(
+    /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i
+  );
+  if (rgbMatch) {
+    const toHex = (n: string) =>
+      Math.max(0, Math.min(255, Number.parseInt(n, 10)))
+        .toString(16)
+        .padStart(2, "0");
+    return `#${toHex(rgbMatch[1])}${toHex(rgbMatch[2])}${toHex(rgbMatch[3])}`;
+  }
+  return trimmed;
+}
+
 export function getTableProperties(table: HTMLTableElement): {
   borderStyle: string;
   borderWidth: number;
@@ -831,7 +866,8 @@ export function getTableProperties(table: HTMLTableElement): {
     const cellStyle = globalThis.getComputedStyle(firstCell);
     borderStyle = cellStyle.borderStyle || "solid";
     borderWidth = Number.parseInt(cellStyle.borderWidth) || 1;
-    borderColor = cellStyle.borderColor || "#d1d5db";
+    // Normalize to hex so the color input shows the real color, not black.
+    borderColor = normalizeColorToHex(cellStyle.borderColor) || "#d1d5db";
   }
 
   return {
@@ -839,7 +875,7 @@ export function getTableProperties(table: HTMLTableElement): {
     borderWidth,
     borderColor,
     width: table.style.width || computedStyle.width || "100%",
-    backgroundColor: table.style.backgroundColor || "",
+    backgroundColor: normalizeColorToHex(table.style.backgroundColor),
     borderCollapse: computedStyle.borderCollapse === "collapse",
   };
 }

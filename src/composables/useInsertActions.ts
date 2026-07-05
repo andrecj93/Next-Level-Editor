@@ -272,11 +272,57 @@ export function useInsertActions(options: InsertActionsOptions) {
   };
 
   /**
+   * Determine whether the current selection is contained within the editor
+   * root. Insert actions that operate on the live selection must be scoped to
+   * the editor so a stray caret elsewhere on the page never mutates unrelated
+   * DOM.
+   */
+  const isSelectionInEditor = (
+    root: HTMLElement,
+    selection: Selection | null
+  ): boolean => {
+    return Boolean(
+      selection &&
+        selection.rangeCount > 0 &&
+        selection.anchorNode &&
+        root.contains(selection.anchorNode)
+    );
+  };
+
+  /**
+   * Build a collapsed selection at the end of the editor content, used as a
+   * fallback when the live selection is outside/absent so insertions still
+   * land inside the editor root.
+   */
+  const collapseSelectionToEditorEnd = (
+    root: HTMLElement
+  ): Selection | null => {
+    const selection = globalThis.getSelection();
+    if (!selection) return null;
+
+    const range = document.createRange();
+    range.selectNodeContents(root);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    return selection;
+  };
+
+  /**
    * Insert page break
    */
   const handleInsertPageBreak = () => {
-    if (!editorContent.value) return;
-    const selection = globalThis.getSelection();
+    const root = editorContent.value;
+    if (!root) return;
+
+    let selection = globalThis.getSelection();
+    // Guard: only act on the live selection when it is inside the editor,
+    // otherwise append the page break at the end of the editor content.
+    if (!isSelectionInEditor(root, selection)) {
+      selection = collapseSelectionToEditorEnd(root);
+    }
+
     insertPageBreak(selection);
     captureSnapshot();
   };
@@ -285,9 +331,17 @@ export function useInsertActions(options: InsertActionsOptions) {
    * Insert table of contents
    */
   const handleInsertTOC = () => {
-    if (!editorContent.value) return;
-    const selection = globalThis.getSelection();
-    insertTableOfContents(editorContent.value, selection);
+    const root = editorContent.value;
+    if (!root) return;
+
+    let selection = globalThis.getSelection();
+    // Guard: contain the insertion to the editor root, falling back to the end
+    // of the editor content when the selection is outside/absent.
+    if (!isSelectionInEditor(root, selection)) {
+      selection = collapseSelectionToEditorEnd(root);
+    }
+
+    insertTableOfContents(root, selection);
     captureSnapshot();
   };
 

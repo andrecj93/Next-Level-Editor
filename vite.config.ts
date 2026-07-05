@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import autoprefixer from "autoprefixer";
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [vue()],
 
   // Transpilation target for broader browser support
@@ -46,7 +46,10 @@ export default defineConfig({
 
   // ESBuild transpilation settings
   esbuild: {
-    target: "es2015",
+    // Only downlevel to es2015 for the production build. Applying it during
+    // dev serving lowers `import.meta` to `{}`, which breaks Vite's injected
+    // `import.meta.hot` HMR code and crashes every SFC on load.
+    target: command === "build" ? "es2015" : "esnext",
     // Keep class/function names for debugging
     keepNames: true,
   },
@@ -85,4 +88,4 @@ export default defineConfig({
   server: {
     hmr: process.env.DISABLE_HMR !== "true",
   },
-});
+}));

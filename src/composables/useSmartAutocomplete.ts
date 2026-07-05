@@ -79,6 +79,11 @@ export function useSmartAutocomplete(
   const lastInput = ref("");
   const autocompleteHistory = ref<AutocompleteResult[]>([]);
 
+  // Re-entrancy guard: applying a replacement dispatches an "input" event so
+  // the host editor can sync v-model; that event must not re-trigger
+  // handleInput synchronously.
+  let isApplying = false;
+
   // ============================================
   // URL Auto-linking
   // ============================================
@@ -91,15 +96,28 @@ export function useSmartAutocomplete(
     /\b(?:https?:\/\/|www\.)[\w-]+(\.[\w-]+)+([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?/gi;
 
   /**
-   * Detect and convert URLs to links
+   * Detect and convert URLs to links.
+   *
+   * Only fires once the user has typed a boundary character (space) after the
+   * URL — converting on every keystroke would linkify half-typed addresses
+   * (e.g. "www.example.c" the moment it matches the pattern). The boundary
+   * character is included in `original`/`replacement` so the matched span
+   * still ends exactly at the caret, as applyAutocomplete requires.
    */
   const detectUrl = (text: string): AutocompleteResult | null => {
     if (!enableUrlLinking) return null;
 
-    const match = text.match(urlPattern);
-    if (!match) return null;
+    const boundary = text.match(/([\u0020\u00a0])$/);
+    if (!boundary) return null;
+    const body = text.slice(0, -1);
 
-    const url = match[0];
+    const matches = body.match(urlPattern);
+    if (!matches) return null;
+
+    const url = matches[matches.length - 1];
+    // The URL must sit immediately before the just-typed boundary.
+    if (!body.endsWith(url)) return null;
+
     let href = url;
 
     // Add protocol if missing
@@ -109,8 +127,8 @@ export function useSmartAutocomplete(
 
     return {
       type: "url",
-      original: url,
-      replacement: `<a href="${href}" target="_blank" rel="noopener noreferrer">${url}</a>`,
+      original: url + boundary[1],
+      replacement: `<a href="${href}" target="_blank" rel="noopener noreferrer">${url}</a>${boundary[1]}`,
     };
   };
 
@@ -124,20 +142,27 @@ export function useSmartAutocomplete(
   const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
 
   /**
-   * Detect and convert emails to mailto links
+   * Detect and convert emails to mailto links. Gated behind a just-typed
+   * boundary character like detectUrl, so half-typed addresses never convert.
    */
   const detectEmail = (text: string): AutocompleteResult | null => {
     if (!enableEmailLinking) return null;
 
-    const match = text.match(emailPattern);
-    if (!match) return null;
+    const boundary = text.match(/([\u0020\u00a0])$/);
+    if (!boundary) return null;
+    const body = text.slice(0, -1);
 
-    const email = match[0];
+    const matches = body.match(emailPattern);
+    if (!matches) return null;
+
+    const email = matches[matches.length - 1];
+    // The email must sit immediately before the just-typed boundary.
+    if (!body.endsWith(email)) return null;
 
     return {
       type: "email",
-      original: email,
-      replacement: `<a href="mailto:${email}">${email}</a>`,
+      original: email + boundary[1],
+      replacement: `<a href="mailto:${email}">${email}</a>${boundary[1]}`,
     };
   };
 
@@ -159,11 +184,11 @@ export function useSmartAutocomplete(
     if (text.includes('"')) {
       let converted = text;
 
-      // Opening double quote (after space or start)
-      converted = converted.replace(/(^|\s)"/g, '$1"');
+      // Opening double quote (after space or start) - curly (U+201C)
+      converted = converted.replace(/(^|\s)"/g, "$1“");
 
-      // Closing double quote (before space, punctuation, or end)
-      converted = converted.replace(/"($|\s|[.,!?;:])/g, '"$1');
+      // Closing double quote (before space, punctuation, or end) - curly (U+201D)
+      converted = converted.replace(/"($|\s|[.,!?;:])/g, "”$1");
 
       if (converted !== text) {
         return {
@@ -329,7 +354,10 @@ export function useSmartAutocomplete(
         const replacement = shortcut.replacement(match);
         return {
           type: "markdown",
-          original: text,
+          // Only the matched source span is replaced (for block patterns the
+          // ^...$ anchors make match[0] the whole line; for inline patterns
+          // like **bold** it is just the marked segment).
+          original: match[0],
           replacement,
           cursorOffset: shortcut.cursorOffset,
         };
@@ -490,43 +518,107 @@ export function useSmartAutocomplete(
   };
 
   /**
-   * Apply autocomplete to current selection/cursor
+   * Apply autocomplete at the current caret position.
+   *
+   * `result.original` is the exact source text that was matched by detection;
+   * it must end at the caret inside a single text node. That span is removed
+   * and `result.replacement` is inserted in its place, so the source text is
+   * never duplicated (e.g. "--" becomes "—", not "--—").
+   *
+   * Guards: if `original` is empty, the caret is not in a text node inside
+   * the editor, or the text before the caret does not equal `original`,
+   * nothing happens — skipping is always safer than corrupting content.
    */
   const applyAutocomplete = (result: AutocompleteResult) => {
-    if (!editorRef.value) return;
+    const editor = editorRef.value;
+    if (!editor) return;
+    if (!result.original) return;
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
 
-    const range = selection.getRangeAt(0);
+    const caretRange = selection.getRangeAt(0);
+    const node = caretRange.startContainer;
+    const caretOffset = caretRange.startOffset;
 
-    // Create replacement node
-    const template = document.createElement("template");
-    template.innerHTML = result.replacement;
-    const replacement = template.content;
+    // Only operate on a caret inside a text node owned by the editor
+    if (node.nodeType !== Node.TEXT_NODE) return;
+    if (!editor.contains(node)) return;
 
-    // Replace content
+    // The matched source text must end exactly at the caret
+    const start = caretOffset - result.original.length;
+    const nodeText = node.textContent || "";
+    if (start < 0 || caretOffset > nodeText.length) return;
+    if (nodeText.substring(start, caretOffset) !== result.original) return;
+
+    // Remove exactly the matched source text
+    const range = document.createRange();
+    range.setStart(node, start);
+    range.setEnd(node, caretOffset);
     range.deleteContents();
-    range.insertNode(replacement);
+
+    // Insert the replacement. url/email/markdown replacements are HTML
+    // markup; the remaining types (smartQuote, emoji, smartPunctuation)
+    // produce plain text and are inserted as text nodes so surrounding
+    // characters like "<" or "&" are never re-parsed as markup.
+    const isHtmlReplacement =
+      result.type === "url" ||
+      result.type === "email" ||
+      result.type === "markdown";
+
+    let lastInserted: Node | null = null;
+    if (isHtmlReplacement) {
+      const template = document.createElement("template");
+      template.innerHTML = result.replacement;
+      lastInserted = template.content.lastChild;
+      if (lastInserted) {
+        range.insertNode(template.content);
+      }
+    } else if (result.replacement) {
+      const textNode = document.createTextNode(result.replacement);
+      lastInserted = textNode;
+      range.insertNode(textNode);
+    }
 
     // Set cursor position
-    if (result.cursorOffset === undefined) {
-      // Move cursor to end of replacement
-      range.collapse(false);
+    const newRange = document.createRange();
+    if (lastInserted && result.cursorOffset !== undefined) {
+      // Honor an explicit offset within the inserted content's last text node
+      let target: Node = lastInserted;
+      while (target.lastChild) {
+        target = target.lastChild;
+      }
+      if (target.nodeType === Node.TEXT_NODE) {
+        const length = target.textContent?.length ?? 0;
+        newRange.setStart(
+          target,
+          Math.min(Math.max(result.cursorOffset, 0), length)
+        );
+      } else {
+        newRange.setStartAfter(lastInserted);
+      }
+    } else if (lastInserted) {
+      // Default: place the caret right after the inserted content
+      newRange.setStartAfter(lastInserted);
     } else {
-      const newRange = document.createRange();
-      const lastNode = replacement.lastChild || replacement;
-      newRange.setStart(lastNode, result.cursorOffset);
-      newRange.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
+      // Nothing inserted; keep the caret where the removed text started
+      newRange.setStart(node, start);
     }
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
 
     // Add to history
     autocompleteHistory.value.push(result);
 
-    // Trigger input event
-    editorRef.value.dispatchEvent(new Event("input", { bubbles: true }));
+    // Trigger input event so the host editor syncs (guarded so it cannot
+    // synchronously re-enter handleInput)
+    isApplying = true;
+    try {
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    } finally {
+      isApplying = false;
+    }
   };
 
   /**
@@ -534,6 +626,7 @@ export function useSmartAutocomplete(
    */
   const handleInput = () => {
     if (!editorRef.value) return;
+    if (isApplying) return;
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;

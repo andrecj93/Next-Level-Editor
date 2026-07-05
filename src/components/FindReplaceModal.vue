@@ -2,7 +2,12 @@
 <template>
   <teleport to="body">
     <transition name="modal-fade">
-      <div v-if="show" class="modal-overlay" @click="handleOverlayClick">
+      <div
+        v-if="show"
+        class="modal-overlay"
+        :class="theme"
+        @click="handleOverlayClick"
+      >
         <div class="modal-content find-replace-modal" @click.stop>
           <div class="modal-header">
             <h3>Find & Replace</h3>
@@ -106,22 +111,25 @@ import { ref, watch, nextTick, onMounted } from "vue";
 interface Props {
   show: boolean;
   content: string;
+  theme?: string;
+}
+
+interface ReplaceData {
+  findText: string;
+  replaceText: string;
+  options: { caseSensitive: boolean; wholeWord: boolean };
 }
 
 interface Emits {
   (e: "close"): void;
-  (
-    e: "replace",
-    data: {
-      findText: string;
-      replaceText: string;
-      options: { caseSensitive: boolean; wholeWord: boolean };
-    }
-  ): void;
+  (e: "replace", data: ReplaceData): void;
+  (e: "replace-all", data: ReplaceData): void;
   (e: "find", data: { findText: string; direction: "next" | "previous" }): void;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  theme: "theme-light",
+});
 const emit = defineEmits<Emits>();
 
 const findInput = ref<HTMLInputElement | null>(null);
@@ -166,18 +174,18 @@ const replaceOne = () => {
 
 const replaceAll = () => {
   if (!findText.value || matches.value === 0) return;
-  // Replace all occurrences by repeatedly calling replace
-  const totalMatches = matches.value;
-  for (let i = 0; i < totalMatches; i++) {
-    emit("replace", {
-      findText: findText.value,
-      replaceText: replaceText.value,
-      options: {
-        caseSensitive: caseSensitive.value,
-        wholeWord: wholeWord.value,
-      },
-    });
-  }
+  // A single replace-all pass handles every occurrence. (The previous code
+  // looped `matches` times over an already-global replace, which corrupted
+  // text whenever the replacement contained the search term and fired N
+  // redundant DOM rewrites / snapshots.)
+  emit("replace-all", {
+    findText: findText.value,
+    replaceText: replaceText.value,
+    options: {
+      caseSensitive: caseSensitive.value,
+      wholeWord: wholeWord.value,
+    },
+  });
   updateMatches();
 };
 
@@ -260,7 +268,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay-backdrop);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -270,9 +278,9 @@ onMounted(() => {
 }
 
 .modal-content {
-  background: white;
-  border-radius: var(--radius-xl, 12px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2xl);
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
@@ -283,14 +291,14 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .close-btn {
@@ -298,7 +306,7 @@ onMounted(() => {
   height: 32px;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 20px;
   cursor: pointer;
   border-radius: var(--radius-md, 8px);
@@ -309,8 +317,8 @@ onMounted(() => {
 }
 
 .close-btn:hover {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .modal-body {
@@ -327,13 +335,15 @@ onMounted(() => {
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-text);
 }
 
 .text-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  background: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
   transition: border-color var(--transition-fast, 150ms) ease;
@@ -341,7 +351,7 @@ onMounted(() => {
 
 .text-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -350,7 +360,7 @@ onMounted(() => {
   right: 12px;
   top: 38px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   pointer-events: none;
 }
 
@@ -371,7 +381,7 @@ onMounted(() => {
   cursor: pointer;
   user-select: none;
   font-size: 14px;
-  color: #374151;
+  color: var(--color-text);
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -384,7 +394,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
   gap: 12px;
 }
 
@@ -410,21 +420,21 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #e5e7eb;
+  background: var(--color-border);
 }
 
 .btn-primary {
-  background: #2563eb;
+  background: var(--color-primary);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #2563eb;
+  background: var(--color-primary-dark);
 }
 
 .modal-fade-enter-active,

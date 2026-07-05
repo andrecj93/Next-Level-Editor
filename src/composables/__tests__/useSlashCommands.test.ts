@@ -498,4 +498,74 @@ describe("useSlashCommands", () => {
       expect(options.handleInsertHR).toHaveBeenCalled();
     });
   });
+
+  describe("Keyboard navigation", () => {
+    it("starts with the first option highlighted", () => {
+      const { selectedIndex } = useSlashCommands(options);
+      expect(selectedIndex.value).toBe(0);
+    });
+
+    it("ignores keys while the menu is closed", () => {
+      const { handleMenuKeydown, selectedIndex } = useSlashCommands(options);
+      const handled = handleMenuKeydown(
+        new KeyboardEvent("keydown", { key: "ArrowDown" })
+      );
+      expect(handled).toBe(false);
+      expect(selectedIndex.value).toBe(0);
+    });
+
+    it("moves the highlight with arrow keys and wraps around", () => {
+      const {
+        showCommandMenu,
+        selectedIndex,
+        commandOptions,
+        handleMenuKeydown,
+      } = useSlashCommands(options);
+      showCommandMenu.value = true;
+
+      expect(
+        handleMenuKeydown(new KeyboardEvent("keydown", { key: "ArrowDown" }))
+      ).toBe(true);
+      expect(selectedIndex.value).toBe(1);
+
+      handleMenuKeydown(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+      expect(selectedIndex.value).toBe(0);
+
+      // wrap from the first item back to the last
+      handleMenuKeydown(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+      expect(selectedIndex.value).toBe(commandOptions.length - 1);
+    });
+
+    it("runs the highlighted command on Enter and closes the menu", () => {
+      const { showCommandMenu, handleMenuKeydown } = useSlashCommands(options);
+      showCommandMenu.value = true;
+      // index 0 is "Heading 1" -> handleBlockAction('h1')
+      const handled = handleMenuKeydown(
+        new KeyboardEvent("keydown", { key: "Enter" })
+      );
+      expect(handled).toBe(true);
+      expect(options.handleBlockAction).toHaveBeenCalledWith("h1");
+      expect(showCommandMenu.value).toBe(false);
+    });
+
+    it("selects with Tab as well", () => {
+      const { showCommandMenu, selectedIndex, handleMenuKeydown } =
+        useSlashCommands(options);
+      showCommandMenu.value = true;
+      selectedIndex.value = 3; // "Paragraph"
+      handleMenuKeydown(new KeyboardEvent("keydown", { key: "Tab" }));
+      expect(options.handleBlockAction).toHaveBeenCalledWith("p");
+      expect(showCommandMenu.value).toBe(false);
+    });
+
+    it("closes on Escape", () => {
+      const { showCommandMenu, handleMenuKeydown } = useSlashCommands(options);
+      showCommandMenu.value = true;
+      const handled = handleMenuKeydown(
+        new KeyboardEvent("keydown", { key: "Escape" })
+      );
+      expect(handled).toBe(true);
+      expect(showCommandMenu.value).toBe(false);
+    });
+  });
 });

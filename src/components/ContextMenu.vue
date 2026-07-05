@@ -4,6 +4,7 @@
       <div
         v-if="show"
         class="context-menu"
+        :class="theme"
         :style="{
           top: `${position.top}px`,
           left: `${position.left}px`,
@@ -41,18 +42,21 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from "vue";
+import { watch, onBeforeUnmount } from "vue";
 import type { ContextMenuItem } from "../types/contextMenu";
 
 interface Props {
   show: boolean;
   position: { top: number; left: number };
   items: ContextMenuItem[];
+  theme?: string;
 }
 
 type Emits = (e: "close") => void;
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  theme: "theme-light",
+});
 const emit = defineEmits<Emits>();
 
 const handleItemClick = (item: ContextMenuItem) => {
@@ -72,29 +76,67 @@ const handleDocumentClick = () => {
   }
 };
 
+// #31: close the menu when the underlying page scrolls or the window resizes -
+// in both cases the anchor point the menu was positioned at is no longer valid.
+const handleDismiss = () => {
+  if (props.show) {
+    emit("close");
+  }
+};
+
+// #31: close the menu on Escape pressed while it is open. Listening on the
+// menu container keeps this scoped to the menu; a keydown anywhere in the
+// document while the menu is open should still dismiss it.
+const handleKeydown = (event: KeyboardEvent) => {
+  if (props.show && event.key === "Escape") {
+    emit("close");
+  }
+};
+
+const addDismissListeners = () => {
+  document.addEventListener("click", handleDocumentClick);
+  // `scroll` fires on inner scrollable elements too, so capture it.
+  window.addEventListener("scroll", handleDismiss, true);
+  window.addEventListener("resize", handleDismiss);
+  document.addEventListener("keydown", handleKeydown);
+};
+
+const removeDismissListeners = () => {
+  document.removeEventListener("click", handleDocumentClick);
+  window.removeEventListener("scroll", handleDismiss, true);
+  window.removeEventListener("resize", handleDismiss);
+  document.removeEventListener("keydown", handleKeydown);
+};
+
 watch(
   () => props.show,
   (newShow) => {
     if (newShow) {
-      // Add click listener to close menu when clicking outside
+      // Defer so the opening right-click/keypress does not immediately close it.
       setTimeout(() => {
-        document.addEventListener("click", handleDocumentClick);
+        addDismissListeners();
       }, 0);
     } else {
-      document.removeEventListener("click", handleDocumentClick);
+      removeDismissListeners();
     }
   }
 );
+
+// Ensure listeners are removed if the component is unmounted while the menu is
+// still open (the watch only removes them on close).
+onBeforeUnmount(() => {
+  removeDismissListeners();
+});
 </script>
 
 <style scoped>
 .context-menu {
   position: fixed;
   min-width: 200px;
-  background: var(--editor-bg, #ffffff);
-  border: 1px solid var(--editor-border, #d8dde6);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   padding: 4px;
   z-index: 10000;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -108,7 +150,7 @@ watch(
   padding: 8px 12px;
   border: none;
   background: transparent;
-  color: var(--toolbar-text, #1f2937);
+  color: var(--color-text);
   font-size: 14px;
   text-align: left;
   cursor: pointer;
@@ -117,7 +159,7 @@ watch(
 }
 
 .context-menu-item:hover:not(:disabled) {
-  background: var(--toolbar-hover, rgba(59, 130, 246, 0.1));
+  background: var(--color-surface-raised);
 }
 
 .context-menu-item:disabled {
@@ -144,7 +186,7 @@ watch(
 
 .context-menu-divider {
   height: 1px;
-  background: var(--editor-border, #d8dde6);
+  background: var(--color-border);
   margin: 4px 8px;
 }
 
@@ -161,13 +203,5 @@ watch(
 .context-menu-leave-to {
   opacity: 0;
   transform: scale(0.95);
-}
-
-/* Dark theme support */
-:deep(.theme-dark) .context-menu {
-  --editor-bg: #0f172a;
-  --editor-border: #1e293b;
-  --toolbar-text: #e2e8f0;
-  --toolbar-hover: rgba(96, 165, 250, 0.2);
 }
 </style>

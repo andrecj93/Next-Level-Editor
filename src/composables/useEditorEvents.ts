@@ -29,7 +29,6 @@ export function useEditorEvents({
   showTableDesigner,
   currentTable,
   currentCell,
-  tableDesignerPosition,
   emit,
 }: UseEditorEventsParams) {
   /**
@@ -77,20 +76,13 @@ export function useEditorEvents({
     const cell = getSelectedCell();
 
     if (table && cell) {
+      // Track the active table/cell so table operations know their target, but
+      // do NOT auto-open the TableDesigner here. Opening it on every left-click
+      // in a cell popped the panel unprompted and fought the right-click
+      // positioning; it now opens only on an explicit right-click (handled in
+      // useContextMenu). [#12]
       currentTable.value = table;
       currentCell.value = cell;
-
-      // Position the designer near the table
-      const rect = table.getBoundingClientRect();
-      const editorRect = editorContent.value?.getBoundingClientRect();
-
-      if (editorRect) {
-        tableDesignerPosition.value = {
-          x: rect.right - editorRect.left + 10,
-          y: rect.top - editorRect.top,
-        };
-        showTableDesigner.value = true;
-      }
     } else {
       showTableDesigner.value = false;
       currentTable.value = null;

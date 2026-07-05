@@ -3,15 +3,22 @@
     <div
       v-if="show"
       class="command-menu"
-      :style="{ top: `${position.top}px`, left: `${position.left}px` }"
+      :style="{
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+        maxHeight: position.maxHeight ? `${position.maxHeight}px` : undefined,
+      }"
     >
       <div class="command-menu-header">
         Quick Actions
       </div>
-      <ul>
+      <ul role="listbox">
         <li
-          v-for="option in options"
+          v-for="(option, index) in options"
           :key="option.id"
+          role="option"
+          :class="{ selected: index === selectedIndex }"
+          :aria-selected="index === selectedIndex"
           @mousedown.prevent
           @click="$emit('select', option)"
         >
@@ -28,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+import { watch, nextTick } from "vue";
 import type { SlashCommandOption } from "../composables/useSlashCommands";
 
 // Re-export for backward compatibility
@@ -41,19 +49,36 @@ export interface CommandOption {
 export interface CommandMenuPosition {
   top: number;
   left: number;
+  /** Cap so the menu scrolls internally instead of extending under fixed bars. */
+  maxHeight?: number;
 }
 
 interface Props {
   show: boolean;
   position: CommandMenuPosition;
   options: SlashCommandOption[];
+  /** Keyboard-highlighted option index (Arrow keys drive it upstream). */
+  selectedIndex?: number;
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   show: false,
   position: () => ({ top: 0, left: 0 }),
   options: () => [],
+  selectedIndex: 0,
 });
+
+// Keep the keyboard-highlighted item scrolled into view within the menu.
+watch(
+  () => props.selectedIndex,
+  () => {
+    if (!props.show) return;
+    nextTick(() => {
+      const el = document.querySelector(".command-menu li.selected");
+      el?.scrollIntoView({ block: "nearest" });
+    });
+  }
+);
 
 defineEmits<{
   select: [option: SlashCommandOption];

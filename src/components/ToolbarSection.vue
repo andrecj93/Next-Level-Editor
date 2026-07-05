@@ -10,6 +10,8 @@
     "
     :items="items"
     :disabled="!visible"
+    :preserve-label="preserveLabel"
+    @remember-selection="$emit('remember-selection')"
   />
 
   <!-- Button Group Section -->
@@ -22,7 +24,7 @@
       :key="action.id"
       :class="[
         'toolbar-btn-modern',
-        { active: action.isActive?.(), disabled: !visible },
+        { active: action.isActive?.(), disabled: !visible || action.isDisabled?.() },
       ]"
       :data-tooltip="
         visible
@@ -31,9 +33,9 @@
       "
       :aria-label="action.label"
       :aria-pressed="action.isActive?.() || false"
-      :disabled="!visible"
+      :disabled="!visible || action.isDisabled?.()"
       @mousedown.prevent="$emit('remember-selection')"
-      @click="visible ? action.onClick() : null"
+      @click="visible && !action.isDisabled?.() ? action.onClick() : null"
     >
       <span v-html="action.icon" />
     </button>
@@ -59,6 +61,8 @@ interface Props {
   icon?: string;
   tooltip?: string;
   items?: ToolbarAction[] | any[];
+  /** Keep the static trigger label (see ToolbarDropdown.preserveLabel). */
+  preserveLabel?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -67,6 +71,7 @@ withDefaults(defineProps<Props>(), {
   icon: "",
   tooltip: "",
   items: () => [],
+  preserveLabel: false,
 });
 
 defineEmits<{

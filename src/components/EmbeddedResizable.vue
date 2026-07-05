@@ -537,34 +537,33 @@ onUnmounted(() => {
   transform: scale(0.95);
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .embedded-resizable:hover {
-    border-color: rgba(102, 126, 234, 0.5);
-  }
+/* Dark mode support — keyed to the editor's own theme class (.theme-dark on
+   the .next-level-editor root), not the OS prefers-color-scheme setting. */
+.theme-dark .embedded-resizable:hover {
+  border-color: rgba(102, 126, 234, 0.5);
+}
 
-  .embedded-toolbar {
-    background: #2a2a2a;
-    border-color: #444;
-  }
+.theme-dark .embedded-toolbar {
+  background: #2a2a2a;
+  border-color: #444;
+}
 
-  .toolbar-btn {
-    background: #2a2a2a;
-    color: #fff;
-  }
+.theme-dark .toolbar-btn {
+  background: #2a2a2a;
+  color: #fff;
+}
 
-  .toolbar-btn:hover {
-    background: #3a3a3a;
-  }
+.theme-dark .toolbar-btn:hover {
+  background: #3a3a3a;
+}
 
-  .size-indicator {
-    background: #3a3a3a;
-    color: #ccc;
-  }
+.theme-dark .size-indicator {
+  background: #3a3a3a;
+  color: #ccc;
+}
 
-  .resize-handle {
-    border-color: #2a2a2a;
-  }
+.theme-dark .resize-handle {
+  border-color: #2a2a2a;
 }
 
 /* Responsive */

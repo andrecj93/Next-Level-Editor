@@ -12,7 +12,7 @@
       :aria-expanded="isOpen"
       :aria-haspopup="true"
       :disabled="disabled"
-      @mousedown.prevent
+      @mousedown.prevent="$emit('remember-selection')"
       @click.stop="!disabled ? toggle() : null"
     >
       <span
@@ -85,17 +85,28 @@ interface Props {
   items: DropdownItem[];
   modelValue?: boolean;
   disabled?: boolean;
+  /**
+   * Keep the static label as the trigger text. By default the trigger shows
+   * the active item's label (select-like dropdowns such as Format/Size); menus
+   * with stateful toggle items (e.g. Tools > Spell Check) must opt out so the
+   * trigger doesn't get hijacked by whichever item happens to be active.
+   */
+  preserveLabel?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   icon: "",
   tooltip: "",
   disabled: false,
+  preserveLabel: false,
 });
 
 const emit = defineEmits<{
   "update:modelValue": [value: boolean];
   "item-click": [item: DropdownItem];
+  // Emitted on trigger mousedown so the host can save the editor selection
+  // and suppress the floating bubble before the dropdown opens.
+  "remember-selection": [];
 }>();
 
 const dropdownRef = ref<HTMLElement | null>(null);
@@ -106,6 +117,7 @@ const hasActiveItem = computed(() => {
 });
 
 const displayLabel = computed(() => {
+  if (props.preserveLabel) return props.label;
   const activeItem = props.items.find((item) => item.isActive?.());
   return activeItem?.label || props.label;
 });
@@ -168,15 +180,15 @@ watch(
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 7px 11px;
   border: 1px solid var(--border-color, #ddd);
   background: var(--toolbar-btn-bg, white);
   color: var(--text-color, #333);
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.2s;
-  min-height: 32px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  min-height: 34px;
 }
 
 .dropdown-trigger:hover:not(:disabled) {
@@ -244,8 +256,8 @@ watch(
   left: 0;
   background: var(--dropdown-bg, white);
   border: 1px solid var(--border-color, #ddd);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-lg, 8px);
+  box-shadow: var(--shadow-lg);
   z-index: 10000;
   max-height: 400px;
   overflow-y: auto;
@@ -318,25 +330,25 @@ watch(
 }
 
 /* Dark mode */
-.dark .dropdown-trigger {
-  --toolbar-btn-bg: #2d2d2d;
-  --toolbar-btn-hover: #3a3a3a;
-  --toolbar-btn-active: #1a3a52;
-  --border-color: #444;
-  --border-hover-color: #666;
-  --text-color: #e0e0e0;
+.theme-dark .dropdown-trigger {
+  --toolbar-btn-bg: var(--color-surface-raised);
+  --toolbar-btn-hover: var(--color-surface-overlay);
+  --toolbar-btn-active: rgba(96, 165, 250, 0.18);
+  --border-color: var(--color-border);
+  --border-hover-color: var(--color-border-dark);
+  --text-color: var(--color-text);
 }
 
-.dark .dropdown-trigger[data-tooltip]::after {
+.theme-dark .dropdown-trigger[data-tooltip]::after {
   background: rgba(15, 23, 42, 0.95);
   color: #e2e8f0;
 }
 
-.dark .dropdown-menu {
-  --dropdown-bg: #2d2d2d;
-  --dropdown-item-hover: #3a3a3a;
-  --dropdown-item-active: #1a3a52;
-  --border-color: #444;
-  --text-color: #e0e0e0;
+.theme-dark .dropdown-menu {
+  --dropdown-bg: var(--color-surface-raised);
+  --dropdown-item-hover: var(--color-surface-overlay);
+  --dropdown-item-active: rgba(96, 165, 250, 0.18);
+  --border-color: var(--color-border);
+  --text-color: var(--color-text);
 }
 </style>

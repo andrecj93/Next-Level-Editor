@@ -3,8 +3,37 @@
  * Visual styling for {{ variableName }} elements in the editor
  */
 
-/* Variable pill styling - similar to CKEditor */
-.nle-content .editor-variable {
+/*
+ * Design tokens for the variable pills. These used to live in
+ * src/styles/variables.css, but that file is never imported into the library
+ * build, so every var(--variable-*) below resolved to nothing and the pills
+ * rendered as bare text. Define them here, on the editor root, so they always
+ * resolve. The dark palette is picked explicitly by the .theme-dark rules
+ * below, so both light and dark values are always available.
+ */
+.next-level-editor {
+  --variable-bg-light: #e8f2ff;
+  --variable-border-light: #3b82f6;
+  --variable-text-light: #1e40af;
+  --variable-hover-bg-light: #dbeafe;
+
+  --variable-bg-dark: rgba(59, 130, 246, 0.15);
+  --variable-border-dark: #60a5fa;
+  --variable-text-dark: #93c5fd;
+  --variable-hover-bg-dark: rgba(59, 130, 246, 0.25);
+}
+
+/*
+ * Variable pill styling - similar to CKEditor.
+ * NOTE: these were previously scoped to `.nle-content` / `.nle-container.dark`,
+ * class names that exist nowhere in the DOM (the editor root is
+ * `.next-level-editor.theme-dark|.theme-light`, its content is
+ * `.editor-content`). As a result the entire pill look — including every dark
+ * override — was dead. The base rules are intentionally left unscoped so the
+ * pills also style inside the read-only preview, and the theme overrides key
+ * off the real `.theme-dark` root class.
+ */
+.editor-variable {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
@@ -25,7 +54,7 @@
 }
 
 /* Hover state */
-.nle-content .editor-variable:hover {
+.editor-variable:hover {
   background: var(--variable-hover-bg-light);
   border-color: var(--variable-border-light);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
@@ -33,25 +62,25 @@
 }
 
 /* Active/Focus state */
-.nle-content .editor-variable:active {
+.editor-variable:active {
   transform: translateY(0);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 /* Dark theme support */
-.nle-container.dark .nle-content .editor-variable {
+.theme-dark .editor-variable {
   background: var(--variable-bg-dark);
   border-color: var(--variable-border-dark);
   color: var(--variable-text-dark);
 }
 
-.nle-container.dark .nle-content .editor-variable:hover {
+.theme-dark .editor-variable:hover {
   background: var(--variable-hover-bg-dark);
   border-color: var(--variable-border-dark);
   box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.15);
 }
 
-.nle-container.dark .nle-content .editor-variable:active {
+.theme-dark .editor-variable:active {
   box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.25);
 }
 
@@ -92,7 +121,7 @@
   animation: fadeIn 0.2s ease;
 }
 
-.nle-container.dark .editor-variable[title]:hover::after {
+.theme-dark .editor-variable[title]:hover::after {
   background: var(--tooltip-bg-dark, rgba(15, 23, 42, 0.95));
   color: var(--tooltip-text-dark, #e2e8f0);
 }
@@ -112,7 +141,7 @@
   animation: fadeIn 0.2s ease;
 }
 
-.nle-container.dark .editor-variable[title]:hover::before {
+.theme-dark .editor-variable[title]:hover::before {
   border-top-color: var(--tooltip-bg-dark, rgba(15, 23, 42, 0.95));
 }
 
@@ -156,7 +185,7 @@
   background: rgba(59, 130, 246, 0.2);
 }
 
-.nle-container.dark .editor-variable::selection {
+.theme-dark .editor-variable::selection {
   background: rgba(96, 165, 250, 0.25);
 }
 
@@ -175,7 +204,7 @@
   color: #991b1b;
 }
 
-.nle-container.dark .editor-variable.error {
+.theme-dark .editor-variable.error {
   background: rgba(239, 68, 68, 0.2);
   border-color: #f87171;
   color: #fef2f2;
@@ -198,7 +227,7 @@
   outline-offset: 2px;
 }
 
-.nle-container.dark .editor-variable:focus-visible {
+.theme-dark .editor-variable:focus-visible {
   outline-color: var(--variable-border-dark);
 }
 

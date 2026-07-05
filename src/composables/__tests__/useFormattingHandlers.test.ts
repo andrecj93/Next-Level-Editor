@@ -307,7 +307,10 @@ describe("useFormattingHandlers", () => {
       expect(mockHandleTextColorBase).toHaveBeenCalledWith("#ff0000");
     });
 
-    it("should close colors dropdown after 300ms", () => {
+    it("should keep the colors dropdown open after applying a color", () => {
+      // The dropdown must stay open so the user can keep fine-tuning the color
+      // (drag/HEX input). It is dismissed only by an outside click or Escape,
+      // handled at the editor level — never auto-closed on each value change.
       showColorsDropdown.value = true;
 
       const { handleTextColor } = useFormattingHandlers({
@@ -324,9 +327,9 @@ describe("useFormattingHandlers", () => {
 
       expect(showColorsDropdown.value).toBe(true);
 
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(1000);
 
-      expect(showColorsDropdown.value).toBe(false);
+      expect(showColorsDropdown.value).toBe(true);
     });
 
     it("should not close dropdown immediately", () => {
@@ -386,7 +389,7 @@ describe("useFormattingHandlers", () => {
       expect(mockHandleBackgroundColorBase).toHaveBeenCalledWith("#ffcc00");
     });
 
-    it("should close colors dropdown after 300ms", () => {
+    it("should keep the colors dropdown open after applying a background color", () => {
       showColorsDropdown.value = true;
 
       const { handleBackgroundColor } = useFormattingHandlers({
@@ -403,9 +406,9 @@ describe("useFormattingHandlers", () => {
 
       expect(showColorsDropdown.value).toBe(true);
 
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(1000);
 
-      expect(showColorsDropdown.value).toBe(false);
+      expect(showColorsDropdown.value).toBe(true);
     });
 
     it("should not close dropdown immediately", () => {
@@ -562,11 +565,11 @@ describe("useFormattingHandlers", () => {
       handleTextColor("#ff0000");
       handleBackgroundColor("#00ff00");
 
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(1000);
 
       expect(mockHandleTextColorBase).toHaveBeenCalledWith("#ff0000");
       expect(mockHandleBackgroundColorBase).toHaveBeenCalledWith("#00ff00");
-      expect(showColorsDropdown.value).toBe(false);
+      expect(showColorsDropdown.value).toBe(true); // Stays open for fine-tuning
       expect(formatPainterActive.value).toBe(true); // Should not be affected
     });
 

@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 
 interface ToastNotificationOptions {
   duration?: number;
@@ -44,17 +44,33 @@ export function useEditorUIState(options?: ToastNotificationOptions) {
   };
 
   /**
-   * Toggle full screen mode
+   * Toggle full screen mode. isFullScreen is driven by the actual
+   * `fullscreenchange` event (see below) rather than flipped here, so the
+   * state stays correct when the user leaves fullscreen with Esc/F11 — which
+   * the browser handles directly, bypassing this button.
    */
   const toggleFullScreen = () => {
-    isFullScreen.value = !isFullScreen.value;
-
-    if (isFullScreen.value) {
+    if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.();
     } else {
       document.exitFullscreen?.();
     }
   };
+
+  // Keep isFullScreen in sync with the real fullscreen state so the editor's
+  // `.fullscreen` layout class and the toolbar button's active state never get
+  // stuck on after an Esc/F11 exit.
+  const syncFullScreenState = () => {
+    isFullScreen.value = Boolean(document.fullscreenElement);
+  };
+
+  onMounted(() => {
+    document.addEventListener("fullscreenchange", syncFullScreenState);
+  });
+
+  onBeforeUnmount(() => {
+    document.removeEventListener("fullscreenchange", syncFullScreenState);
+  });
 
   return {
     // UI state

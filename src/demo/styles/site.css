@@ -1,0 +1,188 @@
+/**
+ * next-level-editor — demo / docs site design system
+ *
+ * Aesthetic: "Editorial Ink". A rich-text editor is a writing instrument, so the
+ * site reads like fine print — a warm paper ground, deep ink, a single confident
+ * vermilion accent, a high-contrast Fraunces serif for display and a crisp
+ * Hanken Grotesk for text. Deliberately NOT the purple-gradient-on-white look.
+ * Dark mode is a `.site-dark` class on <html> (not OS), toggled in-nav.
+ */
+
+:root {
+  /* Type */
+  --font-display: "Fraunces", "Hoefler Text", Georgia, "Times New Roman", serif;
+  --font-sans: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Accent — vermilion ink */
+  --accent: #c4392c;
+  --accent-strong: #a52c21;
+  --brand-500: #c4392c;
+  --brand-400: #e07a4b;
+  --brand-gradient: linear-gradient(135deg, #c4392c 0%, #dd6a3a 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(196, 57, 44, 0.1), rgba(221, 106, 58, 0.08));
+
+  /* Paper & ink — light */
+  --bg: #fbf8f1;
+  --bg-subtle: #f3eee1;
+  --bg-elevated: #fffdf8;
+  --surface: #fffdf8;
+  --ink: #1c1a17;
+  --ink-soft: #57514a;
+  --ink-muted: #9a9184;
+  --border: #e8e0d0;
+  --border-strong: #d8cdb8;
+  --code-bg: #221e18;
+  --code-ink: #ece4d7;
+
+  --shadow-sm: 0 1px 2px rgba(40, 30, 20, 0.06), 0 1px 3px rgba(40, 30, 20, 0.05);
+  --shadow-md: 0 8px 22px -10px rgba(50, 38, 24, 0.18), 0 3px 8px -5px rgba(50, 38, 24, 0.1);
+  --shadow-lg: 0 30px 60px -28px rgba(45, 33, 20, 0.32), 0 12px 24px -14px rgba(45, 33, 20, 0.18);
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+  --radius-pill: 999px;
+
+  --container: 1120px;
+  --nav-h: 66px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.site-dark {
+  --accent: #f0705a;
+  --accent-strong: #f78a76;
+  --brand-500: #f0705a;
+  --brand-400: #f4a07a;
+  --brand-gradient: linear-gradient(135deg, #e8624c 0%, #f0895a 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(240, 112, 90, 0.16), rgba(244, 160, 122, 0.12));
+
+  --bg: #16120d;
+  --bg-subtle: #1d1811;
+  --bg-elevated: #211b13;
+  --surface: #201a12;
+  --ink: #efe7d9;
+  --ink-soft: #b8ac98;
+  --ink-muted: #837a68;
+  --border: #2e271d;
+  --border-strong: #3d3427;
+  --code-bg: #100d09;
+  --code-ink: #ece4d7;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 10px 24px -10px rgba(0, 0, 0, 0.65);
+  --shadow-lg: 0 34px 66px -30px rgba(0, 0, 0, 0.8);
+}
+
+/* ---- Base ---- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  /* Keep <body> on a stable system font. The site's web fonts are scoped to
+     `.site` so that editor components teleported to <body> (modals, toolbars)
+     don't inherit a swap-in webfont — a late swap would reflow an open modal
+     and shift its controls mid-interaction. */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background 0.4s var(--ease), color 0.4s var(--ease);
+  overflow-x: hidden;
+}
+/* Faint paper grain for warmth (very subtle; sits above the ground). */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  /* Behind content (-1) rather than establishing a sibling layer. Using z-index
+     0 here forced `#app` into its own stacking context to sit above the grain,
+     which trapped the editor's in-app modals below the body-level (teleported)
+     mobile toolbar. Keeping the grain at -1 lets #app stay context-free. */
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+.site-dark body::before { opacity: 0.6; mix-blend-mode: screen; }
+a { color: inherit; text-decoration: none; }
+::selection { background: rgba(196, 57, 44, 0.18); }
+.site-dark ::selection { background: rgba(240, 112, 90, 0.26); }
+img { max-width: 100%; }
+
+/* ---- Layout ---- */
+.container { width: 100%; max-width: var(--container); margin-inline: auto; padding-inline: 24px; }
+.container-wide { max-width: 1300px; }
+.section { padding: clamp(56px, 9vw, 118px) 0; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* Editorial display type */
+.h-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: clamp(2.6rem, 6.4vw, 4.6rem); line-height: 1.03; letter-spacing: -0.02em;
+  font-weight: 600; margin: 0; color: var(--ink);
+}
+.h-section {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: clamp(2rem, 4vw, 3rem); line-height: 1.08; letter-spacing: -0.015em; font-weight: 600; margin: 0;
+}
+.lede { font-size: clamp(1.06rem, 1.5vw, 1.28rem); line-height: 1.62; color: var(--ink-soft); margin: 0; }
+/* the accent word: italic serif, vermilion */
+.grad-text { color: var(--accent); font-style: italic; }
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 48px; padding: 0 24px; border-radius: var(--radius-pill);
+  font-family: var(--font-sans); font-weight: 600; font-size: 15px; cursor: pointer; border: 1px solid transparent;
+  transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease), background 0.2s, border-color 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 10px 26px -12px rgba(196, 57, 44, 0.7); }
+.btn-primary:hover { background: var(--accent-strong); box-shadow: 0 16px 34px -14px rgba(196, 57, 44, 0.85); transform: translateY(-1px); }
+.btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { height: 40px; padding: 0 16px; font-size: 14px; }
+.btn-lg { height: 56px; padding: 0 30px; font-size: 16.5px; }
+
+/* ---- Cards ---- */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm); transition: transform 0.2s var(--ease), box-shadow 0.25s var(--ease), border-color 0.2s;
+}
+.card-hover:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--border-strong); }
+
+/* ---- Code ---- */
+.codeblock {
+  position: relative; background: var(--code-bg); color: var(--code-ink);
+  border-radius: var(--radius); border: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: var(--font-mono); font-size: 13.5px; line-height: 1.66; overflow: hidden;
+}
+.codeblock-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  color: #b3a996; font-size: 12px; letter-spacing: 0.02em;
+}
+.codeblock pre { margin: 0; padding: 16px 18px; overflow-x: auto; }
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d9cfbd; border-radius: 7px; padding: 4px 10px; font-size: 12px; font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.copy-btn:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+
+/* ---- Utility ---- */
+.grid-auto { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); }

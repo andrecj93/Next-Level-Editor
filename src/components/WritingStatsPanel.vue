@@ -499,19 +499,22 @@ const getSEOClass = (score: number): string => {
 
 <style scoped>
 .writing-stats-panel {
+  /* Anchored just above its toggle FAB (bottom:110px) so it rises from the
+     trigger instead of floating over the toolbar at the top of the editor. */
   position: fixed;
-  top: 80px;
-  right: 20px;
-  width: 320px;
-  max-height: calc(100vh - 100px);
+  bottom: 180px;
+  right: 32px;
+  top: auto;
+  width: 340px;
+  max-height: calc(100vh - 320px);
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  transition: all 0.3s ease;
-  z-index: 100;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 9998;
 }
 
 .writing-stats-panel.collapsed {
@@ -522,8 +525,9 @@ const getSEOClass = (score: number): string => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  background: linear-gradient(135deg, #4c51bf 0%, #5b21b6 100%);
+  padding: 14px 16px;
+  /* Match the green Writing-Stats toggle FAB so the panel reads as its popover. */
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #ffffff;
 }
 
@@ -560,7 +564,7 @@ const getSEOClass = (score: number): string => {
 }
 
 .stats-content {
-  max-height: calc(100vh - 180px);
+  max-height: calc(100vh - 390px);
   overflow-y: auto;
   padding: 16px;
 }
@@ -679,7 +683,7 @@ const getSEOClass = (score: number): string => {
 .grade-value {
   font-size: 36px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--color-primary);
 }
 
 .grade-label {
@@ -991,61 +995,109 @@ const getSEOClass = (score: number): string => {
   border: 1px solid #bfdbfe;
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  .writing-stats-panel {
-    background: #1f2937;
-    border-color: #374151;
-  }
+/* Dark mode — driven by the editor's own theme class (.theme-dark on the
+   .next-level-editor root), NOT the OS-level prefers-color-scheme, so the panel
+   always matches whatever theme the editor toggle is set to. */
+.theme-dark .writing-stats-panel {
+  background: #1f2937;
+  border-color: #374151;
+}
 
-  .section-title {
-    color: #f3f4f6;
-  }
+.theme-dark .section-title {
+  color: #f3f4f6;
+}
 
-  .stat-item {
-    background: #111827;
-  }
+.theme-dark .stat-item {
+  background: #111827;
+}
 
-  .stat-label {
-    color: #9ca3af;
-  }
+.theme-dark .stat-label {
+  color: #9ca3af;
+}
 
-  .stat-value {
-    color: #f9fafb;
-  }
+.theme-dark .stat-value {
+  color: #f9fafb;
+}
 
-  .grade-box {
-    background: #111827;
-  }
+.theme-dark .grade-box {
+  background: #111827;
+}
 
-  .detail-item {
-    background: #111827;
-  }
+.theme-dark .detail-item {
+  background: #111827;
+}
 
-  .detail-item span {
-    color: #9ca3af;
-  }
+.theme-dark .detail-item span {
+  color: #9ca3af;
+}
 
-  .detail-item strong {
-    color: #f9fafb;
-  }
+.theme-dark .detail-item strong {
+  color: #f9fafb;
+}
 
-  .issues-section {
-    background: #7f1d1d;
-  }
+.theme-dark .common-words-title {
+  color: #9ca3af;
+}
 
-  .seo-section {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-  }
+.theme-dark .issues-section {
+  background: #7f1d1d;
+}
 
-  .seo-item {
-    background: #1e293b;
-  }
+.theme-dark .issue-hint {
+  color: #d1d5db;
+}
 
-  .keyword-tag {
-    background: #1e293b;
-    border-color: #475569;
-  }
+.theme-dark .seo-section {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+}
+
+.theme-dark .seo-label {
+  color: #bfdbfe;
+}
+
+.theme-dark .seo-item {
+  background: #1e293b;
+}
+
+.theme-dark .seo-item span {
+  color: #cbd5e1;
+}
+
+.theme-dark .seo-item strong {
+  color: #f9fafb;
+}
+
+.theme-dark .keyword-tag {
+  background: #1e293b;
+  border-color: #475569;
+  color: #bfdbfe;
+}
+
+/* Grade readability number: token-driven, tinted lighter in dark mode */
+.theme-dark .grade-value {
+  color: #93b4fc;
+}
+
+/* SEO donut number: dark charcoal fill is invisible on the deep-blue section */
+.theme-dark .percentage {
+  fill: var(--color-text);
+}
+
+/* Issue titles: dark-red on the dark-red issues section is unreadable */
+.theme-dark .issue-title {
+  color: #fca5a5;
+}
+
+/* Most-common word pills: pale lavender is washed out on the dark panel */
+.theme-dark .word-tag {
+  background: #312e4a;
+  color: #c4b5fd;
+}
+
+/* Repeated-word chips: light-pink disappears on the dark-red section */
+.theme-dark .repeated-word {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fecaca;
 }
 
 /* Scrollbar */

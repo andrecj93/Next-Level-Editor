@@ -154,13 +154,16 @@
           <svg
             width="16"
             height="16"
-            viewBox="0 0 16 16"
-            fill="currentColor"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
             aria-hidden="true"
           >
-            <path
-              d="M8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM3 8a5 5 0 0 1 8-4l-3 3h4V3l-1.5 1.5A6 6 0 1 0 14 8h-1a5 5 0 0 1-5 5"
-            />
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
           </svg>
         </button>
         <button
@@ -173,21 +176,25 @@
           <svg
             width="16"
             height="16"
-            viewBox="0 0 16 16"
-            fill="currentColor"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
             aria-hidden="true"
           >
-            <path
-              d="M8 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm5 5a5 5 0 0 0-8-4l3 3H4V3l1.5 1.5A6 6 0 1 1 2 8h1a5 5 0 0 0 5 5"
-            />
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
         </button>
       </div>
 
-      <!-- Tools Dropdown -->
+      <!-- Tools Dropdown (menu of stateful actions — keep the static label) -->
       <ToolbarSection
         type="dropdown"
         label="Tools"
+        preserve-label
         icon="<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 16 16&quot; fill=&quot;currentColor&quot;><path d=&quot;M1 1h6v1H2v13h12V9h1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5zm8 0l5.5 5.5-1 1L12 6v4h-1V6L9.5 7.5l-1-1L14 1h-5z&quot;/></svg>"
         tooltip="Productivity tools"
         :items="productivityDropdownItems"

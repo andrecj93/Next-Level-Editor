@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, onBeforeUnmount } from "vue";
 
 /**
  * Device type detection
@@ -227,29 +227,44 @@ export function useDeviceDetection() {
     }, 100);
   };
 
+  /**
+   * Check for touch capability changes (rare, but possible on hybrid devices)
+   */
+  const updateTouchCapabilities = () => {
+    touchCapabilities.value = {
+      hasTouch: "ontouchstart" in window || navigator.maxTouchPoints > 0,
+      hasMouse: matchMedia("(hover: hover) and (pointer: fine)").matches,
+      hasPen:
+        matchMedia("(pointer: fine)").matches &&
+        !matchMedia("(hover: hover)").matches,
+      maxTouchPoints: navigator.maxTouchPoints || 0,
+    };
+  };
+
+  // Media queries for touch capability changes (kept as refs so their
+  // "change" listeners can be removed on unmount and don't leak)
+  let hoverQuery: MediaQueryList | null = null;
+  let pointerQuery: MediaQueryList | null = null;
+
   // Lifecycle
   onMounted(() => {
     window.addEventListener("resize", handleResize, { passive: true });
     window.addEventListener("orientationchange", handleOrientationChange);
 
-    // Check for touch capability changes (rare, but possible on hybrid devices)
-    const updateTouchCapabilities = () => {
-      touchCapabilities.value = {
-        hasTouch: "ontouchstart" in window || navigator.maxTouchPoints > 0,
-        hasMouse: matchMedia("(hover: hover) and (pointer: fine)").matches,
-        hasPen:
-          matchMedia("(pointer: fine)").matches &&
-          !matchMedia("(hover: hover)").matches,
-        maxTouchPoints: navigator.maxTouchPoints || 0,
-      };
-    };
-
     // Listen to media query changes
-    const hoverQuery = matchMedia("(hover: hover)");
-    const pointerQuery = matchMedia("(pointer: fine)");
+    hoverQuery = matchMedia("(hover: hover)");
+    pointerQuery = matchMedia("(pointer: fine)");
 
     hoverQuery.addEventListener("change", updateTouchCapabilities);
     pointerQuery.addEventListener("change", updateTouchCapabilities);
+  });
+
+  onBeforeUnmount(() => {
+    // Remove the matchMedia "change" listeners added on mount
+    hoverQuery?.removeEventListener("change", updateTouchCapabilities);
+    pointerQuery?.removeEventListener("change", updateTouchCapabilities);
+    hoverQuery = null;
+    pointerQuery = null;
   });
 
   onUnmounted(() => {

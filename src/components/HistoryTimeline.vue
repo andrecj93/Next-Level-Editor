@@ -451,42 +451,41 @@ defineExpose({
   height: 8px;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .history-timeline {
-    background: var(--bg-secondary-dark, #2a2a2a);
-  }
+/* Dark mode support — keyed to the editor's own theme class (.theme-dark on
+   the .next-level-editor root), not the OS prefers-color-scheme setting. */
+.theme-dark .history-timeline {
+  background: var(--bg-secondary-dark, #2a2a2a);
+}
 
-  .timeline-title {
-    color: var(--text-primary-dark, #f0f0f0);
-  }
+.theme-dark .timeline-title {
+  color: var(--text-primary-dark, #f0f0f0);
+}
 
-  .btn-clear,
-  .btn-export {
-    background: var(--bg-primary-dark, #1e1e1e);
-    color: var(--text-primary-dark, #f0f0f0);
-    border-color: var(--border-color-dark, #444);
-  }
+.theme-dark .btn-clear,
+.theme-dark .btn-export {
+  background: var(--bg-primary-dark, #1e1e1e);
+  color: var(--text-primary-dark, #f0f0f0);
+  border-color: var(--border-color-dark, #444);
+}
 
-  .btn-clear:hover,
-  .btn-export:hover {
-    background: var(--bg-hover-dark, #333);
-  }
+.theme-dark .btn-clear:hover,
+.theme-dark .btn-export:hover {
+  background: var(--bg-hover-dark, #333);
+}
 
-  .timeline-progress-bar {
-    background: var(--bg-tertiary-dark, #444);
-  }
+.theme-dark .timeline-progress-bar {
+  background: var(--bg-tertiary-dark, #444);
+}
 
-  .timeline-entry:hover {
-    background: var(--bg-hover-dark, #333);
-  }
+.theme-dark .timeline-entry:hover {
+  background: var(--bg-hover-dark, #333);
+}
 
-  .entry-label {
-    color: var(--text-primary-dark, #f0f0f0);
-  }
+.theme-dark .entry-label {
+  color: var(--text-primary-dark, #f0f0f0);
+}
 
-  .entry-preview {
-    background: var(--bg-primary-dark, #1e1e1e);
-  }
+.theme-dark .entry-preview {
+  background: var(--bg-primary-dark, #1e1e1e);
 }
 </style>
