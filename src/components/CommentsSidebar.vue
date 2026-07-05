@@ -317,7 +317,7 @@ function createNewComment() {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: var(--toolbar-accent, #3b82f6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -395,12 +395,8 @@ function createNewComment() {
 }
 
 .comments-tab.active {
-  background: linear-gradient(
-    135deg,
-    rgba(59, 130, 246, 0.1) 0%,
-    rgba(139, 92, 246, 0.1) 100%
-  );
-  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--toolbar-accent, #3b82f6);
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
 }
 
@@ -424,7 +420,7 @@ function createNewComment() {
 }
 
 .comments-tab.active .comments-tab-badge {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: var(--toolbar-accent, #3b82f6);
   color: white;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
@@ -487,26 +483,38 @@ function createNewComment() {
   height: 56px;
   border: none;
   border-radius: 16px;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: var(--toolbar-accent, #3b82f6);
   color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 20px -4px rgba(15, 23, 42, 0.28),
+    0 1px 3px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.18s ease, filter 0.18s ease;
   z-index: 10;
 }
 
 .comments-fab:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.35),
+    0 2px 6px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .comments-fab:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comments-fab {
+    transition: box-shadow 0.18s ease, filter 0.18s ease;
+  }
+  .comments-fab:hover,
+  .comments-fab:active {
+    transform: none;
+  }
 }
 
 /* Scrollbar */

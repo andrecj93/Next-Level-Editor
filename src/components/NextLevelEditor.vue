@@ -1476,95 +1476,99 @@ useEditorSetup({
   transform: scale(0.8) translateY(20px);
 }
 
-/* Comments Toggle FAB */
-.comments-toggle-fab {
-  position: fixed;
-  bottom: 32px;
-  right: 32px;
-  width: 64px;
-  height: 64px;
-  border: none;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 9998;
-}
-
-.comments-toggle-fab:hover {
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 16px 48px rgba(59, 130, 246, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
-}
-
-.comments-toggle-fab:active {
-  transform: translateY(-2px) scale(0.98);
-}
-
-/* Writing Stats Toggle FAB */
+/* Comments / Stats FABs — refined surface controls, one shared material
+   (no gradient blobs). Sized as a matched pair; the icon is currentColor. */
+.comments-toggle-fab,
 .writing-stats-toggle-fab {
   position: fixed;
-  bottom: 110px;
-  right: 32px;
-  width: 56px;
-  height: 56px;
-  border: none;
+  right: 28px;
+  border: 1px solid var(--color-border);
   border-radius: 50%;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
+  background: var(--color-surface-raised);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.16),
+    0 1px 3px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease, background 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease;
   z-index: 9998;
 }
 
-.writing-stats-toggle-fab:hover {
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 16px 48px rgba(16, 185, 129, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+.theme-dark .comments-toggle-fab,
+.theme-dark .writing-stats-toggle-fab {
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+/* Comments = the primary action: accent icon + a quiet accent ring. */
+.comments-toggle-fab {
+  bottom: 28px;
+  width: 56px;
+  height: 56px;
+  color: var(--toolbar-accent);
+  border-color: var(--toolbar-accent);
+}
+
+/* Stats = secondary: a calm neutral icon until hovered. */
+.writing-stats-toggle-fab {
+  bottom: 96px;
+  width: 52px;
+  height: 52px;
+  color: var(--color-text-secondary);
+}
+
+.comments-toggle-fab:hover,
+.writing-stats-toggle-fab:hover {
+  transform: translateY(-3px);
+  background: var(--color-surface-overlay);
+  color: var(--toolbar-accent);
+  border-color: var(--toolbar-accent);
+  box-shadow: 0 14px 34px -10px rgba(15, 23, 42, 0.26),
+    0 2px 6px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.theme-dark .comments-toggle-fab:hover,
+.theme-dark .writing-stats-toggle-fab:hover {
+  box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.6),
+    0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.comments-toggle-fab:active,
 .writing-stats-toggle-fab:active {
-  transform: translateY(-2px) scale(0.98);
+  transform: translateY(-1px) scale(0.96);
 }
 
 .comments-toggle-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 6px;
-  background: #ef4444;
-  color: white;
-  border-radius: 12px;
-  font-size: 12px;
+  top: -3px;
+  right: -3px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  background: var(--toolbar-accent);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 11px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4),
-    0 0 0 3px var(--editor-bg, #ffffff);
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  box-shadow: 0 0 0 2px var(--color-surface-raised);
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
+@media (prefers-reduced-motion: reduce) {
+  .comments-toggle-fab,
+  .writing-stats-toggle-fab {
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  50% {
-    transform: scale(1.1);
+  .comments-toggle-fab:hover,
+  .writing-stats-toggle-fab:hover,
+  .comments-toggle-fab:active,
+  .writing-stats-toggle-fab:active {
+    transform: none;
   }
 }
 

@@ -20,14 +20,14 @@
           @mouseenter="handleMouseEnter(toast.id)"
           @mouseleave="handleMouseLeave(toast.id)"
         >
-          <!-- Icon -->
+          <!-- Icon (inline SVG for defaults; a plain string/emoji still renders
+               fine if a caller passes one) -->
           <div
             v-if="toast.icon"
             class="toast__icon"
             aria-hidden="true"
-          >
-            {{ toast.icon }}
-          </div>
+            v-html="toast.icon"
+          />
 
           <!-- Message -->
           <div class="toast__content">

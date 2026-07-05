@@ -418,36 +418,42 @@ describe("useToastNotification", () => {
     });
 
     describe("Default Icons", () => {
-      it("should use correct default icon for success", () => {
+      // Defaults are inline stroke SVGs (Lucide geometry), not emoji, so they
+      // match the editor's icon language and inherit color via currentColor.
+      it("should use an inline SVG default icon for success", () => {
         const { success, toasts } = useToastNotification();
 
         success("Success message");
 
-        expect(toasts.value[0].icon).toBe("✓");
+        expect(toasts.value[0].icon).toContain("<svg");
+        expect(toasts.value[0].icon).toContain('stroke="currentColor"');
       });
 
-      it("should use correct default icon for error", () => {
+      it("should use an inline SVG default icon for error", () => {
         const { error, toasts } = useToastNotification();
 
         error("Error message");
 
-        expect(toasts.value[0].icon).toBe("✕");
+        expect(toasts.value[0].icon).toContain("<svg");
+        expect(toasts.value[0].icon).toContain('stroke="currentColor"');
       });
 
-      it("should use correct default icon for warning", () => {
+      it("should use an inline SVG default icon for warning", () => {
         const { warning, toasts } = useToastNotification();
 
         warning("Warning message");
 
-        expect(toasts.value[0].icon).toBe("⚠");
+        expect(toasts.value[0].icon).toContain("<svg");
+        expect(toasts.value[0].icon).toContain('stroke="currentColor"');
       });
 
-      it("should use correct default icon for info", () => {
+      it("should use an inline SVG default icon for info", () => {
         const { info, toasts } = useToastNotification();
 
         info("Info message");
 
-        expect(toasts.value[0].icon).toBe("ℹ");
+        expect(toasts.value[0].icon).toContain("<svg");
+        expect(toasts.value[0].icon).toContain('stroke="currentColor"');
       });
 
       it("should allow custom icon override", () => {

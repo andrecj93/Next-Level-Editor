@@ -108,11 +108,49 @@
   />
 
   <!-- Auto-save Indicator -->
-  <div v-if="isSaving || lastSaved" class="auto-save-indicator">
-    <span v-if="isSaving" class="saving">💾 Saving...</span>
-    <span v-else-if="lastSaved" :key="lastSaved.getTime()" class="saved"
-      >✓ Saved at {{ lastSaved.toLocaleTimeString() }}</span
-    >
+  <div
+    v-if="isSaving || lastSaved"
+    class="auto-save-indicator"
+    :class="{ 'is-saving': isSaving, 'is-saved': !isSaving && lastSaved }"
+    role="status"
+    aria-live="polite"
+  >
+    <span v-if="isSaving" class="saving">
+      <svg
+        class="asi-spinner"
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M21 12a9 9 0 1 1-6.219-8.56"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+        />
+      </svg>
+      Saving...
+    </span>
+    <span v-else-if="lastSaved" :key="lastSaved.getTime()" class="saved">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M20 6 9 17l-5-5"
+          stroke="currentColor"
+          stroke-width="2.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      Saved at {{ lastSaved.toLocaleTimeString() }}
+    </span>
   </div>
 
   <!-- Toast Notification -->
