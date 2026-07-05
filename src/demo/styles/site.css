@@ -1,0 +1,153 @@
+/**
+ * next-level-editor — demo / docs site design system
+ * A small, cohesive token layer + primitives shared across Home / Playground /
+ * Docs. Dark mode is a `.site-dark` class on <html> (not OS), toggled in-nav.
+ */
+
+:root {
+  /* Brand */
+  --brand-500: #6366f1;
+  --brand-600: #5b5bd6;
+  --brand-400: #818cf8;
+  --brand-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #d946ef 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.12));
+
+  /* Neutrals — light */
+  --bg: #ffffff;
+  --bg-subtle: #f8fafc;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --ink: #0f172a;
+  --ink-soft: #475569;
+  --ink-muted: #94a3b8;
+  --border: #e6e8ee;
+  --border-strong: #d3d8e2;
+  --code-bg: #0f172a;
+  --code-ink: #e2e8f0;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 6px 16px -6px rgba(15, 23, 42, 0.12), 0 3px 6px -4px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 24px 48px -24px rgba(30, 41, 59, 0.28), 0 10px 20px -12px rgba(30, 41, 59, 0.16);
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+  --radius-pill: 999px;
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --container: 1160px;
+  --nav-h: 64px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.site-dark {
+  --bg: #0a0e1a;
+  --bg-subtle: #0d1220;
+  --bg-elevated: #111827;
+  --surface: #111827;
+  --ink: #f1f5f9;
+  --ink-soft: #b6c2d4;
+  --ink-muted: #7c8aa0;
+  --border: #1e2637;
+  --border-strong: #2a3346;
+  --code-bg: #0b1020;
+  --code-ink: #e2e8f0;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 20px -8px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 30px 60px -28px rgba(0, 0, 0, 0.75);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(139, 92, 246, 0.16));
+}
+
+/* ---- Base ---- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background 0.4s var(--ease), color 0.4s var(--ease);
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+::selection { background: rgba(99, 102, 241, 0.24); }
+img { max-width: 100%; }
+
+/* ---- Layout ---- */
+.container { width: 100%; max-width: var(--container); margin-inline: auto; padding-inline: 24px; }
+.container-wide { max-width: 1320px; }
+.section { padding: clamp(56px, 9vw, 120px) 0; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--brand-500);
+}
+.site-dark .eyebrow { color: var(--brand-400); }
+.h-display {
+  font-size: clamp(2.4rem, 6vw, 4.2rem); line-height: 1.04; letter-spacing: -0.03em;
+  font-weight: 800; margin: 0;
+}
+.h-section { font-size: clamp(1.9rem, 3.6vw, 2.8rem); line-height: 1.1; letter-spacing: -0.02em; font-weight: 800; margin: 0; }
+.lede { font-size: clamp(1.05rem, 1.6vw, 1.3rem); line-height: 1.6; color: var(--ink-soft); margin: 0; }
+.grad-text { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 46px; padding: 0 22px; border-radius: var(--radius-pill);
+  font-weight: 600; font-size: 15px; cursor: pointer; border: 1px solid transparent;
+  font-family: inherit;
+  transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease), background 0.2s, border-color 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--brand-gradient); color: #fff; box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.6); }
+.btn-primary:hover { box-shadow: 0 16px 40px -12px rgba(99, 102, 241, 0.75); transform: translateY(-1px); }
+.btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.btn-ghost:hover { border-color: var(--brand-500); color: var(--brand-500); }
+.btn-sm { height: 38px; padding: 0 16px; font-size: 14px; }
+.btn-lg { height: 54px; padding: 0 28px; font-size: 16px; }
+
+/* ---- Cards ---- */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm); transition: transform 0.2s var(--ease), box-shadow 0.25s var(--ease), border-color 0.2s;
+}
+.card-hover:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--border-strong); }
+
+/* ---- Code ---- */
+.codeblock {
+  position: relative; background: var(--code-bg); color: var(--code-ink);
+  border-radius: var(--radius); border: 1px solid rgba(148, 163, 184, 0.14);
+  font-family: var(--font-mono); font-size: 13.5px; line-height: 1.65; overflow: hidden;
+}
+.codeblock-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  color: #94a3b8; font-size: 12px; letter-spacing: 0.02em;
+}
+.codeblock pre { margin: 0; padding: 16px 18px; overflow-x: auto; }
+.codeblock .tok-key { color: #c4b5fd; }
+.codeblock .tok-str { color: #86efac; }
+.codeblock .tok-tag { color: #f0abfc; }
+.codeblock .tok-com { color: #64748b; font-style: italic; }
+.codeblock .tok-attr { color: #7dd3fc; }
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #cbd5e1; border-radius: 7px; padding: 4px 10px; font-size: 12px; font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.copy-btn:hover { background: rgba(148, 163, 184, 0.22); color: #fff; }
+
+/* ---- Utility ---- */
+.grid-auto { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }

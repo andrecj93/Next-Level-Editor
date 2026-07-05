@@ -531,7 +531,9 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
   background: var(--toolbar-bg, #ffffff);
   border-top: 1px solid var(--toolbar-border, #e5e7eb);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
+  /* Below modal overlays (z-index 1000) so a dialog — e.g. the file manager —
+     is never covered by this persistent bottom bar; still above page content. */
+  z-index: 900;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   max-height: 60vh;
   overflow: hidden;
