@@ -81,7 +81,7 @@
           @click.stop="$emit('toggle-colors-dropdown')"
         >
           <span class="dropdown-icon"
-            ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".6" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".6" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".6" fill="currentColor" /><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.6 0-.5-.2-.9-.5-1.2-.3-.3-.4-.6-.4-1.1a1.6 1.6 0 0 1 1.6-1.6H18c2.2 0 4-1.8 4-4C22 6 17.5 2 12 2Z" /></svg></span>
+            ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3s6 5.5 6 10a6 6 0 0 1-12 0c0-4.5 6-10 6-10Z" /><path d="M5 21h14" /></svg></span>
           <span class="dropdown-label">Colors</span>
           <span class="dropdown-arrow" aria-hidden="true">▼</span>
         </button>
@@ -141,8 +141,8 @@
           @click="$emit('undo')"
         >
           <svg
-            width="16"
-            height="16"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -163,8 +163,8 @@
           @click="$emit('redo')"
         >
           <svg
-            width="16"
-            height="16"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -184,7 +184,7 @@
         type="dropdown"
         label="Tools"
         preserve-label
-        icon="<svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><path d=&quot;M15 3h6v6&quot;/><path d=&quot;M10 14 21 3&quot;/><path d=&quot;M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6&quot;/></svg>"
+        icon="<svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><line x1=&quot;4&quot; x2=&quot;4&quot; y1=&quot;21&quot; y2=&quot;14&quot;/><line x1=&quot;4&quot; x2=&quot;4&quot; y1=&quot;10&quot; y2=&quot;3&quot;/><line x1=&quot;12&quot; x2=&quot;12&quot; y1=&quot;21&quot; y2=&quot;12&quot;/><line x1=&quot;12&quot; x2=&quot;12&quot; y1=&quot;8&quot; y2=&quot;3&quot;/><line x1=&quot;20&quot; x2=&quot;20&quot; y1=&quot;21&quot; y2=&quot;16&quot;/><line x1=&quot;20&quot; x2=&quot;20&quot; y1=&quot;12&quot; y2=&quot;3&quot;/><line x1=&quot;2&quot; x2=&quot;6&quot; y1=&quot;14&quot; y2=&quot;14&quot;/><line x1=&quot;10&quot; x2=&quot;14&quot; y1=&quot;8&quot; y2=&quot;8&quot;/><line x1=&quot;18&quot; x2=&quot;22&quot; y1=&quot;16&quot; y2=&quot;16&quot;/></svg>"
         tooltip="Productivity tools"
         :items="productivityDropdownItems"
         @remember-selection="$emit('remember-selection')"
@@ -281,8 +281,21 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1" /><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" /></svg>
       </button>
 
-      <!-- Fullscreen Toggle -->
+      <!-- Export (hero): all formats collapsed into one clear menu -->
       <div class="toolbar-divider" />
+      <div class="export-section">
+        <ToolbarSection
+          type="dropdown"
+          label="Export"
+          preserve-label
+          icon="<svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><path d=&quot;M12 15V3&quot;/><path d=&quot;m7 10 5 5 5-5&quot;/><path d=&quot;M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4&quot;/></svg>"
+          tooltip="Export document"
+          :items="exportDropdownItems"
+          @remember-selection="$emit('remember-selection')"
+        />
+      </div>
+
+      <!-- Fullscreen Toggle -->
       <button
         class="toolbar-btn-modern fullscreen-toggle"
         data-tooltip="Toggle fullscreen mode"
@@ -290,8 +303,8 @@
         :aria-pressed="isFullScreen"
         @click="$emit('toggle-fullscreen')"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
+        <svg v-if="!isFullScreen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+        <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
       </button>
 
       <!-- Theme Toggle -->
@@ -332,6 +345,7 @@ interface Props {
   historyLength: number;
   productivityDropdownItems: any[];
   toolActions: ToolbarAction[];
+  exportDropdownItems: any[];
   viewMode: "editor" | "code" | "split" | "preview";
   theme: "light" | "dark";
   isFullScreen: boolean;

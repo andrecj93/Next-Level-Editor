@@ -63,6 +63,15 @@ describe("EditorToolbar", () => {
         isActive: vi.fn(() => false),
       },
     ],
+    exportDropdownItems: [
+      {
+        id: "export-html",
+        label: "HTML",
+        shortcut: ".html",
+        icon: "<svg></svg>",
+        onClick: vi.fn(),
+      },
+    ],
     viewMode: "editor" as const,
     theme: "light" as const,
     isFullScreen: false,

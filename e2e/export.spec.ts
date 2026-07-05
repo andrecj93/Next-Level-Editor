@@ -6,31 +6,30 @@ test.describe("Export", () => {
     await page.waitForSelector(".editor-content");
   });
 
-  test("should show clear labels on export buttons", async ({ page }) => {
-    // Check HTML export button
-    const htmlButton = page.locator('button:has-text("HTML")');
-    await expect(htmlButton).toBeVisible();
+  test("collapses every format into one clearly-labelled Export menu", async ({
+    page,
+  }) => {
+    // The four cryptic file-badges are gone — exports live behind one menu.
+    const trigger = page.getByRole("button", { name: "Export" });
+    await expect(trigger).toBeVisible();
+    await trigger.click();
 
-    // Check MD export button
-    const mdButton = page.locator('button:has-text("MD")');
-    await expect(mdButton).toBeVisible();
-
-    // Check PDF export button
-    const pdfButton = page.locator('button:has-text("PDF")');
-    await expect(pdfButton).toBeVisible();
-
-    // Check DOCX export button
-    const docxButton = page.locator('button:has-text("DOCX")');
-    await expect(docxButton).toBeVisible();
+    const menu = page.locator(".dropdown-menu");
+    await expect(menu.getByRole("button", { name: "HTML" })).toBeVisible();
+    await expect(menu.getByRole("button", { name: "Markdown" })).toBeVisible();
+    await expect(menu.getByRole("button", { name: "PDF" })).toBeVisible();
+    await expect(menu.getByRole("button", { name: "Word" })).toBeVisible();
   });
 
-  test("should have descriptive tooltips", async ({ page }) => {
-    const htmlButton = page.locator('button:has-text("HTML")');
-    await htmlButton.hover();
+  test("shows the target file extension next to each format", async ({
+    page,
+  }) => {
+    await page.getByRole("button", { name: "Export" }).click();
 
-    // Tooltip should contain file extension info
-    await expect(
-      page.locator('[data-tooltip*=".html"], [title*=".html"]')
-    ).toBeVisible({ timeout: 2000 });
+    const menu = page.locator(".dropdown-menu");
+    await expect(menu).toContainText(".html");
+    await expect(menu).toContainText(".md");
+    await expect(menu).toContainText(".pdf");
+    await expect(menu).toContainText(".docx");
   });
 });

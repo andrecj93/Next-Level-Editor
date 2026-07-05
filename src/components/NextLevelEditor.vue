@@ -25,6 +25,7 @@
       :history-length="history.length"
       :productivity-dropdown-items="productivityDropdownItems"
       :tool-actions="toolActions"
+      :export-dropdown-items="exportDropdownItems"
       :view-mode="viewMode"
       :theme="theme"
       :is-full-screen="isFullScreen"
@@ -812,6 +813,7 @@ const {
   listActions,
   insertDropdownItems,
   toolActions,
+  exportDropdownItems,
   productivityDropdownItems,
 } = useToolbarItems({
   editorContent,
@@ -841,7 +843,6 @@ const {
   toggleEmojiPicker: () => {
     showEmojiPicker.value = !showEmojiPicker.value;
   },
-  toggleFullScreen,
   handleToggleSpellCheck,
   handleExportHtml,
   handleExportMarkdown,
@@ -850,7 +851,6 @@ const {
   handleCopyFormat,
   handlePasteFormat,
   hasFormatCopied,
-  isFullScreen,
   spellCheckEnabled,
   captureSnapshot,
   toggleHistoryTimeline: () => {
