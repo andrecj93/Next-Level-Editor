@@ -1036,13 +1036,15 @@
   transform: none;
 }
 
-/* Tooltips for modern toolbar */
+/* Tooltips for modern toolbar. They DROP DOWN (below the button): the toolbar
+   is docked at the top of .next-level-editor, which is overflow:hidden for its
+   rounded corners, so an upward tooltip on the first row would be clipped. */
 .toolbar-btn-modern[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: calc(100% + 10px);
+  top: calc(100% + 10px);
   left: 50%;
-  transform: translateX(-50%) translateY(4px);
+  transform: translateX(-50%) translateY(-4px);
   padding: 7px 12px;
   background: var(--tooltip-bg);
   color: var(--tooltip-text);
@@ -1065,11 +1067,11 @@
 .toolbar-btn-modern[data-tooltip]::before {
   content: "";
   position: absolute;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: var(--tooltip-bg);
+  border-bottom-color: var(--tooltip-bg);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -1158,13 +1160,13 @@
   box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.2);
 }
 
-/* Tooltips for view mode buttons */
+/* Tooltips for view mode buttons — drop down (see toolbar-btn tooltips). */
 .view-mode-btn[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: calc(100% + 10px);
+  top: calc(100% + 10px);
   left: 50%;
-  transform: translateX(-50%) translateY(4px);
+  transform: translateX(-50%) translateY(-4px);
   padding: 7px 12px;
   background: var(--tooltip-bg);
   color: var(--tooltip-text);
@@ -1187,11 +1189,11 @@
 .view-mode-btn[data-tooltip]::before {
   content: "";
   position: absolute;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: var(--tooltip-bg);
+  border-bottom-color: var(--tooltip-bg);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -1456,13 +1458,13 @@
   transform: rotate(180deg);
 }
 
-/* Tooltips for dropdown triggers */
+/* Tooltips for dropdown triggers — drop down (see toolbar-btn tooltips). */
 .dropdown-trigger[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: calc(100% + 10px);
+  top: calc(100% + 10px);
   left: 50%;
-  transform: translateX(-50%) translateY(4px);
+  transform: translateX(-50%) translateY(-4px);
   padding: 7px 12px;
   background: var(--tooltip-bg);
   color: var(--tooltip-text);
@@ -1485,11 +1487,11 @@
 .dropdown-trigger[data-tooltip]::before {
   content: "";
   position: absolute;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: var(--tooltip-bg);
+  border-bottom-color: var(--tooltip-bg);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;

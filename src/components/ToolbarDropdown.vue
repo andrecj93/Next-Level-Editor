@@ -226,11 +226,12 @@ watch(
   transform: rotate(180deg);
 }
 
-/* Tooltips for dropdown triggers */
+/* Tooltips for dropdown triggers — drop DOWN: the toolbar sits at the top of
+   an overflow:hidden editor, so an upward tooltip on the first row is clipped. */
 .dropdown-trigger[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
   padding: 6px 10px;
