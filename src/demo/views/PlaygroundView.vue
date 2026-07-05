@@ -40,17 +40,17 @@
         <div v-if="showConfig" class="pg-config card">
           <div class="cfg-grid">
             <label class="toggle">
-              <input type="checkbox" v-model="editorConfig.showWritingStats" />
+              <input v-model="editorConfig.showWritingStats" type="checkbox">
               <span class="toggle-track"><span class="toggle-thumb" /></span>
               <span class="toggle-text"><strong>Writing stats</strong><small>Word count, readability, SEO</small></span>
             </label>
             <label class="toggle">
-              <input type="checkbox" v-model="editorConfig.enableComments" />
+              <input v-model="editorConfig.enableComments" type="checkbox">
               <span class="toggle-track"><span class="toggle-thumb" /></span>
               <span class="toggle-text"><strong>Comments</strong><small>Inline threads &amp; @mentions</small></span>
             </label>
             <label class="toggle">
-              <input type="checkbox" v-model="editorConfig.enableVariables" />
+              <input v-model="editorConfig.enableVariables" type="checkbox">
               <span class="toggle-track"><span class="toggle-thumb" /></span>
               <span class="toggle-text"><strong>Variables</strong><small><span v-pre>{{ mustache }}</span> template tokens</small></span>
             </label>
@@ -58,11 +58,11 @@
           <div class="cfg-row">
             <div class="cfg-field">
               <label>Height</label>
-              <input v-model="editorConfig.height" type="number" min="300" max="1200" class="num" /> px
+              <input v-model="editorConfig.height" type="number" min="300" max="1200" class="num"> px
             </div>
             <div class="cfg-field cfg-grow">
               <label>Placeholder</label>
-              <input v-model="editorConfig.placeholder" type="text" class="text" />
+              <input v-model="editorConfig.placeholder" type="text" class="text">
             </div>
             <button class="btn btn-ghost btn-sm" @click="resetConfig">Reset</button>
           </div>

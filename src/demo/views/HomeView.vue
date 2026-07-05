@@ -8,7 +8,7 @@
           <span class="dot" /> Open source · MIT · Vue 3 · Zero config
         </span>
         <h1 class="h-display hero-title">
-          The rich text editor<br />
+          The rich text editor<br>
           that feels <span class="grad-text">truly native.</span>
         </h1>
         <p class="lede hero-lede">
@@ -70,7 +70,7 @@
         <div class="split">
           <div class="split-copy">
             <span class="eyebrow">Developer experience</span>
-            <h2 class="h-section">One component.<br />One <code>v-model</code>.</h2>
+            <h2 class="h-section">One component.<br>One <code>v-model</code>.</h2>
             <p class="lede">No document schema to learn, no render props, no boilerplate. It's a Vue component that binds to a string of HTML — exactly what you'd expect.</p>
             <ul class="split-list">
               <li v-for="p in points" :key="p"><span class="check">✓</span>{{ p }}</li>
@@ -157,7 +157,7 @@ import 'next-level-editor/style.css'
 import { ref } from 'vue'
 
 const content = ref('<h1>Hello world</h1>')
-<\/script>
+</scr${""}ipt>
 
 <template>
   <NextLevelEditor

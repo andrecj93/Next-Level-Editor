@@ -5,9 +5,9 @@ import { test, expect } from "@playwright/test";
  * run on the desktop (chromium) project only; the mobile-safari project pins a
  * device viewport that we don't want to fight with setViewportSize.
  */
-test.beforeEach(async ({}, testInfo) => {
+test.beforeEach(() => {
   test.skip(
-    testInfo.project.name === "mobile-safari",
+    test.info().project.name === "mobile-safari",
     "viewport-driven responsive checks run on chromium only"
   );
 });

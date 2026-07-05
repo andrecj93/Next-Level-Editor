@@ -142,7 +142,7 @@ import { NextLevelEditor } from 'next-level-editor'
 import 'next-level-editor/style.css'
 
 const content = ref('<h1>Hello, world</h1>')
-<\/script>
+</scr${""}ipt>
 
 <template>
   <NextLevelEditor v-model="content" />
