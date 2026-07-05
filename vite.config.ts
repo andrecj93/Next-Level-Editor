@@ -87,5 +87,8 @@ export default defineConfig(({ command }) => ({
   // Disable HMR when running tests
   server: {
     hmr: process.env.DISABLE_HMR !== "true",
+    // Honour a harness-assigned port (e.g. the preview tool) when present so the
+    // dev server binds where the tooling expects it; fall back to Vite's default.
+    port: process.env.PORT ? Number(process.env.PORT) : undefined,
   },
 }));
