@@ -203,7 +203,6 @@ interface ToolbarItemsOptions {
   openFindReplaceModal: () => void;
   openTemplateModal: () => void;
   toggleEmojiPicker: () => void;
-  toggleFullScreen: () => void;
   handleToggleSpellCheck: () => void;
   handleExportHtml: () => void;
   handleExportMarkdown: () => void;
@@ -212,7 +211,6 @@ interface ToolbarItemsOptions {
   handleCopyFormat: () => void;
   handlePasteFormat: () => void;
   hasFormatCopied: () => boolean;
-  isFullScreen: Ref<boolean>;
   spellCheckEnabled: Ref<boolean>;
   captureSnapshot: () => void;
   toggleHistoryTimeline: () => void;
@@ -247,7 +245,6 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     openFindReplaceModal,
     openTemplateModal,
     toggleEmojiPicker,
-    toggleFullScreen,
     handleToggleSpellCheck,
     handleExportHtml,
     handleExportMarkdown,
@@ -256,7 +253,6 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     handleCopyFormat,
     handlePasteFormat,
     hasFormatCopied,
-    isFullScreen,
     spellCheckEnabled,
     captureSnapshot,
     toggleHistoryTimeline,
@@ -511,7 +507,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "view-html",
       label: "View HTML Code",
-      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg>',
       tooltip: "View formatted HTML code",
       onClick: openHtmlCodeModal,
     },
@@ -522,53 +518,40 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       tooltip: "Find & Replace (Ctrl+F)",
       onClick: openFindReplaceModal,
     },
-    {
-      id: "spell-check-toggle",
-      label: "Toggle Spell Check",
-      icon: spellCheckEnabled.value
-        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/><path d="m16 20 2 2 4-4"/></svg>'
-        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/></svg>',
-      tooltip: spellCheckEnabled.value
-        ? "Disable Spell Check"
-        : "Enable Spell Check",
-      onClick: handleToggleSpellCheck,
-      isActive: () => spellCheckEnabled.value,
-    },
+  ]);
+
+  const exportDropdownItems = computed(() => [
     {
       id: "export-html",
-      label: "Export HTML",
-      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h8.5L19 8.5V21H5z"/><path d="M13.5 3v5H19"/><text x="12" y="18.5" font-size="5.2" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">HTML</text></svg>',
-      tooltip: "Export as HTML (.html)",
+      label: "HTML",
+      shortcut: ".html",
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="m9 13-2 2 2 2"/><path d="m13 17 2-2-2-2"/></svg>',
+      tooltip: "Export as HTML",
       onClick: handleExportHtml,
     },
     {
       id: "export-md",
-      label: "Export Markdown",
-      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h8.5L19 8.5V21H5z"/><path d="M13.5 3v5H19"/><text x="12" y="18.5" font-size="6.4" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">MD</text></svg>',
-      tooltip: "Export as Markdown (.md)",
+      label: "Markdown",
+      shortcut: ".md",
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="15" x="2" y="4.5" rx="2"/><path d="M6.5 15V9.5l3 3 3-3V15"/><path d="M17 9.5V13"/><path d="m15 12 2 2 2-2"/></svg>',
+      tooltip: "Export as Markdown",
       onClick: handleExportMarkdown,
     },
     {
       id: "export-pdf",
-      label: "Export PDF",
-      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h8.5L19 8.5V21H5z"/><path d="M13.5 3v5H19"/><text x="12" y="18.5" font-size="6.4" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">PDF</text></svg>',
-      tooltip: "Export as PDF (.pdf)",
+      label: "PDF",
+      shortcut: ".pdf",
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><line x1="8" x2="16" y1="13" y2="13"/><line x1="8" x2="13" y1="17" y2="17"/></svg>',
+      tooltip: "Export as PDF",
       onClick: handleExportPdf,
     },
     {
       id: "export-word",
-      label: "Export Word",
-      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h8.5L19 8.5V21H5z"/><path d="M13.5 3v5H19"/><text x="12" y="18.5" font-size="5.2" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">DOCX</text></svg>',
-      tooltip: "Export as Word (.docx)",
+      label: "Word",
+      shortcut: ".docx",
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="m8 12.5 1.4 5 1.6-4 1.6 4 1.4-5"/></svg>',
+      tooltip: "Export as Word",
       onClick: handleExportWord,
-    },
-    {
-      id: "fullscreen",
-      label: "Fullscreen",
-      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
-      tooltip: "Toggle fullscreen",
-      onClick: toggleFullScreen,
-      isActive: () => isFullScreen.value,
     },
   ]);
 
@@ -622,6 +605,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     listActions,
     insertDropdownItems,
     toolActions,
+    exportDropdownItems,
     productivityDropdownItems,
   };
 }
