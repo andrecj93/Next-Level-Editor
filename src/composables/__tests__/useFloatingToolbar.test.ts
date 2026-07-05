@@ -267,7 +267,9 @@ describe("useFloatingToolbar", () => {
 
       expect(boldAction).toBeDefined();
       expect(boldAction?.label).toBe("Bold");
-      expect(boldAction?.icon).toBe("<strong>B</strong>");
+      // Cohesive with the main toolbar: an inline stroke SVG, not raw <strong>.
+      expect(boldAction?.icon).toContain("<svg");
+      expect(boldAction?.icon).toContain('stroke="currentColor"');
       expect(boldAction?.tooltip).toBe("Bold (Ctrl+B)");
     });
 
@@ -278,7 +280,8 @@ describe("useFloatingToolbar", () => {
 
       expect(italicAction).toBeDefined();
       expect(italicAction?.label).toBe("Italic");
-      expect(italicAction?.icon).toBe("<em>I</em>");
+      expect(italicAction?.icon).toContain("<svg");
+      expect(italicAction?.icon).toContain('stroke="currentColor"');
       expect(italicAction?.tooltip).toBe("Italic (Ctrl+I)");
     });
 
@@ -291,7 +294,8 @@ describe("useFloatingToolbar", () => {
 
       expect(underlineAction).toBeDefined();
       expect(underlineAction?.label).toBe("Underline");
-      expect(underlineAction?.icon).toBe("<u>U</u>");
+      expect(underlineAction?.icon).toContain("<svg");
+      expect(underlineAction?.icon).toContain('stroke="currentColor"');
       expect(underlineAction?.tooltip).toBe("Underline (Ctrl+U)");
     });
 
@@ -302,7 +306,9 @@ describe("useFloatingToolbar", () => {
 
       expect(linkAction).toBeDefined();
       expect(linkAction?.label).toBe("Link");
-      expect(linkAction?.icon).toBe("🔗");
+      // No more emoji — a real stroke glyph matching the toolbar set.
+      expect(linkAction?.icon).toContain("<svg");
+      expect(linkAction?.icon).toContain('stroke="currentColor"');
       expect(linkAction?.tooltip).toBe("Insert link");
     });
 
