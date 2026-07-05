@@ -266,7 +266,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "paragraph",
       label: "Paragraph",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1H2V3zm0 3h12v1H2V6zm0 3h12v1H2V9zm0 3h8v1H2v-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v16"/><path d="M17 4v16"/><path d="M19 4H9.5a4.5 4.5 0 0 0 0 9H13"/></svg>',
       onClick: () => handleBlockAction("p"),
       isActive: () => isBlockActionActive("p"),
     },
@@ -274,7 +274,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "h1",
       label: "Heading 1",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h2v5h4V2h2v12h-2V9H4v5H2V2zm10 10v2h2v-2h-2zm0-3v2h2V9h-2z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="m17 12 3-2v8"/></svg>',
       shortcut: "Ctrl+Alt+1",
       onClick: () => handleBlockAction("h1"),
       isActive: () => isBlockActionActive("h1"),
@@ -282,7 +282,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "h2",
       label: "Heading 2",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h2v5h4V2h2v12h-2V9H4v5H2V2zm10 10v2h4v-2l-2-2.5a1 1 0 0 1 1-1.5h1V9h-2a2 2 0 0 0-2 3.5L13 14h-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M21 18h-4c0-4 4-3 4-6 0-1.5-2-2.5-4-1"/></svg>',
       shortcut: "Ctrl+Alt+2",
       onClick: () => handleBlockAction("h2"),
       isActive: () => isBlockActionActive("h2"),
@@ -290,7 +290,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "h3",
       label: "Heading 3",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h2v5h4V2h2v12h-2V9H4v5H2V2zm10 7a1.5 1.5 0 0 0 0 3h1v2h-2v-1h-1v2h4v-3a1.5 1.5 0 0 0 0-3h-1V8h2V7h-3v2z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M17.5 10.5c1.7-1 3.5 0 3.5 1.5a2 2 0 0 1-2 2"/><path d="M17 17.5c2 1.5 4 .3 4-1.5a2 2 0 0 0-2-2"/></svg>',
       shortcut: "Ctrl+Alt+3",
       onClick: () => handleBlockAction("h3"),
       isActive: () => isBlockActionActive("h3"),
@@ -301,7 +301,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "bold",
       label: "Bold",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2h5a3.5 3.5 0 0 1 2.5 6A3.5 3.5 0 0 1 9 14H4V2zm5 5.5A1.5 1.5 0 0 0 9 4H6v3h3zm0 5A1.5 1.5 0 0 0 9 10H6v3h3z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 12a4 4 0 0 0 0-8H6v8"/><path d="M15 20a4 4 0 0 0 0-8H6v8Z"/></svg>',
       tooltip: "Bold (Ctrl+B)",
       onClick: () => handleInlineAction("strong"),
       isActive: () => isInlineActionActive("strong"),
@@ -309,7 +309,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "italic",
       label: "Italic",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 2h6v2H9.5l-2 8H10v2H4v-2h2.5l2-8H6V2z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg>',
       tooltip: "Italic (Ctrl+I)",
       onClick: () => handleInlineAction("em"),
       isActive: () => isInlineActionActive("em"),
@@ -317,7 +317,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "underline",
       label: "Underline",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 14v-1h10v1H3zm5-12v7a2 2 0 1 0 4 0V2h2v7a4 4 0 1 1-8 0V2h2z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" x2="20" y1="21" y2="21"/></svg>',
       tooltip: "Underline (Ctrl+U)",
       onClick: () => handleInlineAction("u"),
       isActive: () => isInlineActionActive("u"),
@@ -325,7 +325,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "strike",
       label: "Strikethrough",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 8h12v1H2V8zm6-6a3.5 3.5 0 0 0-3.5 3.5H3A5 5 0 0 1 8 .5a5 5 0 0 1 4.027 2H10.5A3.5 3.5 0 0 0 8 2zm0 12a3.5 3.5 0 0 1-3.5-3.5H3A5 5 0 0 0 8 15.5a5 5 0 0 0 4.027-2H10.5A3.5 3.5 0 0 1 8 14z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4"/><path d="M14 12a4 4 0 0 1 0 8H6"/><line x1="4" x2="20" y1="12" y2="12"/></svg>',
       tooltip: "Strikethrough",
       onClick: () => handleInlineAction("s"),
       isActive: () => isInlineActionActive("s"),
@@ -336,28 +336,28 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "align-left",
       label: "Align Left",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2V2zm0 3h8v1H2V5zm0 3h12v1H2V8zm0 3h8v1H2v-1zm0 3h12v1H2v-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="15" x2="3" y1="12" y2="12"/><line x1="17" x2="3" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("left"),
       isActive: () => getCaretAlignment(editorContent.value) === "left",
     },
     {
       id: "align-center",
       label: "Center",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2V2zm2 3h8v1H4V5zm-2 3h12v1H2V8zm2 3h8v1H4v-1zm-2 3h12v1H2v-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="17" x2="7" y1="12" y2="12"/><line x1="19" x2="5" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("center"),
       isActive: () => getCaretAlignment(editorContent.value) === "center",
     },
     {
       id: "align-right",
       label: "Align Right",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2V2zm4 3h8v1H6V5zm-4 3h12v1H2V8zm4 3h8v1H6v-1zm-4 3h12v1H2v-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="21" x2="9" y1="12" y2="12"/><line x1="21" x2="7" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("right"),
       isActive: () => getCaretAlignment(editorContent.value) === "right",
     },
     {
       id: "align-justify",
       label: "Justify",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2V2zm0 3h12v1H2V5zm0 3h12v1H2V8zm0 3h12v1H2v-1zm0 3h12v1H2v-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("justify"),
       isActive: () => getCaretAlignment(editorContent.value) === "justify",
     },
@@ -399,7 +399,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "bullet-list",
       label: "Bullet List",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="2.5" cy="3.5" r="1.5"/><path d="M5 3h9v1H5V3z"/><circle cx="2.5" cy="8" r="1.5"/><path d="M5 7.5h9v1H5v-1z"/><circle cx="2.5" cy="12.5" r="1.5"/><path d="M5 12h9v1H5v-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>',
       tooltip: "Bullet list",
       onClick: () => handleListAction("ul"),
       isActive: () => isListActionActive("ul"),
@@ -407,7 +407,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "numbered-list",
       label: "Numbered List",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h1v3H2V2zm0 4h1v1H1v-.5L2 6H1V5h2v1zM1 10h2v1H1v1h2v1H1v-3zm4-7h9v1H5V3zm0 4.5h9v1H5v-1zm0 4.5h9v1H5v-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h11"/><path d="M10 12h11"/><path d="M10 18h11"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>',
       tooltip: "Numbered list",
       onClick: () => handleListAction("ol"),
       isActive: () => isListActionActive("ol"),
@@ -415,7 +415,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "increase-indent",
       label: "Increase Indent",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v1H3V2zm0 3h10v1H3V5zm0 3h10v1H3V8zm0 3h10v1H3v-1zm0 3h10v1H3v-1zM1 5.5l2 2-2 2v-4z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 7 12 3 16"/><line x1="21" x2="11" y1="12" y2="12"/><line x1="21" x2="11" y1="6" y2="6"/><line x1="21" x2="11" y1="18" y2="18"/></svg>',
       tooltip: "Increase indent (Tab)",
       // Only act when the caret is in an indentable list item (#21)
       isDisabled: () => !canIndentListItem(editorContent.value),
@@ -429,7 +429,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "decrease-indent",
       label: "Decrease Indent",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v1H3V2zm0 3h10v1H3V5zm0 3h10v1H3V8zm0 3h10v1H3v-1zm0 3h10v1H3v-1zM3 5.5l-2 2 2 2v-4z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"/><line x1="21" x2="11" y1="12" y2="12"/><line x1="21" x2="11" y1="6" y2="6"/><line x1="21" x2="11" y1="18" y2="18"/></svg>',
       tooltip: "Decrease indent (Shift+Tab)",
       // Outdent is disabled unless the caret sits in a nested list item (#21)
       isDisabled: () => !canOutdentListItem(editorContent.value),
@@ -446,63 +446,63 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "link",
       label: "Link",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 11a.5.5 0 0 1 0-1h3a.5.5 0 0 1 0 1h-3zm-2-3a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2V8zm-2-3a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1h-1V5a1 1 0 0 0-1-1h-3a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h1v1h-1a2 2 0 0 1-2-2V5z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
       shortcut: "Ctrl+K",
       onClick: insertLink,
     },
     {
       id: "image",
       label: "Image",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm1 1v7.5l3-3 2.5 2.5 4-4L14 7.5V3H3zm8.5 1a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
       onClick: insertImage,
     },
     {
       id: "file-manager",
       label: "File Manager",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2a1 1 0 0 1 1-1h4l1 1h5a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V2zm2 1v8h9V4H7L6 3H4z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>',
       onClick: openFileManagerModal,
     },
     {
       id: "video",
       label: "Video",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3zm9 1v8l4-4-4-4z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>',
       onClick: openEmbedModal,
     },
     { divider: true },
     {
       id: "table",
       label: "Table",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v12H2V2zm1 1v3h4V3H3zm5 0v3h5V3H8zM3 7v3h4V7H3zm5 0v3h5V7H8zM3 11v2h4v-2H3zm5 0v2h5v-2H8z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>',
       onClick: openTableModal,
     },
     {
       id: "code",
       label: "Code Block",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3l-3 5 3 5V3zm6 0v10l3-5-3-5zM7 6h2v1H7V6zm0 2h2v1H7V8zm0 2h2v1H7v-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
       onClick: openCodeBlockModal,
     },
     {
       id: "hr",
       label: "Horizontal Rule",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 8h12v1H2V8z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>',
       onClick: handleInsertHR,
     },
     {
       id: "page-break",
       label: "Page Break",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v1H2V2zm7 0h5v1H9V2zM2 6h1v1H2V6zm3 0h1v1H5V6zm3 0h1v1H8V6zm3 0h1v1h-1V6zm3 0h1v1h-1V6zM2 8h12v1H2V8zm0 4h5v1H2v-1zm7 0h5v1H9v-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="12" y2="12"/><polyline points="8 8 12 4 16 8"/><polyline points="16 16 12 20 8 16"/></svg>',
       onClick: handleInsertPageBreak,
     },
     {
       id: "toc",
       label: "Table of Contents",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h2v2H2V2zm3 0h9v2H5V2zM2 6h2v2H2V6zm3 0h9v2H5V6zM2 10h2v2H2v-2zm3 0h9v2H5v-2z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/><path d="M3 10v6c0 1.1.9 2 2 2h3"/></svg>',
       onClick: handleInsertTOC,
     },
     {
       id: "emoji",
       label: "Emoji",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="6" cy="6" r="1"/><circle cx="10" cy="6" r="1"/><path d="M5 10c0 1.5 1.3 3 3 3s3-1.5 3-3H5z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>',
       onClick: toggleEmojiPicker,
     },
   ]);
@@ -511,14 +511,14 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "view-html",
       label: "View HTML Code",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3l-3 5 3 5V3zm6 0v10l3-5-3-5z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>',
       tooltip: "View formatted HTML code",
       onClick: openHtmlCodeModal,
     },
     {
       id: "find",
       label: "Find & Replace",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 10l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
       tooltip: "Find & Replace (Ctrl+F)",
       onClick: openFindReplaceModal,
     },
@@ -526,8 +526,8 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       id: "spell-check-toggle",
       label: "Toggle Spell Check",
       icon: spellCheckEnabled.value
-        ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M13 3l-8 8-3-3-1 1 4 4 9-9-1-1z"/></svg>'
-        : '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 3h10v1H3V3zm0 3h10v1H3V6zm0 3h10v1H3V9zm0 3h6v1H3v-1z"/></svg>',
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/><path d="m16 20 2 2 4-4"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/></svg>',
       tooltip: spellCheckEnabled.value
         ? "Disable Spell Check"
         : "Enable Spell Check",
@@ -537,35 +537,35 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "export-html",
       label: "Export HTML",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 1.5h5L12 5v8.5a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" fill="currentColor" opacity="0.16"/><path d="M8.5 1.5 12 5H9.5a1 1 0 0 1-1-1V1.5z" fill="currentColor"/><text x="7.75" y="12.1" text-anchor="middle" textLength="8" lengthAdjust="spacingAndGlyphs" font-size="4.6" font-weight="700" font-family="system-ui,sans-serif" fill="currentColor">HTML</text></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h8.5L19 8.5V21H5z"/><path d="M13.5 3v5H19"/><text x="12" y="18.5" font-size="5.2" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">HTML</text></svg>',
       tooltip: "Export as HTML (.html)",
       onClick: handleExportHtml,
     },
     {
       id: "export-md",
       label: "Export Markdown",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 1.5h5L12 5v8.5a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" fill="currentColor" opacity="0.16"/><path d="M8.5 1.5 12 5H9.5a1 1 0 0 1-1-1V1.5z" fill="currentColor"/><text x="7.75" y="12.1" text-anchor="middle" textLength="5" lengthAdjust="spacingAndGlyphs" font-size="4.6" font-weight="700" font-family="system-ui,sans-serif" fill="currentColor">MD</text></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h8.5L19 8.5V21H5z"/><path d="M13.5 3v5H19"/><text x="12" y="18.5" font-size="6.4" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">MD</text></svg>',
       tooltip: "Export as Markdown (.md)",
       onClick: handleExportMarkdown,
     },
     {
       id: "export-pdf",
       label: "Export PDF",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 1.5h5L12 5v8.5a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" fill="currentColor" opacity="0.16"/><path d="M8.5 1.5 12 5H9.5a1 1 0 0 1-1-1V1.5z" fill="currentColor"/><text x="7.75" y="12.1" text-anchor="middle" textLength="6.5" lengthAdjust="spacingAndGlyphs" font-size="4.6" font-weight="700" font-family="system-ui,sans-serif" fill="currentColor">PDF</text></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h8.5L19 8.5V21H5z"/><path d="M13.5 3v5H19"/><text x="12" y="18.5" font-size="6.4" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">PDF</text></svg>',
       tooltip: "Export as PDF (.pdf)",
       onClick: handleExportPdf,
     },
     {
       id: "export-word",
       label: "Export Word",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 1.5h5L12 5v8.5a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" fill="currentColor" opacity="0.16"/><path d="M8.5 1.5 12 5H9.5a1 1 0 0 1-1-1V1.5z" fill="currentColor"/><text x="7.75" y="12.1" text-anchor="middle" textLength="8" lengthAdjust="spacingAndGlyphs" font-size="4.6" font-weight="700" font-family="system-ui,sans-serif" fill="currentColor">DOCX</text></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h8.5L19 8.5V21H5z"/><path d="M13.5 3v5H19"/><text x="12" y="18.5" font-size="5.2" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">DOCX</text></svg>',
       tooltip: "Export as Word (.docx)",
       onClick: handleExportWord,
     },
     {
       id: "fullscreen",
       label: "Fullscreen",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3v4H3V4h3V3H2zm11 0h-4v1h3v3h1V3zM3 9H2v4h4v-1H3V9zm10 0v3h-3v1h4V9h-1z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
       tooltip: "Toggle fullscreen",
       onClick: toggleFullScreen,
       isActive: () => isFullScreen.value,
@@ -576,13 +576,13 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "format-painter-copy",
       label: "Copy Format",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1h1v2H3V2h1V1zM3 4h10v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg>',
       onClick: handleCopyFormat,
     },
     {
       id: "format-painter-paste",
       label: "Paste Format",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M5 2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h2v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3h2V2zm1 0v1h4V2H6zM4 4v9h8V4H4z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg>',
       onClick: handlePasteFormat,
       disabled: !hasFormatCopied(),
     },
@@ -593,8 +593,8 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
         ? "Disable Spell Check"
         : "Enable Spell Check",
       icon: spellCheckEnabled.value
-        ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M13 3l-8 8-3-3-1 1 4 4 9-9-1-1z"/></svg>'
-        : '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h1v12H2V2zm11 0h1v12h-1V2zM5 5h6v1H5V5zm0 3h6v1H5V8zm0 3h6v1H5v-1z"/></svg>',
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/><path d="m16 20 2 2 4-4"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/></svg>',
       onClick: handleToggleSpellCheck,
       // Reflect current spellcheck state in the Tools dropdown (#26)
       isActive: () => spellCheckEnabled.value,
@@ -603,13 +603,13 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     {
       id: "templates",
       label: "Templates",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h4v4H2V2zm5 0h4v4H7V2zm5 0h2v4h-2V2zM2 7h4v4H2V7zm5 0h4v4H7V7zm5 0h2v4h-2V7zM2 12h4v2H2v-2zm5 0h4v2H7v-2zm5 0h2v2h-2v-2z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>',
       onClick: openTemplateModal,
     },
     {
       id: "history-timeline",
       label: "History Timeline",
-      icon: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 1 0 7 7h-1.5A5.5 5.5 0 1 1 8 2.5V1zm0 3v4l3 2 .75-1.23L9.5 7.5V4H8zM8 1v1.5A5.5 5.5 0 0 1 13.5 8H15a7 7 0 0 0-7-7z"/></svg>',
+      icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>',
       onClick: toggleHistoryTimeline,
     },
   ]);
