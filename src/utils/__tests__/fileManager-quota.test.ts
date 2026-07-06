@@ -148,4 +148,114 @@ describe("FileManagerService quota-safe persistence", () => {
     // No degradation happened, so the data-URL is retained intact.
     expect(parsed[0].url.startsWith("data:")).toBe(true);
   });
+
+  it("preserves non-data URLs and strips only data-URL thumbnails during a degraded save", async () => {
+    // Seed a previously-persisted file that has an *external* (non-data) URL
+    // but a heavy data-URL *thumbnail*. This drives the otherwise-uncovered
+    // branch sides in the degraded metadata mapping:
+    //   - url is NOT a data URL  -> kept as-is (the `: file.url` side)
+    //   - thumbnail IS a data URL -> dropped to undefined (the `? undefined` side)
+    const { store, storage } = createQuotaStub(true);
+    store.set(
+      "next-level-editor-files",
+      JSON.stringify([
+        {
+          id: "seed_1",
+          name: "remote.png",
+          type: "image/png",
+          size: 1234,
+          url: "https://cdn.example.com/remote.png",
+          uploadedAt: new Date(1000).toISOString(),
+          thumbnail: "data:image/jpeg;base64,AAAA",
+        },
+      ])
+    );
+    vi.stubGlobal("localStorage", storage);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    // Constructing loads the seeded file; uploading a second (data-URL heavy)
+    // file forces the primary save to fail and the degraded save to run over
+    // BOTH files.
+    const manager = new FileManagerService();
+    await manager.uploadFile(
+      new File(["hello"], "local.txt", { type: "text/plain" })
+    );
+
+    const persisted = JSON.parse(
+      localStorage.getItem("next-level-editor-files")!
+    ) as Array<{ name: string; url: string; thumbnail?: string }>;
+
+    const remote = persisted.find((f) => f.name === "remote.png")!;
+    // External URL survives untouched (false side of the isDataUrl(url) check).
+    expect(remote.url).toBe("https://cdn.example.com/remote.png");
+    // Its data-URL thumbnail is stripped (true side of the thumbnail check).
+    expect(remote.thumbnail).toBeUndefined();
+
+    const local = persisted.find((f) => f.name === "local.txt")!;
+    // The uploaded file's inline data URL is dropped in the degraded save.
+    expect(local.url).toBe("");
+  });
+
+  it("leaves a non-data-URL thumbnail intact during a degraded save", async () => {
+    // Covers the false side of `isDataUrl(thumbnail)`: a thumbnail that is a
+    // regular URL must be preserved, not stripped.
+    const { store, storage } = createQuotaStub(true);
+    store.set(
+      "next-level-editor-files",
+      JSON.stringify([
+        {
+          id: "seed_2",
+          name: "hosted.png",
+          type: "image/png",
+          size: 42,
+          url: "https://cdn.example.com/hosted.png",
+          uploadedAt: new Date(2000).toISOString(),
+          thumbnail: "https://cdn.example.com/hosted-thumb.png",
+        },
+      ])
+    );
+    vi.stubGlobal("localStorage", storage);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const manager = new FileManagerService();
+    await manager.uploadFile(
+      new File(["hi"], "trigger.txt", { type: "text/plain" })
+    );
+
+    const persisted = JSON.parse(
+      localStorage.getItem("next-level-editor-files")!
+    ) as Array<{ name: string; thumbnail?: string }>;
+
+    const hosted = persisted.find((f) => f.name === "hosted.png")!;
+    expect(hosted.thumbnail).toBe("https://cdn.example.com/hosted-thumb.png");
+  });
+
+  it("does not throw when even the degraded metadata write fails", async () => {
+    // Reject *every* write, including the metadata-only fallback, so the final
+    // inner catch runs. The upload must still resolve and keep in-memory files.
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+      setItem: () => {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      },
+      removeItem: (key: string) => store.delete(key),
+      clear: () => store.clear(),
+      key: (i: number) => Array.from(store.keys())[i] ?? null,
+      get length() {
+        return store.size;
+      },
+    } as unknown as Storage;
+    vi.stubGlobal("localStorage", storage);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const manager = new FileManagerService();
+    await expect(
+      manager.uploadFile(new File(["x"], "x.txt", { type: "text/plain" }))
+    ).resolves.toBeDefined();
+
+    // Both the primary and the degraded save warned, but nothing threw.
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+    expect(manager.getFiles()).toHaveLength(1);
+  });
 });

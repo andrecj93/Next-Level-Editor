@@ -8,6 +8,7 @@ export function useModals(options: UseModalsOptions = {}) {
   const { rememberSelection } = options;
 
   // Modal states
+  const showLinkModal = ref(false);
   const showImageUploadModal = ref(false);
   const showEmbedModal = ref(false);
   const showFileManagerModal = ref(false);
@@ -27,6 +28,16 @@ export function useModals(options: UseModalsOptions = {}) {
     if (rememberSelection) {
       rememberSelection();
     }
+  };
+
+  // Link Modal
+  const openLinkModal = () => {
+    beforeOpenModal();
+    showLinkModal.value = true;
+  };
+
+  const closeLinkModal = () => {
+    showLinkModal.value = false;
   };
 
   // Image Upload Modal
@@ -141,6 +152,7 @@ export function useModals(options: UseModalsOptions = {}) {
 
   return {
     // States
+    showLinkModal,
     showImageUploadModal,
     showEmbedModal,
     showFileManagerModal,
@@ -154,6 +166,8 @@ export function useModals(options: UseModalsOptions = {}) {
     showTablePropertiesModal,
 
     // Functions
+    openLinkModal,
+    closeLinkModal,
     openImageUploadModal,
     closeImageUploadModal,
     openEmbedModal,

@@ -129,6 +129,7 @@ describe("ModalsContainer", () => {
     showTableDesigner: false,
     showTablePropertiesModal: false,
     showEmojiPicker: false,
+    showLinkModal: false,
     showImageUploadModal: false,
     showEmbedModal: false,
     showFileManagerModal: false,
