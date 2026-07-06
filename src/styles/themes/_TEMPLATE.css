@@ -1,0 +1,50 @@
+/* ============================================================
+   THEME TEMPLATE — copy me to make a new editor theme.
+
+   1. Copy this file to  src/styles/themes/<your-theme>.css
+   2. Replace every "example" below with your theme id (kebab-case).
+   3. Retint the 14 tokens for LIGHT and DARK (keep the meanings).
+      - Body/menu text must clear WCAG AA (>=4.5:1) on its surface.
+      - Keep --toolbar-hover an rgba() of your --toolbar-accent.
+      - In dark mode: surface < surface-raised < surface-overlay (each lighter).
+   4. @import "./themes/<your-theme>.css";  in src/styles/NextLevelEditor.css
+   5. Add the id to AVAILABLE_THEMES in src/composables/useEditorThemes.ts
+      (and the demo switcher picks it up automatically).
+   Then use it:  <NextLevelEditor theme-preset="<your-theme>" />
+   ============================================================ */
+
+/* Light mode */
+.next-level-editor.nle-theme-example {
+  --editor-bg: #ffffff;
+  --editor-border: #d8dde6;
+  --toolbar-bg: #f8f9fb;
+  --toolbar-text: #1f2937;
+  --toolbar-accent: #3b82f6;
+  --toolbar-hover: rgba(59, 130, 246, 0.12);
+  --content-color: #1f2937;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: #ffffff;
+  --color-border: #e5e7eb;
+  --color-divider: #e5e7eb;
+  --color-text: #1f2937;
+  --color-text-secondary: #6b7280;
+}
+
+/* Dark mode */
+.next-level-editor.nle-theme-example.theme-dark {
+  --editor-bg: #0f172a;
+  --editor-border: #1e293b;
+  --toolbar-bg: #111827;
+  --toolbar-text: #e2e8f0;
+  --toolbar-accent: #60a5fa;
+  --toolbar-hover: rgba(96, 165, 250, 0.2);
+  --content-color: #e2e8f0;
+  --color-surface: #1e293b;
+  --color-surface-raised: #334155;
+  --color-surface-overlay: #475569;
+  --color-border: #334155;
+  --color-divider: #334155;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+}

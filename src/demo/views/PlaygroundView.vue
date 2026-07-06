@@ -69,6 +69,24 @@
         </div>
       </transition>
 
+      <!-- Theme switcher -->
+      <div class="pg-themes">
+        <span class="pg-themes-label">Theme</span>
+        <div class="pg-theme-chips">
+          <button
+            v-for="t in editorThemes"
+            :key="t.id"
+            type="button"
+            class="pg-theme-chip"
+            :class="{ active: editorConfig.themePreset === t.id }"
+            :title="t.description"
+            @click="editorConfig.themePreset = t.id"
+          >
+            {{ t.label }}
+          </button>
+        </div>
+      </div>
+
       <!-- Editor -->
       <div class="pg-editor">
         <NextLevelEditor
@@ -76,6 +94,7 @@
           width="100%"
           :height="editorHeight"
           :placeholder="editorConfig.placeholder"
+          :theme-preset="editorConfig.themePreset"
           :show-writing-stats="editorConfig.showWritingStats"
           :enable-comments="editorConfig.enableComments"
           :enable-variables="editorConfig.enableVariables"
@@ -104,6 +123,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import NextLevelEditor from "../../components/NextLevelEditor.vue";
+import { AVAILABLE_THEMES } from "../../composables/useEditorThemes";
 import {
   getAllTemplates,
   getTemplateById,
@@ -111,6 +131,7 @@ import {
 } from "../examples/exampleTemplates";
 
 const templates = getAllTemplates();
+const editorThemes = AVAILABLE_THEMES;
 const selectedTemplate = ref("showcase");
 const showConfig = ref(false);
 const outTab = ref<"preview" | "html">("preview");
@@ -121,6 +142,7 @@ const content = ref(startEmpty ? "" : getDefaultTemplate().content);
 
 const editorConfig = ref({
   height: "620",
+  themePreset: "default",
   showWritingStats: true,
   enableComments: true,
   enableVariables: true,
@@ -140,6 +162,7 @@ const loadTemplate = () => {
 const resetConfig = () => {
   editorConfig.value = {
     height: "620",
+    themePreset: "default",
     showWritingStats: true,
     enableComments: true,
     enableVariables: true,
@@ -199,6 +222,13 @@ const demoMentionSearch = (query: string) => {
 .cfg-field label { font-weight: 600; }
 .num, .text { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg-subtle); border: 1px solid var(--border-strong); border-radius: 9px; padding: 8px 12px; }
 .num { width: 90px; }
+
+.pg-themes { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+.pg-themes-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); }
+.pg-theme-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pg-theme-chip { background: var(--bg-subtle); border: 1px solid var(--border); color: var(--ink-soft); font: inherit; font-weight: 600; font-size: 13.5px; padding: 7px 15px; border-radius: 999px; cursor: pointer; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease; }
+.pg-theme-chip:hover { color: var(--ink); border-color: var(--ink-soft); transform: translateY(-1px); }
+.pg-theme-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 .pg-editor { margin-bottom: 20px; }
 
