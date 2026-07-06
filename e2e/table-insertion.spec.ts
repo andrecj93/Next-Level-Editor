@@ -17,10 +17,12 @@ test.describe("Table Insertion", () => {
     await insertButton.click();
     await page.waitForTimeout(200);
 
-    // Look for table option
+    // The "Table" item inside the open Insert menu. Scope + exact name so it
+    // can't match other on-page text (e.g. the "Comfortable" density chip,
+    // since has-text is case-insensitive: "comforTABLE").
     const tableOption = page
-      .locator('button:has-text("Table"), [aria-label*="Table"]')
-      .first();
+      .locator(".dropdown-menu")
+      .getByRole("button", { name: "Table", exact: true });
     await tableOption.click();
     await page.waitForTimeout(300);
 
