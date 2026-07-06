@@ -205,7 +205,7 @@ import NextLevelEditor from "../../components/NextLevelEditor.vue";
 import type { MentionSuggestion } from "../../composables/useComments";
 import { htmlToMarkdown, formatHtml } from "../../utils/export";
 import CodeBlock from "../components/CodeBlock.vue";
-import Icon from "../components/Icon.vue";
+import Icon, { type IconName } from "../components/Icon.vue";
 import EditorSheet from "../components/EditorSheet.vue";
 import RevealOnScroll from "../components/RevealOnScroll.vue";
 import LiveDemo from "../components/LiveDemo.vue";
@@ -293,7 +293,7 @@ const mentionSearch = (q: string): MentionSuggestion[] => {
 
 const trust = ["No dependencies to wrangle", "TypeScript-first", "Fully themeable", "SSR-friendly"];
 
-const features: { icon: string; title: string; desc: string }[] = [
+const features: { icon: IconName; title: string; desc: string }[] = [
   { icon: "chart", title: "Writing stats", desc: "Live word count, reading time, readability scoring and lightweight SEO hints." },
   { icon: "palette", title: "Beautiful theming", desc: "A token-based design system with first-class light and dark modes out of the box." },
   { icon: "mobile", title: "Mobile ready", desc: "A dedicated touch toolbar, responsive layout and comfortable 44px targets." },

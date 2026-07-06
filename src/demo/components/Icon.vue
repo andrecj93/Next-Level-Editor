@@ -15,9 +15,7 @@
   />
 </template>
 
-<script setup lang="ts">
-import { computed } from "vue";
-
+<script lang="ts">
 /**
  * Icon — the site's single crafted stroke-icon set. One source of truth so the
  * marketing site never reaches for an emoji (per the project's established
@@ -25,13 +23,8 @@ import { computed } from "vue";
  * drawn on the same visual grid: 1.7 default weight, round caps/joins, so the
  * whole set reads like it was drawn by one hand.
  */
-const props = withDefaults(
-  defineProps<{ name: IconName; size?: number | string; strokeWidth?: number | string }>(),
-  { size: 22, strokeWidth: 1.7 }
-);
-
 // prettier-ignore
-const ICONS = {
+export const ICONS = {
   // editor capabilities
   slash: '<path d="M15.5 5 8.5 19"/>',
   comment: '<path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 9.5 9.5 0 0 1-4-.9L3 20l1.4-4.5A8.38 8.38 0 0 1 3.5 11 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5Z"/><path d="M8.5 11h7M8.5 14h4"/>',
@@ -62,7 +55,17 @@ const ICONS = {
   layers: '<path d="m12 3.5 8 4.2-8 4.2-8-4.2Z"/><path d="m4 12 8 4.2 8-4.2M4 15.8l8 4.2 8-4.2"/>',
 } as const;
 
-type IconName = keyof typeof ICONS;
+export type IconName = keyof typeof ICONS;
+</script>
+
+<script setup lang="ts">
+import { computed } from "vue";
+
+const props = withDefaults(
+  defineProps<{ name: IconName; size?: number | string; strokeWidth?: number | string }>(),
+  { size: 22, strokeWidth: 1.7 }
+);
+
 const path = computed(() => ICONS[props.name]);
 </script>
 

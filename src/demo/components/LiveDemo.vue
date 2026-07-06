@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
-import Icon from "./Icon.vue";
+import Icon, { type IconName } from "./Icon.vue";
 import EditorSheet from "./EditorSheet.vue";
 
 /**
@@ -42,7 +42,7 @@ withDefaults(
     title: string;
     desc: string;
     hint: string;
-    icon: string;
+    icon: IconName;
     filename?: string;
     badge?: string;
     alt?: boolean;
