@@ -1,10 +1,10 @@
 <template>
   <div class="playground">
     <div class="container container-wide">
-      <header class="pg-head">
+      <header class="pg-head ruled">
         <div>
-          <span class="eyebrow">Playground</span>
-          <h1 class="h-section">Try every feature, live</h1>
+          <span class="eyebrow"><Icon name="bolt" :size="15" /> Playground</span>
+          <h1 class="h-display pg-title">Try every feature, <span class="ink is-in">live.</span></h1>
           <p class="lede">
             A fully-configured editor — formatting, tables, slash commands, comments,
             variables, export and more. Load a template or start from scratch.
@@ -32,7 +32,7 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" /></svg>
           Configure
         </button>
-        <a class="btn btn-ghost btn-sm" href="https://github.com/andrecj93/next-level-editor" target="_blank" rel="noopener">Star ⭐</a>
+        <a class="btn btn-ghost btn-sm" href="https://github.com/andrecj93/next-level-editor" target="_blank" rel="noopener"><Icon name="star" :size="15" /> Star</a>
       </div>
 
       <!-- Config panel -->
@@ -103,7 +103,7 @@
       </div>
 
       <!-- Editor -->
-      <div class="pg-editor">
+      <EditorSheet filename="playground.vue" badge="live" class="pg-editor">
         <NextLevelEditor
           v-model="content"
           width="100%"
@@ -118,7 +118,7 @@
           @focus="handleFocus"
           @blur="handleBlur"
         />
-      </div>
+      </EditorSheet>
 
       <!-- Output -->
       <div class="pg-output card">
@@ -140,6 +140,8 @@
 import { ref, computed } from "vue";
 import NextLevelEditor from "../../components/NextLevelEditor.vue";
 import { AVAILABLE_THEMES } from "../../composables/useEditorThemes";
+import Icon from "../components/Icon.vue";
+import EditorSheet from "../components/EditorSheet.vue";
 import {
   getAllTemplates,
   getTemplateById,
@@ -211,9 +213,11 @@ const demoMentionSearch = (query: string) => {
 </script>
 
 <style scoped>
-.playground { padding: 40px 0 40px; }
-.pg-head { max-width: 640px; margin-bottom: 28px; }
-.pg-head .h-section { margin: 10px 0 12px; }
+.playground { padding: 48px 0 40px; }
+.pg-head { max-width: 680px; margin-bottom: 30px; }
+.pg-head .eyebrow { display: inline-flex; }
+.pg-title { font-size: clamp(2rem, 4.2vw, 3rem); margin: 12px 0 14px; }
+.pg-editor { margin-bottom: 20px; }
 
 .pg-controls { display: flex; align-items: center; gap: 12px; padding: 14px 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .ctrl-group { display: flex; align-items: center; gap: 10px; }

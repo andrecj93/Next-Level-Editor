@@ -3,16 +3,13 @@
     <div class="container container-wide footer-inner">
       <div class="footer-brand">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
-            </svg>
-          </span>
+          <span class="brand-mark" aria-hidden="true"><Icon name="pen" :size="17" :stroke-width="1.9" /></span>
           <span class="brand-name">Next Level Editor</span>
         </div>
         <p class="footer-tag">
           A modern, framework-native rich-text editor for Vue&nbsp;3. Free &amp; open source, MIT licensed.
         </p>
+        <p class="footer-signoff">— crafted for people who care about writing</p>
       </div>
 
       <div class="footer-cols">
@@ -38,6 +35,8 @@
 </template>
 
 <script setup lang="ts">
+import Icon from "./Icon.vue";
+
 defineEmits<{ navigate: [id: string] }>();
 
 interface FooterLink {
@@ -73,15 +72,20 @@ const open = (href?: string) => {
 <style scoped>
 .site-footer { border-top: 1px solid var(--border); background: var(--bg-subtle); padding: 56px 0 28px; margin-top: 40px; }
 .footer-inner { display: flex; flex-wrap: wrap; gap: 48px; justify-content: space-between; }
-.footer-brand { max-width: 340px; }
+.footer-brand { max-width: 360px; }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); }
-.brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--brand-gradient); color: #fff; }
-.brand-name { font-weight: 800; letter-spacing: -0.02em; }
+.brand-mark {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px;
+  background: var(--brand-gradient); color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 5px 14px -7px rgba(196, 57, 44, 0.7);
+}
+.brand-name { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; font-size: 1.05rem; }
 .footer-tag { margin: 14px 0 0; font-size: 0.92rem; line-height: 1.6; color: var(--ink-soft); }
+.footer-signoff { margin: 12px 0 0; font-family: var(--font-display); font-style: italic; font-size: 0.92rem; color: var(--ink-muted); }
 .footer-cols { display: flex; gap: 64px; flex-wrap: wrap; }
 .footer-col { display: flex; flex-direction: column; gap: 10px; }
 .footer-col h4 { margin: 0 0 6px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); }
 .footer-link { background: none; border: none; padding: 0; text-align: left; cursor: pointer; font: inherit; font-size: 0.92rem; color: var(--ink-soft); transition: color 0.15s; }
-.footer-link:hover { color: var(--brand-500); }
+.footer-link:hover { color: var(--accent); }
 .footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--ink-muted); }
 </style>

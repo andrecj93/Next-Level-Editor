@@ -19,9 +19,9 @@
 
     <!-- Content -->
     <article class="docs-body">
-      <header class="docs-hero">
-        <span class="eyebrow">Documentation</span>
-        <h1 class="h-section">Get started in a minute</h1>
+      <header class="docs-hero ruled">
+        <span class="eyebrow"><Icon name="layers" :size="15" /> Documentation</span>
+        <h1 class="h-display docs-title">Get started in <span class="ink is-in">a minute.</span></h1>
         <p class="lede">Everything you need to add a full-featured rich-text editor to your Vue&nbsp;3 app.</p>
       </header>
 
@@ -96,12 +96,13 @@
         <p class="muted">See <code>src/demo/examples/example-plugin.ts</code> for a complete, worked example.</p>
       </section>
 
-      <div class="docs-next card">
+      <div class="docs-next sheet ruled">
         <div>
+          <span class="eyebrow"><Icon name="pen" :size="14" /> Next</span>
           <h3>Ready to build?</h3>
           <p>Jump into the playground and try every feature with live output.</p>
         </div>
-        <button class="btn btn-primary" @click="$emit('navigate', 'playground')">Open playground →</button>
+        <button class="btn btn-primary" @click="$emit('navigate', 'playground')">Open playground <Icon name="arrow" :size="16" /></button>
       </div>
     </article>
   </div>
@@ -110,6 +111,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import CodeBlock from "../components/CodeBlock.vue";
+import Icon from "../components/Icon.vue";
 
 defineEmits<{ navigate: [id: string] }>();
 
@@ -229,7 +231,8 @@ onUnmounted(() => observer?.disconnect());
 
 .docs-body { max-width: 760px; min-width: 0; }
 .docs-hero { margin-bottom: 40px; }
-.docs-hero .h-section { margin: 12px 0; }
+.docs-hero .eyebrow { display: inline-flex; }
+.docs-title { font-size: clamp(2rem, 4vw, 2.9rem); margin: 12px 0; }
 .doc-section { padding: 26px 0; border-top: 1px solid var(--border); scroll-margin-top: calc(var(--nav-h) + 20px); }
 .doc-section:first-of-type { border-top: none; padding-top: 0; }
 .doc-section h2 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 14px; }
@@ -254,8 +257,9 @@ onUnmounted(() => observer?.disconnect());
 .props-table td code { font-family: var(--font-mono); font-size: 12.5px; color: var(--brand-500); font-weight: 600; }
 .props-table .ty { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-muted); white-space: nowrap; }
 
-.docs-next { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 26px; margin-top: 40px; flex-wrap: wrap; }
-.docs-next h3 { margin: 0 0 4px; font-size: 1.15rem; }
+.docs-next { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 28px 30px; margin-top: 40px; flex-wrap: wrap; }
+.docs-next .eyebrow { display: inline-flex; margin-bottom: 8px; }
+.docs-next h3 { margin: 0 0 4px; font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; }
 .docs-next p { margin: 0; color: var(--ink-soft); font-size: 0.94rem; }
 
 @media (max-width: 900px) {
