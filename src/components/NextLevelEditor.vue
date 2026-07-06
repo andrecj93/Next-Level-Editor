@@ -123,6 +123,7 @@
       :show-table-designer="showTableDesigner"
       :show-table-properties-modal="showTablePropertiesModal"
       :show-emoji-picker="showEmojiPicker"
+      :show-link-modal="showLinkModal"
       :show-image-upload-modal="showImageUploadModal"
       :show-embed-modal="showEmbedModal"
       :show-file-manager-modal="showFileManagerModal"
@@ -164,6 +165,8 @@
       @apply-table-properties="handleApplyTableProperties"
       @close-emoji-picker="showEmojiPicker = false"
       @insert-emoji="handleInsertEmoji"
+      @close-link-modal="closeLinkModal"
+      @insert-link="handleInsertLink"
       @close-image-upload-modal="closeImageUploadModal"
       @insert-image="handleInsertImage"
       @close-embed-modal="closeEmbedModal"
@@ -576,6 +579,7 @@ useViewMode({
 
 // Modal management using composable - pass rememberSelection to save cursor position
 const {
+  showLinkModal,
   showImageUploadModal,
   showEmbedModal,
   showFileManagerModal,
@@ -587,6 +591,8 @@ const {
   showTableModal,
   showTableDesigner,
   showTablePropertiesModal,
+  openLinkModal,
+  closeLinkModal,
   openImageUploadModal,
   closeImageUploadModal,
   openEmbedModal,
@@ -731,6 +737,7 @@ const { handleFind, handleReplace, handleReplaceAll } = useFindReplace({
 // Insert actions using composable
 const {
   insertLink,
+  handleInsertLink,
   insertImage,
   handleInsertImage,
   handleInsertEmbed,
@@ -746,6 +753,7 @@ const {
   performWithSelection,
   captureSnapshot,
   showToast: showToastNotification,
+  openLinkModal,
   openImageUploadModal,
   closeImageUploadModal,
   closeEmbedModal,

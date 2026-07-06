@@ -337,6 +337,38 @@ describe('Formatting Tests', () => {
       expect(link!.target).toBe('_blank')
       expect(link!.rel).toBe('noopener noreferrer')
     })
+
+    it('uses custom link text when the caret is collapsed', () => {
+      root.innerHTML = '<p>x</p>'
+      const p = root.querySelector('p')!
+      const range = document.createRange()
+      range.setStart(p.firstChild!, 1)
+      range.collapse(true)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      insertLink(root, 'https://example.com', 'Click here')
+
+      const link = root.querySelector('a')!
+      expect(link.getAttribute('href')).toBe('https://example.com')
+      expect(link.textContent).toBe('Click here')
+    })
+
+    it('falls back to the URL as text when no custom text is given', () => {
+      root.innerHTML = '<p>x</p>'
+      const p = root.querySelector('p')!
+      const range = document.createRange()
+      range.setStart(p.firstChild!, 1)
+      range.collapse(true)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      insertLink(root, 'https://example.com')
+
+      expect(root.querySelector('a')!.textContent).toBe('https://example.com')
+    })
   })
 
   describe('insertImage', () => {

@@ -19,6 +19,7 @@ describe("useInsertActions containment (page break & TOC)", () => {
       ),
       captureSnapshot: vi.fn(),
       showToast: vi.fn(),
+      openLinkModal: vi.fn(),
       openImageUploadModal: vi.fn(),
       closeImageUploadModal: vi.fn(),
       closeEmbedModal: vi.fn(),

@@ -921,17 +921,18 @@ export const outdentListItem = (root: HTMLElement): boolean => {
   return true;
 };
 
-export const insertLink = (root: HTMLElement, url: string) => {
+export const insertLink = (root: HTMLElement, url: string, text = "") => {
   const range = getSelectionRange();
   if (!range) return;
 
-  // If range is collapsed (no text selected), create link with visible text
+  // If range is collapsed (no text selected), create link with visible text —
+  // the caller's custom text when given, otherwise the URL itself.
   if (range.collapsed) {
     const element = document.createElement("a");
     element.href = url;
     element.target = "_blank";
     element.rel = "noopener noreferrer";
-    element.textContent = url;
+    element.textContent = text || url;
     element.style.color = "var(--primary-color, #3b82f6)";
     element.style.textDecoration = "underline";
     element.style.cursor = "pointer";

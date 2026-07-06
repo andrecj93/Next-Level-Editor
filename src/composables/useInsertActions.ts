@@ -22,6 +22,7 @@ interface InsertActionsOptions {
   ) => void;
   captureSnapshot: () => void;
   showToast: (message: string, type?: "success" | "error") => void;
+  openLinkModal: () => void;
   openImageUploadModal: () => void;
   closeImageUploadModal: () => void;
   closeEmbedModal: () => void;
@@ -39,6 +40,7 @@ export function useInsertActions(options: InsertActionsOptions) {
     performWithSelection,
     captureSnapshot,
     showToast,
+    openLinkModal,
     openImageUploadModal,
     closeImageUploadModal,
     closeEmbedModal,
@@ -47,16 +49,22 @@ export function useInsertActions(options: InsertActionsOptions) {
   } = options;
 
   /**
-   * Insert a link with URL prompt
+   * Open the styled link modal (remembers the current selection).
    */
   const insertLink = () => {
-    const url = prompt("Enter the URL:");
-    if (url) {
-      performWithSelection(
-        (root) => insertLinkUtil(root, url),
-        captureSnapshot
-      );
-    }
+    openLinkModal();
+  };
+
+  /**
+   * Insert a link from the modal at the remembered selection. When text was
+   * selected it is wrapped; otherwise `text` (or the URL) becomes the link text.
+   */
+  const handleInsertLink = (url: string, text = "") => {
+    if (!url) return;
+    performWithSelection(
+      (root) => insertLinkUtil(root, url, text),
+      captureSnapshot
+    );
   };
 
   /**
@@ -490,6 +498,7 @@ export function useInsertActions(options: InsertActionsOptions) {
 
   return {
     insertLink,
+    handleInsertLink,
     insertImage,
     handleInsertImage,
     handleInsertEmbed,

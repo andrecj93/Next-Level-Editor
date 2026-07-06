@@ -18,6 +18,7 @@ describe("useInsertActions", () => {
   ) => void;
   let captureSnapshot: () => void;
   let showToast: (message: string, type?: "success" | "error") => void;
+  let openLinkModal: () => void;
   let openImageUploadModal: () => void;
   let closeImageUploadModal: () => void;
   let closeEmbedModal: () => void;
@@ -39,6 +40,7 @@ describe("useInsertActions", () => {
     );
     captureSnapshot = vi.fn();
     showToast = vi.fn();
+    openLinkModal = vi.fn();
     openImageUploadModal = vi.fn();
     closeImageUploadModal = vi.fn();
     closeEmbedModal = vi.fn();
@@ -55,12 +57,13 @@ describe("useInsertActions", () => {
   });
 
   describe("insertLink", () => {
-    it("should prompt for URL", () => {
-      const { insertLink } = useInsertActions({
+    const build = () =>
+      useInsertActions({
         editorContent,
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -68,47 +71,33 @@ describe("useInsertActions", () => {
         closeEmojiPicker,
       });
 
-      globalThis.prompt = vi.fn(() => "https://example.com");
+    it("opens the styled link modal (no native prompt)", () => {
+      const { insertLink } = build();
       insertLink();
-
-      expect(globalThis.prompt).toHaveBeenCalledWith("Enter the URL:");
+      expect(openLinkModal).toHaveBeenCalledTimes(1);
     });
 
-    it("should call insertLinkUtil when URL is provided", () => {
-      const { insertLink } = useInsertActions({
-        editorContent,
-        performWithSelection,
-        captureSnapshot,
-        showToast,
-        openImageUploadModal,
-        closeImageUploadModal,
-        closeEmbedModal,
-        closeFileManagerModal,
-        closeEmojiPicker,
-      });
+    it("handleInsertLink inserts at the remembered selection", () => {
+      const { handleInsertLink } = build();
+      const p = editorElement.querySelector("p")!;
+      const range = document.createRange();
+      range.setStart(p.firstChild!, 0);
+      range.collapse(true);
+      const sel = window.getSelection()!;
+      sel.removeAllRanges();
+      sel.addRange(range);
 
-      globalThis.prompt = vi.fn(() => "https://example.com");
-      insertLink();
-
-      expect(performWithSelection).toHaveBeenCalled();
+      handleInsertLink("https://example.com", "Click");
+      expect(performWithSelection).toHaveBeenCalledTimes(1);
+      const link = editorElement.querySelector("a");
+      expect(link).toBeTruthy();
+      expect(link!.getAttribute("href")).toBe("https://example.com");
+      expect(link!.textContent).toBe("Click");
     });
 
-    it("should not insert link when URL is cancelled", () => {
-      const { insertLink } = useInsertActions({
-        editorContent,
-        performWithSelection,
-        captureSnapshot,
-        showToast,
-        openImageUploadModal,
-        closeImageUploadModal,
-        closeEmbedModal,
-        closeFileManagerModal,
-        closeEmojiPicker,
-      });
-
-      globalThis.prompt = vi.fn(() => null);
-      insertLink();
-
+    it("handleInsertLink ignores an empty URL", () => {
+      const { handleInsertLink } = build();
+      handleInsertLink("");
       expect(performWithSelection).not.toHaveBeenCalled();
     });
   });
@@ -120,6 +109,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -140,6 +130,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -159,6 +150,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -179,6 +171,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -211,6 +204,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -230,6 +224,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -250,6 +245,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -288,6 +284,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -326,6 +323,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -364,6 +362,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -388,6 +387,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -420,6 +420,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -440,6 +441,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -460,6 +462,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -480,6 +483,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -502,6 +506,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -524,6 +529,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -544,6 +550,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -563,6 +570,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -584,6 +592,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -606,6 +615,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -630,6 +640,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -662,6 +673,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -683,6 +695,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -704,6 +717,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,
@@ -723,6 +737,7 @@ describe("useInsertActions", () => {
         performWithSelection,
         captureSnapshot,
         showToast,
+        openLinkModal,
         openImageUploadModal,
         closeImageUploadModal,
         closeEmbedModal,

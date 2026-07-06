@@ -63,6 +63,13 @@
     />
   </div>
 
+  <!-- Link Modal -->
+  <LinkModal
+    :is-open="showLinkModal"
+    @close="$emit('close-link-modal')"
+    @insert="(url: string, text: string) => $emit('insert-link', url, text)"
+  />
+
   <!-- Image Upload Modal -->
   <ImageUploadModal
     :is-open="showImageUploadModal"
@@ -168,6 +175,7 @@ import CodeBlockModal from "./CodeBlockModal.vue";
 import TableDesigner from "./TableDesigner.vue";
 import TablePropertiesModal from "./TablePropertiesModal.vue";
 import EmojiPicker from "./EmojiPicker.vue";
+import LinkModal from "./LinkModal.vue";
 import ImageUploadModal from "./ImageUploadModal.vue";
 import EmbedModal from "./EmbedModal.vue";
 import FileManagerModal from "./FileManagerModal.vue";
@@ -187,6 +195,7 @@ interface Props {
   showTableDesigner: boolean;
   showTablePropertiesModal: boolean;
   showEmojiPicker: boolean;
+  showLinkModal: boolean;
   showImageUploadModal: boolean;
   showEmbedModal: boolean;
   showFileManagerModal: boolean;
@@ -231,6 +240,8 @@ defineEmits<{
   "apply-table-properties": [data: any];
   "close-emoji-picker": [];
   "insert-emoji": [emoji: string];
+  "close-link-modal": [];
+  "insert-link": [url: string, text: string];
   "close-image-upload-modal": [];
   "insert-image": [url: string, alt: string];
   "close-embed-modal": [];
