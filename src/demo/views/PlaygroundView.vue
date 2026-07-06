@@ -69,7 +69,7 @@
         </div>
       </transition>
 
-      <!-- Theme switcher -->
+      <!-- Theme + layout switchers -->
       <div class="pg-themes">
         <span class="pg-themes-label">Theme</span>
         <div class="pg-theme-chips">
@@ -85,6 +85,21 @@
             {{ t.label }}
           </button>
         </div>
+
+        <span class="pg-themes-label pg-density-label">Toolbar</span>
+        <div class="pg-theme-chips">
+          <button
+            v-for="l in toolbarLayouts"
+            :key="l.id"
+            type="button"
+            class="pg-theme-chip"
+            :class="{ active: editorConfig.toolbarLayout === l.id }"
+            :title="l.description"
+            @click="editorConfig.toolbarLayout = l.id"
+          >
+            {{ l.label }}
+          </button>
+        </div>
       </div>
 
       <!-- Editor -->
@@ -95,6 +110,7 @@
           :height="editorHeight"
           :placeholder="editorConfig.placeholder"
           :theme-preset="editorConfig.themePreset"
+          :toolbar-layout="editorConfig.toolbarLayout"
           :show-writing-stats="editorConfig.showWritingStats"
           :enable-comments="editorConfig.enableComments"
           :enable-variables="editorConfig.enableVariables"
@@ -132,6 +148,10 @@ import {
 
 const templates = getAllTemplates();
 const editorThemes = AVAILABLE_THEMES;
+const toolbarLayouts = [
+  { id: "comfortable" as const, label: "Comfortable", description: "Labelled, two-row toolbar." },
+  { id: "compact" as const, label: "Compact", description: "One dense, icon-first row." },
+];
 const selectedTemplate = ref("showcase");
 const showConfig = ref(false);
 const outTab = ref<"preview" | "html">("preview");
@@ -143,6 +163,7 @@ const content = ref(startEmpty ? "" : getDefaultTemplate().content);
 const editorConfig = ref({
   height: "620",
   themePreset: "default",
+  toolbarLayout: "comfortable" as "comfortable" | "compact",
   showWritingStats: true,
   enableComments: true,
   enableVariables: true,
@@ -163,6 +184,7 @@ const resetConfig = () => {
   editorConfig.value = {
     height: "620",
     themePreset: "default",
+    toolbarLayout: "comfortable",
     showWritingStats: true,
     enableComments: true,
     enableVariables: true,
@@ -225,6 +247,7 @@ const demoMentionSearch = (query: string) => {
 
 .pg-themes { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
 .pg-themes-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); }
+.pg-density-label { margin-left: 6px; }
 .pg-theme-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .pg-theme-chip { background: var(--bg-subtle); border: 1px solid var(--border); color: var(--ink-soft); font: inherit; font-weight: 600; font-size: 13.5px; padding: 7px 15px; border-radius: 999px; cursor: pointer; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease; }
 .pg-theme-chip:hover { color: var(--ink); border-color: var(--ink-soft); transform: translateY(-1px); }

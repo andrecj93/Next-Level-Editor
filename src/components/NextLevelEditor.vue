@@ -34,6 +34,7 @@
       :view-mode="viewMode"
       :theme="theme"
       :is-full-screen="isFullScreen"
+      :toolbar-layout="toolbarLayout"
       @remember-selection="rememberSelectionFromToolbar"
       @toggle-colors-dropdown="showColorsDropdown = !showColorsDropdown"
       @text-color-change="handleTextColor"
@@ -366,6 +367,12 @@ interface Props {
    */
   themePreset?: string;
   /**
+   * Toolbar density/layout: "comfortable" (default, labelled two-row) or
+   * "compact" (a single dense icon-first row; labels move to tooltips). An
+   * independent axis from `themePreset`.
+   */
+  toolbarLayout?: "comfortable" | "compact";
+  /**
    * Host-supplied @mention provider for comments: given the text typed after
    * "@", return the users to suggest. Without it the mention dropdown stays
    * empty. [#4]
@@ -390,6 +397,7 @@ const props = withDefaults(defineProps<Props>(), {
   enableComments: false,
   mentionSearch: undefined,
   themePreset: "default",
+  toolbarLayout: "comfortable",
 });
 
 const emit = defineEmits<Emits>();
