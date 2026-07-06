@@ -33,29 +33,29 @@
         </h4>
         <div class="stats-grid">
           <div class="stat-item">
-            <span class="stat-label">Words</span>
+            <span class="stat-label" title="Total number of words in the document.">Words</span>
             <span class="stat-value">{{ stats.words.toLocaleString() }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Characters</span>
+            <span class="stat-label" title="Total characters, including spaces.">Characters</span>
             <span class="stat-value">{{
               stats.characters.toLocaleString()
             }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Sentences</span>
+            <span class="stat-label" title="Number of sentences detected.">Sentences</span>
             <span class="stat-value">{{ stats.sentences }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Paragraphs</span>
+            <span class="stat-label" title="Number of paragraphs — blocks separated by blank lines.">Paragraphs</span>
             <span class="stat-value">{{ stats.paragraphs }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Reading Time</span>
+            <span class="stat-label" title="Estimated silent reading time at ~200 words per minute.">Reading Time</span>
             <span class="stat-value">{{ stats.readingTime }} min</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Speaking Time</span>
+            <span class="stat-label" title="Estimated time to read aloud at ~130 words per minute.">Speaking Time</span>
             <span class="stat-value">{{ stats.speakingTime }} min</span>
           </div>
         </div>
@@ -78,7 +78,7 @@
             <div class="score-value">
               {{ readability.fleschReadingEase.toFixed(1) }}
             </div>
-            <div class="score-label">
+            <div class="score-label" title="How easy the text is to read, 0–100. Higher is easier; 60–70 is plain English.">
               Flesch Reading Ease
             </div>
             <div class="score-description">
@@ -89,7 +89,7 @@
             <div class="grade-value">
               {{ Math.round(readability.averageGradeLevel) }}
             </div>
-            <div class="grade-label">
+            <div class="grade-label" title="US school grade needed to understand the text, averaged across formulas.">
               Grade Level
             </div>
           </div>
@@ -97,19 +97,19 @@
 
         <div class="readability-details">
           <div class="detail-item">
-            <span>Flesch-Kincaid:</span>
+            <span title="US grade level from sentence length and syllables per word.">Flesch-Kincaid:</span>
             <strong>Grade {{ readability.fleschKincaidGrade.toFixed(1) }}</strong>
           </div>
           <div class="detail-item">
-            <span>Gunning Fog:</span>
+            <span title="Years of schooling needed to read it on the first try. Aim below 12.">Gunning Fog:</span>
             <strong>{{ readability.gunningFog.toFixed(1) }}</strong>
           </div>
           <div class="detail-item">
-            <span>Coleman-Liau:</span>
+            <span title="US grade level based on letters per word instead of syllables.">Coleman-Liau:</span>
             <strong>Grade {{ readability.colemanLiauIndex.toFixed(1) }}</strong>
           </div>
           <div class="detail-item">
-            <span>ARI:</span>
+            <span title="Automated Readability Index — grade level from letters, words and sentences.">ARI:</span>
             <strong>Grade
               {{ readability.automatedReadabilityIndex.toFixed(1) }}</strong>
           </div>
@@ -159,13 +159,13 @@
         </div>
         <div class="stats-grid">
           <div class="stat-item">
-            <span class="stat-label">Avg Words/Sentence</span>
+            <span class="stat-label" title="Average sentence length. 15–20 words reads smoothly.">Avg Words/Sentence</span>
             <span class="stat-value">{{
               sentenceAnalysis.averageWordsPerSentence.toFixed(1)
             }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Longest Sentence</span>
+            <span class="stat-label" title="Length of the longest sentence — watch for run-ons.">Longest Sentence</span>
             <span class="stat-value">{{ sentenceAnalysis.longestSentence }} words</span>
           </div>
         </div>
@@ -181,23 +181,23 @@
         </h4>
         <div class="stats-grid">
           <div class="stat-item">
-            <span class="stat-label">Unique Words</span>
+            <span class="stat-label" title="Count of distinct words — your vocabulary variety.">Unique Words</span>
             <span class="stat-value">{{
               wordAnalysis.uniqueWords.toLocaleString()
             }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Avg Word Length</span>
+            <span class="stat-label" title="Average characters per word. Higher reads as denser.">Avg Word Length</span>
             <span class="stat-value">{{
               wordAnalysis.averageWordLength.toFixed(1)
             }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Long Words (&gt;6)</span>
+            <span class="stat-label" title="Words longer than 6 characters.">Long Words (&gt;6)</span>
             <span class="stat-value">{{ wordAnalysis.longWords }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Very Long (&gt;12)</span>
+            <span class="stat-label" title="Words longer than 12 characters — often harder to read.">Very Long (&gt;12)</span>
             <span class="stat-value">{{ wordAnalysis.veryLongWords }}</span>
           </div>
         </div>
@@ -350,7 +350,7 @@
               </text>
             </svg>
           </div>
-          <div class="seo-label">
+          <div class="seo-label" title="Overall on-page SEO health, 0–100, from headings, length and keywords.">
             SEO Score
           </div>
         </div>
@@ -360,18 +360,18 @@
             class="seo-item"
             :class="{ success: seo.headingStructure.h1Count === 1 }"
           >
-            <span>H1 Headings:</span>
+            <span title="Number of H1 headings. Best practice is exactly one per page.">H1 Headings:</span>
             <strong>{{ seo.headingStructure.h1Count }}</strong>
           </div>
           <div
             class="seo-item"
             :class="{ success: seo.headingStructure.h2Count > 0 }"
           >
-            <span>H2 Headings:</span>
+            <span title="Number of H2 subheadings that structure the content.">H2 Headings:</span>
             <strong>{{ seo.headingStructure.h2Count }}</strong>
           </div>
           <div class="seo-item">
-            <span>Meta Length:</span>
+            <span title="Length of the meta description. Aim for 120–160 characters.">Meta Length:</span>
             <strong>{{ seo.metaDescriptionLength }} chars</strong>
           </div>
         </div>
@@ -621,6 +621,16 @@ const getSEOClass = (score: number): string => {
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* Metric labels carry an explanatory title="" — signal it's hoverable. */
+.stat-label,
+.score-label,
+.grade-label,
+.seo-label,
+.detail-item > span:first-child,
+.seo-item > span:first-child {
+  cursor: help;
 }
 
 .stat-value {
