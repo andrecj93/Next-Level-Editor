@@ -26,7 +26,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
-import Icon, { type IconName } from "./Icon.vue";
+import Icon from "./Icon.vue";
+import type { IconName } from "./icons";
 import EditorSheet from "./EditorSheet.vue";
 
 /**

@@ -9,7 +9,7 @@
         </span>
 
         <h1 class="h-display hero-title">
-          <span class="hero-line1">The rich-text editor</span><br >
+          <span class="hero-line1">The rich-text editor</span><br>
           <span class="hero-line2">
             that <span class="ink is-in grad-text">{{ typed }}</span
             ><i v-if="showCaret" class="caret" aria-hidden="true" />
@@ -68,8 +68,10 @@
         <RevealOnScroll class="section-head">
           <span class="eyebrow"><Icon name="bolt" :size="15" /> Proof, not promises</span>
           <h2 class="h-section">Every feature, <span class="ink">live on this page.</span></h2>
-          <p class="lede">These aren't screenshots. Each panel below is the real component — type in
-            it, comment on it, break it. That's the whole pitch.</p>
+          <p class="lede">
+These aren't screenshots. Each panel below is the real component — type in
+            it, comment on it, break it. That's the whole pitch.
+</p>
         </RevealOnScroll>
 
         <div class="demos">
@@ -143,9 +145,11 @@
         <div class="split">
           <RevealOnScroll class="split-copy ruled">
             <span class="eyebrow"><Icon name="bolt" :size="15" /> Developer experience</span>
-            <h2 class="h-section">One component.<br >One <code>v-model</code>.</h2>
-            <p class="lede">No document schema to learn, no render props, no ceremony. It binds to a
-              plain HTML string — exactly what you'd expect from a Vue component.</p>
+            <h2 class="h-section">One component.<br>One <code>v-model</code>.</h2>
+            <p class="lede">
+No document schema to learn, no render props, no ceremony. It binds to a
+              plain HTML string — exactly what you'd expect from a Vue component.
+</p>
             <ul class="split-list">
               <li v-for="p in points" :key="p"><Icon name="check" :size="16" />{{ p }}</li>
             </ul>
@@ -184,9 +188,11 @@
           <div class="cta-band sheet">
             <div class="cta-rule" aria-hidden="true" />
             <span class="eyebrow"><Icon name="pen" :size="15" /> Sign here</span>
-            <h2 class="cta-title h-display">Ready to give your users<br >an editor they'll <span class="grad-text">love</span>?</h2>
-            <p class="cta-sub">Free, open source, production-ready. Add it to your Vue app in under a minute —
-              then never think about rich text again.</p>
+            <h2 class="cta-title h-display">Ready to give your users<br>an editor they'll <span class="grad-text">love</span>?</h2>
+            <p class="cta-sub">
+Free, open source, production-ready. Add it to your Vue app in under a minute —
+              then never think about rich text again.
+</p>
             <div class="hero-ctas">
               <button class="btn btn-primary btn-lg" @click="$emit('navigate', 'playground')">Open the playground <Icon name="arrow" :size="18" /></button>
               <a class="btn btn-ghost btn-lg" href="https://github.com/andrecj93/next-level-editor" target="_blank" rel="noopener"><Icon name="star" :size="17" /> Star on GitHub</a>
@@ -205,7 +211,8 @@ import NextLevelEditor from "../../components/NextLevelEditor.vue";
 import type { MentionSuggestion } from "../../composables/useComments";
 import { htmlToMarkdown, formatHtml } from "../../utils/export";
 import CodeBlock from "../components/CodeBlock.vue";
-import Icon, { type IconName } from "../components/Icon.vue";
+import Icon from "../components/Icon.vue";
+import type { IconName } from "../components/icons";
 import EditorSheet from "../components/EditorSheet.vue";
 import RevealOnScroll from "../components/RevealOnScroll.vue";
 import LiveDemo from "../components/LiveDemo.vue";

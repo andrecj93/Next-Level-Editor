@@ -1,10 +1,11 @@
 /**
- * Export utility functions for converting editor content to different formats
+ * Export utility functions for converting editor content to different formats.
+ *
+ * jspdf, html2canvas and html-docx-js-typescript are heavy (they dominate bundle
+ * size) and only needed for PDF/Word export, so they are lazy-loaded via dynamic
+ * import() inside the functions that use them. This keeps them out of the main
+ * library chunk — consumers who never export to PDF/Word never download them.
  */
-
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
-import { asBlob } from 'html-docx-js-typescript'
 
 /**
  * Format/pretty-print HTML with proper indentation
@@ -338,6 +339,12 @@ export function exportAsMarkdown(html: string, filename: string = 'document.md')
  */
 export async function exportAsPdf(element: HTMLElement, filename: string = 'document.pdf') {
   try {
+    // Lazy-load the heavy PDF/canvas libs only when export is actually invoked.
+    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ])
+
     // Create a temporary container with the content
     const tempDiv = document.createElement('div')
     tempDiv.style.position = 'absolute'
@@ -398,6 +405,9 @@ export async function exportAsPdf(element: HTMLElement, filename: string = 'docu
  */
 export async function exportAsWord(html: string, filename: string = 'document.docx') {
   try {
+    // Lazy-load the Word-conversion lib only when export is actually invoked.
+    const { asBlob } = await import('html-docx-js-typescript')
+
     // Create a full HTML document for better Word conversion
     const fullHtml = `<!DOCTYPE html>
 <html lang="en">

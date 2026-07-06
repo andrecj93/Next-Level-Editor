@@ -234,7 +234,7 @@ We test on **8 configurations** using Playwright:
 <script setup lang="ts">
 import { ref } from "vue";
 import { NextLevelEditor } from "next-level-editor";
-import "next-level-editor/dist/style.css";
+import "next-level-editor/style.css";
 
 const content = ref("<p>Hello World!</p>");
 
@@ -278,7 +278,7 @@ For apps that use the editor throughout:
 import { createApp } from "vue";
 import App from "./App.vue";
 import NextLevelEditor from "next-level-editor";
-import "next-level-editor/dist/style.css";
+import "next-level-editor/style.css";
 
 const app = createApp(App);
 app.use(NextLevelEditor);

@@ -347,40 +347,9 @@ import CommentModal from "./CommentModal.vue";
 import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
-import type { MentionSuggestion } from "../composables/useComments";
 import { useVariables } from "../composables/useVariables";
 import { useSmartAutocomplete } from "../composables/useSmartAutocomplete";
-
-interface Props {
-  modelValue?: string;
-  placeholder?: string;
-  width?: string;
-  height?: string;
-  showWritingStats?: boolean;
-  enableComments?: boolean;
-  enableVariables?: boolean;
-  /**
-   * Whole-editor theme preset: "classic" | "minimal" | "midnight" | "warm"
-   * (or "default"). Skins the toolbar, menus, panels and editing surface via
-   * token overrides, and composes with the light/dark toggle. See
-   * {@link AVAILABLE_THEMES}.
-   */
-  themePreset?: string;
-  /**
-   * Toolbar density/layout: "comfortable" (default, labelled two-row) or
-   * "compact" (a single dense icon-first row; labels move to tooltips). An
-   * independent axis from `themePreset`.
-   */
-  toolbarLayout?: "comfortable" | "compact";
-  /**
-   * Host-supplied @mention provider for comments: given the text typed after
-   * "@", return the users to suggest. Without it the mention dropdown stays
-   * empty. [#4]
-   */
-  mentionSearch?: (
-    query: string
-  ) => Promise<MentionSuggestion[]> | MentionSuggestion[];
-}
+import type { NextLevelEditorProps } from "./NextLevelEditor.types";
 
 interface Emits {
   (e: "update:modelValue", value: string): void;
@@ -388,7 +357,7 @@ interface Emits {
   (e: "blur"): void;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   modelValue: "",
   placeholder: "Start typing...",
   width: undefined,
