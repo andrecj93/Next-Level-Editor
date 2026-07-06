@@ -1004,6 +1004,67 @@
   animation: nle-toolbar-in 0.4s ease both;
 }
 
+/* ============================================================
+   COMPACT layout (toolbarLayout="compact") — one dense, icon-first
+   row. Labels collapse into the existing tooltips; the over-prominent
+   view-mode switch and every dropdown label shrink to their glyph, so
+   the whole bar is a single quiet strip and the document gets the room.
+   ============================================================ */
+.editor-toolbar-modern.is-compact {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: visible;
+  gap: 4px;
+  padding: 6px 12px;
+  min-height: 46px;
+  scrollbar-width: none;
+}
+.editor-toolbar-modern.is-compact::-webkit-scrollbar {
+  height: 0;
+}
+.editor-toolbar-modern.is-compact .toolbar-section-group {
+  gap: 3px;
+  flex-wrap: nowrap;
+}
+.editor-toolbar-modern.is-compact .toolbar-divider {
+  height: 20px;
+  margin: 0 3px;
+}
+/* Every label → its tooltip. Dropdowns, view-modes and the Export pill
+   all become icon-only. */
+.editor-toolbar-modern.is-compact .dropdown-label,
+.editor-toolbar-modern.is-compact .view-mode-btn .btn-label {
+  display: none;
+}
+.editor-toolbar-modern.is-compact .dropdown-trigger {
+  gap: 2px;
+  padding: 0 8px;
+  min-height: 32px;
+}
+.editor-toolbar-modern.is-compact .dropdown-arrow {
+  font-size: 8px;
+}
+.editor-toolbar-modern.is-compact .toolbar-btn-modern {
+  height: 32px;
+  min-width: 32px;
+  padding: 0 6px;
+}
+.editor-toolbar-modern.is-compact .toolbar-group {
+  padding: 2px;
+  gap: 2px;
+}
+.editor-toolbar-modern.is-compact .view-mode-group {
+  padding: 2px;
+  gap: 2px;
+}
+.editor-toolbar-modern.is-compact .view-mode-btn,
+.editor-toolbar-modern.is-compact .view-mode-btn.with-text {
+  min-width: 34px;
+  height: 32px;
+  padding: 0 9px;
+  gap: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toolbar-btn-modern svg,
   .view-mode-btn svg,

@@ -1,6 +1,6 @@
 <template>
   <nav
-    class="editor-toolbar-modern"
+    :class="['editor-toolbar-modern', { 'is-compact': toolbarLayout === 'compact' }]"
     role="toolbar"
     aria-label="Text formatting toolbar"
   >
@@ -399,6 +399,7 @@ interface Props {
   viewMode: "editor" | "code" | "split" | "preview";
   theme: "light" | "dark";
   isFullScreen: boolean;
+  toolbarLayout?: "comfortable" | "compact";
 }
 
 defineProps<Props>();

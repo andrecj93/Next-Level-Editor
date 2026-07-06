@@ -491,6 +491,24 @@ describe("EditorToolbar", () => {
     });
   });
 
+  describe("Toolbar layout", () => {
+    it("is comfortable (no is-compact) by default", () => {
+      expect(wrapper.find(".editor-toolbar-modern").classes()).not.toContain(
+        "is-compact"
+      );
+    });
+
+    it("adds the is-compact class when toolbarLayout is 'compact'", () => {
+      const compact = mount(EditorToolbar, {
+        props: { ...defaultProps, toolbarLayout: "compact" as const },
+        global: { stubs: { ToolbarSection: true, ColorPicker: true } },
+      });
+      expect(compact.find(".editor-toolbar-modern").classes()).toContain(
+        "is-compact"
+      );
+    });
+  });
+
   describe("Edge Cases", () => {
     it("should handle empty formatDropdownItems", async () => {
       await wrapper.setProps({ formatDropdownItems: [] });

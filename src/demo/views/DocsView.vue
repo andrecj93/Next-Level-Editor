@@ -131,6 +131,7 @@ const props = [
   { name: "width", type: "string", def: "'100%'", desc: "Editor width (any CSS length)." },
   { name: "height", type: "string", def: "'600px'", desc: "Editor height (any CSS length)." },
   { name: "themePreset", type: "string", def: "'default'", desc: "Whole-editor theme: default | classic | minimal | midnight | warm." },
+  { name: "toolbarLayout", type: "string", def: "'comfortable'", desc: "Toolbar density: comfortable (labelled) | compact (icon-first, one row)." },
   { name: "showWritingStats", type: "boolean", def: "false", desc: "Enable the writing-stats panel." },
   { name: "enableComments", type: "boolean", def: "false", desc: "Enable inline comments & mentions." },
   { name: "enableVariables", type: "boolean", def: "false", desc: "Enable {{ variable }} tokens." },
