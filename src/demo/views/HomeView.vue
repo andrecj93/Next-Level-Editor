@@ -10,12 +10,15 @@
 
         <h1 class="h-display hero-title">
           <span class="hero-line1">The rich-text editor</span><br>
-          <span class="hero-line2">
+          <!-- The animated line is decorative for assistive tech (it would
+               otherwise be read char-by-char, then duplicate the sr-only line);
+               the sr-only span is the single accessible phrase, derived from the
+               same FULL constant so the two can't drift. -->
+          <span class="hero-line2" aria-hidden="true">
             that <span class="ink is-in grad-text">{{ typed }}</span
-            ><i v-if="showCaret" class="caret" aria-hidden="true" />
+            ><i v-if="showCaret" class="caret" />
           </span>
-          <!-- Full phrase always present for a11y + tests, even mid-animation -->
-          <span class="sr-only">that writes back.</span>
+          <span class="sr-only">that {{ FULL }}</span>
         </h1>
 
         <p class="lede hero-lede">
@@ -98,7 +101,7 @@ These aren't screenshots. Each panel below is the real component â€” type in
             <NextLevelEditor
               v-model="commentsContent"
               :enable-comments="true"
-              :mention-search="mentionSearch"
+              :mention-search="demoMentionSearch"
               width="100%"
               height="300px"
             />
@@ -208,8 +211,8 @@ Free, open source, production-ready. Add it to your Vue app in under a minute â€
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import NextLevelEditor from "../../components/NextLevelEditor.vue";
-import type { MentionSuggestion } from "../../composables/useComments";
 import { htmlToMarkdown, formatHtml } from "../../utils/export";
+import { demoMentionSearch } from "../examples/demoTeam";
 import CodeBlock from "../components/CodeBlock.vue";
 import Icon from "../components/Icon.vue";
 import type { IconName } from "../components/icons";
@@ -287,16 +290,6 @@ const exportOutput = computed(() =>
     : formatHtml(exportContent.value)
 );
 
-/* ---- @mention provider for the comments demo ---- */
-const TEAM: MentionSuggestion[] = [
-  { id: "1", name: "Ada Lovelace", email: "ada@team.dev" },
-  { id: "2", name: "Alan Turing", email: "alan@team.dev" },
-  { id: "3", name: "Grace Hopper", email: "grace@team.dev" },
-];
-const mentionSearch = (q: string): MentionSuggestion[] => {
-  const s = q.toLowerCase();
-  return TEAM.filter((u) => u.name.toLowerCase().includes(s));
-};
 
 const trust = ["No dependencies to wrangle", "TypeScript-first", "Fully themeable", "SSR-friendly"];
 

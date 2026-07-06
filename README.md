@@ -628,7 +628,7 @@ npm run test:e2e:debug
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.es.js` (~224 KB total with chunks, 61 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs` (~224 KB total with chunks, 61 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Lazy-loaded chunks for optimal performance
   - Recommended for Vite, Webpack 5+, Rollup

@@ -50,12 +50,12 @@ CI (`.github/workflows/ci.yml`) runs, as separate jobs: unit tests, `lint` + `vu
 - `src/components/` — Vue components; only `NextLevelEditor.vue` is public API, the rest are internal presentational pieces.
 - `src/types/` — shared TS types, notably `plugin.ts` (the plugin/toolbar/command/slash-command contracts).
 - `src/config/` — declarative config (toolbar layout).
-- `src/styles/` — CSS is split into design tokens (`tokens.css`, `*-variables.css`), feature styles, and cross-browser fallbacks (`gap-fallback.css`, `focus-indicators.css`, `touch-targets.css`). `cssCodeSplit` is off, so all CSS ships as one `dist/style.css`.
+- `src/styles/` — CSS is split into design tokens (`tokens.css`, `*-variables.css`), feature styles, and cross-browser fallbacks (`gap-fallback.css`, `focus-indicators.css`, `touch-targets.css`). `cssCodeSplit` is off, so all CSS ships as one `dist/next-level-editor.css` (exposed to consumers via the `next-level-editor/style.css` subpath export).
 - `src/demo/` — the local playground app (App.vue, FeatureShowcase, example plugins/templates). Excluded from the library build and from coverage.
 
 ### Public API surface
 
-`src/index.ts` is the library entry. It exports the `NextLevelEditor` component, a Vue plugin (`app.use(...)` default export), plus a curated set of composables (`useAccessibility`, `useComments`, `useVariables`, `useWritingAssistant`, `useSmartAutocomplete`, mobile helpers), companion components, util functions, and their types. **Anything meant to be consumable externally must be re-exported here.** Public `.d.ts` types are **auto-generated from source** by `vite-plugin-dts` during `npm run build` (config in `tsconfig.build.json`) — there is no hand-maintained declaration file, so exports and their types can't drift.
+`src/index.ts` is the library entry. It exports the `NextLevelEditor` component, a Vue plugin (`app.use(...)` default export), plus a curated set of composables (`useAccessibility`, `useComments`, `useVariables`, `useWritingAssistant`, `useSmartAutocomplete`, mobile helpers), companion components, util functions, and their types. **Anything meant to be consumable externally must be re-exported here.** Public `.d.ts` types are **auto-generated from source** by `vue-tsc -p tsconfig.build.json` during `npm run build` (`vite build && vue-tsc -p tsconfig.build.json`) — there is no hand-maintained declaration file, so exports and their types can't drift. (vite-plugin-dts was deliberately avoided: its `.vue`→virtual-`.ts` transform trips `TS4082` on `NextLevelEditor.vue`.)
 
 The component is `v-model`-driven (`modelValue: string` of HTML). Feature-flag props gate the heavier subsystems: `showWritingStats`, `enableComments`, `enableVariables`.
 

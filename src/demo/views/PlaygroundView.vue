@@ -147,6 +147,7 @@ import {
   getTemplateById,
   getDefaultTemplate,
 } from "../examples/exampleTemplates";
+import { demoMentionSearch } from "../examples/demoTeam";
 
 const templates = getAllTemplates();
 const editorThemes = AVAILABLE_THEMES;
@@ -196,20 +197,6 @@ const resetConfig = () => {
 
 const handleFocus = () => {};
 const handleBlur = () => {};
-
-// Demo @mention provider: a real app would query its user directory.
-const demoTeam = [
-  { id: "u1", name: "Ada Lovelace", email: "ada@example.com" },
-  { id: "u2", name: "Alan Turing", email: "alan@example.com" },
-  { id: "u3", name: "Grace Hopper", email: "grace@example.com" },
-  { id: "u4", name: "Margaret Hamilton", email: "margaret@example.com" },
-];
-const demoMentionSearch = (query: string) => {
-  const q = query.toLowerCase();
-  return demoTeam.filter(
-    (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-  );
-};
 </script>
 
 <style scoped>

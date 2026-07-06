@@ -11,7 +11,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/next-level-editor.mjs",
-      "require": "./dist/next-level-editor.umd.js"
+      "require": "./dist/next-level-editor.umd.js",
+      "default": "./dist/next-level-editor.mjs"
     },
     "./style.css": "./dist/next-level-editor.css",
     "./dist/next-level-editor.css": "./dist/next-level-editor.css",
