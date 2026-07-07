@@ -1011,16 +1011,14 @@
    the whole bar is a single quiet strip and the document gets the room.
    ============================================================ */
 .editor-toolbar-modern.is-compact {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: visible;
+  /* overflow MUST stay visible: the drop-down tooltips overflow the bar and
+     an overflow context (auto/scroll/hidden) would clip them. So we wrap
+     between groups when space is tight rather than horizontally scroll — on
+     desktop it stays a single dense row. */
+  overflow: visible;
   gap: 4px;
   padding: 6px 12px;
   min-height: 46px;
-  scrollbar-width: none;
-}
-.editor-toolbar-modern.is-compact::-webkit-scrollbar {
-  height: 0;
 }
 .editor-toolbar-modern.is-compact .toolbar-section-group {
   gap: 3px;
@@ -1063,6 +1061,19 @@
   height: 32px;
   padding: 0 9px;
   gap: 0;
+}
+
+/* Compact drops every label, so its tooltips carry the whole meaning — make
+   them bolder, larger and lifted so each icon reads instantly. The ancestor
+   chain out-specifies the ToolbarDropdown-scoped tooltip; the accent ring
+   makes it read as an intentional label, not a passive hint. */
+.next-level-editor .editor-toolbar-modern.is-compact [data-tooltip]::after {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 8px 12px;
+  box-shadow: 0 10px 26px -6px rgba(15, 23, 42, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
 }
 
 @media (prefers-reduced-motion: reduce) {

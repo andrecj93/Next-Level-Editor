@@ -26,6 +26,14 @@ test.describe("Compact toolbar layout", () => {
     const compactHeight = (await toolbar.boundingBox())!.height;
     expect(compactHeight).toBeLessThan(comfyHeight);
 
+    // Compact has no labels, so its icon tooltips are essential — the bar must
+    // NOT create an overflow context, or the drop-down tooltips get clipped.
+    const overflow = await toolbar.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return `${s.overflowX}/${s.overflowY}`;
+    });
+    expect(overflow).toBe("visible/visible");
+
     // Labels are hidden (icon-only) but the aria-labels + dropdowns still work.
     await page.getByRole("button", { name: "Insert" }).first().click();
     await expect(page.locator(".dropdown-menu")).toBeVisible();
