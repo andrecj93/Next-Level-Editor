@@ -77,6 +77,21 @@
         </ul>
       </section>
 
+      <section id="usage-modes" class="doc-section">
+        <h2>Usage modes</h2>
+        <p>
+The same component adapts to different jobs — an editor, a headless
+          surface, or a read-only viewer for saved documents.
+</p>
+        <CodeBlock :code="usageModesSnippet" lang="vue" />
+        <ul class="feat-list">
+          <li><strong>readonly</strong> — content is shown and selectable but not editable; the main, selection and mobile toolbars are hidden. Perfect for rendering stored HTML.</li>
+          <li><strong>showToolbar</strong> — set <code>false</code> to drop the main toolbar and drive the editor from your own UI, shortcuts and the selection bubble.</li>
+          <li><strong>defaultViewMode</strong> — open in <code>editor</code>, <code>code</code>, <code>split</code> or <code>preview</code>.</li>
+          <li><strong>autofocus</strong> — put the caret in the editor on mount.</li>
+        </ul>
+      </section>
+
       <section id="mentions" class="doc-section">
         <h2>@mentions</h2>
         <p>Provide a <code>mention-search</code> function to power @mentions from your own user directory. It can return a promise.</p>
@@ -121,6 +136,7 @@ const sections = [
   { id: "v-model", label: "v-model" },
   { id: "props", label: "Props" },
   { id: "features", label: "Feature flags" },
+  { id: "usage-modes", label: "Usage modes" },
   { id: "mentions", label: "@mentions" },
   { id: "theming", label: "Theming" },
   { id: "plugins", label: "Plugins" },
@@ -133,7 +149,11 @@ const props = [
   { name: "width", type: "string", def: "'100%'", desc: "Editor width (any CSS length)." },
   { name: "height", type: "string", def: "'600px'", desc: "Editor height (any CSS length)." },
   { name: "themePreset", type: "string", def: "'default'", desc: "Whole-editor theme: default | classic | minimal | midnight | warm." },
-  { name: "toolbarLayout", type: "string", def: "'comfortable'", desc: "Toolbar density: comfortable (labelled) | compact (icon-first, one row)." },
+  { name: "toolbarLayout", type: "string", def: "'comfortable'", desc: "Toolbar density: comfortable (labelled) | compact (mini bar + expand toggle)." },
+  { name: "readonly", type: "boolean", def: "false", desc: "Viewer mode — content shown & selectable, not editable; toolbars hidden." },
+  { name: "showToolbar", type: "boolean", def: "true", desc: "Show the main toolbar. Set false for a headless editor." },
+  { name: "defaultViewMode", type: "string", def: "'editor'", desc: "Initial view: editor | code | split | preview." },
+  { name: "autofocus", type: "boolean", def: "false", desc: "Focus the editing surface on mount." },
   { name: "showWritingStats", type: "boolean", def: "false", desc: "Enable the writing-stats panel." },
   { name: "enableComments", type: "boolean", def: "false", desc: "Enable inline comments & mentions." },
   { name: "enableVariables", type: "boolean", def: "false", desc: "Enable {{ variable }} tokens." },
@@ -168,6 +188,15 @@ const flagsSnippet = `<NextLevelEditor
   :enable-comments="true"
   :enable-variables="true"
 />`;
+
+const usageModesSnippet = `<!-- A read-only viewer for a saved document -->
+<NextLevelEditor v-model="savedHtml" readonly />
+
+<!-- Headless: your own UI, no built-in toolbar -->
+<NextLevelEditor v-model="content" :show-toolbar="false" autofocus />
+
+<!-- Open straight into the raw-HTML view -->
+<NextLevelEditor v-model="content" default-view-mode="code" />`;
 
 const mentionSnippet = `async function mentionSearch(query) {
   const res = await fetch('/api/users?q=' + query)

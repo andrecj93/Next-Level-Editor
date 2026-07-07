@@ -5,6 +5,7 @@
     @click="handleOverlayClick"
   >
     <div
+      ref="modalContent"
       class="modal-content"
       role="dialog"
       aria-labelledby="modal-title"
@@ -34,6 +35,7 @@
           <label for="video-url">Video URL</label>
           <input
             id="video-url"
+            ref="urlInput"
             v-model="videoUrl"
             type="url"
             placeholder="https://www.youtube.com/watch?v=..."
@@ -104,6 +106,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { getVideoEmbedHtml, isEmbeddableVideo } from '../utils/embed'
+import { useModalDialog } from '../composables/useModalDialog'
 
 const props = defineProps<{
   isOpen: boolean
@@ -117,6 +120,8 @@ const emit = defineEmits<{
 const videoUrl = ref('')
 const previewHtml = ref('')
 const errorMessage = ref('')
+const modalContent = ref<HTMLElement | null>(null)
+const urlInput = ref<HTMLInputElement | null>(null)
 
 /**
  * Handle URL change
@@ -177,6 +182,14 @@ const resetForm = () => {
   previewHtml.value = ''
   errorMessage.value = ''
 }
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.isOpen,
+  container: modalContent,
+  onClose: close,
+  initialFocus: () => urlInput.value,
+})
 
 // Reset form when modal opens
 watch(() => props.isOpen, (isOpen) => {

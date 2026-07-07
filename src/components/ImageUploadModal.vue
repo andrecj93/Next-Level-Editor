@@ -2,6 +2,7 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
     <div
+      ref="modalContent"
       class="modal-content"
       role="dialog"
       aria-labelledby="modal-title"
@@ -21,6 +22,7 @@
           <label for="image-url">Image URL</label>
           <input
             id="image-url"
+            ref="urlInput"
             v-model="imageUrl"
             type="url"
             placeholder="https://example.com/image.jpg"
@@ -105,6 +107,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { useModalDialog } from "../composables/useModalDialog";
 
 const props = defineProps<{
   isOpen: boolean;
@@ -120,6 +123,8 @@ const altText = ref("");
 const previewUrl = ref("");
 const imageError = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
+const modalContent = ref<HTMLElement | null>(null);
+const urlInput = ref<HTMLInputElement | null>(null);
 
 /**
  * Handle URL input change
@@ -191,6 +196,14 @@ const resetForm = () => {
     fileInput.value.value = "";
   }
 };
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.isOpen,
+  container: modalContent,
+  onClose: close,
+  initialFocus: () => urlInput.value,
+});
 
 // Reset form when modal opens
 watch(

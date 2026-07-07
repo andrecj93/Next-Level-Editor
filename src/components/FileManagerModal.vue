@@ -2,9 +2,11 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
     <dialog
+      ref="modalContent"
       open
       class="modal-content file-manager-modal"
       aria-labelledby="modal-title"
+      aria-modal="true"
       @click.stop
     >
       <div class="modal-header">
@@ -236,6 +238,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { fileManager, type ManagedFile } from "../utils/fileManager";
+import { useModalDialog } from "../composables/useModalDialog";
 
 interface Props {
   isOpen: boolean;
@@ -250,6 +253,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 const fileInput = ref<HTMLInputElement | null>(null);
+const modalContent = ref<HTMLElement | null>(null);
 const files = ref<ManagedFile[]>([]);
 const selectedFiles = ref<string[]>([]);
 const viewMode = ref<"grid" | "list">("grid");
@@ -268,6 +272,13 @@ const allFilesSelected = computed(
   () =>
     files.value.length > 0 && selectedFiles.value.length === files.value.length
 );
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.isOpen,
+  container: modalContent,
+  onClose: () => emit("close"),
+});
 
 // Load files when modal opens
 watch(

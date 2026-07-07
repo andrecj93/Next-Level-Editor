@@ -8,11 +8,15 @@
         @click="handleOverlayClick"
       >
         <div
+          ref="modalContent"
           class="modal-content code-block-modal"
+          role="dialog"
+          aria-labelledby="code-block-modal-title"
+          aria-modal="true"
           @click.stop
         >
           <div class="modal-header">
-            <h3>Insert Code Block</h3>
+            <h3 id="code-block-modal-title">Insert Code Block</h3>
             <button
               class="close-btn"
               aria-label="Close modal"
@@ -91,8 +95,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import Prism from 'prismjs'
+import { useModalDialog } from '../composables/useModalDialog'
 import 'prismjs/themes/prism-tomorrow.css'
 
 // Import markup-templating (required for PHP and other template languages)
@@ -130,14 +135,24 @@ interface Emits {
   (e: 'insert', data: { code: string; language: string }): void
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   theme: 'theme-light'
 })
 const emit = defineEmits<Emits>()
 
 const codeInput = ref<HTMLTextAreaElement | null>(null)
+const modalContent = ref<HTMLElement | null>(null)
 const selectedLanguage = ref('javascript')
 const code = ref('')
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.show,
+  container: modalContent,
+  // `close` (defined below) also clears the draft code, matching Cancel.
+  onClose: () => close(),
+  initialFocus: () => codeInput.value,
+})
 
 const languages = [
   { label: 'Plain Text', value: 'plaintext' },
@@ -206,13 +221,6 @@ const insertCode = () => {
   close()
 }
 
-watch(() => codeInput.value, (input) => {
-  if (input) {
-    nextTick(() => {
-      input.focus()
-    })
-  }
-})
 </script>
 
 <style scoped>

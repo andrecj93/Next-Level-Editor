@@ -5,7 +5,7 @@
       <div
         ref="editorRef"
         class="editor-content"
-        contenteditable="true"
+        :contenteditable="editable ? 'true' : 'false'"
         :placeholder="placeholder"
         @input="$emit('input', $event)"
         @blur="$emit('blur', $event)"
@@ -25,6 +25,7 @@
         ref="codeEditorRef"
         class="code-editor"
         :value="codeContent"
+        :readonly="!editable"
         spellcheck="false"
         @input="$emit('code-input', $event)"
         @blur="$emit('code-blur', $event)"
@@ -34,7 +35,7 @@
       <div
         ref="editorRef"
         class="editor-content"
-        contenteditable="true"
+        :contenteditable="editable ? 'true' : 'false'"
         :placeholder="placeholder"
         style="display: none"
         @input="$emit('input', $event)"
@@ -134,6 +135,8 @@ interface Props {
   codeContent?: string;
   htmlContent?: string;
   splitRightMode?: "preview" | "editor";
+  /** When false, the editing surfaces are contenteditable=false / readonly. */
+  editable?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -141,6 +144,7 @@ withDefaults(defineProps<Props>(), {
   codeContent: "",
   htmlContent: "",
   splitRightMode: "preview",
+  editable: true,
 });
 
 defineEmits<{

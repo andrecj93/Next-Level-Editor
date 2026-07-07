@@ -8,11 +8,15 @@
         @click="handleOverlayClick"
       >
         <div
+          ref="modalContent"
           class="modal-content"
+          role="dialog"
+          aria-labelledby="table-modal-title"
+          aria-modal="true"
           @click.stop
         >
           <div class="modal-header">
-            <h3>Insert Table</h3>
+            <h3 id="table-modal-title">Insert Table</h3>
             <button
               class="close-btn"
               aria-label="Close modal"
@@ -27,6 +31,7 @@
               <label for="table-rows">Rows</label>
               <input
                 id="table-rows"
+                ref="rowsInput"
                 v-model.number="rows"
                 type="number"
                 min="1"
@@ -97,6 +102,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useModalDialog } from '../composables/useModalDialog'
 
 interface Props {
   show: boolean
@@ -108,7 +114,7 @@ interface Emits {
   (e: 'insert', data: { rows: number; cols: number; includeHeader: boolean }): void
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   theme: 'theme-light'
 })
 const emit = defineEmits<Emits>()
@@ -116,6 +122,16 @@ const emit = defineEmits<Emits>()
 const rows = ref(3)
 const cols = ref(3)
 const includeHeader = ref(true)
+const modalContent = ref<HTMLElement | null>(null)
+const rowsInput = ref<HTMLInputElement | null>(null)
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.show,
+  container: modalContent,
+  onClose: () => emit('close'),
+  initialFocus: () => rowsInput.value,
+})
 
 const totalCells = computed(() => rows.value * cols.value)
 

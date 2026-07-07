@@ -54,6 +54,21 @@
               <span class="toggle-track"><span class="toggle-thumb" /></span>
               <span class="toggle-text"><strong>Variables</strong><small><span v-pre>{{ mustache }}</span> template tokens</small></span>
             </label>
+            <label class="toggle">
+              <input v-model="editorConfig.readonly" type="checkbox">
+              <span class="toggle-track"><span class="toggle-thumb" /></span>
+              <span class="toggle-text"><strong>Read-only</strong><small>Viewer mode — no editing or toolbars</small></span>
+            </label>
+            <label class="toggle">
+              <input v-model="editorConfig.showToolbar" type="checkbox">
+              <span class="toggle-track"><span class="toggle-thumb" /></span>
+              <span class="toggle-text"><strong>Main toolbar</strong><small>Hide for a headless editor</small></span>
+            </label>
+            <label class="toggle">
+              <input v-model="editorConfig.autofocus" type="checkbox">
+              <span class="toggle-track"><span class="toggle-thumb" /></span>
+              <span class="toggle-text"><strong>Autofocus</strong><small>Focus the editor on load</small></span>
+            </label>
           </div>
           <div class="cfg-row">
             <div class="cfg-field">
@@ -111,6 +126,10 @@
           :placeholder="editorConfig.placeholder"
           :theme-preset="editorConfig.themePreset"
           :toolbar-layout="editorConfig.toolbarLayout"
+          :readonly="editorConfig.readonly"
+          :show-toolbar="editorConfig.showToolbar"
+          :default-view-mode="editorConfig.defaultViewMode"
+          :autofocus="editorConfig.autofocus"
           :show-writing-stats="editorConfig.showWritingStats"
           :enable-comments="editorConfig.enableComments"
           :enable-variables="editorConfig.enableVariables"
@@ -163,14 +182,32 @@ const urlParams = new URLSearchParams(window.location.search);
 const startEmpty = urlParams.get("empty") === "true";
 const content = ref(startEmpty ? "" : getDefaultTemplate().content);
 
-const editorConfig = ref({
+type ViewMode = "editor" | "code" | "split" | "preview";
+const DEFAULT_CONFIG = {
   height: "620",
   themePreset: "warm",
   toolbarLayout: "comfortable" as "comfortable" | "compact",
   showWritingStats: true,
   enableComments: true,
   enableVariables: true,
+  readonly: false,
+  showToolbar: true,
+  defaultViewMode: "editor" as ViewMode,
+  autofocus: false,
   placeholder: "Start typing your content here… Try typing / for quick commands!",
+};
+
+// Deep-link overrides so the docs/e2e can showcase each option directly.
+const editorConfig = ref({
+  ...DEFAULT_CONFIG,
+  readonly: urlParams.get("readonly") === "1",
+  showToolbar: urlParams.get("hideToolbar") !== "1",
+  autofocus: urlParams.get("autofocus") === "1",
+  defaultViewMode: (["editor", "code", "split", "preview"].includes(
+    urlParams.get("editorView") ?? ""
+  )
+    ? (urlParams.get("editorView") as ViewMode)
+    : "editor") as ViewMode,
 });
 
 const editorHeight = computed(() => `${editorConfig.value.height}px`);
@@ -184,15 +221,7 @@ const loadTemplate = () => {
 };
 
 const resetConfig = () => {
-  editorConfig.value = {
-    height: "620",
-    themePreset: "warm",
-    toolbarLayout: "comfortable",
-    showWritingStats: true,
-    enableComments: true,
-    enableVariables: true,
-    placeholder: "Start typing your content here… Try typing / for quick commands!",
-  };
+  editorConfig.value = { ...DEFAULT_CONFIG };
 };
 
 const handleFocus = () => {};

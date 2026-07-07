@@ -5,9 +5,11 @@
     @click.self="close"
   >
     <dialog
+      ref="modalContent"
       open
       class="shortcut-customization-modal"
       aria-labelledby="shortcut-modal-title"
+      aria-modal="true"
     >
       <!-- Header -->
       <div class="modal-header">
@@ -26,6 +28,7 @@
       <!-- Search & Filters -->
       <div class="modal-controls">
         <input
+          ref="searchInput"
           v-model="searchQuery"
           type="text"
           class="search-input"
@@ -206,6 +209,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from "vue";
 import type { Shortcut } from "../composables/useShortcutRegistry";
+import { useModalDialog } from "../composables/useModalDialog";
 
 interface Props {
   isOpen: boolean;
@@ -223,6 +227,25 @@ const searchQuery = ref("");
 const selectedCategory = ref("");
 const customizingShortcut = ref<Shortcut | null>(null);
 const recordedKeys = ref<string[]>([]);
+const modalContent = ref<HTMLElement | null>(null);
+const searchInput = ref<HTMLInputElement | null>(null);
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog).
+// While recording a key combination, Escape cancels the recording instead of
+// closing the whole dialog.
+useModalDialog({
+  isOpen: () => props.isOpen,
+  container: modalContent,
+  onClose: () => emit("close"),
+  initialFocus: () => searchInput.value,
+  onEscape: () => {
+    if (customizingShortcut.value) {
+      cancelCustomization();
+      return true;
+    }
+    return false;
+  },
+});
 
 // Get data from registry
 const categories = computed(() => props.registry.getAllCategories());

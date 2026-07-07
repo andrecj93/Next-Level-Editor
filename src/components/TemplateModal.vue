@@ -5,9 +5,15 @@
       class="modal-overlay"
       @click.self="$emit('close')"
     >
-      <div class="modal-content template-modal">
+      <div
+        ref="modalContent"
+        class="modal-content template-modal"
+        role="dialog"
+        aria-labelledby="template-modal-title"
+        aria-modal="true"
+      >
         <div class="modal-header">
-          <h3>📄 Choose a Template</h3>
+          <h3 id="template-modal-title">📄 Choose a Template</h3>
           <button
             class="close-btn"
             aria-label="Close"
@@ -56,17 +62,27 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { getTemplates, type Template } from '../utils/templates'
+import { useModalDialog } from '../composables/useModalDialog'
 
 interface Props {
   show: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   close: []
   select: [template: Template]
 }>()
+
+const modalContent = ref<HTMLElement | null>(null)
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.show,
+  container: modalContent,
+  onClose: () => emit('close'),
+})
 
 const selectedCategory = ref<'all' | Template['category']>('all')
 

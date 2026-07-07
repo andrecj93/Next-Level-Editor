@@ -8,9 +8,16 @@
         :class="theme"
         @click="handleOverlayClick"
       >
-        <div class="modal-content find-replace-modal" @click.stop>
+        <div
+          ref="modalContent"
+          class="modal-content find-replace-modal"
+          role="dialog"
+          aria-labelledby="find-replace-modal-title"
+          aria-modal="true"
+          @click.stop
+        >
           <div class="modal-header">
-            <h3>Find & Replace</h3>
+            <h3 id="find-replace-modal-title">Find & Replace</h3>
             <button class="close-btn" aria-label="Close modal" @click="close">
               ✕
             </button>
@@ -27,7 +34,6 @@
                 class="text-input"
                 placeholder="Search text..."
                 @keydown.enter="findNext"
-                @keydown.esc="close"
               />
               <div class="search-info">
                 <span v-if="matches > 0"
@@ -48,7 +54,6 @@
                 class="text-input"
                 placeholder="Replacement text..."
                 @keydown.enter="replaceOne"
-                @keydown.esc="close"
               />
             </div>
 
@@ -106,7 +111,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted } from "vue";
+import { ref, watch, onMounted, onBeforeUnmount } from "vue";
+import { useModalDialog } from "../composables/useModalDialog";
 
 interface Props {
   show: boolean;
@@ -133,6 +139,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const findInput = ref<HTMLInputElement | null>(null);
+const modalContent = ref<HTMLElement | null>(null);
 const findText = ref("");
 const replaceText = ref("");
 const caseSensitive = ref(false);
@@ -227,32 +234,31 @@ watch([findText, caseSensitive, wholeWord, () => props.content], () => {
   updateMatches();
 });
 
-watch(
-  () => props.show,
-  (newShow) => {
-    if (newShow) {
-      nextTick(() => {
-        findInput.value?.focus();
-      });
-    }
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.show,
+  container: modalContent,
+  onClose: close,
+  initialFocus: () => findInput.value,
+});
+
+// Handle Ctrl+F while the dialog is open: refocus and select the search box.
+const handleGlobalKeydown = (e: KeyboardEvent) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "f" && props.show) {
+    e.preventDefault();
+    findInput.value?.focus();
+    findInput.value?.select();
   }
-);
+};
 
 onMounted(() => {
-  // Handle Ctrl+F shortcut globally
-  const handleKeydown = (e: KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "f" && props.show) {
-      e.preventDefault();
-      findInput.value?.focus();
-      findInput.value?.select();
-    }
-  };
+  window.addEventListener("keydown", handleGlobalKeydown);
+});
 
-  window.addEventListener("keydown", handleKeydown);
-
-  return () => {
-    window.removeEventListener("keydown", handleKeydown);
-  };
+// (The previous version returned a cleanup function from onMounted, which
+// Vue ignores — the listener leaked across unmounts.)
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleGlobalKeydown);
 });
 </script>
 

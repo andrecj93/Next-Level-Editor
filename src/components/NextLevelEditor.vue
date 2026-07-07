@@ -21,7 +21,7 @@
          rules to actually match .editor-toolbar-modern. The shell also owns
          the sticky positioning the toolbar previously had — sticky inside a
          tight wrapper would otherwise pin to the wrapper's own bounds. -->
-    <div class="nle-toolbar-shell">
+    <div v-if="showToolbar && !readonly" class="nle-toolbar-shell">
     <EditorToolbar
       :is-toolbar-section-visible="isToolbarSectionVisible"
       :format-dropdown-items="formatDropdownItems"
@@ -67,6 +67,7 @@
     <EditorPanels
       ref="editorPanelsRef"
       :view-mode="viewMode"
+      :editable="!readonly"
       :placeholder="placeholder"
       :code-content="codeContent"
       :html-content="htmlContent"
@@ -86,14 +87,19 @@
     <EditorFooter :word-count="wordCount" :character-count="characterCount" />
 
     <!-- Floating Toolbar -->
-    <FloatingToolbar :show="showFloatingToolbar" :actions="floatingActions" />
+    <!-- Selection toolbar (bubble over selected text) — never in readonly. -->
+    <FloatingToolbar
+      :show="showFloatingToolbar && !readonly"
+      :actions="floatingActions"
+    />
 
-    <!-- Mobile bottom toolbar (self-hides on non-touch/desktop). Because it
-         teleports to <body>, `visible` is driven by focus/last-interaction
-         ownership: only the instance the user is working in shows a toolbar,
-         so multi-editor pages never stack N identical fixed bars. -->
+    <!-- Mobile bottom toolbar (self-hides on non-touch/desktop; off in
+         readonly). Because it teleports to <body>, `visible` is driven by
+         focus/last-interaction ownership: only the instance the user is
+         working in shows a toolbar, so multi-editor pages never stack N
+         identical fixed bars. -->
     <MobileToolbar
-      :visible="mobileToolbarVisible"
+      :visible="mobileToolbarVisible && !readonly"
       :is-active="mobileIsActive"
       @action="handleMobileAction"
       @close="mobileToolbarClosed = true"
@@ -499,6 +505,10 @@ const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   mentionSearch: undefined,
   themePreset: "default",
   toolbarLayout: "comfortable",
+  readonly: false,
+  showToolbar: true,
+  defaultViewMode: "editor",
+  autofocus: false,
 });
 
 const emit = defineEmits<Emits>();
@@ -513,8 +523,11 @@ const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
 const rootEl = ref<HTMLElement | null>(null);
 
 // View-mode state is declared early so the active-editable computed below can
-// close over it (the refs are passed into useViewMode further down).
-const viewMode = ref<"editor" | "code" | "split" | "preview">("editor");
+// close over it (the refs are passed into useViewMode further down). Starts in
+// the caller's preferred view.
+const viewMode = ref<"editor" | "code" | "split" | "preview">(
+  props.defaultViewMode
+);
 const splitRightMode = ref<"preview" | "editor">("preview");
 
 // The ACTIVE editable surface. In split view with the right pane in editor
@@ -686,9 +699,9 @@ function handleExportHistory() {
 const { themeClass, editorStyles, wordCount, characterCount } =
   useEditorComputed({
     theme,
-    width: props.width,
-    height: props.height,
-    modelValue: props.modelValue,
+    width: toRef(props, "width"),
+    height: toRef(props, "height"),
+    modelValue: toRef(props, "modelValue"),
     editorContent,
     htmlContent,
     isApplyingHistory,
@@ -1121,6 +1134,26 @@ onMounted(() => {
   // Capture phase so stopPropagation inside widgets can't desync ownership.
   document.addEventListener("pointerdown", updateMobileToolbarOwnership, true);
   document.addEventListener("focusin", updateMobileToolbarOwnership, true);
+
+  // autofocus: place the caret in the editing surface on mount so the user can
+  // type immediately. Meaningless (and skipped) when readonly.
+  if (props.autofocus && !props.readonly) {
+    nextTick(() => {
+      const surface = editorContent.value;
+      if (surface) {
+        surface.focus();
+        // Collapse the caret to the end of existing content.
+        const selection = globalThis.getSelection();
+        if (selection) {
+          const range = document.createRange();
+          range.selectNodeContents(surface);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+    });
+  }
 });
 
 onUnmounted(() => {

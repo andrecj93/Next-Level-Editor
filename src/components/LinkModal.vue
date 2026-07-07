@@ -68,7 +68,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount } from "vue";
+import { ref, computed, watch } from "vue";
+import { useModalDialog } from "../composables/useModalDialog";
 
 const props = defineProps<{ isOpen: boolean }>();
 
@@ -81,10 +82,6 @@ const url = ref("");
 const text = ref("");
 const urlInput = ref<HTMLInputElement | null>(null);
 const modalContent = ref<HTMLElement | null>(null);
-
-/** Element focused before the dialog opened; focus returns to it on close
-    (WAI-ARIA dialog pattern). */
-let previouslyFocused: HTMLElement | null = null;
 
 const isValid = computed(() => url.value.trim().length > 0);
 
@@ -110,73 +107,22 @@ const close = () => {
   reset();
 };
 
-const getFocusables = (): HTMLElement[] => {
-  if (!modalContent.value) return [];
-  return Array.from(
-    modalContent.value.querySelectorAll<HTMLElement>(
-      'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])'
-    )
-  );
-};
+// Escape-to-close, Tab trap, initial focus, and focus restore
+// (WAI-ARIA dialog pattern) — shared with every other modal.
+useModalDialog({
+  isOpen: () => props.isOpen,
+  container: modalContent,
+  onClose: close,
+  initialFocus: () => urlInput.value,
+});
 
-/** Escape closes the dialog; Tab / Shift+Tab are trapped inside it
-    (aria-modal="true" promises both). */
-const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key === "Escape") {
-    event.preventDefault();
-    event.stopPropagation();
-    close();
-    return;
-  }
-
-  if (event.key !== "Tab") return;
-
-  const focusables = getFocusables();
-  if (focusables.length === 0) return;
-
-  const first = focusables[0];
-  const last = focusables[focusables.length - 1];
-  const active = document.activeElement as HTMLElement | null;
-  const inside = !!active && !!modalContent.value?.contains(active);
-
-  if (event.shiftKey) {
-    if (!inside || active === first) {
-      event.preventDefault();
-      last.focus();
-    }
-  } else if (!inside || active === last) {
-    event.preventDefault();
-    first.focus();
-  }
-};
-
+// Start from a clean form each time the dialog opens.
 watch(
   () => props.isOpen,
   (open) => {
-    if (open) {
-      previouslyFocused =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null;
-      reset();
-      document.addEventListener("keydown", handleKeydown, true);
-      nextTick(() => urlInput.value?.focus());
-    } else {
-      document.removeEventListener("keydown", handleKeydown, true);
-      const target = previouslyFocused;
-      previouslyFocused = null;
-      if (target && target.isConnected) {
-        // Wait for the overlay to leave the DOM before handing focus back.
-        nextTick(() => target.focus());
-      }
-    }
-  },
-  { immediate: true }
+    if (open) reset();
+  }
 );
-
-onBeforeUnmount(() => {
-  document.removeEventListener("keydown", handleKeydown, true);
-});
 </script>
 
 <style scoped>

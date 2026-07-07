@@ -8,11 +8,15 @@
         @click="handleOverlayClick"
       >
         <div
+          ref="modalContent"
           class="modal-content html-code-modal"
+          role="dialog"
+          aria-labelledby="html-code-modal-title"
+          aria-modal="true"
           @click.stop
         >
           <div class="modal-header">
-            <h3>HTML Code</h3>
+            <h3 id="html-code-modal-title">HTML Code</h3>
             <button
               class="close-btn"
               aria-label="Close modal"
@@ -59,6 +63,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import Prism from "prismjs";
+import { useModalDialog } from "../composables/useModalDialog";
 import "prismjs/themes/prism-tomorrow.css";
 // Import markup-templating first (required for template languages in HTML)
 import "prismjs/components/prism-markup-templating";
@@ -79,6 +84,14 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const copyButtonText = ref("📋 Copy");
+const modalContent = ref<HTMLElement | null>(null);
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.show,
+  container: modalContent,
+  onClose: () => emit("close"),
+});
 
 const highlightedHtml = computed(() => {
   if (!props.htmlContent) return "";

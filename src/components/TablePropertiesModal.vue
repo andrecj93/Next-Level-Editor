@@ -8,11 +8,15 @@
         @click="handleOverlayClick"
       >
         <div
+          ref="modalContent"
           class="modal-content"
+          role="dialog"
+          aria-labelledby="table-properties-modal-title"
+          aria-modal="true"
           @click.stop
         >
           <div class="modal-header">
-            <h3>{{ mode === 'cell' ? 'Cell Properties' : 'Table Properties' }}</h3>
+            <h3 id="table-properties-modal-title">{{ mode === 'cell' ? 'Cell Properties' : 'Table Properties' }}</h3>
             <button
               class="close-btn"
               aria-label="Close modal"
@@ -265,6 +269,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useModalDialog } from '../composables/useModalDialog'
 
 interface CellProperties {
   backgroundColor: string
@@ -307,6 +312,14 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const activeTab = ref<'cell' | 'table'>(props.mode === 'table' ? 'table' : 'cell')
+const modalContent = ref<HTMLElement | null>(null)
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.show,
+  container: modalContent,
+  onClose: () => emit('close'),
+})
 
 const cellProps = ref<CellProperties>({
   backgroundColor: '',

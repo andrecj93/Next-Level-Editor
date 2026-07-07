@@ -5,11 +5,11 @@
       v-if="isOpen"
       class="comment-modal-overlay"
       @click="handleCancel"
-      @keydown.esc="handleCancel"
     >
       <Transition name="modal-slide">
         <div
           v-if="isOpen"
+          ref="modalContent"
           class="comment-modal"
           role="dialog"
           aria-labelledby="comment-modal-title"
@@ -230,6 +230,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onBeforeUnmount } from "vue";
 import type { MentionSuggestion } from "../composables/useComments";
+import { useModalDialog } from "../composables/useModalDialog";
 
 interface Props {
   isOpen: boolean;
@@ -261,6 +262,7 @@ const MENTION_SEARCH_DEBOUNCE_MS = 150;
 
 // Refs
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
+const modalContent = ref<HTMLElement | null>(null);
 const content = ref("");
 const showMentions = ref(false);
 const mentionQuery = ref("");
@@ -315,15 +317,28 @@ function queueMentionSearch(query: string) {
   }, MENTION_SEARCH_DEBOUNCE_MS);
 }
 
-// Watch modal open to focus textarea
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog).
+// While the mention dropdown is open, Escape dismisses it instead of
+// cancelling the whole dialog.
+useModalDialog({
+  isOpen: () => props.isOpen,
+  container: modalContent,
+  onClose: () => handleCancel(),
+  initialFocus: () => textareaRef.value,
+  onEscape: () => {
+    if (showMentions.value) {
+      showMentions.value = false;
+      return true;
+    }
+    return false;
+  },
+});
+
+// Reset the form when the modal closes
 watch(
   () => props.isOpen,
   (isOpen) => {
-    if (isOpen) {
-      nextTick(() => {
-        textareaRef.value?.focus();
-      });
-    } else {
+    if (!isOpen) {
       // Reset form when modal closes
       content.value = "";
       showMentions.value = false;
@@ -356,17 +371,14 @@ function handleInput() {
   }
 }
 
+// Escape is handled by useModalDialog (capture phase), so it never reaches
+// this handler.
 function handleKeydown(event: KeyboardEvent) {
   if (!showMentions.value) {
     // Submit on Cmd/Ctrl + Enter
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       handleSubmit();
-    }
-    // Close on Escape
-    if (event.key === "Escape") {
-      event.preventDefault();
-      handleCancel();
     }
     return;
   }
@@ -387,9 +399,6 @@ function handleKeydown(event: KeyboardEvent) {
     if (suggestion) {
       selectMention(suggestion);
     }
-  } else if (event.key === "Escape") {
-    event.preventDefault();
-    showMentions.value = false;
   }
 }
 

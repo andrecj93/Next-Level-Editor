@@ -30,10 +30,33 @@ export interface NextLevelEditorProps {
   themePreset?: string;
   /**
    * Toolbar density/layout: "comfortable" (default, labelled two-row) or
-   * "compact" (a single dense icon-first row; labels move to tooltips). An
-   * independent axis from `themePreset`.
+   * "compact" (a mini formatting-essentials row with an expand toggle that
+   * reveals the full toolbar). An independent axis from `themePreset`.
    */
   toolbarLayout?: "comfortable" | "compact";
+  /**
+   * Read-only / viewer mode. The content is displayed and selectable but not
+   * editable: the main, selection and mobile toolbars are hidden, slash and
+   * paste handling are inert, and `v-model` still reflects the (unchanging)
+   * HTML. Use it to render saved documents. Default `false`.
+   */
+  readonly?: boolean;
+  /**
+   * Show the main toolbar (the persistent bar at the top of the editor).
+   * Set `false` for a headless editor driven entirely by your own UI,
+   * keyboard shortcuts and the selection toolbar. Default `true`.
+   */
+  showToolbar?: boolean;
+  /**
+   * Which view the editor opens in: "editor" (WYSIWYG, default), "code" (raw
+   * HTML), "split" (both) or "preview" (rendered, read-only).
+   */
+  defaultViewMode?: "editor" | "code" | "split" | "preview";
+  /**
+   * Focus the editing surface on mount so the user can type immediately.
+   * Ignored in `readonly` mode. Default `false`.
+   */
+  autofocus?: boolean;
   /**
    * Host-supplied @mention provider for comments: given the text typed after
    * "@", return the users to suggest. Without it the mention dropdown stays

@@ -38,7 +38,7 @@ test.describe("Variables", () => {
     await page.waitForTimeout(300);
 
     const text = (await editor.textContent()) ?? "";
-    expect(text.replace(/ /g, " ")).toContain(
+    expect(text.replace(/\u00A0/g, " ")).toContain(
       "Year: {{ date.year }} END"
     );
     expect(text).not.toMatch(/^DNE/); // reversed-at-start corruption

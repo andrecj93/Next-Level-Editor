@@ -412,8 +412,16 @@ announce("Document saved", "polite");
 | `placeholder`      | `string`  | `'Start typing...'` | Placeholder text when editor is empty                        |
 | `width`            | `string`  | `undefined`         | Custom width for the editor (e.g., '800px', '100%', '50rem') |
 | `height`           | `string`  | `undefined`         | Custom height for the editor (e.g., '500px', '80vh', '30em') |
+| `themePreset`      | `string`  | `'default'`         | Whole-editor theme: `default` \| `classic` \| `minimal` \| `midnight` \| `warm` |
+| `toolbarLayout`    | `string`  | `'comfortable'`     | Toolbar density: `comfortable` (labelled) \| `compact` (mini bar + expand toggle) |
+| `readonly`         | `boolean` | `false`             | Viewer mode — content shown & selectable, not editable; toolbars hidden |
+| `showToolbar`      | `boolean` | `true`              | Show the main toolbar; set `false` for a headless editor     |
+| `defaultViewMode`  | `string`  | `'editor'`          | Initial view: `editor` \| `code` \| `split` \| `preview`     |
+| `autofocus`        | `boolean` | `false`             | Focus the editing surface on mount                           |
 | `showWritingStats` | `boolean` | `false`             | Enable Writing Assistant & Analytics panel                   |
 | `enableComments`   | `boolean` | `false`             | Enable Comments & Collaboration system                       |
+| `enableVariables`  | `boolean` | `false`             | Enable `{{ variable }}` template tokens                      |
+| `mentionSearch`    | `fn`      | `undefined`         | Async provider for @mention suggestions                      |
 
 ### Events
 

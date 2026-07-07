@@ -4,9 +4,10 @@ import { useHtmlSanitizer } from "./useHtmlSanitizer";
 
 interface EditorComputedOptions {
   theme: Ref<"light" | "dark">;
-  width?: string;
-  height?: string;
-  modelValue: string;
+  /** Reactive so changing the width/height prop re-styles the editor live. */
+  width: Ref<string | undefined>;
+  height: Ref<string | undefined>;
+  modelValue: Ref<string>;
   editorContent: Ref<HTMLElement | null>;
   htmlContent: Ref<string>;
   isApplyingHistory: Ref<boolean>;
@@ -47,11 +48,11 @@ export function useEditorComputed(options: EditorComputedOptions) {
    */
   const editorStyles: ComputedRef<Record<string, string>> = computed(() => {
     const styles: Record<string, string> = {};
-    if (width) {
-      styles.width = width;
+    if (width.value) {
+      styles.width = width.value;
     }
-    if (height) {
-      styles.height = height;
+    if (height.value) {
+      styles.height = height.value;
     }
     return styles;
   });
@@ -76,7 +77,7 @@ export function useEditorComputed(options: EditorComputedOptions) {
    * Watch modelValue changes and update editor content
    */
   watch(
-    () => modelValue,
+    modelValue,
     (newValue) => {
       if (!editorContent.value) return;
       if (isApplyingHistory.value) return;
