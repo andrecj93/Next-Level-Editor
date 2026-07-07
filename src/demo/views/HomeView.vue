@@ -111,7 +111,7 @@ These aren't screenshots. Each panel below is the real component — type in
             index="03 — TEMPLATE VARIABLES"
             icon="braces"
             title="Mail-merge, built in"
-            desc="Insert {{ '{{ mustache }}' }} tokens that render as styled pills and fill from your data — perfect for contracts, emails and templates."
+            :desc="'Insert {{ mustache }} tokens that render as styled pills and fill from your data — perfect for contracts, emails and templates.'"
             hint="Open the variables panel &amp; insert a token"
             filename="contract.tpl"
           >

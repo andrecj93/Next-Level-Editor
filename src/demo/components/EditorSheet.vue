@@ -58,6 +58,19 @@ defineProps<{ filename?: string; badge?: string }>();
   box-shadow: 0 5px 14px -2px rgba(196, 57, 44, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
+/* Dark mode: the library editor ships a cool-navy dark surface, which reads as
+   a foreign object on the site's warm brown-black ground. Warm the editor's
+   dark surface tokens so it becomes a "warm dark document" that belongs — light
+   mode keeps the crisp white page, which already sits well on cream. Demo-only;
+   consumers keep the library default. */
+.site-dark .editor-sheet :deep(.next-level-editor) {
+  --editor-bg: #211a11;
+  --editor-border: #342a1b;
+  --toolbar-bg: #2a2115;
+  --toolbar-text: #e9dfcc;
+  --content-color: #efe7d9;
+  --placeholder-color: #8b8069;
+}
 .sheet-badge {
   margin-left: auto;
   font-family: var(--font-mono);
