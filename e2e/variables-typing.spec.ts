@@ -103,18 +103,20 @@ test.describe("Variables", () => {
 
     const panel = page.locator(".variables-panel");
     await expect(panel).toBeVisible();
-    // Lists the built-in variables with their values.
+    // Lists the built-in variables with their values. Scope the value check to
+    // the user.name row — "John Doe" is also the default doc.author value, so an
+    // unscoped value match would resolve to two items.
+    const userNameItem = panel
+      .locator(".variables-panel-item", { hasText: "user.name" })
+      .first();
     await expect(
-      panel.locator(".variables-panel-item-name", { hasText: "user.name" })
+      userNameItem.locator(".variables-panel-item-name", { hasText: "user.name" })
     ).toBeVisible();
     await expect(
-      panel.locator(".variables-panel-item-value", { hasText: "John Doe" })
+      userNameItem.locator(".variables-panel-item-value", { hasText: "John Doe" })
     ).toBeVisible();
 
-    await panel
-      .locator(".variables-panel-item", { hasText: "user.name" })
-      .first()
-      .click();
+    await userNameItem.click();
     await page.waitForTimeout(300);
 
     const pill = editor.locator("span.editor-variable");

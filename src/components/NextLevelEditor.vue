@@ -2055,4 +2055,20 @@ useEditorSetup({
     height: 56px;
   }
 }
+
+/* On narrow screens the fixed 320px panel could grow taller than the viewport
+   and clip its own top off-screen, stranding the first category (its items
+   can't be scrolled into the visible area). Reflow it into a bottom sheet that
+   spans the width with margins and is capped to a safe fraction of the
+   viewport, so every variable stays reachable via the list's internal scroll.
+   The `bottom` is set inline, so the mobile override needs !important. */
+@media (max-width: 640px) {
+  .variables-panel {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: 70vh;
+    bottom: calc(16px + var(--nle-mobile-toolbar-clearance, 0px)) !important;
+  }
+}
 </style>
