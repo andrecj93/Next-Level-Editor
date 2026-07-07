@@ -38,4 +38,27 @@ test.describe("Compact toolbar layout", () => {
     await page.getByRole("button", { name: "Insert" }).first().click();
     await expect(page.locator(".dropdown-menu")).toBeVisible();
   });
+
+  test("tucks rarely-used tools into a ⋯ More menu that still works", async ({
+    page,
+  }) => {
+    await page.goto("/?view=playground");
+    await page.waitForSelector(".editor-toolbar-modern");
+    await page.locator(".pg-theme-chip", { hasText: /^Compact$/ }).click();
+    await expect(page.locator(".editor-toolbar-modern")).toHaveClass(
+      /is-compact/
+    );
+
+    // The view-mode switch is no longer inline — it moved into "More".
+    await expect(page.getByRole("button", { name: "Code view" })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "More" }).click();
+    const menu = page.locator(".dropdown-menu");
+    await expect(menu).toBeVisible();
+    // ...and switching the mode from the menu still works.
+    await menu.getByRole("button", { name: "Code view" }).click();
+    await expect(page.locator(".editor-container")).toHaveClass(
+      /view-mode-code/
+    );
+  });
 });
