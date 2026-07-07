@@ -507,6 +507,45 @@ describe("EditorToolbar", () => {
         "is-compact"
       );
     });
+
+    it("compact tucks view-modes into a ⋯ More menu and still switches mode", async () => {
+      // Render the real ToolbarSection/ToolbarDropdown so the More menu
+      // (and its compactMoreItems) actually run; only stub the heavy picker.
+      const compact = mount(EditorToolbar, {
+        props: { ...defaultProps, toolbarLayout: "compact" as const },
+        global: { stubs: { ColorPicker: true } },
+      });
+
+      // The view-mode switch is no longer inline in compact.
+      expect(compact.find(".view-mode-group").exists()).toBe(false);
+
+      // Open the "More" dropdown.
+      const moreTrigger = compact
+        .findAll("button.dropdown-trigger")
+        .find((b) => b.attributes("aria-label") === "More");
+      expect(moreTrigger).toBeTruthy();
+      await moreTrigger!.trigger("click");
+
+      // It aggregates the tool actions + the four view modes + fullscreen.
+      const items = compact.findAll(".dropdown-item");
+      const labels = items.map((i) => i.attributes("aria-label"));
+      expect(labels).toEqual(
+        expect.arrayContaining([
+          "Editor view",
+          "Code view",
+          "Split view",
+          "Preview",
+          "Fullscreen",
+        ])
+      );
+
+      // The active mode is marked, and picking another emits view-mode-change.
+      const codeItem = items.find(
+        (i) => i.attributes("aria-label") === "Code view"
+      );
+      await codeItem!.trigger("click");
+      expect(compact.emitted("view-mode-change")?.[0]).toEqual(["code"]);
+    });
   });
 
   describe("Edge Cases", () => {
