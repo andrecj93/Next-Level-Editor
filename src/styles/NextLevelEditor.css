@@ -1047,9 +1047,13 @@
   min-width: 32px;
   padding: 0 6px;
 }
+/* Flatten the remaining inline pill (undo/redo) so compact is clean icons +
+   dividers, not boxes-within-a-box. */
 .editor-toolbar-modern.is-compact .toolbar-group {
-  padding: 2px;
+  padding: 0;
   gap: 2px;
+  background: transparent;
+  border-color: transparent;
 }
 .editor-toolbar-modern.is-compact .view-mode-group {
   padding: 2px;

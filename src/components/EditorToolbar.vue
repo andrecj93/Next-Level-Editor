@@ -240,8 +240,9 @@
         @remember-selection="$emit('remember-selection')"
       />
 
-      <!-- Tool Actions (Inline Buttons) -->
+      <!-- Tool Actions (Inline Buttons) — move into "⋯ More" in compact -->
       <ToolbarSection
+        v-if="toolbarLayout !== 'compact'"
         type="buttons"
         :items="toolActions"
         @remember-selection="$emit('remember-selection')"
@@ -256,8 +257,9 @@
     >
       <div class="toolbar-divider" />
 
-      <!-- View Mode Toggle with Text Labels -->
+      <!-- View Mode Toggle with Text Labels — moves into "⋯ More" in compact -->
       <div
+        v-if="toolbarLayout !== 'compact'"
         class="view-mode-group"
         role="group"
         aria-label="View mode selection"
@@ -345,8 +347,21 @@
         />
       </div>
 
-      <!-- Fullscreen Toggle -->
+      <!-- Compact overflow — the rarely-used tools in one calm menu -->
+      <ToolbarSection
+        v-if="toolbarLayout === 'compact'"
+        type="dropdown"
+        label="More"
+        preserve-label
+        icon="<svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;currentColor&quot; stroke=&quot;none&quot;><circle cx=&quot;5&quot; cy=&quot;12&quot; r=&quot;1.6&quot;/><circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;1.6&quot;/><circle cx=&quot;19&quot; cy=&quot;12&quot; r=&quot;1.6&quot;/></svg>"
+        tooltip="More tools"
+        :items="compactMoreItems"
+        @remember-selection="$emit('remember-selection')"
+      />
+
+      <!-- Fullscreen Toggle — moves into "⋯ More" in compact -->
       <button
+        v-if="toolbarLayout !== 'compact'"
         class="toolbar-btn-modern fullscreen-toggle"
         data-tooltip="Toggle fullscreen mode"
         aria-label="Toggle fullscreen mode"
@@ -375,6 +390,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import type { ToolbarAction } from "../types/toolbar";
 import type { ToolbarConfig } from "../composables/useSmartToolbar";
 import ToolbarSection from "./ToolbarSection.vue";
@@ -402,9 +418,9 @@ interface Props {
   toolbarLayout?: "comfortable" | "compact";
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
-defineEmits<{
+const emit = defineEmits<{
   "remember-selection": [];
   "toggle-colors-dropdown": [];
   "text-color-change": [color: string];
@@ -416,6 +432,44 @@ defineEmits<{
   "toggle-theme": [];
   "toggle-fullscreen": [];
 }>();
+
+/**
+ * Compact overflow ("⋯ More"): the rarely-used tools that stay inline in the
+ * comfortable layout — the view-mode switch, View-HTML, Find and Fullscreen —
+ * collapse into a single menu so the compact bar reads as core writing tools.
+ */
+const svgIcon = (paths: string): string =>
+  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+
+const VIEW_MODES = [
+  { mode: "editor" as const, label: "Editor view", paths: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>' },
+  { mode: "code" as const, label: "Code view", paths: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>' },
+  { mode: "split" as const, label: "Split view", paths: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/>' },
+  { mode: "preview" as const, label: "Preview", paths: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>' },
+];
+
+const compactMoreItems = computed(() => [
+  ...props.toolActions,
+  { divider: true },
+  ...VIEW_MODES.map((v) => ({
+    id: `view-${v.mode}`,
+    label: v.label,
+    icon: svgIcon(v.paths),
+    isActive: () => props.viewMode === v.mode,
+    onClick: () => emit("view-mode-change", v.mode),
+  })),
+  { divider: true },
+  {
+    id: "fullscreen",
+    label: props.isFullScreen ? "Exit fullscreen" : "Fullscreen",
+    icon: svgIcon(
+      props.isFullScreen
+        ? '<path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>'
+        : '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>'
+    ),
+    onClick: () => emit("toggle-fullscreen"),
+  },
+]);
 
 // Curated quick-pick palettes for the Colors menu (custom picker still available).
 const textColorPresets = [
