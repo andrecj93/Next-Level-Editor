@@ -813,6 +813,8 @@ const {
   handlePasteFormatBase,
   showColorsDropdown,
   formatPainterActive,
+  textColor,
+  backgroundColor,
 });
 
 // Context menu composable - needs to be after handleInlineAction, insertLink, insertImage are available
