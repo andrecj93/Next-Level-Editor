@@ -169,8 +169,25 @@ const isRangeFullyStyled = (
   tagName: string,
   root: HTMLElement
 ): boolean => {
+  const container = range.commonAncestorContainer;
+
+  // A TreeWalker never yields its own root, so when both range endpoints sit
+  // inside a single text node (a double-click word selection) the walk below
+  // visits nothing and misreports the range as unstyled — the "toggle bold
+  // nests <strong><strong>" bug. Check that lone text node directly.
+  if (container.nodeType === Node.TEXT_NODE) {
+    return (
+      !!container.textContent &&
+      getClosestElement(
+        container,
+        (element) => element.tagName.toLowerCase() === tagName.toLowerCase(),
+        root
+      ) !== null
+    );
+  }
+
   const walker = document.createTreeWalker(
-    range.commonAncestorContainer,
+    container,
     NodeFilter.SHOW_TEXT,
     {
       acceptNode: (node) => {

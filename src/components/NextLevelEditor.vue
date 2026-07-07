@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="rootEl"
     :class="[
       'next-level-editor',
       themeClass,
@@ -14,7 +15,13 @@
     <!-- Accessibility: ARIA Live Regions -->
     <AriaLiveRegion />
 
-    <!-- Editor Toolbar -->
+    <!-- Editor Toolbar. The shell div is the @container query context: a
+         container query can never style the query container itself, so
+         container-type lives here (not on the toolbar) for the auto-compact
+         rules to actually match .editor-toolbar-modern. The shell also owns
+         the sticky positioning the toolbar previously had — sticky inside a
+         tight wrapper would otherwise pin to the wrapper's own bounds. -->
+    <div class="nle-toolbar-shell">
     <EditorToolbar
       :is-toolbar-section-visible="isToolbarSectionVisible"
       :format-dropdown-items="formatDropdownItems"
@@ -46,6 +53,7 @@
       @toggle-theme="toggleTheme"
       @toggle-fullscreen="toggleFullScreen"
     />
+    </div>
 
     <CommandMenu
       :show="showCommandMenu"
@@ -375,6 +383,10 @@ const emit = defineEmits<Emits>();
 const themePresetClass = computed(() => editorThemeClass(props.themePreset));
 
 const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
+
+// This instance's root element — the ownership scope for document-level
+// listeners (e.g. the selection toolbar's selectionchange handling).
+const rootEl = ref<HTMLElement | null>(null);
 
 // View-mode state is declared early so the active-editable computed below can
 // close over it (the refs are passed into useViewMode further down).
@@ -804,6 +816,9 @@ const {
   isAddingComment: comments?.isAddingComment,
   enableComments: props.enableComments,
   onAddComment: handleCreateComment,
+  // Ownership scope for the selection toolbar: only selections inside this
+  // instance's root may show its bubble (selectionchange is document-global).
+  editorRoot: rootEl,
 });
 
 // Toolbar Items - Using useToolbarItems composable

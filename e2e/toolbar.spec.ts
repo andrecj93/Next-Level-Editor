@@ -33,15 +33,20 @@ test.describe("Toolbar", () => {
     // Toolbar should still be visible
     await expect(toolbar).toBeVisible();
 
-    // Check that toolbar has sticky positioning
-    const toolbarStyles = await toolbar.evaluate((el) => {
-      const styles = globalThis.getComputedStyle(el);
+    // Check that the toolbar is pinned via sticky positioning. The sticky
+    // lives on the toolbar's shell wrapper (.nle-toolbar-shell), which is
+    // also the @container query context — a container query can't style its
+    // own container, so the toolbar itself can't carry container-type.
+    const stickyStyles = await toolbar.evaluate((el) => {
+      const shell = el.closest(".nle-toolbar-shell") ?? el;
+      const styles = globalThis.getComputedStyle(shell as Element);
       return {
         position: styles.position,
         top: styles.top,
       };
     });
 
-    expect(toolbarStyles.position).toBe("sticky");
+    expect(stickyStyles.position).toBe("sticky");
+    expect(stickyStyles.top).toBe("0px");
   });
 });

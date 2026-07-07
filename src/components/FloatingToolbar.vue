@@ -33,6 +33,13 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 
+/**
+ * The SELECTION TOOLBAR — the floating bubble that appears over selected text
+ * (a.k.a. "bubble menu"). Not to be confused with the MAIN TOOLBAR
+ * (EditorToolbar.vue), the persistent bar at the top of the editor.
+ * Visibility is owned per-instance by useFloatingToolbar, which only reacts
+ * to selections inside its own editor root.
+ */
 interface ToolbarAction {
   id: string
   label: string

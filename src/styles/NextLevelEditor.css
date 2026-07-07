@@ -830,6 +830,22 @@
 }
 
 /* Modern Toolbar Styles */
+/* The toolbar's query-container shell. A container query cannot style its own
+   query container, so container-type lives on this wrapper — the auto-compact
+   @container rules below can then match .editor-toolbar-modern itself. The
+   shell also carries the sticky positioning (sticky on the toolbar inside a
+   tight wrapper would pin to the wrapper's own bounds and never stick). It has
+   no fixed-position descendants, so the containing-block side effect of
+   container-type can't re-parent the editor's fullscreen/emoji/auto-save
+   elements. */
+.nle-toolbar-shell {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  container-type: inline-size;
+  container-name: nle-toolbar;
+}
+
 .editor-toolbar-modern {
   display: flex;
   align-items: center;
@@ -839,18 +855,6 @@
   background: var(--toolbar-bg);
   border-bottom: 1px solid var(--editor-border);
   min-height: 52px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  /* Make the toolbar a query container so it can adapt to its OWN width, not
-     the viewport's (see the @container block below): an editor embedded narrow
-     — a sidebar, a split-pane, a phone — auto-adopts the single-row compact
-     layout instead of wrapping the desktop toolbar into many rows. Scoped to
-     the toolbar (no fixed-position descendants) so it never re-parents the
-     editor's fullscreen / emoji-picker / auto-save fixed elements the way
-     container-type on the root would. */
-  container-type: inline-size;
-  container-name: nle-toolbar;
   /* A lit top edge makes the bar read as a solid slab, not a flat strip. */
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 1px 3px rgba(0, 0, 0, 0.04);

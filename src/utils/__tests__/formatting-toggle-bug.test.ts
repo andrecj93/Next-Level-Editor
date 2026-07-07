@@ -164,3 +164,64 @@ describe('Formatting Toggle Bug Reproduction', () => {
     expect(root.textContent).toContain('Hello')
   })
 })
+
+describe('Toggle-off with text-node-anchored selections (double-click word)', () => {
+  // A real double-click selection places BOTH range endpoints inside one text
+  // node, so range.commonAncestorContainer is the #text node itself — unlike
+  // selectNodeContents(element) used above. isRangeFullyStyled used to root a
+  // TreeWalker at that text node, and since a TreeWalker never yields its own
+  // root it saw "no styled text" and re-wrapped, nesting <strong><strong>…
+  // per click instead of toggling off.
+  let root: HTMLElement
+
+  beforeEach(() => {
+    root = document.createElement('div')
+    root.contentEditable = 'true'
+    document.body.appendChild(root)
+  })
+
+  afterEach(() => {
+    document.body.removeChild(root)
+  })
+
+  const selectInsideTextNode = (textNode: Node) => {
+    const range = document.createRange()
+    range.setStart(textNode, 0)
+    range.setEnd(textNode, textNode.textContent!.length)
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+    return range
+  }
+
+  it.each(['strong', 'em', 'u', 's'])(
+    'toggles %s off (not nest) when the selection lives inside one text node',
+    (tag) => {
+      root.innerHTML = '<p>alpha word omega</p>'
+      const p = root.querySelector('p')!
+
+      // Style the middle word first (endpoints inside the paragraph text node)
+      const textNode = p.firstChild!
+      const applyRange = document.createRange()
+      applyRange.setStart(textNode, 6)
+      applyRange.setEnd(textNode, 10)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(applyRange)
+      applyInlineStyle(root, tag)
+
+      const styled = root.querySelector(tag)
+      expect(styled).toBeTruthy()
+      expect(styled!.textContent).toBe('word')
+
+      // Re-select like a double-click: endpoints INSIDE the styled text node
+      selectInsideTextNode(styled!.firstChild!)
+      expect(isInlineStyleActive(root, tag)).toBe(true)
+
+      // Second click must UNWRAP, not nest a duplicate tag
+      applyInlineStyle(root, tag)
+      expect(root.querySelectorAll(tag).length).toBe(0)
+      expect(root.textContent).toContain('word')
+    }
+  )
+})
