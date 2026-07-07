@@ -214,6 +214,12 @@ interface ToolbarItemsOptions {
   spellCheckEnabled: Ref<boolean>;
   captureSnapshot: () => void;
   toggleHistoryTimeline: () => void;
+  /**
+   * Opens the keyboard-shortcuts help modal. Optional so hosts that don't
+   * render ShortcutHelpModal can omit it — the Tools item only appears when
+   * a handler is provided.
+   */
+  openShortcutHelpModal?: () => void;
 }
 
 /**
@@ -256,6 +262,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     spellCheckEnabled,
     captureSnapshot,
     toggleHistoryTimeline,
+    openShortcutHelpModal,
   } = options;
 
   const formatDropdownItems = computed(() => [
@@ -567,7 +574,13 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       label: "Paste Format",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg>',
       onClick: handlePasteFormat,
-      disabled: !hasFormatCopied(),
+      // Lazily evaluated on each property read (i.e. every menu render) so it
+      // tracks the format painter's module-level state — copying a format
+      // doesn't touch any reactive dependency, so a plain boolean captured
+      // when this computed ran would stay stale forever.
+      get disabled() {
+        return !hasFormatCopied();
+      },
     },
     { divider: true },
     {
@@ -595,6 +608,18 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>',
       onClick: toggleHistoryTimeline,
     },
+    // Keyboard-shortcuts help — only offered when the host wires a handler
+    // (the modal itself is rendered by the host's modals container).
+    ...(openShortcutHelpModal
+      ? [
+          {
+            id: "keyboard-shortcuts",
+            label: "Keyboard Shortcuts",
+            icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M6 12h.01"/><path d="M10 12h.01"/><path d="M14 12h.01"/><path d="M18 12h.01"/><path d="M7 16h10"/></svg>',
+            onClick: openShortcutHelpModal,
+          },
+        ]
+      : []),
   ]);
 
   return {

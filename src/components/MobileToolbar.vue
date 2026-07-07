@@ -2,6 +2,7 @@
   <Teleport to="body">
     <div
       v-if="showToolbar"
+      ref="toolbarEl"
       class="mobile-toolbar"
       :class="{ 'toolbar-collapsed': isCollapsed, 'theme-dark': isDark }"
     >
@@ -174,12 +175,6 @@
               v-html="action.icon"
             />
             <span class="more-label">{{ action.label }}</span>
-            <span
-              v-if="action.badge"
-              class="more-badge"
-            >
-              {{ action.badge }}
-            </span>
           </button>
         </div>
       </div>
@@ -197,7 +192,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useDeviceDetection } from "../composables/useDeviceDetection";
 
 // Props
@@ -230,8 +225,62 @@ const isCollapsed = ref(false);
 const activeTab = ref(props.defaultTab);
 const showHapticIndicator = ref(false);
 
-// Show toolbar only on mobile devices
+// Show toolbar only on mobile devices — and only when the owning editor
+// instance says so (`visible` is driven by focus/last-interaction ownership
+// in NextLevelEditor, so multi-editor pages never stack toolbars).
 const showToolbar = computed(() => props.visible && showMobileToolbar.value);
+
+// ---------------------------------------------------------------------------
+// Bottom clearance for other fixed chrome (FABs etc.).
+// While this fixed bottom bar is visible it publishes its on-screen height as
+// a global CSS custom property so anything else pinned to the viewport bottom
+// (comments/stats/variables FABs) can offset itself above the bar instead of
+// being covered by it. Measured from the live rect — never a hardcoded guess —
+// and kept fresh via ResizeObserver (tab switches change the content height)
+// plus transitionend (collapse/expand animates `transform`, which observers
+// don't see). At most one toolbar is visible at a time (ownership above), so
+// a plain property on <html> cannot be fought over by instances.
+// ---------------------------------------------------------------------------
+const toolbarEl = ref<HTMLElement | null>(null);
+const CLEARANCE_PROP = "--nle-mobile-toolbar-clearance";
+let clearanceObserver: ResizeObserver | null = null;
+
+const updateClearance = () => {
+  const el = toolbarEl.value;
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  // Visible height of the bar = viewport bottom minus its (possibly
+  // transform-translated, when collapsed) top edge.
+  const clearance = Math.max(0, Math.round(window.innerHeight - rect.top));
+  document.documentElement.style.setProperty(CLEARANCE_PROP, `${clearance}px`);
+};
+
+const clearClearance = () => {
+  clearanceObserver?.disconnect();
+  clearanceObserver = null;
+  document.documentElement.style.removeProperty(CLEARANCE_PROP);
+};
+
+watch(
+  showToolbar,
+  (shown) => {
+    if (!shown) {
+      clearClearance();
+      return;
+    }
+    nextTick(() => {
+      const el = toolbarEl.value;
+      if (!el) return;
+      updateClearance();
+      if (typeof ResizeObserver !== "undefined") {
+        clearanceObserver = new ResizeObserver(updateClearance);
+        clearanceObserver.observe(el);
+      }
+      el.addEventListener("transitionend", updateClearance);
+    });
+  },
+  { immediate: true }
+);
 
 // Because the toolbar teleports to <body>, it escapes the editor's
 // `.theme-dark` scope. Mirror the editor root's theme onto our own root so the
@@ -258,6 +307,7 @@ onMounted(() => {
 onUnmounted(() => {
   themeObserver?.disconnect();
   themeObserver = null;
+  clearClearance();
 });
 
 // Tabs configuration
@@ -401,12 +451,10 @@ const blockActions = [
     icon: "1.",
     onClick: () => executeAction("numbered-list"),
   },
-  {
-    id: "checklist",
-    label: "Checklist",
-    icon: "☑",
-    onClick: () => executeAction("checklist"),
-  },
+  // NOTE: "checklist" is intentionally not offered — the editor has no
+  // checklist command yet, so the button was a silent no-op. Restore it here
+  // (and wire a case in NextLevelEditor's handleMobileAction) once a checklist
+  // block actually exists.
   {
     id: "blockquote",
     label: "Quote",
@@ -441,25 +489,10 @@ const moreActions = [
     icon: "🔍",
     onClick: () => executeAction("find"),
   },
-  {
-    id: "shortcuts",
-    label: "Keyboard Shortcuts",
-    icon: "⌨️",
-    onClick: () => executeAction("shortcuts"),
-  },
-  {
-    id: "export",
-    label: "Export",
-    icon: "📤",
-    onClick: () => executeAction("export"),
-    badge: "New",
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: "⚙️",
-    onClick: () => executeAction("settings"),
-  },
+  // NOTE: "shortcuts" (Keyboard Shortcuts), "export" and "settings" are
+  // intentionally not offered — NextLevelEditor's handleMobileAction has no
+  // handler for them yet, so the buttons (one even badged "New") silently did
+  // nothing. Restore them here once mobile-friendly handlers exist.
 ];
 
 // Methods
@@ -780,15 +813,6 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
   flex: 1;
   font-size: 16px;
   color: var(--text-primary, #1f2937);
-}
-
-.more-badge {
-  padding: 2px 8px;
-  background: var(--badge-bg, #2563eb);
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 12px;
 }
 
 /* ============================================

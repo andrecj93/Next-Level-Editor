@@ -152,12 +152,26 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
+// Standard menu keyboard behavior: Escape dismisses an open dropdown. The
+// event is consumed so the editor's application-level Escape handler (which
+// dismisses its own top-most overlay) doesn't also fire on the same keystroke.
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key !== "Escape" || !isOpen.value) return;
+  event.preventDefault();
+  event.stopPropagation();
+  close();
+};
+
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
+  // Capture phase so an open dropdown wins over the editor's document-level
+  // bubble-phase Escape handler.
+  document.addEventListener("keydown", handleKeydown, true);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener("click", handleClickOutside);
+  document.removeEventListener("keydown", handleKeydown, true);
 });
 
 watch(

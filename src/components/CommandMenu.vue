@@ -12,7 +12,16 @@
       <div class="command-menu-header">
         Quick Actions
       </div>
-      <ul role="listbox">
+      <div
+        v-if="options.length === 0"
+        class="command-menu-empty"
+      >
+        No matching commands
+      </div>
+      <ul
+        v-else
+        role="listbox"
+      >
         <li
           v-for="(option, index) in options"
           :key="option.id"
@@ -84,3 +93,12 @@ defineEmits<{
   select: [option: SlashCommandOption];
 }>();
 </script>
+
+<style scoped>
+.command-menu-empty {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--toolbar-text);
+  opacity: 0.6;
+}
+</style>

@@ -106,12 +106,12 @@
                   :key="c"
                   type="button"
                   class="colors-swatch"
-                  :class="{ active: sameColor(textColor, c) }"
+                  :class="{ active: sameColor(selectionTextColor, c) }"
                   :style="{ background: c }"
                   :aria-label="`Text color ${c}`"
                   :title="c"
                   @mousedown.prevent="$emit('remember-selection')"
-                  @click="$emit('text-color-change', c)"
+                  @click="pickTextColor(c)"
                 />
               </div>
               <div class="colors-custom-row">
@@ -119,7 +119,7 @@
                   :model-value="textColor"
                   label="Text Color"
                   icon="+"
-                  @update:model-value="$emit('text-color-change', $event)"
+                  @update:model-value="pickTextColor($event)"
                 />
                 <span class="colors-custom-label">Custom…</span>
               </div>
@@ -132,25 +132,23 @@
                 <button
                   type="button"
                   class="colors-swatch colors-swatch-none"
-                  :class="{
-                    active: !backgroundColor || backgroundColor === 'transparent',
-                  }"
+                  :class="{ active: noHighlightActive }"
                   aria-label="No highlight"
                   title="None"
                   @mousedown.prevent="$emit('remember-selection')"
-                  @click="$emit('background-color-change', 'transparent')"
+                  @click="pickHighlightColor('transparent')"
                 />
                 <button
                   v-for="c in highlightColorPresets"
                   :key="c"
                   type="button"
                   class="colors-swatch"
-                  :class="{ active: sameColor(backgroundColor, c) }"
+                  :class="{ active: sameColor(selectionHighlightColor, c) }"
                   :style="{ background: c }"
                   :aria-label="`Highlight ${c}`"
                   :title="c"
                   @mousedown.prevent="$emit('remember-selection')"
-                  @click="$emit('background-color-change', c)"
+                  @click="pickHighlightColor(c)"
                 />
               </div>
               <div class="colors-custom-row">
@@ -158,7 +156,7 @@
                   :model-value="backgroundColor"
                   label="Highlight"
                   icon="+"
-                  @update:model-value="$emit('background-color-change', $event)"
+                  @update:model-value="pickHighlightColor($event)"
                 />
                 <span class="colors-custom-label">Custom…</span>
               </div>
@@ -416,7 +414,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick, onBeforeUnmount } from "vue";
 import type { ToolbarAction } from "../types/toolbar";
 import type { ToolbarConfig } from "../composables/useSmartToolbar";
 import ToolbarSection from "./ToolbarSection.vue";
@@ -540,7 +538,120 @@ const highlightColorPresets = [
   "#f9a8d4",
 ];
 
-/** Case-insensitive hex compare so an active preset is highlighted. */
-const sameColor = (a: string | undefined, b: string): boolean =>
-  !!a && a.toLowerCase() === b.toLowerCase();
+// --- Active swatch tracking --------------------------------------------------
+// The textColor/backgroundColor props only carry the last custom-picked values
+// (they are never written back when a color is applied), so the active swatch
+// indicators derive from the actual selection instead: while the Colors menu is
+// open we read the computed color / highlight at the selection anchor (scoped
+// to the contenteditable root) and mark the matching preset.
+
+const selectionTextColor = ref("");
+const selectionHighlightColor = ref("");
+
+const EDITABLE_SELECTOR =
+  '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]';
+
+/** Fully transparent computed background values (i.e. "no highlight"). */
+const isTransparent = (value: string): boolean => {
+  const parsed = parseColor(value);
+  return !parsed || parsed === "transparent";
+};
+
+const readSelectionColors = () => {
+  const selection = window.getSelection?.();
+  const node = selection?.anchorNode ?? null;
+  const start: Element | null =
+    node instanceof Element ? node : node?.parentElement ?? null;
+  const editableRoot = start?.closest(EDITABLE_SELECTOR) ?? null;
+  if (!start || !editableRoot) {
+    selectionTextColor.value = "";
+    selectionHighlightColor.value = "";
+    return;
+  }
+
+  selectionTextColor.value = window.getComputedStyle(start).color || "";
+
+  // background-color doesn't inherit, so walk up to the first non-transparent
+  // ancestor. Stop before the editable root itself — the editor surface's own
+  // background is not a text highlight.
+  let highlight = "";
+  let el: Element | null = start;
+  while (el && el !== editableRoot) {
+    const bg = window.getComputedStyle(el).backgroundColor;
+    if (bg && !isTransparent(bg)) {
+      highlight = bg;
+      break;
+    }
+    el = el.parentElement;
+  }
+  selectionHighlightColor.value = highlight;
+};
+
+// Track the selection only while the menu is open (the swatches don't render
+// otherwise). `immediate` covers a menu that is already open at mount.
+watch(
+  () => props.showColorsDropdown,
+  (open) => {
+    document.removeEventListener("selectionchange", readSelectionColors);
+    if (open) {
+      readSelectionColors();
+      document.addEventListener("selectionchange", readSelectionColors);
+    }
+  },
+  { immediate: true }
+);
+
+onBeforeUnmount(() => {
+  document.removeEventListener("selectionchange", readSelectionColors);
+});
+
+// The host applies the color synchronously during the emit (via the remembered
+// selection), so re-reading on the next tick marks the freshly applied swatch
+// even if no selectionchange fires.
+const pickTextColor = (color: string) => {
+  emit("text-color-change", color);
+  nextTick(readSelectionColors);
+};
+
+const pickHighlightColor = (color: string) => {
+  emit("background-color-change", color);
+  nextTick(readSelectionColors);
+};
+
+const noHighlightActive = computed(() =>
+  isTransparent(selectionHighlightColor.value)
+);
+
+/**
+ * Normalize a CSS color to a comparable "r,g,b" key: presets are hex while
+ * computed styles report rgb()/rgba(), so a plain string compare never matches.
+ */
+function parseColor(value: string | undefined | null): string {
+  if (!value) return "";
+  const v = value.trim().toLowerCase();
+  if (v === "transparent") return "transparent";
+  const hexMatch = v.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/);
+  if (hexMatch) {
+    let hex = hexMatch[1];
+    if (hex.length === 3) hex = hex.replace(/./g, (ch) => ch + ch);
+    const num = parseInt(hex, 16);
+    return `${(num >> 16) & 255},${(num >> 8) & 255},${num & 255}`;
+  }
+  const rgbMatch = v.match(
+    /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)\s*(?:[,/]\s*([\d.]+%?)\s*)?\)$/
+  );
+  if (rgbMatch) {
+    const alpha = rgbMatch[4];
+    if (alpha !== undefined && parseFloat(alpha) === 0) return "transparent";
+    return `${rgbMatch[1]},${rgbMatch[2]},${rgbMatch[3]}`;
+  }
+  // Named colors and anything else: compare the normalized string as-is.
+  return v;
+}
+
+/** Whether a selection color matches a preset (hex vs rgb() tolerant). */
+const sameColor = (a: string | undefined, b: string): boolean => {
+  const parsed = parseColor(a);
+  return !!parsed && parsed !== "transparent" && parsed === parseColor(b);
+};
 </script>

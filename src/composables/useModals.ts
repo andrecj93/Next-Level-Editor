@@ -20,6 +20,7 @@ export function useModals(options: UseModalsOptions = {}) {
   const showTableModal = ref(false);
   const showTableDesigner = ref(false);
   const showTablePropertiesModal = ref(false);
+  const showShortcutHelpModal = ref(false);
 
   /**
    * Helper to remember selection before opening modal
@@ -140,6 +141,17 @@ export function useModals(options: UseModalsOptions = {}) {
     showEmojiPicker.value = false;
   };
 
+  // Keyboard Shortcut Help Modal
+  const openShortcutHelpModal = () => {
+    // Reference-only modal: it never touches the document, so the current
+    // selection doesn't need to be saved before opening it.
+    showShortcutHelpModal.value = true;
+  };
+
+  const closeShortcutHelpModal = () => {
+    showShortcutHelpModal.value = false;
+  };
+
   // Table Designer
   const openTableDesigner = () => {
     // Note: Table designer doesn't need selection save as it's contextual
@@ -164,6 +176,7 @@ export function useModals(options: UseModalsOptions = {}) {
     showTableModal,
     showTableDesigner,
     showTablePropertiesModal,
+    showShortcutHelpModal,
 
     // Functions
     openLinkModal,
@@ -190,5 +203,7 @@ export function useModals(options: UseModalsOptions = {}) {
     closeEmojiPicker,
     openTableDesigner,
     closeTableDesigner,
+    openShortcutHelpModal,
+    closeShortcutHelpModal,
   };
 }

@@ -6,7 +6,17 @@
     @mousedown.prevent
   >
     <div class="variable-autocomplete-header">
-      <span class="variable-autocomplete-icon">🔤</span>
+      <span class="variable-autocomplete-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            :d="BRACES_ICON_PATH"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </span>
       <span>Variables</span>
     </div>
 
@@ -21,7 +31,21 @@
       >
         <div class="variable-autocomplete-item-main">
           <span class="variable-autocomplete-item-icon">
-            {{ getCategoryIcon(variable.category) }}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                :d="getCategoryIconPath(variable.category)"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
           </span>
           <div class="variable-autocomplete-item-content">
             <div class="variable-autocomplete-item-name">
@@ -52,6 +76,21 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import type { Variable, VariableCategory } from "../composables/useVariables";
+
+// Stroke icon paths (24px viewBox), matching the editor's icon language —
+// no emoji in the chrome. Keyed by category id with a tag-shaped fallback.
+const BRACES_ICON_PATH =
+  "M9 4C7.5 4 7 5 7 6.5V9c0 1.5-1 2.3-2.2 2.6v.8C6 12.7 7 13.5 7 15v2.5C7 19 7.5 20 9 20M15 4c1.5 0 2 1 2 2.5V9c0 1.5 1 2.3 2.2 2.6v.8C18 12.7 17 13.5 17 15v2.5c0 1.5-.5 2.5-2 2.5";
+const CATEGORY_ICON_PATHS: Record<string, string> = {
+  user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
+  date: "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
+  document:
+    "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 2v6h6",
+  company:
+    "M3 21h18M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9.5 7h1M13.5 7h1M9.5 11h1M13.5 11h1M9.5 15h1M13.5 15h1",
+};
+const DEFAULT_ICON_PATH =
+  "M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l8.58-8.58a1 1 0 0 0 0-1.42L12 2zM7 7h.01";
 
 interface Props {
   variables: Variable[];
@@ -92,10 +131,9 @@ const positionStyle = computed(() => ({
   left: `${props.position.left}px`,
 }));
 
-// Get category icon
-const getCategoryIcon = (categoryId?: string): string => {
-  const category = props.categories.find((c) => c.id === categoryId);
-  return category?.icon || "📝";
+// Get category icon path (stroke SVG, keyed by category id)
+const getCategoryIconPath = (categoryId?: string): string => {
+  return (categoryId && CATEGORY_ICON_PATHS[categoryId]) || DEFAULT_ICON_PATH;
 };
 
 // Select variable
@@ -103,9 +141,14 @@ const selectVariable = (variable: Variable) => {
   emit("select", variable);
 };
 
-// Keyboard navigation
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (!props.isOpen || filteredVariables.value.length === 0) return;
+/**
+ * Keyboard navigation. Returns true when the event was consumed so the host
+ * editor can give the open dropdown priority over its own keydown handling
+ * (Enter would otherwise insert a paragraph before this component ever saw
+ * the key). Exposed via defineExpose for that carve-out.
+ */
+const handleEditorKeydown = (e: KeyboardEvent): boolean => {
+  if (!props.isOpen || filteredVariables.value.length === 0) return false;
 
   switch (e.key) {
     case "ArrowDown":
@@ -114,23 +157,32 @@ const handleKeyDown = (e: KeyboardEvent) => {
         selectedIndex.value + 1,
         filteredVariables.value.length - 1
       );
-      break;
+      return true;
     case "ArrowUp":
       e.preventDefault();
       selectedIndex.value = Math.max(selectedIndex.value - 1, 0);
-      break;
+      return true;
     case "Enter":
     case "Tab":
       e.preventDefault();
       if (filteredVariables.value[selectedIndex.value]) {
         selectVariable(filteredVariables.value[selectedIndex.value]);
       }
-      break;
+      return true;
     case "Escape":
       e.preventDefault();
       emit("close");
-      break;
+      return true;
   }
+  return false;
+};
+
+// Document-level fallback (e.g. hosts that don't wire the editor carve-out).
+// Skips events the editor-level call already consumed (they arrive here with
+// defaultPrevented set) so keys are never handled twice.
+const handleDocumentKeydown = (e: KeyboardEvent) => {
+  if (e.defaultPrevented) return;
+  handleEditorKeydown(e);
 };
 
 // Reset selected index when query changes
@@ -149,12 +201,14 @@ watch(filteredVariables, () => {
 });
 
 onMounted(() => {
-  document.addEventListener("keydown", handleKeyDown);
+  document.addEventListener("keydown", handleDocumentKeydown);
 });
 
 onUnmounted(() => {
-  document.removeEventListener("keydown", handleKeyDown);
+  document.removeEventListener("keydown", handleDocumentKeydown);
 });
+
+defineExpose({ handleEditorKeydown });
 </script>
 
 <style scoped>
@@ -188,7 +242,10 @@ onUnmounted(() => {
 }
 
 .variable-autocomplete-icon {
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color, #007bff);
 }
 
 .variable-autocomplete-list {
@@ -216,7 +273,10 @@ onUnmounted(() => {
 }
 
 .variable-autocomplete-item-icon {
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #666);
   flex-shrink: 0;
 }
 
@@ -245,7 +305,7 @@ onUnmounted(() => {
   font-size: 11px;
   color: var(--text-muted, #888);
   margin-top: 4px;
-  margin-left: 28px;
+  margin-left: 26px; /* icon (16px) + gap (10px) */
   line-height: 1.4;
 }
 

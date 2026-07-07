@@ -5,6 +5,7 @@
     @click="close"
   >
     <div
+      ref="modalContent"
       class="modal-content"
       role="dialog"
       aria-labelledby="link-modal-title"
@@ -67,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch, nextTick, onBeforeUnmount } from "vue";
 
 const props = defineProps<{ isOpen: boolean }>();
 
@@ -79,6 +80,11 @@ const emit = defineEmits<{
 const url = ref("");
 const text = ref("");
 const urlInput = ref<HTMLInputElement | null>(null);
+const modalContent = ref<HTMLElement | null>(null);
+
+/** Element focused before the dialog opened; focus returns to it on close
+    (WAI-ARIA dialog pattern). */
+let previouslyFocused: HTMLElement | null = null;
 
 const isValid = computed(() => url.value.trim().length > 0);
 
@@ -90,7 +96,8 @@ const submit = () => {
     ? raw
     : `https://${raw}`;
   emit("insert", normalized, text.value.trim());
-  reset();
+  // Self-close after a successful insert, like the other insert modals.
+  close();
 };
 
 const reset = () => {
@@ -103,15 +110,73 @@ const close = () => {
   reset();
 };
 
+const getFocusables = (): HTMLElement[] => {
+  if (!modalContent.value) return [];
+  return Array.from(
+    modalContent.value.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])'
+    )
+  );
+};
+
+/** Escape closes the dialog; Tab / Shift+Tab are trapped inside it
+    (aria-modal="true" promises both). */
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    close();
+    return;
+  }
+
+  if (event.key !== "Tab") return;
+
+  const focusables = getFocusables();
+  if (focusables.length === 0) return;
+
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = document.activeElement as HTMLElement | null;
+  const inside = !!active && !!modalContent.value?.contains(active);
+
+  if (event.shiftKey) {
+    if (!inside || active === first) {
+      event.preventDefault();
+      last.focus();
+    }
+  } else if (!inside || active === last) {
+    event.preventDefault();
+    first.focus();
+  }
+};
+
 watch(
   () => props.isOpen,
   (open) => {
     if (open) {
+      previouslyFocused =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
       reset();
+      document.addEventListener("keydown", handleKeydown, true);
       nextTick(() => urlInput.value?.focus());
+    } else {
+      document.removeEventListener("keydown", handleKeydown, true);
+      const target = previouslyFocused;
+      previouslyFocused = null;
+      if (target && target.isConnected) {
+        // Wait for the overlay to leave the DOM before handing focus back.
+        nextTick(() => target.focus());
+      }
     }
-  }
+  },
+  { immediate: true }
 );
+
+onBeforeUnmount(() => {
+  document.removeEventListener("keydown", handleKeydown, true);
+});
 </script>
 
 <style scoped>

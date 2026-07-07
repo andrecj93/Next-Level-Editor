@@ -91,12 +91,23 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 }
 
+// Standard menu keyboard behavior: Escape dismisses the open dropdown and is
+// consumed so global Escape handlers don't also fire (see ToolbarDropdown).
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'Escape' || !showDropdown.value) return
+  event.preventDefault()
+  event.stopPropagation()
+  showDropdown.value = false
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  document.addEventListener('keydown', handleKeydown, true)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleKeydown, true)
 })
 </script>
 

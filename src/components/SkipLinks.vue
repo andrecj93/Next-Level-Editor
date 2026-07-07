@@ -1,11 +1,11 @@
 <template>
-  <nav class="skip-links" aria-label="Skip links">
+  <nav ref="navRef" class="skip-links" aria-label="Skip links">
     <a
       v-for="link in links"
       :key="link.id"
       :href="`#${link.target}`"
       class="skip-link"
-      @click="handleSkip(link.target)"
+      @click="handleSkip($event, link)"
     >
       {{ link.label }}
     </a>
@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useAccessibility } from "../composables/useAccessibility";
 import { smoothScrollIntoView } from "../utils/scroll";
 
@@ -24,6 +24,14 @@ interface SkipLink {
   id: string;
   label: string;
   target: string;
+  /**
+   * Fallback CSS selector resolved within this editor instance when no
+   * element with the `target` id exists. The editor's landmarks (toolbar,
+   * content, footer) don't carry ids of their own — and hard-coding ids on
+   * them would collide across multiple editor instances — so the default
+   * links locate them by landmark selector instead.
+   */
+  selector?: string;
 }
 
 /**
@@ -40,40 +48,93 @@ const props = withDefaults(defineProps<Props>(), {
 // Composables
 const { setFocus, announce } = useAccessibility();
 
+// Root of the skip-links nav — used to scope landmark lookups to the editor
+// instance this component belongs to.
+const navRef = ref<HTMLElement | null>(null);
+
 // Default skip links
 const defaultLinks: SkipLink[] = [
-  { id: "skip-main", label: "Skip to main content", target: "main-content" },
-  { id: "skip-toolbar", label: "Skip to toolbar", target: "toolbar" },
-  { id: "skip-footer", label: "Skip to footer", target: "footer" },
+  {
+    id: "skip-main",
+    label: "Skip to main content",
+    target: "main-content",
+    selector: ".editor-content",
+  },
+  {
+    id: "skip-toolbar",
+    label: "Skip to toolbar",
+    target: "toolbar",
+    selector: '[role="toolbar"]',
+  },
+  {
+    id: "skip-footer",
+    label: "Skip to footer",
+    target: "footer",
+    selector: ".editor-footer",
+  },
 ];
 
 // Merge default and custom links
 const links = ref<SkipLink[]>([...defaultLinks, ...props.customLinks]);
 
 /**
+ * Resolve a skip link's target element. Landmark selectors are checked first,
+ * scoped to this editor instance, so multiple editors on one page never skip
+ * into a sibling instance; plain-id targets (custom links) fall back to a
+ * document-wide id lookup.
+ */
+const resolveTarget = (link: SkipLink): HTMLElement | null => {
+  if (link.selector) {
+    const root = navRef.value?.closest(".next-level-editor");
+    const scoped = (root ?? document).querySelector<HTMLElement>(
+      link.selector
+    );
+    if (scoped) return scoped;
+  }
+  return document.getElementById(link.target);
+};
+
+/**
+ * Give the resolved landmark the id the anchor's href points to, so the
+ * link's `#target` reference is real (and native anchor navigation works as a
+ * no-JS fallback). Never steals an id the element already has, and never
+ * duplicates an id already used elsewhere in the document.
+ */
+const ensureTargetId = (link: SkipLink, element: HTMLElement) => {
+  if (!element.id && !document.getElementById(link.target)) {
+    element.id = link.target;
+  }
+};
+
+// Stamp ids onto the landmarks up front so the hrefs are valid immediately.
+// (Targets rendered later — e.g. the editor pane recreated after a view-mode
+// switch — are re-resolved and re-stamped at click time in handleSkip.)
+onMounted(() => {
+  for (const link of links.value) {
+    const element = resolveTarget(link);
+    if (element) {
+      ensureTargetId(link, element);
+    }
+  }
+});
+
+/**
  * Handle skip link click
  */
-const handleSkip = (targetId: string) => {
-  const targetElement = document.getElementById(targetId);
+const handleSkip = (event: MouseEvent, link: SkipLink) => {
+  const targetElement = resolveTarget(link);
 
   if (targetElement) {
-    // Set focus to target
-    setFocus(targetElement, {
-      announce: `Skipped to ${targetId.replace("-", " ")}`,
-      preventScroll: false,
-    });
+    // We take over from native anchor navigation (focus + smooth scroll).
+    event.preventDefault();
+    ensureTargetId(link, targetElement);
 
-    // Scroll into view
-    smoothScrollIntoView(targetElement, {
-      behavior: "smooth",
-      block: "start",
-    });
-
-    // Make target focusable if it's not already
+    // Make target focusable BEFORE focusing it — non-interactive landmarks
+    // like the toolbar and footer aren't natively focusable.
     if (!targetElement.hasAttribute("tabindex")) {
       targetElement.setAttribute("tabindex", "-1");
 
-      // Remove tabindex after focus (cleanup)
+      // Remove tabindex after focus moves on (cleanup)
       targetElement.addEventListener(
         "blur",
         () => {
@@ -82,8 +143,20 @@ const handleSkip = (targetId: string) => {
         { once: true }
       );
     }
+
+    // Set focus to target
+    setFocus(targetElement, {
+      announce: `Skipped to ${link.target.replace(/-/g, " ")}`,
+      preventScroll: false,
+    });
+
+    // Scroll into view
+    smoothScrollIntoView(targetElement, {
+      behavior: "smooth",
+      block: "start",
+    });
   } else {
-    announce(`Target ${targetId} not found`, { priority: "assertive" });
+    announce(`Target ${link.target} not found`, { priority: "assertive" });
   }
 };
 </script>

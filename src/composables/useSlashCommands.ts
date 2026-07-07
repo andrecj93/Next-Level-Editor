@@ -1,6 +1,10 @@
-import { ref, nextTick } from "vue";
+import { ref, reactive, nextTick } from "vue";
 import { getSelectionRange } from "../utils/formatting";
 import { smoothScrollIntoView } from "../utils/scroll";
+import {
+  splitBlockAtCaret,
+  placeCaretInside,
+} from "../utils/blockInsertion";
 
 export interface SlashCommandOption {
   id: string;
@@ -45,6 +49,10 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
   /** Keyboard-highlighted option in the slash menu (Word/Notion parity). */
   const selectedIndex = ref(0);
 
+  // Block-splitting helpers live in utils/blockInsertion.ts — shared with the
+  // toolbar's Horizontal Rule so every block inserter avoids <p>-nesting.
+  const placeCaret = placeCaretInside;
+
   const insertBlockquote = () => {
     performWithSelection((root) => {
       const range = getSelectionRange();
@@ -57,8 +65,29 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
         quote.textContent = "Type your quote here";
       }
       range.deleteContents();
-      range.insertNode(quote);
+      const tail = splitBlockAtCaret(range, root);
+      if (tail?.parentNode) {
+        tail.parentNode.insertBefore(quote, tail);
+      } else {
+        // Caret was not inside a paragraph/heading — already at block level.
+        range.insertNode(quote);
+      }
+      placeCaret(quote, false);
     });
+  };
+
+  const insertDivider = () => {
+    // Escape the current paragraph first: insertHorizontalRule inserts at the
+    // caret, which used to nest the <hr> inside the <p> (invalid HTML).
+    let tail: HTMLElement | null = null;
+    performWithSelection((root) => {
+      const range = getSelectionRange();
+      if (!range || !root.contains(range.commonAncestorContainer)) return;
+      tail = splitBlockAtCaret(range, root);
+    });
+    handleInsertHR();
+    // Land the caret on the editable line after the divider.
+    if (tail) placeCaret(tail, true);
   };
 
   const removeSlashTrigger = () => {
@@ -163,11 +192,28 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
       if (!range) return;
       const rect = getCaretRect(range);
       const clamped = clampMenuPosition(rect.bottom + 8, rect.left);
+
+      // The menu is position:absolute inside the editor container (its
+      // offsetParent, `.next-level-editor` is position:relative), so the
+      // viewport-clamped coordinates must be converted into that container's
+      // space. Adding window.scrollY here instead produced document-absolute
+      // coordinates that re-added the editor's own page offset, dumping the
+      // menu below the fold on any page where the editor isn't at the top.
+      const startNode = range.startContainer;
+      const startElement =
+        startNode.nodeType === Node.ELEMENT_NODE
+          ? (startNode as HTMLElement)
+          : startNode.parentElement;
+      const containerRect = startElement
+        ?.closest<HTMLElement>(".next-level-editor")
+        ?.getBoundingClientRect();
+
+      resetFilter();
       showCommandMenu.value = true;
-      selectedIndex.value = 0;
       commandMenuPosition.value = {
-        top: clamped.top + window.scrollY,
-        left: clamped.left + window.scrollX,
+        top: clamped.top - (containerRect ? containerRect.top : -window.scrollY),
+        left:
+          clamped.left - (containerRect ? containerRect.left : -window.scrollX),
         maxHeight: clamped.maxHeight,
       };
     });
@@ -191,7 +237,7 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     }
   };
 
-  const commandOptions: SlashCommandOption[] = [
+  const allCommandOptions: SlashCommandOption[] = [
     {
       id: "slash-h1",
       label: "Heading 1",
@@ -274,9 +320,35 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
       id: "slash-divider",
       label: "Divider",
       description: "Insert horizontal rule",
-      action: handleInsertHR,
+      action: insertDivider,
     },
   ];
+
+  /**
+   * Type-to-filter (Notion/Word parity): printable keys typed while the menu
+   * is open narrow this list instead of leaking into the document. The
+   * reactive array is mutated in place so the menu component sees updates.
+   */
+  const filterQuery = ref("");
+  const commandOptions = reactive<SlashCommandOption[]>([...allCommandOptions]);
+
+  const applyFilter = () => {
+    const query = filterQuery.value.trim().toLowerCase();
+    const matches = query
+      ? allCommandOptions.filter(
+          (option) =>
+            option.label.toLowerCase().includes(query) ||
+            option.description.toLowerCase().includes(query)
+        )
+      : allCommandOptions;
+    commandOptions.splice(0, commandOptions.length, ...matches);
+    selectedIndex.value = 0;
+  };
+
+  const resetFilter = () => {
+    filterQuery.value = "";
+    applyFilter();
+  };
 
   /**
    * Scroll to the current selection/element
@@ -327,28 +399,63 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
   const handleMenuKeydown = (event: KeyboardEvent): boolean => {
     if (!showCommandMenu.value) return false;
     const count = commandOptions.length;
-    if (count === 0) return false;
     switch (event.key) {
       case "ArrowDown":
         event.preventDefault();
-        selectedIndex.value = (selectedIndex.value + 1) % count;
+        if (count > 0) selectedIndex.value = (selectedIndex.value + 1) % count;
         return true;
       case "ArrowUp":
         event.preventDefault();
-        selectedIndex.value = (selectedIndex.value - 1 + count) % count;
+        if (count > 0) {
+          selectedIndex.value = (selectedIndex.value - 1 + count) % count;
+        }
         return true;
       case "Enter":
       case "Tab":
         event.preventDefault();
-        handleCommandOption(commandOptions[selectedIndex.value]);
+        if (count > 0) {
+          handleCommandOption(commandOptions[selectedIndex.value]);
+        } else {
+          closeCommandMenu();
+        }
         return true;
       case "Escape":
         event.preventDefault();
         closeCommandMenu();
         return true;
+      case "Backspace":
+        // Erase the last filter character; with nothing typed yet, backspace
+        // reads as "cancel the menu" (the trigger slash is already gone).
+        event.preventDefault();
+        if (filterQuery.value) {
+          filterQuery.value = filterQuery.value.slice(0, -1);
+          applyFilter();
+        } else {
+          closeCommandMenu();
+        }
+        return true;
       default:
-        return false;
+        break;
     }
+    // Type-to-filter: consume printable characters so they narrow the list
+    // instead of leaking into the document behind the menu.
+    if (
+      event.key.length === 1 &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey
+    ) {
+      if (event.key === " " && !filterQuery.value) {
+        // Space right after "/" — the user wanted literal text; let it type.
+        closeCommandMenu();
+        return false;
+      }
+      event.preventDefault();
+      filterQuery.value += event.key;
+      applyFilter();
+      return true;
+    }
+    return false;
   };
 
   return {

@@ -49,7 +49,7 @@
       @undo="undo"
       @redo="redo"
       @view-mode-change="(mode) => (viewMode = mode)"
-      @format-html="handleFormatHtml"
+      @format-html="formatHtmlCode"
       @toggle-theme="toggleTheme"
       @toggle-fullscreen="toggleFullScreen"
     />
@@ -88,10 +88,15 @@
     <!-- Floating Toolbar -->
     <FloatingToolbar :show="showFloatingToolbar" :actions="floatingActions" />
 
-    <!-- Mobile bottom toolbar (self-hides on non-touch/desktop) -->
+    <!-- Mobile bottom toolbar (self-hides on non-touch/desktop). Because it
+         teleports to <body>, `visible` is driven by focus/last-interaction
+         ownership: only the instance the user is working in shows a toolbar,
+         so multi-editor pages never stack N identical fixed bars. -->
     <MobileToolbar
+      :visible="mobileToolbarVisible"
       :is-active="mobileIsActive"
       @action="handleMobileAction"
+      @close="mobileToolbarClosed = true"
     />
 
     <!-- History Timeline panel (toggled from the Tools dropdown) -->
@@ -233,6 +238,7 @@
     <!-- Variable Autocomplete (opt-in feature) -->
     <VariableAutocomplete
       v-if="enableVariables && variablesComposable"
+      ref="variableAutocompleteRef"
       :variables="variablesComposable.variables.value"
       :categories="variablesComposable.categories.value"
       :query="variableAutocompleteQuery"
@@ -293,11 +299,129 @@
         </svg>
       </button>
     </Transition>
+
+    <!-- Variables Toggle FAB (opt-in feature) -->
+    <Transition name="fab-fade">
+      <button
+        v-if="enableVariables && variablesComposable"
+        class="variables-toggle-fab"
+        :style="{
+          bottom: `calc(${variablesFabBottom}px + var(--nle-mobile-toolbar-clearance, 0px))`,
+        }"
+        aria-label="Toggle variables panel"
+        :aria-expanded="showVariablesPanel"
+        :title="showVariablesPanel ? 'Hide variables' : 'Show variables'"
+        @click="showVariablesPanel = !showVariablesPanel"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M9 4C7.5 4 7 5 7 6.5V9c0 1.5-1 2.3-2.2 2.6v.8C6 12.7 7 13.5 7 15v2.5C7 19 7.5 20 9 20M15 4c1.5 0 2 1 2 2.5V9c0 1.5 1 2.3 2.2 2.6v.8C18 12.7 17 13.5 17 15v2.5c0 1.5-.5 2.5-2 2.5"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </Transition>
+
+    <!-- Variables Panel (opt-in feature): browse all template variables with
+         their current values and insert one at the caret with a click. -->
+    <Transition name="fab-fade">
+      <div
+        v-if="enableVariables && variablesComposable && showVariablesPanel"
+        class="variables-panel"
+        :style="{
+          bottom: `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px))`,
+        }"
+        role="dialog"
+        aria-label="Template variables"
+      >
+        <div class="variables-panel-header">
+          <span class="variables-panel-title">Variables</span>
+          <button
+            class="variables-panel-close"
+            aria-label="Close variables panel"
+            @click="showVariablesPanel = false"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M6 6l12 12M18 6L6 18"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="variables-panel-list">
+          <template
+            v-for="category in variablesComposable.categories.value"
+            :key="category.id"
+          >
+            <div
+              v-if="
+                variablesComposable.getVariablesByCategory(category.id).length
+              "
+              class="variables-panel-category"
+            >
+              {{ category.name }}
+            </div>
+            <button
+              v-for="variable in variablesComposable.getVariablesByCategory(
+                category.id
+              )"
+              :key="variable.id"
+              class="variables-panel-item"
+              :title="variable.description"
+              @mousedown.prevent
+              @click="handlePanelInsert(variable)"
+            >
+              <span class="variables-panel-item-name">{{
+                variable.name
+              }}</span>
+              <span class="variables-panel-item-value">{{
+                variable.value
+              }}</span>
+            </button>
+          </template>
+          <template v-if="uncategorizedVariables.length">
+            <div class="variables-panel-category">Other</div>
+            <button
+              v-for="variable in uncategorizedVariables"
+              :key="variable.id"
+              class="variables-panel-item"
+              :title="variable.description"
+              @mousedown.prevent
+              @click="handlePanelInsert(variable)"
+            >
+              <span class="variables-panel-item-name">{{
+                variable.name
+              }}</span>
+              <span class="variables-panel-item-value">{{
+                variable.value
+              }}</span>
+            </button>
+          </template>
+        </div>
+        <div class="variables-panel-footer">
+          Click a variable to insert it at the cursor
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRef, nextTick, onMounted, watch } from "vue";
+import {
+  ref,
+  computed,
+  toRef,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  watch,
+} from "vue";
 
 import {
   applyTextAlignment,
@@ -355,7 +479,7 @@ import CommentModal from "./CommentModal.vue";
 import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
-import { useVariables } from "../composables/useVariables";
+import { useVariables, type Variable } from "../composables/useVariables";
 import { useSmartAutocomplete } from "../composables/useSmartAutocomplete";
 import type { NextLevelEditorProps } from "./NextLevelEditor.types";
 
@@ -470,9 +594,36 @@ const selectedTextForComment = ref("");
 const variablesComposable = props.enableVariables ? useVariables() : null;
 
 // Variable autocomplete state
+const variableAutocompleteRef = ref<InstanceType<
+  typeof VariableAutocomplete
+> | null>(null);
 const showVariableAutocomplete = ref(false);
 const variableAutocompleteQuery = ref("");
 const variableAutocompletePosition = ref({ top: 0, left: 0 });
+
+// Variables panel (FAB-toggled browse & insert surface)
+const showVariablesPanel = ref(false);
+
+// Stack the variables FAB above whichever of the comments/stats FABs are
+// enabled so the FAB column has no gaps regardless of feature flags.
+const variablesFabBottom = computed(() => {
+  let bottom = 28;
+  if (props.enableComments) bottom += 68;
+  if (props.showWritingStats) bottom += 68;
+  return bottom;
+});
+
+// Variables without a category (or with an unknown one) still need a home in
+// the panel — they render under a trailing "Other" group.
+const uncategorizedVariables = computed(() => {
+  if (!variablesComposable) return [];
+  const knownCategories = new Set(
+    variablesComposable.categories.value.map((c) => c.id)
+  );
+  return variablesComposable.variables.value.filter(
+    (v) => !v.category || !knownCategories.has(v.category)
+  );
+});
 
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
@@ -773,13 +924,17 @@ const {
   emitUpdate: (value: string) => emit("update:modelValue", value),
 });
 
-// Export actions using composable
+// Export actions using composable. The toolbar's "Format HTML" button is only
+// shown in code/split views, where the code textarea is the editing surface —
+// so it's wired to formatHtmlCode (which pretty-prints codeContent), not to
+// handleFormatHtml (which only touches the hidden WYSIWYG div and left the
+// visible textarea unchanged).
 const {
   handleExportHtml,
   handleExportMarkdown,
-  handleFormatHtml,
   handleExportPdf,
   handleExportWord,
+  formatHtmlCode,
 } = useExportActions({
   editorContent,
   htmlContent,
@@ -787,6 +942,21 @@ const {
   showToast: showToastNotification,
   updateCodeContent: (content: string) => {
     codeContent.value = content;
+    // Run the same sync flow as typing in the code editor (onCodeInput):
+    // mirror into the WYSIWYG surface + reactive model and capture an undo
+    // snapshot, so the reformat is visible, consistent, and undoable.
+    if (editorContent.value) {
+      editorContent.value.innerHTML = content;
+      htmlContent.value = content;
+    }
+    // In split view with the right pane in editor mode, editorContent
+    // resolves to the split editor — keep the hidden main editor mirrored
+    // too (same as onSplitEditorInput) so mode switches preserve content.
+    const hidden = editorPanelsRef.value?.editorRef;
+    if (hidden && hidden !== editorContent.value) {
+      hidden.innerHTML = content;
+    }
+    captureSnapshot();
   },
   captureSnapshot,
 });
@@ -908,6 +1078,58 @@ function handleCommandExecute(command: any) {
   command.action();
 }
 
+// ---------------------------------------------------------------------------
+// Mobile toolbar ownership.
+// MobileToolbar teleports to <body> and (via useDeviceDetection) renders on
+// every narrow viewport — so a page with several editors used to stack one
+// identical fixed bottom bar PER instance. Same multi-instance family as the
+// selection bubble, fixed with the same idea as useFloatingToolbar's
+// `editorRoot` check: document-level events are scoped to THIS instance's
+// root, and only the instance owning the last focus/interaction shows its
+// toolbar. Before any interaction (e.g. while browsing the demo home page)
+// no instance owns it and no toolbar shows.
+// ---------------------------------------------------------------------------
+const ownsMobileToolbar = ref(false);
+// The toolbar's Close (X) hides it until this editor is focused/tapped again.
+const mobileToolbarClosed = ref(false);
+const mobileToolbarVisible = computed(
+  () => ownsMobileToolbar.value && !mobileToolbarClosed.value
+);
+
+const updateMobileToolbarOwnership = (event: Event) => {
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  if (rootEl.value?.contains(target)) {
+    // Interaction inside this editor claims ownership (and re-opens a
+    // toolbar previously dismissed with the X).
+    ownsMobileToolbar.value = true;
+    mobileToolbarClosed.value = false;
+    return;
+  }
+  const el = target instanceof Element ? target : target.parentElement;
+  // The mobile toolbar itself is teleported to <body>: using it must not
+  // release ownership (only the owning instance's toolbar is rendered).
+  if (el?.closest(".mobile-toolbar")) return;
+  // Anything else — another editor instance (which claims for itself) or
+  // plain page content — releases ownership, hiding this toolbar.
+  ownsMobileToolbar.value = false;
+};
+
+onMounted(() => {
+  // Capture phase so stopPropagation inside widgets can't desync ownership.
+  document.addEventListener("pointerdown", updateMobileToolbarOwnership, true);
+  document.addEventListener("focusin", updateMobileToolbarOwnership, true);
+});
+
+onUnmounted(() => {
+  document.removeEventListener(
+    "pointerdown",
+    updateMobileToolbarOwnership,
+    true
+  );
+  document.removeEventListener("focusin", updateMobileToolbarOwnership, true);
+});
+
 // Dispatch MobileToolbar button actions to the real editor handlers. Previously
 // the mobile toolbar was never rendered and its buttons emitted a bare action id
 // that nothing listened for, so every button was a no-op. [#6/#45]
@@ -970,7 +1192,9 @@ function handleMobileAction(actionId: string) {
       redo();
       break;
     default:
-      // checklist / export / settings / shortcuts have no handler yet.
+      // Every button MobileToolbar ships is wired above. checklist / export /
+      // settings / shortcuts were removed from the toolbar until they get
+      // real handlers — add their cases here when reinstating the buttons.
       break;
   }
 }
@@ -1066,16 +1290,20 @@ const onInput = () => {
     handleSmartAutocomplete();
   }
 
+  // Wrap completed variable tokens BEFORE the capture+sanitize+emit pass so
+  // the emitted model already contains the pill. Wrapping after the emit made
+  // the v-model round-trip see a DOM (with pill) that differed from the model
+  // (without pill), rewriting innerHTML — and destroying the caret — one tick
+  // later. The wrap itself is caret-preserving and idempotent.
+  if (variablesComposable && editorContent.value) {
+    variablesComposable.wrapVariablesInContent(editorContent.value);
+  }
+
   onInputBase();
 
   // Detect variable syntax for autocomplete
   if (props.enableVariables) {
     detectVariableSyntax();
-  }
-
-  // Wrap variables in content
-  if (variablesComposable && editorContent.value) {
-    variablesComposable.wrapVariablesInContent(editorContent.value);
   }
 
   // Update writing statistics
@@ -1168,6 +1396,15 @@ const { handleKeydown } = useKeyboardShortcuts({
   handleBlockAction,
   handleSlashMenuKeydown,
 });
+
+// Editor keydown: the variable autocomplete (when open) claims
+// Arrow/Enter/Tab/Escape first — the same priority carve-out the slash menu
+// has inside useKeyboardShortcuts — so Enter inserts the highlighted variable
+// instead of a new paragraph.
+function onEditorKeydown(event: KeyboardEvent) {
+  if (variableAutocompleteRef.value?.handleEditorKeydown(event)) return;
+  handleKeydown(event);
+}
 
 // Comments handlers
 function handleSelectThread(threadId: string) {
@@ -1282,9 +1519,12 @@ function detectVariableSyntax() {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
 
+      // The dropdown is position: fixed, so viewport coordinates are used
+      // as-is — adding scrollY here pushed it below the viewport whenever
+      // the host page was scrolled.
       variableAutocompletePosition.value = {
-        top: rect.bottom + window.scrollY + 5,
-        left: rect.left + window.scrollX,
+        top: rect.bottom + 5,
+        left: rect.left,
       };
 
       variableAutocompleteQuery.value = detection.query;
@@ -1335,6 +1575,29 @@ function closeVariableAutocomplete() {
   showVariableAutocomplete.value = false;
 }
 
+// Insert a variable from the variables panel. The panel items use
+// @mousedown.prevent so the editor selection survives the click; if the caret
+// was never placed in the editor, the pill is appended at the end instead.
+function handlePanelInsert(variable: Variable) {
+  if (!variablesComposable || !editorContent.value) return;
+  const editor = editorContent.value;
+  const selection = window.getSelection();
+  const range =
+    selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+  if (!range || !editor.contains(range.startContainer)) {
+    const endRange = document.createRange();
+    endRange.selectNodeContents(editor);
+    endRange.collapse(false);
+    selection?.removeAllRanges();
+    selection?.addRange(endRange);
+  }
+
+  // insertVariable dispatches a bubbling "input" event, so the normal
+  // capture/sanitize/emit pipeline runs without extra plumbing here.
+  variablesComposable.insertVariable(editor, variable.name);
+}
+
 // Dismiss the top-most open overlay (modal / context menu / designer /
 // dropdown). Returns true if something was closed so callers can stop.
 function closeTopMostOverlay(): boolean {
@@ -1352,6 +1615,10 @@ function closeTopMostOverlay(): boolean {
   }
   if (showHistoryTimeline.value) {
     showHistoryTimeline.value = false;
+    return true;
+  }
+  if (showVariablesPanel.value) {
+    showVariablesPanel.value = false;
     return true;
   }
   if (showEmojiPicker.value) {
@@ -1449,7 +1716,7 @@ useEditorSetup({
   modelValue: props.modelValue,
   applySanitizedContent,
   captureSnapshot,
-  handleKeydown,
+  handleKeydown: onEditorKeydown,
   enableSpellCheck,
   handleDocumentClick: handleGlobalDocumentClick,
   handleEscape: handleGlobalEscape,
@@ -1493,10 +1760,11 @@ useEditorSetup({
   transform: scale(0.8) translateY(20px);
 }
 
-/* Comments / Stats FABs — refined surface controls, one shared material
-   (no gradient blobs). Sized as a matched pair; the icon is currentColor. */
+/* Comments / Stats / Variables FABs — refined surface controls, one shared
+   material (no gradient blobs). Sized as a matched set; icon is currentColor. */
 .comments-toggle-fab,
-.writing-stats-toggle-fab {
+.writing-stats-toggle-fab,
+.variables-toggle-fab {
   position: fixed;
   right: 28px;
   border: 1px solid var(--color-border);
@@ -1510,19 +1778,26 @@ useEditorSetup({
     0 1px 3px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.25s ease, background 0.2s ease, color 0.2s ease,
-    border-color 0.2s ease;
+    border-color 0.2s ease, bottom 0.25s ease;
   z-index: 9998;
 }
 
 .theme-dark .comments-toggle-fab,
-.theme-dark .writing-stats-toggle-fab {
+.theme-dark .writing-stats-toggle-fab,
+.theme-dark .variables-toggle-fab {
   box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.5),
     0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+/* The whole fixed FAB column lifts above the mobile bottom toolbar while it
+   is open: MobileToolbar publishes its measured on-screen height as
+   --nle-mobile-toolbar-clearance on <html> (0 when hidden), so the offset is
+   keyed on actual toolbar state — not a viewport guess — and the FABs never
+   cover (or get covered by) the bar despite their higher z-index. */
+
 /* Comments = the primary action: accent icon + a quiet accent ring. */
 .comments-toggle-fab {
-  bottom: 28px;
+  bottom: calc(28px + var(--nle-mobile-toolbar-clearance, 0px));
   width: 56px;
   height: 56px;
   color: var(--toolbar-accent);
@@ -1531,14 +1806,23 @@ useEditorSetup({
 
 /* Stats = secondary: a calm neutral icon until hovered. */
 .writing-stats-toggle-fab {
-  bottom: 96px;
+  bottom: calc(96px + var(--nle-mobile-toolbar-clearance, 0px));
+  width: 52px;
+  height: 52px;
+  color: var(--color-text-secondary);
+}
+
+/* Variables = secondary too; its `bottom` is computed inline so the FAB
+   column stays gapless whichever feature flags are on. */
+.variables-toggle-fab {
   width: 52px;
   height: 52px;
   color: var(--color-text-secondary);
 }
 
 .comments-toggle-fab:hover,
-.writing-stats-toggle-fab:hover {
+.writing-stats-toggle-fab:hover,
+.variables-toggle-fab:hover {
   transform: translateY(-3px);
   background: var(--color-surface-overlay);
   color: var(--toolbar-accent);
@@ -1548,13 +1832,15 @@ useEditorSetup({
 }
 
 .theme-dark .comments-toggle-fab:hover,
-.theme-dark .writing-stats-toggle-fab:hover {
+.theme-dark .writing-stats-toggle-fab:hover,
+.theme-dark .variables-toggle-fab:hover {
   box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.6),
     0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .comments-toggle-fab:active,
-.writing-stats-toggle-fab:active {
+.writing-stats-toggle-fab:active,
+.variables-toggle-fab:active {
   transform: translateY(-1px) scale(0.96);
 }
 
@@ -1578,15 +1864,132 @@ useEditorSetup({
 
 @media (prefers-reduced-motion: reduce) {
   .comments-toggle-fab,
-  .writing-stats-toggle-fab {
+  .writing-stats-toggle-fab,
+  .variables-toggle-fab {
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
   .comments-toggle-fab:hover,
   .writing-stats-toggle-fab:hover,
+  .variables-toggle-fab:hover,
   .comments-toggle-fab:active,
-  .writing-stats-toggle-fab:active {
+  .writing-stats-toggle-fab:active,
+  .variables-toggle-fab:active {
     transform: none;
   }
+}
+
+/* Variables panel — floating browse & insert surface anchored to its FAB.
+   Same material as the other floating panels: raised surface, neutral
+   shadow, accent used only as a signal. */
+.variables-panel {
+  position: fixed;
+  right: 28px;
+  width: 320px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  z-index: 9998;
+}
+
+.variables-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.variables-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.variables-panel-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.variables-panel-close:hover {
+  background: var(--color-surface-overlay);
+  color: var(--color-text);
+}
+
+.variables-panel-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.variables-panel-category {
+  padding: 10px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.variables-panel-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.variables-panel-item:hover,
+.variables-panel-item:focus-visible {
+  background: var(--color-surface-overlay);
+}
+
+.variables-panel-item-name {
+  font-family: "Courier New", Consolas, Monaco, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--toolbar-accent);
+  white-space: nowrap;
+}
+
+.variables-panel-item-value {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.variables-panel-footer {
+  padding: 8px 16px;
+  border-top: 1px solid var(--color-border);
+  font-size: 11px;
+  color: var(--color-text-secondary);
 }
 
 /* Comment Highlight Pulse */
@@ -1611,7 +2014,7 @@ useEditorSetup({
 /* Responsive */
 @media (max-width: 768px) {
   .comments-toggle-fab {
-    bottom: 20px;
+    bottom: calc(20px + var(--nle-mobile-toolbar-clearance, 0px));
     right: 20px;
     width: 56px;
     height: 56px;

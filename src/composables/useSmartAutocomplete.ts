@@ -28,6 +28,14 @@ export interface MarkdownShortcut {
   trigger: string;
   pattern: RegExp;
   replacement: (match: RegExpMatchArray) => string;
+  /**
+   * Optional veto on a pattern match, for constraints a plain RegExp cannot
+   * express without lookbehind (unsupported on Safari < 16.4, which we
+   * target). E.g. the single-asterisk italic rule must not fire on the inner
+   * span of a still-being-typed `**bold**` marker. For global patterns,
+   * detection keeps scanning for a later match when the guard rejects one.
+   */
+  guard?: (text: string, match: RegExpMatchArray) => boolean;
   cursorOffset?: number;
   description: string;
 }
@@ -43,6 +51,55 @@ export interface SmartAutocompleteOptions {
   enableEmoji?: boolean;
   enableSmartPunctuation?: boolean;
 }
+
+/**
+ * Tags that must never be nested inside a `<p>`: a paragraph's content model
+ * is phrasing content only, so the HTML parser splits the `<p>` around them
+ * on the next serialize/parse round-trip (reload, import, v-model re-render),
+ * silently diverging persisted content from what was authored.
+ */
+const BLOCK_LEVEL_TAG = /^(?:H[1-6]|P|DIV|UL|OL|BLOCKQUOTE|PRE|HR|TABLE|FIGURE)$/;
+
+/**
+ * Whether a parsed replacement fragment contains any block-level element at
+ * its top level (e.g. the `<h1>` produced by the "# " markdown shortcut).
+ */
+const fragmentHasBlockLevel = (fragment: DocumentFragment): boolean => {
+  for (let child = fragment.firstChild; child; child = child.nextSibling) {
+    if (
+      child.nodeType === Node.ELEMENT_NODE &&
+      BLOCK_LEVEL_TAG.test((child as Element).tagName)
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Nearest `<p>` ancestor of `node` strictly inside `editor`, or null.
+ */
+const closestParagraph = (
+  node: Node,
+  editor: HTMLElement
+): HTMLElement | null => {
+  let el = node.parentElement;
+  while (el && el !== editor) {
+    if (el.tagName === "P") return el;
+    el = el.parentElement;
+  }
+  return null;
+};
+
+/**
+ * Whether a container still holds anything worth keeping: any text, or any
+ * element other than a bare `<br>` placeholder.
+ */
+const hasRenderableContent = (
+  container: DocumentFragment | HTMLElement
+): boolean =>
+  (container.textContent || "") !== "" ||
+  container.querySelector(":not(br)") !== null;
 
 /**
  * Professional smart autocomplete system
@@ -302,6 +359,16 @@ export function useSmartAutocomplete(
     {
       trigger: "*",
       pattern: /\*([^*]+)\*/g,
+      // A single-asterisk span that touches another "*" is part of a bold
+      // marker (possibly still being typed: "**bo*" must wait for the final
+      // "*" so the bold rule can win) — never italicize it.
+      guard: (text, match) => {
+        const start = match.index ?? 0;
+        return (
+          text.charAt(start - 1) !== "*" &&
+          text.charAt(start + match[0].length) !== "*"
+        );
+      },
       replacement: (m) => `<em>${m[1]}</em>`,
       description: "Italic",
     },
@@ -349,7 +416,13 @@ export function useSmartAutocomplete(
     if (!enableMarkdownShortcuts) return null;
 
     for (const shortcut of markdownShortcuts) {
-      const match = new RegExp(shortcut.pattern).exec(text);
+      const pattern = new RegExp(shortcut.pattern);
+      let match = pattern.exec(text);
+      // A guard can veto a match; for global patterns keep scanning for a
+      // later occurrence that passes.
+      while (match && shortcut.guard && !shortcut.guard(text, match)) {
+        match = pattern.global ? pattern.exec(text) : null;
+      }
       if (match) {
         const replacement = shortcut.replacement(match);
         return {
@@ -567,12 +640,41 @@ export function useSmartAutocomplete(
       result.type === "markdown";
 
     let lastInserted: Node | null = null;
+    let insertedBlockLevel = false;
     if (isHtmlReplacement) {
       const template = document.createElement("template");
       template.innerHTML = result.replacement;
       lastInserted = template.content.lastChild;
       if (lastInserted) {
-        range.insertNode(template.content);
+        const paragraph = fragmentHasBlockLevel(template.content)
+          ? closestParagraph(node, editor)
+          : null;
+        if (paragraph && paragraph.parentNode) {
+          // Block-level replacement typed inside a <p> (e.g. "# " heading).
+          // A <p> cannot legally contain block elements, so instead of
+          // nesting, convert the paragraph: move any content after the caret
+          // into its own trailing paragraph, insert the block(s) as siblings,
+          // and drop the source paragraph if the match consumed everything.
+          const parent = paragraph.parentNode;
+          const tailRange = document.createRange();
+          tailRange.setStart(node, start);
+          tailRange.setEnd(paragraph, paragraph.childNodes.length);
+          const tail = tailRange.extractContents();
+
+          const anchor = paragraph.nextSibling;
+          parent.insertBefore(template.content, anchor);
+          if (hasRenderableContent(tail)) {
+            const tailParagraph = document.createElement("p");
+            tailParagraph.appendChild(tail);
+            parent.insertBefore(tailParagraph, anchor);
+          }
+          if (!hasRenderableContent(paragraph)) {
+            parent.removeChild(paragraph);
+          }
+          insertedBlockLevel = true;
+        } else {
+          range.insertNode(template.content);
+        }
       }
     } else if (result.replacement) {
       const textNode = document.createTextNode(result.replacement);
@@ -596,6 +698,18 @@ export function useSmartAutocomplete(
         );
       } else {
         newRange.setStartAfter(lastInserted);
+      }
+    } else if (lastInserted && insertedBlockLevel) {
+      // Block conversion: place the caret at the end of the new block so
+      // typing continues inside it (heading, list item, quote, ...)
+      let target: Node = lastInserted;
+      while (target.lastChild) {
+        target = target.lastChild;
+      }
+      if (target.nodeType === Node.TEXT_NODE) {
+        newRange.setStart(target, target.textContent?.length ?? 0);
+      } else {
+        newRange.setStartAfter(target);
       }
     } else if (lastInserted) {
       // Default: place the caret right after the inserted content

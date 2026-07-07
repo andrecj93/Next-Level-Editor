@@ -2,6 +2,8 @@
  * Command definitions for slash commands and toolbar actions
  */
 
+import { splitBlockAtCaret, placeCaretInside } from "./blockInsertion";
+
 export interface EditorCommand {
   id: string;
   label: string;
@@ -300,9 +302,28 @@ export function insertHorizontalRule() {
   const range = selection.getRangeAt(0);
   const hr = document.createElement("hr");
   range.deleteContents();
-  range.insertNode(hr);
 
-  // Move cursor after HR
+  // Escape the caret's paragraph/heading first: inserting at a caret INSIDE a
+  // <p> nests the <hr> (`<p><hr></p>` — invalid HTML that parsers restructure
+  // on any round-trip). Splitting drops the <hr> between blocks instead.
+  const start = range.startContainer;
+  const startEl =
+    start.nodeType === Node.ELEMENT_NODE
+      ? (start as HTMLElement)
+      : start.parentElement;
+  const editableRoot = startEl?.closest<HTMLElement>(
+    '[contenteditable="true"]'
+  );
+  const tail = editableRoot ? splitBlockAtCaret(range, editableRoot) : null;
+
+  if (tail?.parentNode) {
+    tail.parentNode.insertBefore(hr, tail);
+    placeCaretInside(tail, true);
+    return;
+  }
+
+  // Caret was already at block level (or outside a splittable block).
+  range.insertNode(hr);
   const newRange = document.createRange();
   newRange.setStartAfter(hr);
   newRange.collapse(true);

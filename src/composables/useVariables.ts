@@ -149,12 +149,14 @@ export function useVariables() {
     },
   ]);
 
-  // Variable categories
+  // Variable categories. Icons are rendered by the UI as stroke SVGs keyed
+  // off the category id (see VariableAutocomplete.vue) — the editor chrome
+  // never uses raw emoji.
   const categories = ref<VariableCategory[]>([
-    { id: "user", name: "User", icon: "👤" },
-    { id: "date", name: "Date & Time", icon: "📅" },
-    { id: "document", name: "Document", icon: "📄" },
-    { id: "company", name: "Company", icon: "🏢" },
+    { id: "user", name: "User" },
+    { id: "date", name: "Date & Time" },
+    { id: "document", name: "Document" },
+    { id: "company", name: "Company" },
   ]);
 
   // Get variables by category
@@ -224,19 +226,49 @@ export function useVariables() {
   };
 
   /**
+   * Build the styled, non-editable pill span for a variable token.
+   *
+   * NOTE: the attribute creation order (class, contenteditable,
+   * data-variable, data-value, title) is mirrored by useHtmlSanitizer's pill
+   * rebuild so a sanitize round-trip of a fresh pill is string-identical —
+   * innerHTML string comparisons decide whether the editor DOM gets rewritten
+   * (destroying the caret), so keep them in sync.
+   */
+  const createVariableSpan = (variableName: string): HTMLSpanElement => {
+    const variable = getVariable(variableName);
+    const span = document.createElement("span");
+    span.className = "editor-variable";
+    span.contentEditable = "false";
+    span.dataset.variable = variableName;
+    span.dataset.value = variable?.value || "";
+    span.textContent = `{{ ${variableName} }}`;
+    if (variable?.description) {
+      span.title = variable.description;
+    }
+    return span;
+  };
+
+  /**
    * Wrap variable spans in the editor content
-   * This transforms {{ varName }} into styled spans
+   * This transforms completed {{ varName }} tokens into styled pill spans.
+   *
+   * Two invariants keep typing safe once a pill exists:
+   * - Idempotence: a pill's own "{{ name }}" label is never re-wrapped, so
+   *   repeated passes (this runs on every input) cannot nest pills and the
+   *   DOM only changes when a new token actually completes.
+   * - Caret preservation: when the text node under the caret is rewritten
+   *   (the user just typed the closing "}}"), the caret is restored to the
+   *   equivalent position among the new nodes instead of collapsing to the
+   *   start of the document.
    */
   const wrapVariablesInContent = (editor: HTMLElement | null) => {
     if (!editor) return;
 
-    // The text node that currently holds the caret must not be rewritten:
-    // replacing it with a fragment destroys the node under the cursor and jumps
-    // the caret to the start of the editor while the user is still typing the
-    // variable. It gets wrapped on a later pass once the caret moves away.
-    const selection = globalThis.getSelection?.();
-    const caretNode =
-      selection && selection.rangeCount > 0 ? selection.anchorNode : null;
+    const selection = globalThis.getSelection?.() ?? null;
+    const caretRange =
+      selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    const caretNode = caretRange ? caretRange.startContainer : null;
+    const caretOffset = caretRange ? caretRange.startOffset : 0;
 
     const walker = document.createTreeWalker(
       editor,
@@ -248,7 +280,9 @@ export function useVariables() {
 
     let node: Node | null;
     while ((node = walker.nextNode())) {
-      if (node === caretNode) continue;
+      // A pill's own "{{ name }}" label is a text node too — re-wrapping it
+      // would nest a new pill inside the old one on every input.
+      if (node.parentElement?.closest(".editor-variable")) continue;
       const text = node.textContent || "";
       const matches = parseVariables(text);
       if (matches.length > 0) {
@@ -260,45 +294,76 @@ export function useVariables() {
     nodesToReplace.forEach(({ node, matches }) => {
       const text = node.textContent || "";
       const fragment = document.createDocumentFragment();
+      const holdsCaret = node === caretNode;
+
+      // Where to restore the caret after the rewrite: either inside a plain
+      // text segment (node + offset) or immediately after a pill span. Only
+      // the first matching segment latches.
+      let restoreIn: Text | null = null;
+      let restoreOffset = 0;
+      let restoreAfter: HTMLElement | null = null;
+      const placeCaret = (candidate: Text | HTMLElement, offset = 0) => {
+        if (restoreIn || restoreAfter) return;
+        if (candidate instanceof HTMLElement) {
+          restoreAfter = candidate;
+        } else {
+          restoreIn = candidate;
+          restoreOffset = Math.max(0, Math.min(offset, candidate.length));
+        }
+      };
+
       let lastIndex = 0;
 
       matches.forEach((match) => {
         const matchIndex = match.index!;
         const varName = match[1].trim();
-        const variable = getVariable(varName);
 
         // Add text before variable
         if (matchIndex > lastIndex) {
-          fragment.appendChild(
-            document.createTextNode(text.substring(lastIndex, matchIndex))
+          const before = document.createTextNode(
+            text.substring(lastIndex, matchIndex)
           );
+          fragment.appendChild(before);
+          if (holdsCaret && caretOffset <= matchIndex) {
+            placeCaret(before, caretOffset - lastIndex);
+          }
         }
 
-        // Create variable span
-        const span = document.createElement("span");
-        span.className = "editor-variable";
-        span.contentEditable = "false";
-        span.dataset.variable = varName;
-        span.dataset.value = variable?.value || "";
-        span.textContent = `{{ ${varName} }}`;
-
-        // Add tooltip
-        if (variable?.description) {
-          span.title = variable.description;
-        }
-
+        const span = createVariableSpan(varName);
         fragment.appendChild(span);
+        if (holdsCaret && caretOffset <= matchIndex + match[0].length) {
+          placeCaret(span);
+        }
         lastIndex = matchIndex + match[0].length;
       });
 
       // Add remaining text
       if (lastIndex < text.length) {
-        fragment.appendChild(
-          document.createTextNode(text.substring(lastIndex))
-        );
+        const after = document.createTextNode(text.substring(lastIndex));
+        fragment.appendChild(after);
+        if (holdsCaret) {
+          placeCaret(after, caretOffset - lastIndex);
+        }
       }
 
+      const lastChild = fragment.lastChild;
       node.parentNode?.replaceChild(fragment, node);
+
+      if (holdsCaret && selection) {
+        const range = document.createRange();
+        if (restoreIn) {
+          range.setStart(restoreIn, restoreOffset);
+        } else if (restoreAfter) {
+          range.setStartAfter(restoreAfter);
+        } else if (lastChild) {
+          range.setStartAfter(lastChild);
+        } else {
+          return;
+        }
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
     });
   };
 
@@ -312,19 +377,7 @@ export function useVariables() {
     if (!selection || selection.rangeCount === 0) return;
 
     const range = selection.getRangeAt(0);
-    const variable = getVariable(variableName);
-
-    // Create variable span
-    const span = document.createElement("span");
-    span.className = "editor-variable";
-    span.contentEditable = "false";
-    span.dataset.variable = variableName;
-    span.dataset.value = variable?.value || "";
-    span.textContent = `{{ ${variableName} }}`;
-
-    if (variable?.description) {
-      span.title = variable.description;
-    }
+    const span = createVariableSpan(variableName);
 
     // Insert variable
     range.deleteContents();
