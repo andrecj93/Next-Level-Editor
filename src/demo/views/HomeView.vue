@@ -51,6 +51,7 @@
           <NextLevelEditor
             v-if="!compact"
             v-model="demoContent"
+            theme-preset="warm"
             :show-writing-stats="true"
             width="100%"
             height="380px"
@@ -86,7 +87,7 @@ These aren't screenshots. Each panel below is the real component — type in
             hint="Click in, then press <kbd>/</kbd>"
             filename="notes.md"
           >
-            <NextLevelEditor v-model="slashContent" width="100%" height="300px" />
+            <NextLevelEditor v-model="slashContent" theme-preset="warm" toolbar-layout="compact" width="100%" height="300px" />
           </LiveDemo>
 
           <LiveDemo
@@ -100,6 +101,8 @@ These aren't screenshots. Each panel below is the real component — type in
           >
             <NextLevelEditor
               v-model="commentsContent"
+              theme-preset="warm"
+              toolbar-layout="compact"
               :enable-comments="true"
               :mention-search="demoMentionSearch"
               width="100%"
@@ -115,7 +118,7 @@ These aren't screenshots. Each panel below is the real component — type in
             hint="Open the variables panel &amp; insert a token"
             filename="contract.tpl"
           >
-            <NextLevelEditor v-model="variablesContent" :enable-variables="true" width="100%" height="300px" />
+            <NextLevelEditor v-model="variablesContent" theme-preset="warm" toolbar-layout="compact" :enable-variables="true" width="100%" height="300px" />
           </LiveDemo>
 
           <LiveDemo
@@ -128,7 +131,7 @@ These aren't screenshots. Each panel below is the real component — type in
             alt
           >
             <div class="export-demo">
-              <NextLevelEditor v-model="exportContent" width="100%" height="300px" />
+              <NextLevelEditor v-model="exportContent" theme-preset="warm" toolbar-layout="compact" width="100%" height="300px" />
               <div class="export-out">
                 <div class="export-tabs">
                   <button :class="{ on: exportMode === 'markdown' }" @click="exportMode = 'markdown'">Markdown</button>

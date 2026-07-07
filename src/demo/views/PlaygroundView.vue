@@ -165,7 +165,7 @@ const content = ref(startEmpty ? "" : getDefaultTemplate().content);
 
 const editorConfig = ref({
   height: "620",
-  themePreset: "default",
+  themePreset: "warm",
   toolbarLayout: "comfortable" as "comfortable" | "compact",
   showWritingStats: true,
   enableComments: true,
@@ -186,7 +186,7 @@ const loadTemplate = () => {
 const resetConfig = () => {
   editorConfig.value = {
     height: "620",
-    themePreset: "default",
+    themePreset: "warm",
     toolbarLayout: "comfortable",
     showWritingStats: true,
     enableComments: true,

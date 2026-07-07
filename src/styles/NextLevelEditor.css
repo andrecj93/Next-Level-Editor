@@ -842,12 +842,13 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  /* Make the toolbar a query container so it adapts to its OWN width, not the
-     viewport's. An editor embedded in a narrow column, sidebar or split-pane
-     then compacts to a tight icon bar instead of wrapping the full desktop
-     toolbar into many rows. Scoped to the toolbar (which has no fixed-position
-     descendants) so it never re-parents the editor's fullscreen / emoji-picker
-     / auto-save fixed elements the way container-type on the root would. */
+  /* Make the toolbar a query container so it can adapt to its OWN width, not
+     the viewport's (see the @container block below): an editor embedded narrow
+     — a sidebar, a split-pane, a phone — auto-adopts the single-row compact
+     layout instead of wrapping the desktop toolbar into many rows. Scoped to
+     the toolbar (no fixed-position descendants) so it never re-parents the
+     editor's fullscreen / emoji-picker / auto-save fixed elements the way
+     container-type on the root would. */
   container-type: inline-size;
   container-name: nle-toolbar;
   /* A lit top edge makes the bar read as a solid slab, not a flat strip. */
@@ -1086,6 +1087,68 @@
   padding: 8px 12px;
   box-shadow: 0 10px 26px -6px rgba(15, 23, 42, 0.5),
     0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+/* ============================================================
+   AUTO-compact (container query) — the same single dense row as
+   toolbarLayout="compact", but triggered by the toolbar's OWN width instead
+   of an explicit prop. So an editor embedded narrow (a sidebar, a split-pane,
+   the full editor on a phone, a demo panel) collapses the desktop toolbar to
+   one quiet strip on its own — no prop needed — and the document gets the room.
+   The @media rules react to the viewport; this reacts to the container, which
+   is what makes it right for narrow-inside-wide embeds. Values mirror
+   .is-compact so both paths look identical.
+   ============================================================ */
+@container nle-toolbar (max-width: 640px) {
+  .editor-toolbar-modern {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: visible;
+    gap: 4px;
+    padding: 6px 12px;
+    min-height: 46px;
+    scrollbar-width: none;
+  }
+  .editor-toolbar-modern::-webkit-scrollbar {
+    height: 0;
+  }
+  .editor-toolbar-modern .toolbar-section-group {
+    gap: 3px;
+    flex-wrap: nowrap;
+  }
+  .editor-toolbar-modern .toolbar-divider {
+    height: 20px;
+    margin: 0 3px;
+  }
+  .editor-toolbar-modern .dropdown-label,
+  .editor-toolbar-modern .view-mode-btn .btn-label {
+    display: none;
+  }
+  .editor-toolbar-modern .dropdown-trigger {
+    gap: 2px;
+    padding: 0 8px;
+    min-height: 32px;
+  }
+  .editor-toolbar-modern .dropdown-arrow {
+    font-size: 8px;
+  }
+  .editor-toolbar-modern .toolbar-btn-modern {
+    height: 32px;
+    min-width: 32px;
+    padding: 0 6px;
+  }
+  .editor-toolbar-modern .toolbar-group,
+  .editor-toolbar-modern .view-mode-group {
+    padding: 2px;
+    gap: 2px;
+  }
+  .editor-toolbar-modern .view-mode-btn,
+  .editor-toolbar-modern .view-mode-btn.with-text {
+    min-width: 34px;
+    height: 32px;
+    padding: 0 9px;
+    gap: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1827,72 +1890,6 @@
   .view-mode-btn.with-text {
     min-width: 38px;
     padding: 0 8px;
-  }
-}
-
-/* ============================================================
-   Container-responsive toolbar
-   The rules above react to the viewport (mobile). These react to the
-   toolbar's OWN width, so the editor compacts wherever it is embedded
-   narrow — a demo panel, a sidebar, a split view — even on a wide screen.
-   Behaviour mirrors the mobile breakpoints (compact, icon-only) so it
-   collapses from many wrapped rows to ~1–2, giving the writing surface
-   room to breathe. No control is removed; labels fold into their icons.
-   ============================================================ */
-@container nle-toolbar (max-width: 760px) {
-  .editor-toolbar-modern {
-    gap: 4px;
-    padding: 8px 10px;
-    min-height: 48px;
-  }
-  .editor-toolbar-modern .toolbar-divider {
-    height: 22px;
-    margin: 0 2px;
-  }
-  .editor-toolbar-modern .toolbar-group {
-    padding: 2px;
-    gap: 2px;
-  }
-  /* Dropdowns and the view switcher go icon-only to save two-thirds of their
-     width; their tooltips still name them on hover/focus. */
-  .editor-toolbar-modern .dropdown-label,
-  .editor-toolbar-modern .view-mode-btn .btn-label {
-    display: none;
-  }
-  .editor-toolbar-modern .toolbar-btn-modern,
-  .editor-toolbar-modern .dropdown-trigger {
-    min-width: 34px;
-    height: 34px;
-    padding: 0 8px;
-  }
-  .editor-toolbar-modern .view-mode-btn,
-  .editor-toolbar-modern .view-mode-btn.with-text {
-    min-width: 36px;
-    padding: 0 8px;
-  }
-}
-
-@container nle-toolbar (max-width: 700px) {
-  .editor-toolbar-modern {
-    gap: 3px;
-    padding: 6px 8px;
-  }
-  /* Dividers and the group chrome add up across many sections; drop them to
-     reclaim a row so a tightly-embedded editor is toolbar-light, content-heavy. */
-  .editor-toolbar-modern .toolbar-divider {
-    display: none;
-  }
-  .editor-toolbar-modern .toolbar-group {
-    padding: 0;
-    background: none;
-    border-color: transparent;
-  }
-  .editor-toolbar-modern .toolbar-btn-modern,
-  .editor-toolbar-modern .dropdown-trigger,
-  .editor-toolbar-modern .view-mode-btn {
-    min-width: 32px;
-    height: 32px;
-    padding: 0 7px;
   }
 }
 
