@@ -1,6 +1,9 @@
 <template>
   <nav
-    :class="['editor-toolbar-modern', { 'is-compact': toolbarLayout === 'compact' }]"
+    :class="[
+      'editor-toolbar-modern',
+      { 'is-compact': toolbarLayout === 'compact', 'is-mini': isMini },
+    ]"
     role="toolbar"
     aria-label="Text formatting toolbar"
   >
@@ -29,8 +32,9 @@
         @remember-selection="$emit('remember-selection')"
       />
 
-      <!-- Alignment Dropdown -->
+      <!-- Alignment Dropdown (folded into the expand set in mini mode) -->
       <ToolbarSection
+        v-show="!isMini"
         type="dropdown"
         :visible="isToolbarSectionVisible('alignment')"
         label="Align"
@@ -51,6 +55,7 @@
 
     <!-- Insert & Style Group -->
     <div
+      v-show="!isMini"
       class="toolbar-section-group"
       role="group"
       aria-label="Insert and styling"
@@ -175,6 +180,7 @@
 
     <!-- History & Tools Group -->
     <div
+      v-show="!isMini"
       class="toolbar-section-group"
       role="group"
       aria-label="History and tools"
@@ -251,6 +257,7 @@
 
     <!-- View & Display Controls Group -->
     <div
+      v-show="!isMini"
       class="toolbar-section-group"
       role="group"
       aria-label="View and display controls"
@@ -347,9 +354,13 @@
         />
       </div>
 
-      <!-- Compact overflow — the rarely-used tools in one calm menu -->
+      <!-- Compact overflow — the rarely-used tools (view modes, fullscreen,
+           tool actions) in one calm menu once the mini bar is expanded. Hidden
+           in the collapsed mini state; revealed with the rest by the expand
+           toggle. -->
       <ToolbarSection
         v-if="toolbarLayout === 'compact'"
+        v-show="!isMini"
         type="dropdown"
         label="More"
         preserve-label
@@ -386,11 +397,26 @@
           ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg></span>
       </button>
     </div>
+
+    <!-- Mini-toolbar expand / collapse — compact layout only. Collapsed shows
+         just the formatting essentials; this reveals the full toolbar on tap. -->
+    <button
+      v-if="toolbarLayout === 'compact'"
+      type="button"
+      class="toolbar-btn-modern toolbar-expand-toggle"
+      :class="{ 'is-open': expanded }"
+      :data-tooltip="expanded ? 'Show fewer tools' : 'Show all tools'"
+      :aria-label="expanded ? 'Collapse toolbar' : 'Expand toolbar'"
+      :aria-expanded="expanded"
+      @click="expanded = !expanded"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+    </button>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { ref, computed, watch } from "vue";
 import type { ToolbarAction } from "../types/toolbar";
 import type { ToolbarConfig } from "../composables/useSmartToolbar";
 import ToolbarSection from "./ToolbarSection.vue";
@@ -419,6 +445,23 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+/**
+ * Mini toolbar (compact layout only): the bar starts as a tight essentials-only
+ * row — paragraph format, bold/italic/underline/strike, alignment and lists —
+ * with an expand toggle. Everything else (insert, colours, tools, the "⋯ More"
+ * overflow, export) stays one tap away but out of the way, so the writing
+ * surface wins. Comfortable layout ignores this entirely.
+ */
+const expanded = ref(false);
+const isMini = computed(() => props.toolbarLayout === "compact" && !expanded.value);
+// Switching layouts (e.g. the playground toggle) always re-collapses.
+watch(
+  () => props.toolbarLayout,
+  () => {
+    expanded.value = false;
+  }
+);
 
 const emit = defineEmits<{
   "remember-selection": [];

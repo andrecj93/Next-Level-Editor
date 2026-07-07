@@ -1090,6 +1090,39 @@
 }
 
 /* ============================================================
+   MINI toolbar (compact + collapsed) — the default state of a compact editor.
+   Only the formatting essentials show; the expand toggle (pinned right, in the
+   accent so it reads as an affordance) reveals the rest. The bar doesn't scroll
+   here because the essentials fit, which also lets the button tooltips escape.
+   ============================================================ */
+.editor-toolbar-modern.is-compact.is-mini {
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+.editor-toolbar-modern.is-compact.is-mini .toolbar-expand-toggle {
+  margin-left: auto;
+}
+
+/* EXPANDED (compact + open) — the "show me everything" state the user opted
+   into: the full toolbar wraps so every control is visible at once, no scroll. */
+.editor-toolbar-modern.is-compact:not(.is-mini) {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+/* The expand/collapse affordance — accent-tinted; its chevron flips when open. */
+.editor-toolbar-modern.is-compact .toolbar-expand-toggle {
+  color: var(--toolbar-accent);
+  flex: none;
+}
+.toolbar-expand-toggle svg {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.toolbar-expand-toggle.is-open svg {
+  transform: rotate(180deg);
+}
+
+/* ============================================================
    AUTO-compact (container query) — the same single dense row as
    toolbarLayout="compact", but triggered by the toolbar's OWN width instead
    of an explicit prop. So an editor embedded narrow (a sidebar, a split-pane,
