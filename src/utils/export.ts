@@ -13,6 +13,25 @@
  * @param indentSize - Number of spaces for indentation (default: 2)
  * @returns Formatted HTML string
  */
+/**
+ * Escape text content for HTML serialization. The DOM has already decoded
+ * entities, so literal & < > must be re-encoded when emitting markup.
+ */
+function escapeHtmlText(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+/**
+ * Escape an attribute value for HTML serialization (also encodes double quotes,
+ * since attributes are emitted inside double quotes).
+ */
+function escapeHtmlAttribute(value: string): string {
+  return escapeHtmlText(value).replace(/"/g, '&quot;')
+}
+
 export function formatHtml(html: string, indentSize: number = 2): string {
   const temp = document.createElement('div')
   temp.innerHTML = html.trim()
@@ -45,7 +64,7 @@ export function formatHtml(html: string, indentSize: number = 2): string {
 
     if (node.nodeType === Node.TEXT_NODE) {
       const text = (node.textContent || '').trim()
-      return text
+      return escapeHtmlText(text)
     }
 
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -56,7 +75,7 @@ export function formatHtml(html: string, indentSize: number = 2): string {
 
       // Get attributes
       const attrs = Array.from(element.attributes)
-        .map(attr => ` ${attr.name}="${attr.value}"`)
+        .map(attr => ` ${attr.name}="${escapeHtmlAttribute(attr.value)}"`)
         .join('')
 
       // Handle self-closing tags
@@ -69,7 +88,7 @@ export function formatHtml(html: string, indentSize: number = 2): string {
         const children = Array.from(element.childNodes)
           .map(child => {
             if (child.nodeType === Node.TEXT_NODE) {
-              return child.textContent || ''
+              return escapeHtmlText(child.textContent || '')
             }
             return format(child, 0)
           })
@@ -86,7 +105,7 @@ export function formatHtml(html: string, indentSize: number = 2): string {
         const children = Array.from(element.childNodes)
           .map(child => {
             if (child.nodeType === Node.TEXT_NODE) {
-              return child.textContent || ''
+              return escapeHtmlText(child.textContent || '')
             }
             return format(child, 0)
           })
@@ -230,6 +249,69 @@ export function htmlToMarkdown(html: string): string {
           return '---\n\n'
         case 'br':
           return '\n'
+        case 'table': {
+          // Collect rows whether they sit directly under the table or inside
+          // thead/tbody/tfoot sections.
+          const rows: HTMLElement[] = []
+          Array.from(element.children).forEach(section => {
+            const sectionTag = section.tagName.toLowerCase()
+            if (sectionTag === 'tr') {
+              rows.push(section as HTMLElement)
+            } else if (sectionTag === 'thead' || sectionTag === 'tbody' || sectionTag === 'tfoot') {
+              Array.from(section.children).forEach(row => {
+                if (row.tagName.toLowerCase() === 'tr') {
+                  rows.push(row as HTMLElement)
+                }
+              })
+            }
+          })
+          if (rows.length === 0) {
+            return ''
+          }
+
+          // Render a cell's content inline: convert children, escape pipes so
+          // they don't break the GFM table, and collapse newlines to spaces.
+          const cellText = (cell: Element): string =>
+            Array.from(cell.childNodes)
+              .map(convert)
+              .join('')
+              .replace(/\|/g, '\\|')
+              .replace(/\s*\n\s*/g, ' ')
+              .trim()
+          const rowToLine = (row: HTMLElement): string =>
+            `| ${Array.from(row.children).map(cellText).join(' | ')} |`
+
+          // GFM requires a separator after the header row. Treat the first row
+          // as the header (a first row of <th> or a <thead> row lands there);
+          // even without one, synthesizing the separator after the first row
+          // keeps the output rendering as a table.
+          const columnCount = Math.max(rows[0].children.length, 1)
+          const separator = `| ${Array.from({ length: columnCount }, () => '---').join(' | ')} |`
+
+          const lines = rows.map(rowToLine)
+          lines.splice(1, 0, separator)
+          return `${lines.join('\n')}\n\n`
+        }
+        case 'thead':
+        case 'tbody':
+        case 'tfoot':
+        case 'tr':
+        case 'th':
+        case 'td':
+          // Rows/cells are rendered by the parent `table` case above; orphaned
+          // ones outside a table just pass their content through.
+          return children
+        case 'iframe':
+        case 'video': {
+          // Embeds have no Markdown equivalent — emit a link so they survive
+          // export instead of vanishing.
+          let src = element.getAttribute('src') || ''
+          if (!src && tagName === 'video') {
+            const source = element.querySelector('source')
+            src = source?.getAttribute('src') || ''
+          }
+          return src ? `[Embedded video](${src})\n\n` : ''
+        }
         default:
           return children
       }

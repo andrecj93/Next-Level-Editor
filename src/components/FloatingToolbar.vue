@@ -3,7 +3,9 @@
     <transition name="floating">
       <div
         v-if="show && position"
+        ref="toolbarEl"
         class="floating-toolbar"
+        :class="{ 'is-below': position.below }"
         :style="{
           top: `${position.top}px`,
           left: `${position.left}px`
@@ -31,7 +33,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+// Positioning math lives in utils/ (pure + unit-testable; a second plain
+// <script> block exporting it from this SFC tripped TS4082 in vue-tsc's
+// declaration generation).
+import {
+  computeToolbarPosition,
+  ESTIMATED_WIDTH,
+  type ToolbarPosition
+} from '../utils/floatingToolbarPosition'
 
 /**
  * The SELECTION TOOLBAR — the floating bubble that appears over selected text
@@ -54,14 +64,10 @@ interface Props {
   actions: ToolbarAction[]
 }
 
-interface Position {
-  top: number
-  left: number
-}
-
 const props = defineProps<Props>()
 
-const position = ref<Position | null>(null)
+const position = ref<ToolbarPosition | null>(null)
+const toolbarEl = ref<HTMLElement | null>(null)
 
 const updatePosition = () => {
   if (!props.show) {
@@ -83,13 +89,26 @@ const updatePosition = () => {
     return
   }
 
-  // Position toolbar above selection
-  const top = rect.top + window.scrollY - 50
-  const left = rect.left + window.scrollX + (rect.width / 2)
+  // Measure the real bubble width; before first render (v-if) fall back to
+  // an estimate and re-run once the element exists.
+  const measuredWidth = toolbarEl.value?.offsetWidth || 0
+  const hadElement = measuredWidth > 0
 
-  position.value = {
-    top: Math.max(10, top),
-    left: Math.max(10, Math.min(left, window.innerWidth - 300))
+  position.value = computeToolbarPosition({
+    rect: { top: rect.top, bottom: rect.bottom, left: rect.left, width: rect.width },
+    toolbarWidth: hadElement ? measuredWidth : ESTIMATED_WIDTH,
+    viewportWidth: window.innerWidth,
+    scrollX: window.scrollX,
+    scrollY: window.scrollY
+  })
+
+  if (!hadElement) {
+    // First paint used the estimate; re-clamp once with the real width.
+    nextTick(() => {
+      if (props.show && toolbarEl.value && toolbarEl.value.offsetWidth > 0) {
+        updatePosition()
+      }
+    })
   }
 }
 
@@ -151,6 +170,15 @@ onBeforeUnmount(() => {
   border-color: rgba(17, 24, 39, 0.95) transparent transparent transparent;
 }
 
+/* Flipped placement: bubble sits BELOW the selection, arrow points UP.
+   The bubble surface is the same dark chip in light and dark themes, so a
+   single mirrored arrow color covers both. */
+.floating-toolbar.is-below::before {
+  bottom: auto;
+  top: -6px;
+  border-color: transparent transparent rgba(17, 24, 39, 0.95) transparent;
+}
+
 .floating-btn {
   min-width: 36px;
   min-height: 36px;
@@ -187,5 +215,10 @@ onBeforeUnmount(() => {
 .floating-leave-to {
   opacity: 0;
   transform: translateX(-50%) translateY(-10px);
+}
+
+.floating-enter-from.is-below,
+.floating-leave-to.is-below {
+  transform: translateX(-50%) translateY(10px);
 }
 </style>

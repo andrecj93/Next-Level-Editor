@@ -264,7 +264,9 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .find-replace-modal {
-  min-width: 500px;
+  /* Cap the floor to the viewport (overlay has 20px padding per side) so the
+     dialog stays fully reachable on narrow/mobile screens. */
+  min-width: min(500px, calc(100vw - 40px));
   max-width: 600px;
 }
 
@@ -279,7 +281,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10050; /* above floating panels/FABs (9998-9999) */
   padding: 20px;
 }
 
@@ -399,6 +401,9 @@ onBeforeUnmount(() => {
 .modal-footer {
   display: flex;
   justify-content: space-between;
+  /* Let the button groups stack instead of forcing the dialog wider than
+     narrow/mobile viewports (the buttons are white-space: nowrap). */
+  flex-wrap: wrap;
   padding: 16px 24px;
   border-top: 1px solid var(--color-border);
   gap: 12px;
@@ -406,6 +411,7 @@ onBeforeUnmount(() => {
 
 .btn-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 

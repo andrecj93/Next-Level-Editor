@@ -225,7 +225,10 @@ const insertCode = () => {
 
 <style scoped>
 .code-block-modal {
-  min-width: 600px;
+  /* Cap the floor to the viewport (overlay has 20px padding per side) so the
+     dialog — including the close ✕ and footer buttons — stays fully reachable
+     on narrow/mobile screens instead of overflowing both edges. */
+  min-width: min(600px, calc(100vw - 40px));
   max-width: 800px;
 }
 
@@ -240,7 +243,7 @@ const insertCode = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10050; /* above floating panels/FABs (9998-9999) */
   padding: 20px;
 }
 
@@ -378,6 +381,9 @@ const insertCode = () => {
 .modal-footer {
   display: flex;
   justify-content: flex-end;
+  /* Let the buttons stack rather than force the modal wider than tiny (320px)
+     viewports. */
+  flex-wrap: wrap;
   gap: 12px;
   padding: 16px 24px;
   border-top: 1px solid var(--color-border);

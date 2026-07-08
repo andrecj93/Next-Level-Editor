@@ -916,6 +916,131 @@ describe("useKeyboardShortcuts", () => {
     });
   });
 
+  describe("IME Composition Guard", () => {
+    const createShortcuts = () =>
+      useKeyboardShortcuts({
+        editorContent: ref(editorElement),
+        onInput: mockOnInput,
+        onCaptureSnapshot: mockOnCaptureSnapshot,
+        undo: mockUndo,
+        redo: mockRedo,
+        openCommandMenu: mockOpenCommandMenu,
+        insertLink: mockInsertLink,
+        openFindReplaceModal: mockOpenFindReplaceModal,
+        handleInlineAction: mockHandleInlineAction,
+        handleBlockAction: mockHandleBlockAction,
+      });
+
+    /**
+     * Build a keydown event that reports an active IME composition. The
+     * KeyboardEvent constructor accepts isComposing, but happy-dom may not
+     * carry it through — fall back to defining the property directly.
+     */
+    const composingKeydown = (
+      init: KeyboardEventInit & { keyCode?: number }
+    ) => {
+      const event = new KeyboardEvent("keydown", {
+        cancelable: true,
+        ...init,
+      });
+      if (init.isComposing && !event.isComposing) {
+        Object.defineProperty(event, "isComposing", { value: true });
+      }
+      if (init.keyCode !== undefined && event.keyCode !== init.keyCode) {
+        Object.defineProperty(event, "keyCode", { value: init.keyCode });
+      }
+      return event;
+    };
+
+    const placeCaretIn = (p: HTMLElement, offset: number) => {
+      const range = document.createRange();
+      range.setStart(p.firstChild!, offset);
+      range.collapse(true);
+      const selection = globalThis.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    };
+
+    it("must NOT intercept Enter while composing (candidate commit)", () => {
+      const p = document.createElement("p");
+      p.textContent = "こんにちは";
+      editorElement.appendChild(p);
+      placeCaretIn(p, 3);
+
+      const { handleKeydown } = createShortcuts();
+
+      const event = composingKeydown({ key: "Enter", isComposing: true });
+      const preventSpy = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      // Enter must reach the IME: no preventDefault, no block split.
+      expect(preventSpy).not.toHaveBeenCalled();
+      expect(editorElement.querySelectorAll("p").length).toBe(1);
+      expect(editorElement.textContent).toBe("こんにちは");
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+    });
+
+    it("must NOT intercept Enter when keyCode is 229 (legacy IME signal)", () => {
+      const p = document.createElement("p");
+      p.textContent = "input";
+      editorElement.appendChild(p);
+      placeCaretIn(p, 5);
+
+      const { handleKeydown } = createShortcuts();
+
+      const event = composingKeydown({ key: "Enter", keyCode: 229 });
+      const preventSpy = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(preventSpy).not.toHaveBeenCalled();
+      expect(editorElement.querySelectorAll("p").length).toBe(1);
+    });
+
+    it("does not open the slash menu while composing", () => {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      editorElement.appendChild(p);
+
+      const range = document.createRange();
+      range.setStart(p, 0);
+      range.collapse(true);
+      const selection = globalThis.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const { handleKeydown } = createShortcuts();
+
+      handleKeydown(composingKeydown({ key: "/", isComposing: true }));
+
+      expect(mockOpenCommandMenu).not.toHaveBeenCalled();
+    });
+
+    it("does not run formatting shortcuts while composing", () => {
+      const { handleKeydown } = createShortcuts();
+
+      handleKeydown(
+        composingKeydown({ key: "b", ctrlKey: true, isComposing: true })
+      );
+
+      expect(mockHandleInlineAction).not.toHaveBeenCalled();
+    });
+
+    it("still handles Enter normally when NOT composing", () => {
+      const p = document.createElement("p");
+      p.textContent = "Test";
+      editorElement.appendChild(p);
+      placeCaretIn(p, 4);
+
+      const { handleKeydown } = createShortcuts();
+
+      handleKeydown(new KeyboardEvent("keydown", { key: "Enter" }));
+
+      expect(editorElement.querySelectorAll("p").length).toBeGreaterThanOrEqual(
+        2
+      );
+    });
+  });
+
   describe("Edge Cases", () => {
     it("should handle null editor content gracefully", () => {
       const { handleKeydown } = useKeyboardShortcuts({

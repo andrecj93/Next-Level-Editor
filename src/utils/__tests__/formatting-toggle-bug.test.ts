@@ -225,3 +225,68 @@ describe('Toggle-off with text-node-anchored selections (double-click word)', ()
     }
   )
 })
+
+describe('Partly-styled selections re-wrap without nesting same tags', () => {
+  // Bolding across "<strong>foo</strong> bar" used to preserve the inner
+  // <strong> while wrapping a new one around the whole selection, producing
+  // <strong><strong>foo</strong> bar</strong> — which survives the sanitizer
+  // and v-model round-trips. The wrap path must strip same-tag descendants
+  // from the extracted contents first.
+  let root: HTMLElement
+
+  beforeEach(() => {
+    root = document.createElement('div')
+    root.contentEditable = 'true'
+    document.body.appendChild(root)
+  })
+
+  afterEach(() => {
+    document.body.removeChild(root)
+  })
+
+  const selectContents = (el: Element) => {
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+  }
+
+  it('bolding across "<strong>foo</strong> bar" yields exactly one <strong>', () => {
+    root.innerHTML = '<p><strong>foo</strong> bar</p>'
+    const p = root.querySelector('p')!
+    selectContents(p)
+
+    applyInlineStyle(root, 'strong')
+
+    const strongs = root.querySelectorAll('strong')
+    expect(strongs.length).toBe(1)
+    expect(strongs[0].textContent).toBe('foo bar')
+    expect(root.querySelector('strong strong')).toBeFalsy()
+  })
+
+  it('italicizing across "<em>foo</em> bar" yields exactly one <em>', () => {
+    root.innerHTML = '<p><em>foo</em> bar</p>'
+    const p = root.querySelector('p')!
+    selectContents(p)
+
+    applyInlineStyle(root, 'em')
+
+    const ems = root.querySelectorAll('em')
+    expect(ems.length).toBe(1)
+    expect(ems[0].textContent).toBe('foo bar')
+    expect(root.querySelector('em em')).toBeFalsy()
+  })
+
+  it('strips a same-tag element sitting in the MIDDLE of the selection', () => {
+    root.innerHTML = '<p>pre <strong>mid</strong> post</p>'
+    const p = root.querySelector('p')!
+    selectContents(p)
+
+    applyInlineStyle(root, 'strong')
+
+    const strongs = root.querySelectorAll('strong')
+    expect(strongs.length).toBe(1)
+    expect(strongs[0].textContent).toBe('pre mid post')
+  })
+})

@@ -97,7 +97,7 @@ interface Props {
   categories: VariableCategory[];
   query: string;
   isOpen: boolean;
-  position: { top: number; left: number };
+  position: { top: number; left: number; maxHeight?: number };
 }
 
 interface Emits {
@@ -125,10 +125,16 @@ const filteredVariables = computed(() => {
     .slice(0, 10);
 });
 
-// Position style
+// Position style. The clamp may hand us a height budget smaller than the
+// stylesheet's max-height (e.g. the caret sits just above the mobile
+// toolbar) — apply it so the list scrolls internally instead of extending
+// under the fixed bar.
 const positionStyle = computed(() => ({
   top: `${props.position.top}px`,
   left: `${props.position.left}px`,
+  ...(props.position.maxHeight != null
+    ? { maxHeight: `${Math.min(props.position.maxHeight, 400)}px` }
+    : {}),
 }));
 
 // Get category icon path (stroke SVG, keyed by category id)
@@ -219,8 +225,10 @@ defineExpose({ handleEditorKeydown });
   border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  min-width: 320px;
-  max-width: 450px;
+  /* Never intrinsically wider than the viewport (320px phones) — the
+     position clamp assumes the box fits at left: margin. */
+  min-width: min(320px, calc(100vw - 16px));
+  max-width: min(450px, calc(100vw - 16px));
   max-height: 400px;
   overflow: hidden;
   display: flex;

@@ -535,6 +535,16 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
    * Main keyboard event handler
    */
   const handleKeydown = (event: KeyboardEvent) => {
+    // IME guard: while a composition session is active (CJK input methods,
+    // predictive keyboards), Enter commits the current candidate and must
+    // reach the IME untouched — intercepting it here would split the block
+    // and corrupt the composition, making CJK typing impossible. keyCode 229
+    // is the legacy "key processed by IME" signal some browsers send on
+    // keydown before isComposing is set.
+    if (event.isComposing || event.keyCode === 229) {
+      return;
+    }
+
     // Let the slash-command menu (when open) claim Arrow/Enter/Tab/Escape first,
     // so Enter selects a command instead of inserting a new paragraph.
     if (handleSlashMenuKeydown && handleSlashMenuKeydown(event)) {

@@ -435,7 +435,7 @@ function close() {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10050; /* above floating panels/FABs (9998-9999) */
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -869,6 +869,15 @@ function close() {
   border-radius: 6px;
   color: #c33;
   font-size: 13px;
+}
+
+/* Dark theme (keyed to the editor's .theme-dark root class, like the rest of
+   the editor's dark styles): the hardcoded light-pink #fee/#fcc/#c33 trio is
+   illegible on dark surfaces. */
+.theme-dark .error-message {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--color-error-light, #f87171);
 }
 
 .modal-footer {

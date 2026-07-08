@@ -210,7 +210,7 @@ watch(() => props.isOpen, (isOpen) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10050; /* above floating panels/FABs (9998-9999) */
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -347,6 +347,14 @@ watch(() => props.isOpen, (isOpen) => {
   border-radius: 6px;
   font-size: 13px;
   text-align: center;
+}
+
+/* Dark theme (keyed to the editor's .theme-dark root class, like the rest of
+   the editor's dark styles): the hardcoded light-pink #fee/#c33 pair is
+   illegible on dark surfaces. */
+.theme-dark .error-message {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-error-light, #f87171);
 }
 
 .examples {

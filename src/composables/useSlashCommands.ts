@@ -5,6 +5,7 @@ import {
   splitBlockAtCaret,
   placeCaretInside,
 } from "../utils/blockInsertion";
+import { clampMenuToViewport } from "../utils/menuPosition";
 
 export interface SlashCommandOption {
   id: string;
@@ -145,43 +146,14 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
   /**
    * Clamp the menu into the usable viewport: below the sticky main toolbar,
    * above the fixed mobile toolbar (when present), and inside the horizontal
-   * bounds. Without this, on small screens the fixed bars sat on top of the
-   * menu and intercepted every click on its items.
+   * bounds. Shared with the variable autocomplete via clampMenuToViewport.
    */
-  const clampMenuPosition = (viewportTop: number, viewportLeft: number) => {
-    const topBar = document
-      .querySelector(".editor-toolbar-modern")
-      ?.getBoundingClientRect();
-    const mobileBar = document
-      .querySelector(".mobile-toolbar")
-      ?.getBoundingClientRect();
-
-    const minTop = (topBar ? Math.max(0, topBar.bottom) : 0) + MENU_MARGIN;
-    const bottomLimit =
-      mobileBar && mobileBar.height > 0
-        ? mobileBar.top
-        : window.innerHeight;
-    const maxTop = Math.max(
-      minTop,
-      bottomLimit - MENU_ESTIMATED_HEIGHT - MENU_MARGIN
-    );
-    const maxLeft = Math.max(
-      MENU_MARGIN,
-      window.innerWidth - MENU_ESTIMATED_WIDTH - MENU_MARGIN
-    );
-
-    const top = Math.min(Math.max(viewportTop, minTop), maxTop);
-    // The menu may not fit at all between the bars (small screens with the
-    // mobile toolbar open) — cap its height so it scrolls internally instead
-    // of extending underneath the fixed bar, which would intercept clicks.
-    const maxHeight = Math.max(160, bottomLimit - top - MENU_MARGIN);
-
-    return {
-      top,
-      left: Math.min(Math.max(viewportLeft, MENU_MARGIN), maxLeft),
-      maxHeight,
-    };
-  };
+  const clampMenuPosition = (viewportTop: number, viewportLeft: number) =>
+    clampMenuToViewport(viewportTop, viewportLeft, {
+      estimatedWidth: MENU_ESTIMATED_WIDTH,
+      estimatedHeight: MENU_ESTIMATED_HEIGHT,
+      margin: MENU_MARGIN,
+    });
 
   const openCommandMenu = () => {
     nextTick(() => {

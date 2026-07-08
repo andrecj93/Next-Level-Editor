@@ -10,6 +10,9 @@ const ALLOWED_TAGS = new Set([
   "H1",
   "H2",
   "H3",
+  "H4",
+  "H5",
+  "H6",
   "HR",
   "I",
   "IMG",
@@ -25,6 +28,9 @@ const ALLOWED_TAGS = new Set([
   "U",
   "UL",
   "TABLE",
+  "CAPTION",
+  "COLGROUP",
+  "COL",
   "THEAD",
   "TBODY",
   "TR",
@@ -37,7 +43,25 @@ const ALLOWED_TAGS = new Set([
 ]);
 
 const GLOBAL_ALLOWED_ATTRIBUTES = new Set(["title"]);
-const UNWRAP_TAGS = new Set(["DIV"]);
+// Semantic containers commonly found in pasted content (figures, sectioning
+// elements, description lists). They are not part of the editor's document
+// model, so they are unwrapped — children survive and are still recursively
+// sanitized — rather than removed with their subtree.
+const UNWRAP_TAGS = new Set([
+  "DIV",
+  "FIGURE",
+  "FIGCAPTION",
+  "SECTION",
+  "ARTICLE",
+  "HEADER",
+  "FOOTER",
+  "MAIN",
+  "ASIDE",
+  "NAV",
+  "DL",
+  "DT",
+  "DD",
+]);
 
 // The editor's media wrapper (created by utils/embeddedResizable.ts). Kept as
 // a special-cased DIV: its attributes are rebuilt from validated data-* values
@@ -65,6 +89,8 @@ const ELEMENT_ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
   a: new Set(["href", "rel", "target", "title"]),
   img: new Set(["alt", "src", "title", "width", "height", "style"]),
   table: new Set(["border", "cellpadding", "cellspacing", "style"]),
+  colgroup: new Set(["span", "style"]),
+  col: new Set(["span", "style"]),
   td: new Set(["colspan", "rowspan", "style"]),
   th: new Set(["colspan", "rowspan", "style"]),
   span: new Set(["style"]),
@@ -72,6 +98,9 @@ const ELEMENT_ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
   h1: new Set(["style"]),
   h2: new Set(["style"]),
   h3: new Set(["style"]),
+  h4: new Set(["style"]),
+  h5: new Set(["style"]),
+  h6: new Set(["style"]),
   li: new Set(["style"]),
   ul: new Set(["style"]),
   ol: new Set(["style"]),
@@ -97,6 +126,9 @@ const STYLE_ALLOWED_PROPERTIES = new Set([
   "color",
   "background-color",
   "font-size",
+  // Highlight pills (applyBackgroundColor) round-trip padding/border-radius.
+  "padding",
+  "border-radius",
   // Safe sizing properties used by media inside embed containers.
   "width",
   "height",

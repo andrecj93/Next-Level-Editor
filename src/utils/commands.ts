@@ -50,13 +50,57 @@ export function getCharacterCountWithoutSpaces(html: string): number {
   return text.replace(/\s/g, "").length;
 }
 
+/** True for a <span> that carries an inline font-size. */
+function isFontSizeSpan(node: Node): node is HTMLElement {
+  return (
+    node instanceof HTMLElement &&
+    node.tagName.toLowerCase() === "span" &&
+    node.style.fontSize !== ""
+  );
+}
+
 /**
- * Apply font size to selected text or block
- * @param root - Editor root element
+ * Remove the font-size from a span; drop the empty style attribute and unwrap
+ * the span entirely if that leaves it carrying nothing else.
+ */
+function clearFontSizeSpan(span: HTMLElement): void {
+  span.style.fontSize = "";
+  if (!span.getAttribute("style")) {
+    span.removeAttribute("style");
+  }
+  if (span.attributes.length === 0 && span.parentNode) {
+    const parent = span.parentNode;
+    while (span.firstChild) {
+      parent.insertBefore(span.firstChild, span);
+    }
+    span.remove();
+  }
+}
+
+/** Strip font-size styling from every span inside a fragment or element. */
+function removeFontSizeSpansWithin(
+  container: DocumentFragment | HTMLElement
+): void {
+  container.querySelectorAll("span").forEach((span) => {
+    if (isFontSizeSpan(span)) {
+      clearFontSizeSpan(span);
+    }
+  });
+}
+
+/**
+ * Apply font size to selected text or block.
+ *
+ * Idempotent by design: re-sizing a selection that exactly covers a
+ * previously sized span restyles that span in place (no nested spans, no
+ * multiplicative em compounding), and "normal" is a CLEAR operation \u2014 it
+ * removes font sizes instead of wrapping a redundant 1em span.
+ *
+ * @param root - Editor root element (bounds the sized-ancestor search)
  * @param size - Font size (small, normal, large, huge)
  */
 export function applyFontSize(
-  _root: HTMLElement,
+  root: HTMLElement,
   size: "small" | "normal" | "large" | "huge"
 ) {
   const sizeMap = {
@@ -71,30 +115,99 @@ export function applyFontSize(
 
   const range = selection.getRangeAt(0);
 
+  // "normal" clears sizing; it never wraps a 1em span.
+  const targetSize = size === "normal" ? null : sizeMap[size];
+
   if (range.collapsed) {
+    // Nothing is selected, so a CLEAR has nothing to remove.
+    if (!targetSize) return;
+
     // At caret position, wrap future text
     const span = document.createElement("span");
-    span.style.fontSize = sizeMap[size];
+    span.style.fontSize = targetSize;
     span.textContent = "\u200B"; // Zero-width space
     range.insertNode(span);
     range.selectNodeContents(span);
     range.collapse(false);
     selection.removeAllRanges();
     selection.addRange(range);
-  } else {
-    // Wrap selection in span with font size
-    const span = document.createElement("span");
-    span.style.fontSize = sizeMap[size];
-    const contents = range.extractContents();
-    span.appendChild(contents);
-    range.insertNode(span);
+    return;
+  }
 
-    // Restore selection to include the newly created span
+  // Re-size of a selection that exactly covers a previously sized span:
+  // restyle that span in place instead of nesting a new one inside it. Walk
+  // up to the OUTERMOST sized span whose text matches the selection so that
+  // pre-existing nested (compounding) spans collapse onto a single wrapper.
+  const selectedText = range.toString();
+  let sizedAncestor: HTMLElement | null = null;
+  let current: Node | null = range.commonAncestorContainer;
+  while (
+    current &&
+    current !== root &&
+    current.nodeType !== Node.DOCUMENT_NODE
+  ) {
+    if (isFontSizeSpan(current) && current.textContent === selectedText) {
+      sizedAncestor = current;
+    }
+    current = current.parentNode;
+  }
+
+  if (sizedAncestor) {
+    // Collapse any sized spans nested inside the wrapper first.
+    removeFontSizeSpansWithin(sizedAncestor);
+    const firstChild = sizedAncestor.firstChild;
+    const lastChild = sizedAncestor.lastChild;
+
+    if (targetSize) {
+      sizedAncestor.style.fontSize = targetSize;
+    } else {
+      clearFontSizeSpan(sizedAncestor); // may unwrap the span entirely
+    }
+
     const newRange = document.createRange();
-    newRange.selectNodeContents(span);
+    if (sizedAncestor.parentNode) {
+      newRange.selectNodeContents(sizedAncestor);
+    } else if (firstChild && lastChild) {
+      // The span was unwrapped; reselect the released children.
+      newRange.setStartBefore(firstChild);
+      newRange.setEndAfter(lastChild);
+    } else {
+      return;
+    }
     selection.removeAllRanges();
     selection.addRange(newRange);
+    return;
   }
+
+  // General case: pull the contents out, strip sized spans that were fully
+  // inside the selection (extractContents splits partially-overlapping spans
+  // at the range boundaries), then wrap once \u2014 or just re-insert for CLEAR.
+  const contents = range.extractContents();
+  removeFontSizeSpansWithin(contents);
+
+  if (!targetSize) {
+    const nodes = Array.from(contents.childNodes);
+    range.insertNode(contents);
+    if (nodes.length > 0) {
+      const newRange = document.createRange();
+      newRange.setStartBefore(nodes[0]);
+      newRange.setEndAfter(nodes[nodes.length - 1]);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    }
+    return;
+  }
+
+  const span = document.createElement("span");
+  span.style.fontSize = targetSize;
+  span.appendChild(contents);
+  range.insertNode(span);
+
+  // Restore selection to include the newly created span
+  const newRange = document.createRange();
+  newRange.selectNodeContents(span);
+  selection.removeAllRanges();
+  selection.addRange(newRange);
 }
 
 /**

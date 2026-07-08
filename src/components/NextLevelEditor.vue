@@ -87,9 +87,12 @@
     <EditorFooter :word-count="wordCount" :character-count="characterCount" />
 
     <!-- Floating Toolbar -->
-    <!-- Selection toolbar (bubble over selected text) — never in readonly. -->
+    <!-- Selection toolbar (bubble over selected text) — never in readonly,
+         and suppressed while the mobile bottom toolbar owns the screen:
+         two stacked formatting surfaces on a phone is duplicated, cramped
+         UI (the bottom bar already carries the same actions). -->
     <FloatingToolbar
-      :show="showFloatingToolbar && !readonly"
+      :show="showFloatingToolbar && !readonly && !mobileBarOnScreen"
       :actions="floatingActions"
     />
 
@@ -436,6 +439,8 @@ import {
   applyFontSize,
 } from "../utils/commands";
 import { smoothScrollIntoView } from "../utils/scroll";
+import { clampMenuToViewport } from "../utils/menuPosition";
+import { useDeviceDetection } from "../composables/useDeviceDetection";
 import { useTheme } from "../composables/useTheme";
 import { useAutoSave } from "../composables/useAutoSave";
 import { useSmartToolbar } from "../composables/useSmartToolbar";
@@ -1111,6 +1116,15 @@ const mobileToolbarVisible = computed(
   () => ownsMobileToolbar.value && !mobileToolbarClosed.value
 );
 
+// Whether the mobile bottom bar is actually ON SCREEN: ownership alone isn't
+// enough — MobileToolbar also self-gates on device detection, so on desktop
+// `mobileToolbarVisible` can be true while nothing renders. The selection
+// bubble must only be suppressed when the bar is really showing.
+const { showMobileToolbar: deviceShowsMobileToolbar } = useDeviceDetection();
+const mobileBarOnScreen = computed(
+  () => mobileToolbarVisible.value && deviceShowsMobileToolbar.value
+);
+
 const updateMobileToolbarOwnership = (event: Event) => {
   const target = event.target;
   if (!(target instanceof Node)) return;
@@ -1556,11 +1570,16 @@ function detectVariableSyntax() {
 
       // The dropdown is position: fixed, so viewport coordinates are used
       // as-is — adding scrollY here pushed it below the viewport whenever
-      // the host page was scrolled.
-      variableAutocompletePosition.value = {
-        top: rect.bottom + 5,
-        left: rect.left,
-      };
+      // the host page was scrolled. Clamp into the usable viewport (below
+      // the main toolbar, above the mobile toolbar, inside the horizontal
+      // bounds) exactly like the slash menu — an unclamped caret rect put
+      // the 320px box off-screen right on phones and its lower rows under
+      // the fixed mobile toolbar, where taps never landed.
+      variableAutocompletePosition.value = clampMenuToViewport(
+        rect.bottom + 5,
+        rect.left,
+        { estimatedWidth: 320, estimatedHeight: 400 }
+      );
 
       variableAutocompleteQuery.value = detection.query;
       showVariableAutocomplete.value = true;

@@ -300,16 +300,24 @@ test.describe('Next Level Editor - Floating Toolbar', () => {
     const editor = page.locator('.editor-content')
     await editor.click()
     await editor.pressSequentially('Select this text')
-    
+
     // Select all
     await page.keyboard.press('Control+A')
-    
+
     // Wait a bit for floating toolbar to appear
     await page.waitForTimeout(500)
-    
-    // Floating toolbar should be visible
+
     const floatingToolbar = page.locator('.floating-toolbar')
-    await expect(floatingToolbar).toBeVisible()
+    if (test.info().project.name === 'mobile-safari') {
+      // On phones the bottom MobileToolbar owns formatting; the selection
+      // bubble is intentionally suppressed so two stacked formatting
+      // surfaces never compete on a 375px screen.
+      await expect(page.locator('.mobile-toolbar')).toBeVisible()
+      await expect(floatingToolbar).toBeHidden()
+    } else {
+      // Floating toolbar should be visible
+      await expect(floatingToolbar).toBeVisible()
+    }
   })
 })
 

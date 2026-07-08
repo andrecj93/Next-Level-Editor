@@ -58,9 +58,10 @@ describe('Selection Management', () => {
     })
 
     it('applies different font sizes correctly', () => {
+      // "normal" is intentionally absent: it is a CLEAR operation and must
+      // not wrap a redundant 1em span (see the test below).
       const sizes = [
         { size: 'small' as const, expected: '0.875em' },
-        { size: 'normal' as const, expected: '1em' },
         { size: 'large' as const, expected: '1.25em' },
         { size: 'huge' as const, expected: '1.75em' },
       ]
@@ -68,7 +69,7 @@ describe('Selection Management', () => {
       sizes.forEach(({ size, expected }) => {
         root.innerHTML = '<p>Test</p>'
         const p = root.querySelector('p')!
-        
+
         const range = document.createRange()
         range.selectNodeContents(p)
         const selection = window.getSelection()!
@@ -80,6 +81,22 @@ describe('Selection Management', () => {
         const span = root.querySelector('span')
         expect(span!.style.fontSize).toBe(expected)
       })
+    })
+
+    it('treats "normal" as clearing: no wrapper span on unsized text', () => {
+      root.innerHTML = '<p>Test</p>'
+      const p = root.querySelector('p')!
+
+      const range = document.createRange()
+      range.selectNodeContents(p)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      applyFontSize(root, 'normal')
+
+      expect(root.querySelector('span')).toBeFalsy()
+      expect(root.textContent).toBe('Test')
     })
   })
 
