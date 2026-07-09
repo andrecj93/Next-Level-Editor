@@ -858,6 +858,9 @@
    formatting states. Opaque --toolbar-bg keeps contrast AA.
    ============================================================ */
 .editor-toolbar-modern {
+  /* Containing block for the staging overlays (sweep clip + elevation
+     pseudo). No z-index — the letterbox band above must keep winning. */
+  position: relative;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -865,8 +868,12 @@
   gap: 14px;
   padding: 10px 16px;
   background: var(--toolbar-bg);
-  /* A single hairline underlines the masthead — no slab shadows. */
+  /* A single hairline underlines the masthead — no slab shadows. The hairline
+     yields to the elevation shadow when content scrolls beneath the bar
+     (paint-only crossfade; see the staging section below). */
   border-bottom: 1px solid var(--color-divider);
+  transition: border-bottom-color var(--nle-motion-quick, 120ms)
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
   min-height: 52px;
 }
 
@@ -1131,6 +1138,123 @@
 }
 
 /* ============================================================
+   "TITLE SEQUENCE" staging — choreography for the toolbar's STATE
+   CHANGES only. The one-shot classes (.is-unfolding, .is-folding,
+   .is-sweeping) are added exclusively by the expand toggle and the
+   toolbarLayout watcher in EditorToolbar.vue, so none of this can
+   ever run on mount. transform/opacity only; every animation lives
+   on CHILDREN or overlays — swapping animation-name on the nav root
+   itself would replay the nle-toolbar-in mount fade when the class
+   clears. Bold/active rings and other keyboard-frequency states are
+   untouched and stay instant.
+   ============================================================ */
+
+/* 1 — Staggered unfold: when the mini bar expands, the revealed
+   families fade in left→right, one --nle-stagger-step (20ms) apart
+   (indices 0-3 → ≤60ms of added delay). `backwards` holds each
+   family invisible through its delay; NEVER forwards/both — a
+   persisting fill pins opacity at the animation cascade level
+   forever (see the mount-fade comment above). The keyframe only
+   plays while .is-unfolding is present, so plain v-show flips
+   (e.g. re-renders while expanded) never re-animate. */
+@keyframes nle-toolbar-unfold {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+.editor-toolbar-modern.is-unfolding .nle-unfold {
+  animation: nle-toolbar-unfold var(--nle-motion-enter, 180ms)
+    var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1)) backwards;
+  animation-delay: calc(var(--nle-group-i, 0) * var(--nle-stagger-step, 20ms));
+}
+
+/* Collapse is the reverse but FASTER and without stagger: the
+   surviving mini row settles with one quick fade. */
+@keyframes nle-toolbar-refold {
+  from {
+    opacity: 0.55;
+  }
+}
+.editor-toolbar-modern.is-folding .toolbar-section-group {
+  animation: nle-toolbar-refold var(--nle-motion-exit, 140ms)
+    var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1)) backwards;
+}
+
+/* 2 — Elevation on scroll: content moving beneath the sticky bar
+   swaps the hairline for a soft neutral shadow. The shadow is
+   pre-painted on ::after and opacity-crossfaded — never transition
+   box-shadow itself. Both pseudo slots on the nav are free: the
+   tooltip system uses the BUTTONS' pseudos and the active underline
+   is painted via background-image. Outer box-shadows don't paint
+   inside their own box, so the inset:0 pseudo only casts below the
+   bar; pointer-events:none keeps it inert for e2e clicks. */
+.editor-toolbar-modern::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 18px -10px rgba(15, 23, 42, 0.3),
+    0 2px 6px -3px rgba(15, 23, 42, 0.16);
+  opacity: 0;
+  transition: opacity var(--nle-motion-quick, 120ms)
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+.editor-toolbar-modern.is-elevated {
+  border-bottom-color: transparent;
+}
+.editor-toolbar-modern.is-elevated::after {
+  opacity: 1;
+}
+.theme-dark .editor-toolbar-modern::after {
+  box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.6),
+    0 2px 6px -3px rgba(0, 0, 0, 0.4);
+}
+
+/* 3 — Light sweep on density change (and on expand): a single
+   400ms diagonal --toolbar-hover band crossing the bar. It lives in
+   its OWN clipped overlay — the nav must keep overflow: visible for
+   dropdowns/tooltips, so the nav itself can't mask the band. First
+   child + z-index: 0 paints it above the bar surface but beneath the
+   later (positioned, z-auto) buttons and every dropdown menu. */
+.toolbar-sweep-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.toolbar-sweep {
+  position: absolute;
+  inset: 0;
+  /* Invisible at rest; only the keyframes lift opacity. Default fill
+     (none) returns it to this base the instant the sweep ends. */
+  opacity: 0;
+  transform: translateX(-101%);
+  background: linear-gradient(
+    105deg,
+    transparent 32%,
+    var(--toolbar-hover) 50%,
+    transparent 68%
+  );
+}
+@keyframes nle-toolbar-sweep {
+  from {
+    opacity: 1;
+    transform: translateX(-101%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(101%);
+  }
+}
+.editor-toolbar-modern.is-unfolding .toolbar-sweep,
+.editor-toolbar-modern.is-sweeping .toolbar-sweep {
+  animation: nle-toolbar-sweep 400ms
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* ============================================================
    AUTO-compact (container query) — the same single dense row as
    toolbarLayout="compact", but triggered by the toolbar's OWN width instead
    of an explicit prop. So an editor embedded narrow (a sidebar, a split-pane,
@@ -1203,6 +1327,17 @@
     animation: none !important;
     transition: none !important;
     transform: none !important;
+  }
+
+  /* Staging choreography: the stagger tokens already collapse to 0 here, but
+     disable the unfold/settle/sweep animations outright — states still apply
+     instantly (and the elevation shadow snaps rather than fading). */
+  .editor-toolbar-modern.is-unfolding .nle-unfold,
+  .editor-toolbar-modern.is-folding .toolbar-section-group,
+  .editor-toolbar-modern .toolbar-sweep,
+  .editor-toolbar-modern::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
 

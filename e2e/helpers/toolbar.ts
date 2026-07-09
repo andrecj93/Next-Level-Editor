@@ -12,8 +12,18 @@ export async function ensureToolbarExpanded(page: Page): Promise<void> {
   const expand = page.getByRole("button", { name: /Expand toolbar/i });
   if (await expand.isVisible().catch(() => false)) {
     await expand.click();
-    // The expanded set renders synchronously; a settled rAF keeps webkit happy.
-    await page.waitForTimeout(100);
+    // Expanding plays the staged unfold (staggered opacity/translate on the
+    // revealed groups, one-shot .is-unfolding class). Wait for it to SETTLE —
+    // clicking a still-animating control trips Playwright's stability check,
+    // which under full-suite webkit load can stretch into a flake.
+    await page
+      .waitForFunction(
+        () => !document.querySelector(".editor-toolbar-modern.is-unfolding"),
+        undefined,
+        { timeout: 2000 }
+      )
+      .catch(() => {});
+    await page.waitForTimeout(50);
   }
 }
 

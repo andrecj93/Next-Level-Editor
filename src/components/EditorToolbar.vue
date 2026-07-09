@@ -1,12 +1,28 @@
 <template>
   <nav
+    ref="rootEl"
     :class="[
       'editor-toolbar-modern',
-      { 'is-compact': toolbarLayout === 'compact', 'is-mini': isMini },
+      {
+        'is-compact': toolbarLayout === 'compact',
+        'is-mini': isMini,
+        'is-unfolding': isUnfolding,
+        'is-folding': isFolding,
+        'is-sweeping': isSweeping,
+        'is-elevated': isElevated,
+      },
     ]"
     role="toolbar"
     aria-label="Text formatting toolbar"
   >
+    <!-- Light-sweep overlay — its OWN clipped layer (the toolbar must keep
+         overflow: visible for dropdowns/tooltips, so the band can't be masked
+         by the nav itself). Inert and invisible except during the one-shot
+         .is-unfolding / .is-sweeping classes; beneath the buttons. -->
+    <div class="toolbar-sweep-clip" aria-hidden="true">
+      <div class="toolbar-sweep" />
+    </div>
+
     <!-- Text Formatting Group -->
     <div
       class="toolbar-section-group"
@@ -39,6 +55,8 @@
       <!-- Alignment Dropdown (folded into the expand set in mini mode) -->
       <ToolbarSection
         v-show="!isMini"
+        class="nle-unfold"
+        :style="{ '--nle-group-i': 0 }"
         type="dropdown"
         :visible="isToolbarSectionVisible('alignment')"
         label="Align"
@@ -60,7 +78,8 @@
     <!-- Insert & Style Group -->
     <div
       v-show="!isMini"
-      class="toolbar-section-group"
+      class="toolbar-section-group nle-unfold"
+      :style="{ '--nle-group-i': 1 }"
       role="group"
       aria-label="Insert and styling"
     >
@@ -183,7 +202,8 @@
     <!-- History & Tools Group -->
     <div
       v-show="!isMini"
-      class="toolbar-section-group"
+      class="toolbar-section-group nle-unfold"
+      :style="{ '--nle-group-i': 2 }"
       role="group"
       aria-label="History and tools"
     >
@@ -260,7 +280,8 @@
     <!-- View & Display Controls Group -->
     <div
       v-show="!isMini"
-      class="toolbar-section-group"
+      class="toolbar-section-group nle-unfold"
+      :style="{ '--nle-group-i': 3 }"
       role="group"
       aria-label="View and display controls"
     >
@@ -410,7 +431,7 @@
       :data-tooltip="expanded ? 'Show fewer tools' : 'Show all tools'"
       :aria-label="expanded ? 'Collapse toolbar' : 'Expand toolbar'"
       :aria-expanded="expanded"
-      @click="expanded = !expanded"
+      @click="toggleExpanded"
     >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>
@@ -418,7 +439,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import type { ToolbarAction } from "../types/toolbar";
 import type { ToolbarConfig } from "../composables/useSmartToolbar";
 import ToolbarSection from "./ToolbarSection.vue";
@@ -457,13 +478,97 @@ const props = defineProps<Props>();
  */
 const expanded = ref(false);
 const isMini = computed(() => props.toolbarLayout === "compact" && !expanded.value);
-// Switching layouts (e.g. the playground toggle) always re-collapses.
+
+/**
+ * "Title sequence" staging — one-shot choreography classes for toolbar STATE
+ * CHANGES only, never mount:
+ *   - `is-unfolding`: staggered left→right reveal of the hidden families plus
+ *     the light sweep, when the mini bar expands.
+ *   - `is-folding`: the fast, stagger-free settle when it collapses (exits are
+ *     quicker than entries — a slow collapse punishes whoever wants chrome
+ *     gone).
+ *   - `is-sweeping`: the light sweep alone, when the density (toolbarLayout)
+ *     changes.
+ * All three are set exclusively from the toggle handler / layout watcher, so
+ * nothing can ever animate on initial mount — even when starting expanded.
+ */
+const isUnfolding = ref(false);
+const isFolding = ref(false);
+const isSweeping = ref(false);
+// Covers the longest stagger (60ms) + enter duration with margin.
+const UNFOLD_MS = 400;
+const FOLD_MS = 200;
+const SWEEP_MS = 450;
+let unfoldTimer: ReturnType<typeof setTimeout> | undefined;
+let foldTimer: ReturnType<typeof setTimeout> | undefined;
+let sweepTimer: ReturnType<typeof setTimeout> | undefined;
+
+const toggleExpanded = () => {
+  expanded.value = !expanded.value;
+  clearTimeout(unfoldTimer);
+  clearTimeout(foldTimer);
+  if (expanded.value) {
+    isFolding.value = false;
+    isUnfolding.value = true;
+    unfoldTimer = setTimeout(() => {
+      isUnfolding.value = false;
+    }, UNFOLD_MS);
+  } else {
+    isUnfolding.value = false;
+    isFolding.value = true;
+    foldTimer = setTimeout(() => {
+      isFolding.value = false;
+    }, FOLD_MS);
+  }
+};
+
+// Switching layouts (e.g. the playground toggle) always re-collapses, and the
+// density change itself gets the one-shot light sweep (sweep only, no stagger).
 watch(
   () => props.toolbarLayout,
   () => {
     expanded.value = false;
+    clearTimeout(unfoldTimer);
+    isUnfolding.value = false;
+    clearTimeout(sweepTimer);
+    isSweeping.value = true;
+    sweepTimer = setTimeout(() => {
+      isSweeping.value = false;
+    }, SWEEP_MS);
   }
 );
+
+/**
+ * Elevation on scroll — when document content moves beneath the sticky bar,
+ * the hairline bottom border yields to a soft shadow (`is-elevated`). The
+ * toolbar has no ref to the scroll container, so a document-level capture
+ * listener (scroll doesn't bubble) watches for any scroll, then a
+ * rAF-throttled read of the owning editor's `.editor-content` decides the
+ * state. The class only toggles on real scroll events — never at mount.
+ */
+const rootEl = ref<HTMLElement | null>(null);
+const isElevated = ref(false);
+let elevationRaf = 0;
+
+const updateElevation = () => {
+  elevationRaf = 0;
+  const content = rootEl.value
+    ?.closest(".next-level-editor")
+    ?.querySelector(".editor-content");
+  isElevated.value = !!content && content.scrollTop > 0;
+};
+
+const onAnyScroll = () => {
+  if (elevationRaf) return;
+  elevationRaf = requestAnimationFrame(updateElevation);
+};
+
+onMounted(() => {
+  document.addEventListener("scroll", onAnyScroll, {
+    capture: true,
+    passive: true,
+  });
+});
 
 // Mini = essentials only: keep just the two list toggles inline;
 // indent/outdent live behind the expand toggle. The collapsed row is
@@ -620,6 +725,11 @@ watch(
 
 onBeforeUnmount(() => {
   document.removeEventListener("selectionchange", readSelectionColors);
+  document.removeEventListener("scroll", onAnyScroll, { capture: true });
+  if (elevationRaf) cancelAnimationFrame(elevationRaf);
+  clearTimeout(unfoldTimer);
+  clearTimeout(foldTimer);
+  clearTimeout(sweepTimer);
 });
 
 // The host applies the color synchronously during the emit (via the remembered
