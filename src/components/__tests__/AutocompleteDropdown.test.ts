@@ -51,7 +51,7 @@ async function pressKey(key: string) {
 beforeEach(() => {
   // scrollToSelected() -> smoothScrollIntoView() calls scrollIntoView, which
   // happy-dom does not implement. Stub it so keyboard-nav tests don't throw.
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
+   
   (Element.prototype as unknown as { scrollIntoView: () => void }).scrollIntoView =
     vi.fn();
 });

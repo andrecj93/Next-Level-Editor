@@ -185,27 +185,39 @@ describe("FloatingToolbar", () => {
       expect(el.style.left).toBe(left); // rect.left + width/2
     });
 
-    it("clamps the top to a 10px minimum for a selection near the viewport top", async () => {
+    // The clamp math changed with the measured-width positioning fix: `left`
+    // is the bubble CENTER (translateX(-50%)), clamped so the bubble's real
+    // edges stay inside the viewport, and a selection near the viewport top
+    // FLIPS the bubble below instead of clamping it over the text. The full
+    // matrix lives in FloatingToolbar.positioning.test.ts; these document the
+    // rendered wiring.
+    it("flips BELOW the selection near the viewport top (is-below arrow)", async () => {
       const rect = { top: 5, left: 300, width: 40, height: 18 };
       const { w } = await mountVisible({ rect });
       const el = w.get(".floating-toolbar").element as HTMLElement;
-      // 5 - 50 = -45 -> Math.max(10, -45) = 10
-      expect(el.style.top).toBe("10px");
-      expect(expectedPos(rect).top).toBe("10px");
+      // top 5 < FLIP_THRESHOLD 60 -> placed below at rect.bottom + scrollY +
+      // 8. (This suite's rect stub carries no computed `bottom`, so it reads
+      // as 0 -> "8px"; the exact-geometry matrix lives in
+      // FloatingToolbar.positioning.test.ts.)
+      expect(el.classList.contains("is-below")).toBe(true);
+      expect(el.style.top).toBe("8px");
     });
 
-    it("clamps the left to a 10px minimum for a selection near the viewport left", async () => {
+    it("keeps the bubble's LEFT EDGE on-screen for a selection near the viewport left", async () => {
       const rect = { top: 400, left: -1000, width: 0, height: 18 };
       const { w } = await mountVisible({ rect });
       const el = w.get(".floating-toolbar").element as HTMLElement;
-      expect(el.style.left).toBe("10px");
+      // Unmeasurable in happy-dom -> ESTIMATED_WIDTH 240; the CENTER is
+      // clamped to halfWidth + margin = 120 + 10.
+      expect(el.style.left).toBe("130px");
     });
 
-    it("clamps the left to innerWidth-300 for a selection near the viewport right", async () => {
+    it("keeps the bubble's RIGHT EDGE on-screen for a selection near the viewport right", async () => {
       const rect = { top: 400, left: 100000, width: 0, height: 18 };
       const { w } = await mountVisible({ rect });
       const el = w.get(".floating-toolbar").element as HTMLElement;
-      expect(el.style.left).toBe(`${window.innerWidth - 300}px`);
+      // CENTER clamped to innerWidth - halfWidth(120) - margin(10).
+      expect(el.style.left).toBe(`${window.innerWidth - 130}px`);
     });
 
     it("recomputes position on window resize while shown (follows the selection)", async () => {

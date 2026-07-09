@@ -52,8 +52,6 @@ const formatBtn = (w: ReturnType<typeof mountToolbar>, label: string) =>
   w.get(`#panel-format [aria-label="${label}"]`);
 const insertBtn = (w: ReturnType<typeof mountToolbar>, label: string) =>
   w.get(`#panel-insert [aria-label="${label}"]`);
-const moreBtn = (w: ReturnType<typeof mountToolbar>, label: string) =>
-  w.get(`#panel-more [aria-label="${label}"]`);
 
 describe("MobileToolbar", () => {
   describe("visibility gate", () => {

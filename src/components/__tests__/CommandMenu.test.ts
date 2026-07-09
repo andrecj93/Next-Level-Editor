@@ -96,11 +96,16 @@ describe("CommandMenu.vue", () => {
       ]);
     });
 
-    it("renders the header and an empty listbox when options is empty", () => {
+    it("renders the header and a 'No matching commands' empty state when options is empty", () => {
+      // A blank listbox reads as broken — the menu shows an explicit empty
+      // state instead (and no listbox at all, so AT users aren't offered an
+      // empty list).
       const wrapper = factory({ options: [] });
       expect(wrapper.find(".command-menu-header").exists()).toBe(true);
-      expect(wrapper.find("ul[role='listbox']").exists()).toBe(true);
-      expect(wrapper.findAll("li[role='option']")).toHaveLength(0);
+      expect(wrapper.find("ul[role='listbox']").exists()).toBe(false);
+      expect(wrapper.find(".command-menu-empty").text()).toBe(
+        "No matching commands"
+      );
     });
 
     it("re-renders rows when the options prop changes", async () => {
