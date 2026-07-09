@@ -151,6 +151,7 @@ const props = [
   { name: "themePreset", type: "string", def: "'default'", desc: "Whole-editor theme: default | classic | minimal | midnight | warm." },
   { name: "toolbarLayout", type: "string", def: "'comfortable'", desc: "Toolbar density: comfortable (labelled) | compact (mini bar + expand toggle). Below 640px the toolbar auto-compacts to the mini bar regardless." },
   { name: "adaptiveChrome", type: "string", def: "'letterbox'", desc: "While you write: letterbox (toolbar dissolves into an ambient band with block format, position filament, save pulse and word count) | recede (fades to a whisper) | off. Pointer, Escape or toolbar focus bring it back instantly. Desktop-only; honors reduced motion." },
+  { name: "toolbarPosition", type: "string", def: "'top'", desc: "Where the toolbar lives: top | left (slim margin rail) | bottom (dock, menus open upward) | zen (no persistent toolbar — the ambient band is the only chrome; intent peeks the full bar). All fall back to top below 640px." },
   { name: "readonly", type: "boolean", def: "false", desc: "Viewer mode — content shown & selectable, not editable; toolbars hidden." },
   { name: "showToolbar", type: "boolean", def: "true", desc: "Show the main toolbar. Set false for a headless editor." },
   { name: "defaultViewMode", type: "string", def: "'editor'", desc: "Initial view: editor | code | split | preview." },

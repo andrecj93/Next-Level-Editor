@@ -80,6 +80,15 @@
               </select>
             </div>
             <div class="cfg-field">
+              <label>Toolbar position</label>
+              <select v-model="editorConfig.toolbarPosition" class="select">
+                <option value="top">Top (masthead)</option>
+                <option value="left">Left rail</option>
+                <option value="bottom">Bottom dock</option>
+                <option value="zen">Zen (band only)</option>
+              </select>
+            </div>
+            <div class="cfg-field">
               <label>Height</label>
               <input v-model="editorConfig.height" type="number" min="300" max="1200" class="num"> px
             </div>
@@ -139,6 +148,7 @@
           :default-view-mode="editorConfig.defaultViewMode"
           :autofocus="editorConfig.autofocus"
           :adaptive-chrome="editorConfig.adaptiveChrome"
+          :toolbar-position="editorConfig.toolbarPosition"
           :show-writing-stats="editorConfig.showWritingStats"
           :enable-comments="editorConfig.enableComments"
           :enable-variables="editorConfig.enableVariables"
@@ -197,6 +207,7 @@ const DEFAULT_CONFIG = {
   themePreset: "warm",
   toolbarLayout: "comfortable" as "comfortable" | "compact",
   adaptiveChrome: "letterbox" as "letterbox" | "recede" | "off",
+  toolbarPosition: "top" as "top" | "left" | "bottom" | "zen",
   showWritingStats: true,
   enableComments: true,
   enableVariables: true,

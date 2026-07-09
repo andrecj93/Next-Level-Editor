@@ -57,6 +57,23 @@ export interface NextLevelEditorProps {
    */
   adaptiveChrome?: "letterbox" | "recede" | "off";
   /**
+   * Where the main toolbar lives.
+   *
+   * - `"top"` (default): the docked masthead bar above the page.
+   * - `"left"`: a slim vertical rail in the left margin — writing essentials
+   *   stacked in the margin, everything else behind the rail's expand toggle.
+   * - `"bottom"`: the bar docks under the page and its menus open upward —
+   *   chrome leaves the reading line entirely.
+   * - `"zen"`: no persistent toolbar at all — the ambient letterbox band is
+   *   the only chrome; pointer intent or Escape "peeks" the full toolbar,
+   *   which tucks itself away again a moment later. Pair with the selection
+   *   bubble and the `/` menu for a fully focused writing surface.
+   *
+   * Desktop-only: every value falls back to `"top"` below 640px, where the
+   * mobile toolbar owns the screen.
+   */
+  toolbarPosition?: "top" | "left" | "bottom" | "zen";
+  /**
    * Read-only / viewer mode. The content is displayed and selectable but not
    * editable: the main, selection and mobile toolbars are hidden, slash and
    * paste handling are inert, and `v-model` still reflects the (unchanging)

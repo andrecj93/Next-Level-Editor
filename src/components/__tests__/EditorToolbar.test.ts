@@ -616,6 +616,51 @@ describe("EditorToolbar", () => {
     });
   });
 
+  describe("Position-variant panel wrapper", () => {
+    // The left-rail toolbar position floats the non-essential families as a
+    // panel; that needs them under ONE wrapper. The wrapper must be
+    // layout-inert everywhere else (display: contents via CSS), so the
+    // structural contract is: essentials + expand toggle stay direct nav
+    // children, the other three families live inside .nle-toolbar-panel.
+    it("wraps exactly the three non-essential families", () => {
+      const panels = wrapper.findAll(".nle-toolbar-panel");
+      expect(panels.length).toBe(1);
+      const panel = panels[0];
+
+      const grouped = panel
+        .findAll(".toolbar-section-group")
+        .map((g) => g.attributes("aria-label"));
+      expect(grouped).toEqual([
+        "Insert and styling",
+        "History and tools",
+        "View and display controls",
+      ]);
+    });
+
+    it("keeps the essentials family and expand toggle outside the panel", () => {
+      const compact = mount(EditorToolbar, {
+        props: { ...defaultProps, toolbarLayout: "compact" as const },
+        global: { stubs: { ToolbarSection: true, ColorPicker: true } },
+      });
+      const panel = compact.find(".nle-toolbar-panel");
+      expect(panel.exists()).toBe(true);
+      expect(panel.find('[aria-label="Text formatting"]').exists()).toBe(
+        false
+      );
+      expect(panel.find(".toolbar-expand-toggle").exists()).toBe(false);
+      // Both still render — as siblings of the panel inside the nav.
+      const nav = compact.find(".editor-toolbar-modern");
+      expect(nav.find('[aria-label="Text formatting"]').exists()).toBe(true);
+      expect(nav.find(".toolbar-expand-toggle").exists()).toBe(true);
+    });
+
+    it("is a plain layout wrapper — no role, no label", () => {
+      const panel = wrapper.find(".nle-toolbar-panel");
+      expect(panel.attributes("role")).toBeUndefined();
+      expect(panel.attributes("aria-label")).toBeUndefined();
+    });
+  });
+
   describe("Unfold choreography (title-sequence staging)", () => {
     const mountCompact = () =>
       mount(EditorToolbar, {

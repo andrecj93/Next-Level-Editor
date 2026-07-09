@@ -8,6 +8,9 @@
       { fullscreen: isFullScreen },
     ]"
     :style="editorStyles"
+    :data-toolbar-position="
+      effectiveToolbarPosition !== 'top' ? effectiveToolbarPosition : undefined
+    "
   >
     <!-- Accessibility: Skip Links -->
     <SkipLinks />
@@ -25,8 +28,13 @@
       v-if="showToolbar && !readonly"
       ref="toolbarShellEl"
       class="nle-toolbar-shell"
-      :data-adaptive="adaptiveChrome"
+      :data-adaptive="effectiveAdaptiveChrome"
       :data-receded="chromeReceded || undefined"
+      :data-position="
+        effectiveToolbarPosition !== 'top' && effectiveToolbarPosition !== 'zen'
+          ? effectiveToolbarPosition
+          : undefined
+      "
     >
     <EditorToolbar
       :is-toolbar-section-visible="isToolbarSectionVisible"
@@ -63,7 +71,7 @@
          signals in place of the buttons. Click (or any pointer intent /
          Escape / toolbar focus) restores the full toolbar. -->
     <div
-      v-if="adaptiveChrome === 'letterbox'"
+      v-if="effectiveAdaptiveChrome === 'letterbox'"
       class="nle-letterbox"
       :title="'Click to show the toolbar'"
       @click="restoreChrome"
@@ -543,6 +551,7 @@ const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   themePreset: "default",
   toolbarLayout: "comfortable",
   adaptiveChrome: "letterbox",
+  toolbarPosition: "top",
   readonly: false,
   showToolbar: true,
   defaultViewMode: "editor",
@@ -601,9 +610,50 @@ onUnmounted(() => {
   toolbarShellObserver?.disconnect();
   toolbarShellObserver = null;
 });
+
+// Root width drives the toolbarPosition fallback. The SHELL width cannot:
+// in left-rail mode the shell is a ~48px column, which would read as
+// "phone" forever. Same deferred-write pattern as the shell observer.
+const rootWidth = ref(Number.POSITIVE_INFINITY);
+let rootObserver: ResizeObserver | null = null;
+watch(rootEl, (el) => {
+  rootObserver?.disconnect();
+  rootObserver = null;
+  if (el && typeof ResizeObserver !== "undefined") {
+    rootObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width != null && width !== rootWidth.value) {
+        requestAnimationFrame(() => {
+          rootWidth.value = width;
+        });
+      }
+    });
+    rootObserver.observe(el);
+  }
+});
+onUnmounted(() => {
+  rootObserver?.disconnect();
+  rootObserver = null;
+});
+
+// Every non-top position is a desktop arrangement — below the breakpoint
+// the mobile toolbar owns the screen and the docked top bar returns.
+const effectiveToolbarPosition = computed(() =>
+  rootWidth.value <= 640 ? "top" : props.toolbarPosition
+);
+const isZen = computed(() => effectiveToolbarPosition.value === "zen");
+// Zen IS the letterbox, permanently — it overrides adaptiveChrome="off".
+const effectiveAdaptiveChrome = computed(() =>
+  isZen.value ? "letterbox" : props.adaptiveChrome
+);
+
 // Same 640px breakpoint as the @container rule in NextLevelEditor.css.
+// The left rail always runs the compact/mini mechanics — collapsed rail =
+// mini essentials, expand = the floating panel of everything else.
 const effectiveToolbarLayout = computed(() =>
-  props.toolbarLayout === "compact" || toolbarShellWidth.value <= 640
+  props.toolbarLayout === "compact" ||
+  effectiveToolbarPosition.value === "left" ||
+  toolbarShellWidth.value <= 640
     ? "compact"
     : props.toolbarLayout
 );
@@ -1917,12 +1967,14 @@ const chromeSuppressed = computed(
 
 // Desktop-only, and only when the main toolbar is actually rendered. Reuses
 // the auto-compact breakpoint: below it the MobileToolbar owns the phone.
+// The left rail has no letterbox either — its chrome is already marginal.
 const adaptiveChromeEnabled = computed(
   () =>
-    props.adaptiveChrome !== "off" &&
+    effectiveAdaptiveChrome.value !== "off" &&
     props.showToolbar &&
     !props.readonly &&
     viewMode.value !== "code" &&
+    effectiveToolbarPosition.value !== "left" &&
     toolbarShellWidth.value > 640
 );
 
@@ -1930,6 +1982,45 @@ const { receded: chromeReceded, restore: restoreChrome } = useChromeRecede({
   root: rootEl,
   enabled: adaptiveChromeEnabled,
   suppressed: chromeSuppressed,
+});
+
+// Zen ("Estúdio"): the letterbox IS the toolbar. Receded from the very first
+// paint (set synchronously in setup, so there is no mount transition), and
+// any restore is only a PEEK — a few seconds after intent brought the full
+// toolbar out, it tucks itself away again unless the pointer is parked on it
+// or an overlay is open.
+if (props.toolbarPosition === "zen") {
+  chromeReceded.value = true;
+}
+let zenTuckTimer: ReturnType<typeof setTimeout> | null = null;
+const scheduleZenTuck = () => {
+  if (zenTuckTimer) clearTimeout(zenTuckTimer);
+  zenTuckTimer = setTimeout(() => {
+    if (!isZen.value || chromeReceded.value) return;
+    if (chromeSuppressed.value || toolbarShellEl.value?.matches(":hover")) {
+      scheduleZenTuck();
+      return;
+    }
+    chromeReceded.value = true;
+  }, 2500);
+};
+watch([chromeReceded, isZen], ([receded, zen], [, wasZen]) => {
+  // Entering zen at runtime (e.g. the playground select) recedes NOW —
+  // the mode switch should read as an immediate scene change, not wait
+  // out a tuck cycle.
+  if (zen && !wasZen) {
+    chromeReceded.value = true;
+    return;
+  }
+  if (zen && !receded) {
+    scheduleZenTuck();
+  } else if (zenTuckTimer) {
+    clearTimeout(zenTuckTimer);
+    zenTuckTimer = null;
+  }
+});
+onUnmounted(() => {
+  if (zenTuckTimer) clearTimeout(zenTuckTimer);
 });
 
 // The letterbox band's three signals (hard cap — it must never become a
@@ -1970,7 +2061,10 @@ const letterboxFormatLabel = computed(() => {
 const letterboxProgress = ref(0);
 let progressLastUpdate = 0;
 const updateLetterboxProgress = () => {
-  if (!adaptiveChromeEnabled.value || props.adaptiveChrome !== "letterbox") {
+  if (
+    !adaptiveChromeEnabled.value ||
+    effectiveAdaptiveChrome.value !== "letterbox"
+  ) {
     return;
   }
   const now = Date.now();
@@ -2325,6 +2419,44 @@ onUnmounted(() => {
     max-height: 70vh;
     bottom: calc(16px + var(--nle-mobile-toolbar-clearance, 0px)) !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Toolbar position layouts. The root carries data-toolbar-position (mirroring
+   effectiveToolbarPosition — absent for "top"); the shell carries
+   data-position for the toolbar's own form (styled in NextLevelEditor.css).
+   This block only PLACES the shell; below 640px the attribute disappears and
+   the classic top layout returns untouched.
+--------------------------------------------------------------------------- */
+
+/* Margem: a slim rail absolutely placed in the left padding — the content
+   simply flows in the reserved gutter, so no child needs individual offsets. */
+.next-level-editor[data-toolbar-position="left"] {
+  padding-left: 48px;
+}
+
+.next-level-editor[data-toolbar-position="left"] .nle-toolbar-shell {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 48px;
+  z-index: 20;
+}
+
+/* Baseline: the shell docks under the page. Flex column keeps source order
+   for everything else; sticky bottom pins the dock while the editor is in
+   view. Menus/tooltips open upward via the shell's data-position styles. */
+.next-level-editor[data-toolbar-position="bottom"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.next-level-editor[data-toolbar-position="bottom"] .nle-toolbar-shell {
+  order: 99;
+  position: sticky;
+  bottom: 0;
+  top: auto;
 }
 
 /* ---------------------------------------------------------------------------

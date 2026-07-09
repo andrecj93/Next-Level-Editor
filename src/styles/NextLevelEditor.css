@@ -845,7 +845,12 @@
 .nle-toolbar-shell {
   position: sticky;
   top: 0;
-  z-index: 100;
+  /* Above the floating FABs/panels (9998-9999): primary chrome must never
+     lose clicks to a floating affordance — at 375px an unscrolled page could
+     park the comments FAB directly on the expand toggle and swallow every
+     tap. Dialog overlays (10050) still win. This also keeps the toolbar's
+     own open menus above the FABs. */
+  z-index: 9999;
   container-type: inline-size;
   container-name: nle-toolbar;
 }
@@ -1263,9 +1268,17 @@
    The @media rules react to the viewport; this reacts to the container, which
    is what makes it right for narrow-inside-wide embeds. Values mirror
    .is-compact so both paths look identical.
+
+   Every selector is gated on the shell NOT being the left rail: the rail is
+   ~48px wide, so its own container query would always match and these
+   horizontal-bar rules would fight the vertical form. A container query can't
+   see the container's attributes from inside, but the selectors themselves
+   still evaluate normally — and the shell is an ancestor — so an ancestor
+   guard works. `:where()` keeps the guard at zero specificity: the default
+   top bar resolves the cascade exactly as before.
    ============================================================ */
 @container nle-toolbar (max-width: 640px) {
-  .editor-toolbar-modern {
+  :where(.nle-toolbar-shell:not([data-position="left"])) .editor-toolbar-modern {
     /* Mirror .is-compact exactly: wrap + overflow visible. NEVER scroll here —
        `overflow-x: auto` next to `overflow-y: visible` computes overflow-y to
        auto too, turning the bar into a clip/scroll box that cuts every
@@ -1277,37 +1290,60 @@
     padding: 6px 12px;
     min-height: 46px;
   }
-  .editor-toolbar-modern .toolbar-section-group {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .toolbar-section-group {
     gap: 3px;
     flex-wrap: nowrap;
   }
-  .editor-toolbar-modern .toolbar-divider {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .toolbar-divider {
     height: 14px;
     margin: 0 3px;
   }
-  .editor-toolbar-modern .dropdown-label,
-  .editor-toolbar-modern .view-mode-btn .btn-label {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .dropdown-label,
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .view-mode-btn
+    .btn-label {
     display: none;
   }
-  .editor-toolbar-modern .dropdown-trigger {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .dropdown-trigger {
     gap: 2px;
     padding: 0 8px;
     min-height: 32px;
   }
-  .editor-toolbar-modern .dropdown-arrow {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .dropdown-arrow {
     font-size: 8px;
   }
-  .editor-toolbar-modern .toolbar-btn-modern {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .toolbar-btn-modern {
     height: 32px;
     min-width: 32px;
     padding: 0 6px;
   }
-  .editor-toolbar-modern .toolbar-group,
-  .editor-toolbar-modern .view-mode-group {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .toolbar-group,
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .view-mode-group {
     gap: 2px;
   }
-  .editor-toolbar-modern .view-mode-btn,
-  .editor-toolbar-modern .view-mode-btn.with-text {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .view-mode-btn,
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .view-mode-btn.with-text {
     min-width: 34px;
     height: 32px;
     padding: 0 9px;
@@ -2084,6 +2120,302 @@
   .view-mode-btn.with-text {
     min-width: 38px;
     padding: 0 8px;
+  }
+}
+
+/* ============================================================
+   TOOLBAR POSITION VARIANTS — keyed off the data-position attribute the host
+   places on .nle-toolbar-shell (absent = classic top bar, untouched; the host
+   root also carries data-toolbar-position for the surrounding layout).
+
+   "left" (Margem): the toolbar is a slim vertical rail hugging the editor's
+   left edge — the mini essentials as a column, expand toggle at the rail's
+   foot; the non-essential families open as a floating vertical panel to the
+   rail's right. "bottom" (Baseline): the familiar horizontal bar docked under
+   the page — menus and tooltips flip upward so nothing clips at the editor's
+   bottom edge. This section sits LAST among the toolbar styles on purpose:
+   equal-specificity ties (e.g. against .is-compact.is-mini) resolve to the
+   position variant.
+   ============================================================ */
+
+/* The non-essential families' wrapper is layout-inert everywhere except the
+   left rail: display: contents removes its box, so the horizontal bars keep
+   their exact flex layout (the groups stay direct flex items of the nav). */
+.nle-toolbar-panel {
+  display: contents;
+}
+
+/* ---------------- Margem — data-position="left" ---------------- */
+
+/* The rail: a full-height 48px column. min-height resets (the top bar's would
+   force a squat block); the masthead hairline moves to the right edge. The
+   host owns the shell's placement (absolute in the root's reserved 48px
+   gutter), so only the toolbar's own form lives here. */
+.nle-toolbar-shell[data-position="left"] .editor-toolbar-modern {
+  flex-direction: column;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 8px;
+  padding: 8px 4px;
+  border-bottom: none;
+  border-right: 1px solid var(--color-divider);
+}
+
+/* Elevation casts sideways here — content scrolls beside the rail, not
+   beneath it. */
+.nle-toolbar-shell[data-position="left"] .editor-toolbar-modern::after {
+  box-shadow: 8px 0 18px -10px rgba(15, 23, 42, 0.3),
+    2px 0 6px -3px rgba(15, 23, 42, 0.16);
+}
+.theme-dark
+  .nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern::after {
+  box-shadow: 10px 0 20px -10px rgba(0, 0, 0, 0.6),
+    2px 0 6px -3px rgba(0, 0, 0, 0.4);
+}
+.nle-toolbar-shell[data-position="left"] .editor-toolbar-modern.is-elevated {
+  border-right-color: transparent;
+}
+
+/* The essentials family stacks vertically; labels and carets yield to the
+   tooltips (which flip to the rail's right, below). */
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  > .toolbar-section-group {
+  flex-direction: column;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  > .toolbar-section-group
+  .toolbar-group {
+  flex-direction: column;
+  gap: 2px;
+}
+.nle-toolbar-shell[data-position="left"] .editor-toolbar-modern .dropdown-label,
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  > .toolbar-section-group
+  .dropdown-arrow {
+  display: none;
+}
+
+/* The expand toggle pins to the rail's foot; its chevron points into the
+   panel (static transforms — the transition only runs on the open flip). */
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  .toolbar-expand-toggle {
+  margin-left: 0;
+  margin-top: auto;
+}
+.nle-toolbar-shell[data-position="left"] .toolbar-expand-toggle svg {
+  transform: rotate(-90deg);
+}
+.nle-toolbar-shell[data-position="left"] .toolbar-expand-toggle.is-open svg {
+  transform: rotate(90deg);
+}
+
+/* The floating panel — the same surface language as the dropdown menus:
+   hairline edge, soft shadow, --radius-lg. It caps to the editor's height and
+   scrolls internally; that scroll box is also why the dropdowns INSIDE it
+   open downward instead of flying right — overflow-y: auto computes
+   overflow-x to auto too, so a right-flyout would clip at the panel edge. */
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern:not(.is-mini)
+  .nle-toolbar-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 0;
+  z-index: 60;
+  min-width: 264px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--editor-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* The unfold staging reads as a vertical cascade here: the panel surface
+   rises with the same one-shot keyframe as its staggered families. Only ever
+   triggered by .is-unfolding (the expand toggle) — never on mount. */
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern.is-unfolding
+  .nle-toolbar-panel {
+  animation: nle-toolbar-unfold var(--nle-motion-enter, 180ms)
+    var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1)) backwards;
+}
+
+/* Panel families read as menu sections: full-width rows, labels restored
+   (they out-specify the .is-compact label hiding). */
+.nle-toolbar-shell[data-position="left"]
+  .nle-toolbar-panel
+  .toolbar-section-group {
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .dropdown-label {
+  display: inline;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .toolbar-dropdown {
+  display: block;
+  width: 100%;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .dropdown-trigger {
+  width: 100%;
+  justify-content: flex-start;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .dropdown-arrow {
+  margin-left: auto;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .toolbar-divider {
+  width: auto;
+  align-self: stretch;
+  height: 1px;
+  margin: 4px 2px;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .export-section {
+  display: flex;
+}
+
+/* Rail dropdowns (Format — and Align once expanded) fly out to the RIGHT of
+   their trigger; a drop-down would run off the rail. Panel dropdowns open
+   below their trigger inside the panel's scroll box (see the overflow note
+   above). Both out-specify the export section's right-anchor. */
+.nle-toolbar-shell[data-position="left"] .editor-toolbar-modern .dropdown-menu {
+  top: 0;
+  left: calc(100% + 4px);
+  right: auto;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .dropdown-menu {
+  top: calc(100% + 4px);
+  left: 0;
+  right: auto;
+}
+
+/* Rail tooltips flip to the RIGHT of the control: dropping down would overlap
+   the next button, and a centered bubble would clip at the editor's left
+   edge. Inside the panel the labels are visible and a tooltip would clip
+   against the panel's scroll box, so they're suppressed there. */
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  [data-tooltip]::after {
+  top: 50%;
+  bottom: auto;
+  left: calc(100% + 10px);
+  right: auto;
+  transform: translateY(-50%);
+}
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  [data-tooltip]:hover::after {
+  transform: translateY(-50%);
+}
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  [data-tooltip]::before {
+  top: 50%;
+  bottom: auto;
+  left: calc(100% + 4px);
+  right: auto;
+  transform: translateY(-50%);
+  border-color: transparent;
+  border-right-color: var(--tooltip-bg);
+}
+.nle-toolbar-shell[data-position="left"]
+  .nle-toolbar-panel
+  [data-tooltip]::after,
+.nle-toolbar-shell[data-position="left"]
+  .nle-toolbar-panel
+  [data-tooltip]::before {
+  display: none;
+}
+
+/* ---------------- Baseline — data-position="bottom" ---------------- */
+
+/* The host owns the dock's placement (order flip + sticky bottom on the
+   shell); these values are a belt-and-suspenders mirror so a bare shell
+   attribute behaves too. */
+.nle-toolbar-shell[data-position="bottom"] {
+  top: auto;
+  bottom: 0;
+}
+
+/* The masthead hairline moves to the TOP edge; elevation casts upward. */
+.nle-toolbar-shell[data-position="bottom"] .editor-toolbar-modern {
+  border-bottom: none;
+  border-top: 1px solid var(--color-divider);
+}
+.nle-toolbar-shell[data-position="bottom"] .editor-toolbar-modern.is-elevated {
+  border-top-color: transparent;
+}
+.nle-toolbar-shell[data-position="bottom"] .editor-toolbar-modern::after {
+  box-shadow: 0 -8px 18px -10px rgba(15, 23, 42, 0.3),
+    0 -2px 6px -3px rgba(15, 23, 42, 0.16);
+}
+.theme-dark
+  .nle-toolbar-shell[data-position="bottom"]
+  .editor-toolbar-modern::after {
+  box-shadow: 0 -10px 20px -10px rgba(0, 0, 0, 0.6),
+    0 -2px 6px -3px rgba(0, 0, 0, 0.4);
+}
+
+/* Menus open UPWARD — a drop-down would fall past the editor's bottom edge.
+   (The export section's right-anchor is left/right only, so it survives.) */
+.nle-toolbar-shell[data-position="bottom"]
+  .editor-toolbar-modern
+  .dropdown-menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+/* The open/close motion mirrors too: rise from the trigger, settle back. */
+.nle-toolbar-shell[data-position="bottom"] .dropdown-fade-enter-from {
+  transform: translateY(8px);
+}
+.nle-toolbar-shell[data-position="bottom"] .dropdown-fade-leave-to {
+  transform: translateY(4px);
+}
+
+/* Tooltips flip ABOVE the buttons (below would clip at the container's
+   bottom edge); the caret arrow flips with them. */
+.nle-toolbar-shell[data-position="bottom"]
+  .editor-toolbar-modern
+  [data-tooltip]::after {
+  top: auto;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(4px);
+}
+.nle-toolbar-shell[data-position="bottom"]
+  .editor-toolbar-modern
+  [data-tooltip]:hover::after {
+  transform: translateX(-50%) translateY(0);
+}
+.nle-toolbar-shell[data-position="bottom"]
+  .editor-toolbar-modern
+  [data-tooltip]::before {
+  top: auto;
+  bottom: calc(100% + 4px);
+  border-color: transparent;
+  border-top-color: var(--tooltip-bg);
+}
+
+/* Position-variant motion honors reduced-motion like the rest of the
+   staging: states still apply, nothing tweens. */
+@media (prefers-reduced-motion: reduce) {
+  .editor-toolbar-modern.is-unfolding .nle-toolbar-panel {
+    animation: none !important;
   }
 }
 

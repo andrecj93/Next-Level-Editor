@@ -75,6 +75,12 @@
       />
     </div>
 
+    <!-- Non-essential families. The wrapper is layout-inert (display:
+         contents) in the horizontal bars, so their flex layout is untouched;
+         in the left-rail position (.nle-toolbar-shell[data-position="left"])
+         it becomes the floating vertical panel that opens to the right of the
+         rail — see the position-variant styles in NextLevelEditor.css. -->
+    <div class="nle-toolbar-panel">
     <!-- Insert & Style Group -->
     <div
       v-show="!isMini"
@@ -419,6 +425,7 @@
         <span v-else
           ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg></span>
       </button>
+    </div>
     </div>
 
     <!-- Mini-toolbar expand / collapse — compact layout only. Collapsed shows
