@@ -25,6 +25,8 @@
       v-if="showToolbar && !readonly"
       ref="toolbarShellEl"
       class="nle-toolbar-shell"
+      :data-adaptive="adaptiveChrome"
+      :data-receded="chromeReceded || undefined"
     >
     <EditorToolbar
       :is-toolbar-section-visible="isToolbarSectionVisible"
@@ -57,6 +59,29 @@
       @toggle-theme="toggleTheme"
       @toggle-fullscreen="toggleFullScreen"
     />
+    <!-- Letterbox band — the toolbar's while-you-write form: three quiet
+         signals in place of the buttons. Click (or any pointer intent /
+         Escape / toolbar focus) restores the full toolbar. -->
+    <div
+      v-if="adaptiveChrome === 'letterbox'"
+      class="nle-letterbox"
+      :title="'Click to show the toolbar'"
+      @click="restoreChrome"
+    >
+      <span class="nle-letterbox-format">{{ letterboxFormatLabel }}</span>
+      <span class="nle-letterbox-filament" aria-hidden="true">
+        <span
+          class="nle-letterbox-filament-fill"
+          :style="{ width: `${Math.round(letterboxProgress * 100)}%` }"
+        />
+      </span>
+      <span
+        class="nle-letterbox-save"
+        :class="{ 'is-pulsing': letterboxSavePulse }"
+        aria-hidden="true"
+      />
+      <span class="nle-letterbox-count">{{ wordCount }} words</span>
+    </div>
     </div>
 
     <CommandMenu
@@ -444,6 +469,9 @@ import {
 } from "../utils/commands";
 import { smoothScrollIntoView } from "../utils/scroll";
 import { clampMenuToViewport } from "../utils/menuPosition";
+import { getCaretDocumentProgress } from "../utils/caretProgress";
+import { useChromeRecede } from "../composables/useChromeRecede";
+import { selectionTick } from "../composables/useActiveStates";
 import { useDeviceDetection } from "../composables/useDeviceDetection";
 import { useTheme } from "../composables/useTheme";
 import { useAutoSave } from "../composables/useAutoSave";
@@ -514,6 +542,7 @@ const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   mentionSearch: undefined,
   themePreset: "default",
   toolbarLayout: "comfortable",
+  adaptiveChrome: "letterbox",
   readonly: false,
   showToolbar: true,
   defaultViewMode: "editor",
@@ -801,6 +830,7 @@ const {
   showTableModal,
   showTableDesigner,
   showTablePropertiesModal,
+  showShortcutHelpModal,
   openLinkModal,
   closeLinkModal,
   openImageUploadModal,
@@ -1852,6 +1882,126 @@ useEditorSetup({
   handleEscape: handleGlobalEscape,
   onSelectionChange,
 });
+
+// ---------------------------------------------------------------------------
+// Cinematic adaptive chrome ("Letterbox") — typing dissolves the toolbar into
+// a quiet ambient band; intent (pointer, selection, Escape, toolbar focus)
+// brings it back instantly. Declared LAST in setup: useChromeRecede watches
+// `suppressed` with flush:"sync", so every flag it reads must already exist.
+// ---------------------------------------------------------------------------
+
+// Never recede while any overlay owns the screen — receding under an open
+// menu/dialog would yank its anchor away.
+const chromeSuppressed = computed(
+  () =>
+    showColorsDropdown.value ||
+    showCommandMenu.value ||
+    showVariableAutocomplete.value ||
+    showHistoryTimeline.value ||
+    showFloatingToolbar.value ||
+    showVariablesPanel.value ||
+    showLinkModal.value ||
+    showImageUploadModal.value ||
+    showEmbedModal.value ||
+    showFileManagerModal.value ||
+    showEmojiPicker.value ||
+    showTemplateModal.value ||
+    showHtmlCodeModal.value ||
+    showFindReplaceModal.value ||
+    showCodeBlockModal.value ||
+    showTableModal.value ||
+    showTableDesigner.value ||
+    showTablePropertiesModal.value ||
+    showShortcutHelpModal.value
+);
+
+// Desktop-only, and only when the main toolbar is actually rendered. Reuses
+// the auto-compact breakpoint: below it the MobileToolbar owns the phone.
+const adaptiveChromeEnabled = computed(
+  () =>
+    props.adaptiveChrome !== "off" &&
+    props.showToolbar &&
+    !props.readonly &&
+    viewMode.value !== "code" &&
+    toolbarShellWidth.value > 640
+);
+
+const { receded: chromeReceded, restore: restoreChrome } = useChromeRecede({
+  root: rootEl,
+  enabled: adaptiveChromeEnabled,
+  suppressed: chromeSuppressed,
+});
+
+// The letterbox band's three signals (hard cap — it must never become a
+// dashboard): current block format, document-position filament, save + count.
+const BLOCK_FORMAT_LABELS: Record<string, string> = {
+  P: "Paragraph",
+  H1: "Heading 1",
+  H2: "Heading 2",
+  H3: "Heading 3",
+  H4: "Heading 4",
+  H5: "Heading 5",
+  H6: "Heading 6",
+  BLOCKQUOTE: "Quote",
+  PRE: "Code",
+  LI: "List",
+};
+const letterboxFormatLabel = computed(() => {
+  void selectionTick.value;
+  const root = editorContent.value;
+  const selection =
+    typeof window !== "undefined" ? window.getSelection() : null;
+  if (!root || !selection || selection.rangeCount === 0) return "Paragraph";
+  let el: HTMLElement | null =
+    selection.anchorNode?.nodeType === Node.ELEMENT_NODE
+      ? (selection.anchorNode as HTMLElement)
+      : selection.anchorNode?.parentElement ?? null;
+  while (el && el !== root) {
+    const label = BLOCK_FORMAT_LABELS[el.tagName];
+    if (label) return label;
+    el = el.parentElement;
+  }
+  return "Paragraph";
+});
+
+// Playhead filament: the caret's position through the document, throttled —
+// selectionchange fires on every keystroke and the value only needs to feel
+// alive, not be frame-perfect.
+const letterboxProgress = ref(0);
+let progressLastUpdate = 0;
+const updateLetterboxProgress = () => {
+  if (!adaptiveChromeEnabled.value || props.adaptiveChrome !== "letterbox") {
+    return;
+  }
+  const now = Date.now();
+  if (now - progressLastUpdate < 150) return;
+  progressLastUpdate = now;
+  const root = editorContent.value;
+  if (!root) return;
+  const progress = getCaretDocumentProgress(root);
+  if (progress != null) letterboxProgress.value = progress;
+};
+onMounted(() =>
+  document.addEventListener("selectionchange", updateLetterboxProgress)
+);
+onUnmounted(() =>
+  document.removeEventListener("selectionchange", updateLetterboxProgress)
+);
+
+// Auto-save pulse: one soft beat on the band's dot per completed save — the
+// band's single use of accent (accent-as-signal).
+const letterboxSavePulse = ref(false);
+let savePulseTimer: ReturnType<typeof setTimeout> | null = null;
+watch(lastSaved, () => {
+  letterboxSavePulse.value = true;
+  if (savePulseTimer) clearTimeout(savePulseTimer);
+  savePulseTimer = setTimeout(() => {
+    letterboxSavePulse.value = false;
+  }, 1200);
+});
+onUnmounted(() => {
+  if (savePulseTimer) clearTimeout(savePulseTimer);
+});
 </script>
 
 <style src="../styles/NextLevelEditor.css"></style>
@@ -2175,5 +2325,117 @@ useEditorSetup({
     max-height: 70vh;
     bottom: calc(16px + var(--nle-mobile-toolbar-clearance, 0px)) !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Cinematic adaptive chrome. Two stacked layers in the toolbar shell (which is
+   position: sticky, i.e. a containing block): the toolbar itself and the
+   letterbox band. All choreography is opacity-only inside RESERVED space —
+   the shell's height never changes, so the text below never reflows. Recede
+   is slow and beneath notice (gentle ease); return is near-instant (ease-out).
+   Durations come from the --nle-motion tokens, which prefers-reduced-motion
+   already collapses to plain quick crossfades.
+--------------------------------------------------------------------------- */
+.nle-toolbar-shell[data-adaptive] :deep(.editor-toolbar-modern) {
+  transition: opacity var(--nle-motion-return, 160ms)
+    var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1));
+}
+
+.nle-toolbar-shell[data-adaptive][data-receded] :deep(.editor-toolbar-modern) {
+  transition: opacity var(--nle-motion-recede, 450ms)
+    var(--nle-ease-gentle, cubic-bezier(0.4, 0, 0.6, 1));
+  pointer-events: none;
+}
+
+/* Letterbox: the buttons dissolve fully — the band takes their place. */
+.nle-toolbar-shell[data-adaptive="letterbox"][data-receded]
+  :deep(.editor-toolbar-modern) {
+  opacity: 0;
+}
+
+/* Recede: the conservative variant — a whisper of the toolbar remains. */
+.nle-toolbar-shell[data-adaptive="recede"][data-receded]
+  :deep(.editor-toolbar-modern) {
+  opacity: 0.16;
+}
+
+/* The ambient band: absolute over the toolbar's reserved space, inert until
+   the chrome recedes. One shade deeper than the toolbar surface (the house
+   lights going down); progressive enhancement via color-mix. */
+.nle-letterbox {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+  background: var(--toolbar-bg, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--toolbar-bg, var(--color-surface)) 88%,
+    #000 12%
+  );
+  border-bottom: 1px solid var(--color-divider, var(--color-border));
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity var(--nle-motion-return, 160ms)
+    var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1));
+}
+
+.nle-toolbar-shell[data-adaptive="letterbox"][data-receded] .nle-letterbox {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity var(--nle-motion-recede, 450ms)
+    var(--nle-ease-gentle, cubic-bezier(0.4, 0, 0.6, 1));
+}
+
+.nle-letterbox-format {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
+}
+
+/* The playhead: a 2px filament that fills as the caret moves through the
+   document — the one detail that makes scrolling-while-writing meaningful. */
+.nle-letterbox-filament {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.nle-letterbox-filament-fill {
+  display: block;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--toolbar-text-secondary, var(--color-text-secondary));
+  transition: width 300ms var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* Auto-save dot — the band's ONLY use of accent (accent-as-signal). */
+.nle-letterbox-save {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--toolbar-text-secondary, var(--color-text-secondary));
+  opacity: 0.35;
+  transition: opacity var(--nle-motion-quick, 120ms) ease,
+    background var(--nle-motion-quick, 120ms) ease;
+}
+
+.nle-letterbox-save.is-pulsing {
+  background: var(--toolbar-accent, var(--color-primary));
+  opacity: 1;
+}
+
+.nle-letterbox-count {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
 }
 </style>

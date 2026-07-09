@@ -13,9 +13,13 @@
       role="group"
       aria-label="Text formatting"
     >
-      <!-- Format Dropdown -->
+      <!-- Format Dropdown — .format-dropdown scopes the masthead's serif
+           trigger label (the class falls through ToolbarSection onto
+           ToolbarDropdown's root). The trigger shows the ACTIVE block format
+           name (default displayLabel behavior, no preserve-label). -->
       <ToolbarSection
         type="dropdown"
+        class="format-dropdown"
         :visible="isToolbarSectionVisible('format')"
         label="Format"
         icon="<svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><polyline points=&quot;4 7 4 4 20 4 20 7&quot;/><line x1=&quot;9&quot; x2=&quot;15&quot; y1=&quot;20&quot; y2=&quot;20&quot;/><line x1=&quot;12&quot; x2=&quot;12&quot; y1=&quot;4&quot; y2=&quot;20&quot;/></svg>"

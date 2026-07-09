@@ -72,6 +72,14 @@
           </div>
           <div class="cfg-row">
             <div class="cfg-field">
+              <label>While writing</label>
+              <select v-model="editorConfig.adaptiveChrome" class="select">
+                <option value="letterbox">Letterbox band</option>
+                <option value="recede">Recede</option>
+                <option value="off">Keep toolbar</option>
+              </select>
+            </div>
+            <div class="cfg-field">
               <label>Height</label>
               <input v-model="editorConfig.height" type="number" min="300" max="1200" class="num"> px
             </div>
@@ -130,6 +138,7 @@
           :show-toolbar="editorConfig.showToolbar"
           :default-view-mode="editorConfig.defaultViewMode"
           :autofocus="editorConfig.autofocus"
+          :adaptive-chrome="editorConfig.adaptiveChrome"
           :show-writing-stats="editorConfig.showWritingStats"
           :enable-comments="editorConfig.enableComments"
           :enable-variables="editorConfig.enableVariables"
@@ -187,6 +196,7 @@ const DEFAULT_CONFIG = {
   height: "620",
   themePreset: "warm",
   toolbarLayout: "comfortable" as "comfortable" | "compact",
+  adaptiveChrome: "letterbox" as "letterbox" | "recede" | "off",
   showWritingStats: true,
   enableComments: true,
   enableVariables: true,

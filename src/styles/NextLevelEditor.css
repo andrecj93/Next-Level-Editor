@@ -750,18 +750,10 @@
   flex: 1;
 }
 
-/* Fullscreen Toggle Button Styling */
-.toolbar-btn-modern.fullscreen-toggle {
-  transition: all 0.2s ease;
-}
-
+/* Fullscreen Toggle Button Styling — "on" is accent ink, like every other
+   active state in the masthead (no fills, no hover growth). */
 .toolbar-btn-modern.fullscreen-toggle[aria-pressed="true"] {
-  background: var(--toolbar-hover);
   color: var(--toolbar-accent);
-}
-
-.toolbar-btn-modern.fullscreen-toggle:hover {
-  transform: scale(1.05);
 }
 
 /* Emoji Picker Container */
@@ -858,57 +850,62 @@
   container-name: nle-toolbar;
 }
 
+/* ============================================================
+   MASTHEAD toolbar — a magazine masthead, not a row of boxed
+   chips. Ghost controls (no borders, no fills at rest), hairline
+   separators, air between families; the accent appears only as
+   INK: colored glyphs and a short underline bar on active
+   formatting states. Opaque --toolbar-bg keeps contrast AA.
+   ============================================================ */
 .editor-toolbar-modern {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  /* Between families: generous. Within a family: tight (see .toolbar-group). */
+  gap: 14px;
   padding: 10px 16px;
   background: var(--toolbar-bg);
-  border-bottom: 1px solid var(--editor-border);
+  /* A single hairline underlines the masthead — no slab shadows. */
+  border-bottom: 1px solid var(--color-divider);
   min-height: 52px;
-  /* A lit top edge makes the bar read as a solid slab, not a flat strip. */
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.theme-dark .editor-toolbar-modern {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 1px 3px rgba(0, 0, 0, 0.25);
+/* Finer icon line for the masthead: CSS wins over the SVG presentation
+   attribute (stroke-width="2") without touching dozens of icon strings.
+   Fill-based glyphs (e.g. the "⋯ More" dots, stroke="none") are unaffected —
+   stroke-width is inert when there is no stroke. */
+.editor-toolbar-modern svg {
+  stroke-width: 1.5;
 }
 
 /* Toolbar section grouping */
 .toolbar-section-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .toolbar-divider {
   width: 1px;
-  height: 24px;
+  height: 16px;
   background: var(--color-divider);
-  opacity: 0.7;
-  margin: 0 4px;
+  margin: 0 8px;
   align-self: center;
 }
 
+/* A family of sibling controls (undo/redo, inline format toggles) sits
+   flush — no box, no fill; the shared hover pill is the only surface. */
 .toolbar-group {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.04);
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  gap: 2px;
 }
 
-.theme-dark .toolbar-group {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
+/* Ghost control: transparent at rest, secondary ink; hover restores full ink
+   over a soft --toolbar-hover pill. NEVER a `background` shorthand in the
+   state rules below — the active underline lives in background-image and a
+   shorthand would wipe it. */
 .toolbar-btn-modern {
   display: flex;
   align-items: center;
@@ -917,45 +914,53 @@
   min-width: 34px;
   height: 34px;
   padding: 0 9px;
-  border: 1px solid transparent;
+  border: none;
   background: transparent;
-  color: var(--toolbar-text);
-  border-radius: 6px;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  border-radius: var(--radius-md, 6px);
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
   /* Deliberately NOT 'all' — animating outline/transform lags the focus ring
-     and makes hover bob. Only tween paint properties. */
-  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+     and makes hover bob. Only tween paint properties, on the quick step. */
+  transition: background-color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    opacity var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
   position: relative;
 }
 
 .toolbar-btn-modern:hover {
-  background: var(--toolbar-hover);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-}
-
-.theme-dark .toolbar-btn-modern:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background-color: var(--toolbar-hover);
+  color: var(--toolbar-text);
 }
 
 .toolbar-btn-modern:active {
-  background: var(--toolbar-hover);
-  transition: background 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--toolbar-hover);
+  transition-duration: var(--nle-motion-instant, 0ms);
 }
 
+/* Active FORMATTING state — the masthead's signature mark: accent INK plus a
+   2px accent underline bar (~60% wide, centered at the baseline). Painted as
+   a background-image because both pseudo-elements are already taken by the
+   tooltip bubble + arrow. */
 .toolbar-btn-modern.active {
-  background: var(--toolbar-accent);
-  color: #ffffff;
-  border-color: var(--toolbar-accent);
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+  background-color: transparent;
+  color: var(--toolbar-accent);
+  background-image: linear-gradient(
+    var(--toolbar-accent),
+    var(--toolbar-accent)
+  );
+  background-repeat: no-repeat;
+  background-size: 60% 2px;
+  background-position: center calc(100% - 3px);
 }
 
-.theme-dark .toolbar-btn-modern.active {
-  box-shadow: 0 2px 6px rgba(96, 165, 250, 0.4);
+.toolbar-btn-modern.active:hover {
+  background-color: var(--toolbar-hover);
+  color: var(--toolbar-accent);
 }
 
 /* ============================================================
@@ -982,7 +987,8 @@
   transition-duration: 0.08s;
 }
 
-/* Toggle a format on → the icon pops and the accent fill blooms outward. */
+/* Toggle a format on → the icon pops. (The chip-era accent "bloom" is gone:
+   the masthead's active mark is the underline bar, drawn instantly.) */
 .toolbar-btn-modern.active svg {
   animation: nle-icon-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -990,18 +996,6 @@
   0% { transform: scale(0.55); }
   50% { transform: scale(1.3); }
   100% { transform: scale(1); }
-}
-.toolbar-btn-modern.active {
-  box-shadow: 0 4px 14px -3px rgba(59, 130, 246, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  animation: nle-active-bloom 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes nle-active-bloom {
-  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.55); }
-}
-.theme-dark .toolbar-btn-modern.active {
-  box-shadow: 0 4px 14px -3px rgba(96, 165, 250, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 /* Dropdown caret: smooth spring flip when the menu opens. */
@@ -1020,13 +1014,17 @@
 }
 
 /* A whisper-soft opacity fade-in for the whole bar on mount — no transform, so
-   it never leaves buttons "unstable"/intercepting for automated clicks. */
+   it never leaves buttons "unstable"/intercepting for automated clicks.
+   Fill mode MUST be `backwards`, never `both`/`forwards`: a persisting fill
+   keeps the keyframe's opacity:1 at the animation cascade level FOREVER,
+   which silently defeats every later opacity rule (the adaptive-chrome
+   letterbox dissolve died to exactly this). */
 @keyframes nle-toolbar-in {
   from { opacity: 0.4; }
   to { opacity: 1; }
 }
 .editor-toolbar-modern {
-  animation: nle-toolbar-in 0.4s ease both;
+  animation: nle-toolbar-in 0.4s ease backwards;
 }
 
 /* ============================================================
@@ -1050,7 +1048,7 @@
   flex-wrap: nowrap;
 }
 .editor-toolbar-modern.is-compact .toolbar-divider {
-  height: 20px;
+  height: 14px;
   margin: 0 3px;
 }
 /* Every label → its tooltip. Dropdowns, view-modes and the Export pill
@@ -1072,16 +1070,10 @@
   min-width: 32px;
   padding: 0 6px;
 }
-/* Flatten the remaining inline pill (undo/redo) so compact is clean icons +
-   dividers, not boxes-within-a-box. */
-.editor-toolbar-modern.is-compact .toolbar-group {
-  padding: 0;
-  gap: 2px;
-  background: transparent;
-  border-color: transparent;
-}
+/* Families are already ghost (no box) in the masthead; compact just keeps
+   them tight. */
+.editor-toolbar-modern.is-compact .toolbar-group,
 .editor-toolbar-modern.is-compact .view-mode-group {
-  padding: 2px;
   gap: 2px;
 }
 .editor-toolbar-modern.is-compact .view-mode-btn,
@@ -1166,7 +1158,7 @@
     flex-wrap: nowrap;
   }
   .editor-toolbar-modern .toolbar-divider {
-    height: 20px;
+    height: 14px;
     margin: 0 3px;
   }
   .editor-toolbar-modern .dropdown-label,
@@ -1188,7 +1180,6 @@
   }
   .editor-toolbar-modern .toolbar-group,
   .editor-toolbar-modern .view-mode-group {
-    padding: 2px;
     gap: 2px;
   }
   .editor-toolbar-modern .view-mode-btn,
@@ -1322,19 +1313,11 @@
   font-size: 18px;
 }
 
-/* View Mode Toggle Styles */
+/* View Mode Toggle Styles — a ghost family like the rest of the masthead:
+   no segmented box; the active mode carries the accent ink + underline. */
 .view-mode-group {
   display: flex;
-  gap: 3px;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 8px;
-}
-
-.theme-dark .view-mode-group {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+  gap: 2px;
 }
 
 .view-mode-btn {
@@ -1343,13 +1326,16 @@
   padding: 0 10px;
   border: none;
   background: transparent;
-  color: var(--toolbar-text);
-  border-radius: 6px;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  border-radius: var(--radius-md, 6px);
   cursor: pointer;
   font-size: 15px;
-  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    opacity var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
   position: relative;
   display: flex;
   align-items: center;
@@ -1370,19 +1356,27 @@
 }
 
 .view-mode-btn:hover:not(.active) {
-  background: rgba(59, 130, 246, 0.08);
-  color: var(--toolbar-accent);
+  background-color: var(--toolbar-hover);
+  color: var(--toolbar-text);
 }
 
+/* Active mode: accent ink + the signature underline bar (background-image;
+   both pseudo-elements belong to the tooltip). */
 .view-mode-btn.active {
-  background: var(--editor-bg);
+  background-color: transparent;
   color: var(--toolbar-accent);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-image: linear-gradient(
+    var(--toolbar-accent),
+    var(--toolbar-accent)
+  );
+  background-repeat: no-repeat;
+  background-size: 60% 2px;
+  background-position: center calc(100% - 3px);
   font-weight: 600;
 }
 
-.theme-dark .view-mode-btn.active {
-  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.25), 0 1px 3px rgba(0, 0, 0, 0.4);
+.view-mode-btn.active:hover {
+  background-color: var(--toolbar-hover);
 }
 
 .view-mode-btn:focus-visible {
@@ -1637,36 +1631,29 @@
   align-items: center;
   gap: 7px;
   padding: 7px 11px;
-  border: 1px solid transparent;
+  border: none;
   background: transparent;
-  color: var(--toolbar-text);
-  border-radius: 6px;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  border-radius: var(--radius-md, 6px);
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    opacity var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
   min-height: 34px;
 }
 
 .dropdown-trigger:hover {
-  background: var(--toolbar-hover);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-}
-
-.theme-dark .dropdown-trigger:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background-color: var(--toolbar-hover);
+  color: var(--toolbar-text);
 }
 
 .dropdown-trigger.open {
-  background: var(--toolbar-hover);
+  background-color: var(--toolbar-hover);
   color: var(--toolbar-accent);
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
-}
-
-.theme-dark .dropdown-trigger.open {
-  box-shadow: 0 2px 6px rgba(96, 165, 250, 0.25);
 }
 
 .dropdown-icon {
@@ -1683,10 +1670,23 @@
   letter-spacing: 0.01em;
 }
 
+/* The Format dropdown reads as typography, not UI: its trigger shows the
+   ACTIVE block format name ("Paragraph", "Heading 1") set in the editorial
+   serif — the masthead's nameplate. Scoped via the .format-dropdown hook on
+   that one ToolbarSection instance. */
+.editor-toolbar-modern .format-dropdown .dropdown-label {
+  font-family: var(--nle-font-serif, Georgia, serif);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--toolbar-text);
+}
+
 .dropdown-arrow {
   font-size: 9px;
   opacity: 0.5;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--nle-motion-quick, 120ms)
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
 .dropdown-trigger.open .dropdown-arrow {
@@ -1742,7 +1742,8 @@
   top: calc(100% + 4px);
   left: 0;
   background: var(--editor-bg);
-  border: 1px solid var(--editor-border);
+  /* Menus stay surfaces, but soft ones: hairline edge, shadow does the work. */
+  border: 1px solid var(--color-divider);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   z-index: 1000;
@@ -1852,9 +1853,20 @@
   }
 }
 
-.dropdown-fade-enter-active,
+/* Menu open/close: enter decelerates in, exit accelerates away and is
+   faster than the entry (motion tokens; see tokens.css). */
+.dropdown-fade-enter-active {
+  transition: opacity var(--nle-motion-enter, 180ms)
+      var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1)),
+    transform var(--nle-motion-enter, 180ms)
+      var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1));
+}
+
 .dropdown-fade-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
+  transition: opacity var(--nle-motion-exit, 140ms)
+      var(--nle-ease-in, cubic-bezier(0.3, 0, 0.8, 0.15)),
+    transform var(--nle-motion-exit, 140ms)
+      var(--nle-ease-in, cubic-bezier(0.3, 0, 0.8, 0.15));
 }
 
 .dropdown-fade-enter-from {
@@ -1892,12 +1904,10 @@
   }
 
   .toolbar-divider {
-    height: 24px;
     margin: 0 3px;
   }
 
   .toolbar-group {
-    padding: 2px;
     gap: 2px;
   }
 

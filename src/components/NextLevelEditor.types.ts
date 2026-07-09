@@ -40,6 +40,23 @@ export interface NextLevelEditorProps {
    */
   toolbarLayout?: "comfortable" | "compact";
   /**
+   * Cinematic adaptive chrome — what the main toolbar does while you WRITE.
+   *
+   * - `"letterbox"` (default): after ~1s of sustained typing the toolbar's
+   *   buttons dissolve into a quiet ambient band — current block format, a
+   *   document-position filament, an auto-save pulse and the word count.
+   *   Any pointer movement, mouse selection, `Escape` or toolbar focus
+   *   brings the full toolbar back instantly.
+   * - `"recede"`: the conservative variant — the toolbar simply fades to a
+   *   whisper while typing (no ambient band) and returns on the same cues.
+   * - `"off"`: the toolbar never changes while typing.
+   *
+   * Desktop-only: automatically disabled below 640px (phones have their own
+   * toolbar) and honors `prefers-reduced-motion` (movement becomes plain
+   * crossfades). Never returns on a mere typing pause — only on intent.
+   */
+  adaptiveChrome?: "letterbox" | "recede" | "off";
+  /**
    * Read-only / viewer mode. The content is displayed and selectable but not
    * editable: the main, selection and mobile toolbars are hidden, slash and
    * paste handling are inert, and `v-model` still reflects the (unchanging)

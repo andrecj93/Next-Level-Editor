@@ -190,25 +190,34 @@ watch(
   display: inline-block;
 }
 
+/* Masthead ghost trigger: no border, no fill at rest — secondary ink that
+   sharpens on hover over a soft --toolbar-hover pill. Theme tokens so
+   triggers reskin with any editor theme (light + dark). State rules use
+   background-color (never the shorthand): the active underline bar lives in
+   background-image. */
 .dropdown-trigger {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 7px 11px;
-  /* Theme tokens so triggers reskin with any editor theme (light + dark). */
-  border: 1px solid var(--color-border, #ddd);
-  background: var(--color-surface-raised, white);
-  color: var(--toolbar-text, #333);
-  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary, #6b7280));
+  border-radius: var(--radius-md, 6px);
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: background-color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    opacity var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
   min-height: 34px;
 }
 
 .dropdown-trigger:hover:not(:disabled) {
-  background: var(--color-surface-overlay, #f5f5f5);
-  border-color: var(--toolbar-accent, #999);
+  background-color: var(--toolbar-hover, #f5f5f5);
+  color: var(--toolbar-text, #333);
 }
 
 .dropdown-trigger:disabled {
@@ -216,9 +225,22 @@ watch(
   cursor: not-allowed;
 }
 
+/* Active (an item in the menu is on): accent INK + the masthead's 2px
+   underline bar instead of a filled chip. */
 .dropdown-trigger.active {
-  background: var(--toolbar-hover, #e8f0fe);
-  border-color: var(--toolbar-accent, #4285f4);
+  background-color: transparent;
+  color: var(--toolbar-accent, #4285f4);
+  background-image: linear-gradient(
+    var(--toolbar-accent, #4285f4),
+    var(--toolbar-accent, #4285f4)
+  );
+  background-repeat: no-repeat;
+  background-size: 60% 2px;
+  background-position: center calc(100% - 3px);
+}
+
+.dropdown-trigger.active:hover:not(:disabled) {
+  background-color: var(--toolbar-hover, #f5f5f5);
   color: var(--toolbar-accent, #4285f4);
 }
 
@@ -234,7 +256,8 @@ watch(
 .dropdown-arrow {
   font-size: 10px;
   opacity: 0.6;
-  transition: transform 0.2s;
+  transition: transform var(--nle-motion-quick, 120ms)
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
 .toolbar-dropdown.open .dropdown-arrow {
@@ -271,7 +294,8 @@ watch(
   top: calc(100% + 4px);
   left: 0;
   background: var(--color-surface, white);
-  border: 1px solid var(--color-border, #ddd);
+  /* Soft surface: hairline edge; the shadow carries the elevation. */
+  border: 1px solid var(--color-divider, #e5e7eb);
   border-radius: var(--radius-lg, 8px);
   box-shadow: var(--shadow-lg);
   z-index: 10000;
@@ -292,11 +316,12 @@ watch(
   cursor: pointer;
   font-size: 14px;
   text-align: left;
-  transition: background 0.15s;
+  transition: background-color var(--nle-motion-quick, 120ms)
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
 .dropdown-item:hover {
-  background: var(--color-surface-overlay, #f5f5f5);
+  background: var(--toolbar-hover, #f5f5f5);
 }
 
 .dropdown-item.active {
@@ -329,10 +354,20 @@ watch(
   margin: 4px 0;
 }
 
-/* Animations */
-.dropdown-fade-enter-active,
+/* Animations — enter decelerates in (ease-out), exit accelerates away
+   (ease-in) and is faster than the entry (motion tokens; see tokens.css). */
+.dropdown-fade-enter-active {
+  transition: opacity var(--nle-motion-enter, 180ms)
+      var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1)),
+    transform var(--nle-motion-enter, 180ms)
+      var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1));
+}
+
 .dropdown-fade-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
+  transition: opacity var(--nle-motion-exit, 140ms)
+      var(--nle-ease-in, cubic-bezier(0.3, 0, 0.8, 0.15)),
+    transform var(--nle-motion-exit, 140ms)
+      var(--nle-ease-in, cubic-bezier(0.3, 0, 0.8, 0.15));
 }
 
 .dropdown-fade-enter-from {

@@ -193,7 +193,12 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-fast, 150ms) ease;
+  /* Quick-step feedback (note: the old `var(--transition-fast)` here resolved
+     to a full transition shorthand used as a duration — invalid CSS). */
+  transition: background-color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
 .floating-btn:hover {
@@ -205,10 +210,20 @@ onBeforeUnmount(() => {
   color: #ffffff;
 }
 
-.floating-enter-active,
+/* Bubble entry decelerates into place; dismissal accelerates away and is
+   faster than the entry (motion tokens; see tokens.css). */
+.floating-enter-active {
+  transition: opacity var(--nle-motion-enter, 180ms)
+      var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1)),
+    transform var(--nle-motion-enter, 180ms)
+      var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1));
+}
+
 .floating-leave-active {
-  transition: opacity var(--transition-normal, 200ms) ease,
-              transform var(--transition-normal, 200ms) ease;
+  transition: opacity var(--nle-motion-exit, 140ms)
+      var(--nle-ease-in, cubic-bezier(0.3, 0, 0.8, 0.15)),
+    transform var(--nle-motion-exit, 140ms)
+      var(--nle-ease-in, cubic-bezier(0.3, 0, 0.8, 0.15));
 }
 
 .floating-enter-from,
