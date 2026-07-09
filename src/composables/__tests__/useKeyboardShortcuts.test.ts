@@ -1381,4 +1381,146 @@ describe("useKeyboardShortcuts", () => {
       expect(mockUndo).toHaveBeenCalled();
     });
   });
+
+  describe("Block-Boundary Backspace/Delete (normalized merge)", () => {
+    const setup = () => {
+      return useKeyboardShortcuts({
+        editorContent: ref(editorElement),
+        onInput: mockOnInput,
+        onCaptureSnapshot: mockOnCaptureSnapshot,
+        undo: mockUndo,
+        redo: mockRedo,
+        openCommandMenu: mockOpenCommandMenu,
+        insertLink: mockInsertLink,
+        openFindReplaceModal: mockOpenFindReplaceModal,
+        handleInlineAction: mockHandleInlineAction,
+        handleBlockAction: mockHandleBlockAction,
+      });
+    };
+
+    const placeCaret = (node: Node, offset: number) => {
+      const range = document.createRange();
+      range.setStart(node, offset);
+      range.collapse(true);
+      const selection = globalThis.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    };
+
+    it("Backspace at the start of the second <p> merges into the first and dispatches exactly one input event", () => {
+      editorElement.innerHTML = "<p>Hello</p><p>World</p>";
+      const second = editorElement.children[1] as HTMLElement;
+      placeCaret(second.firstChild!, 0);
+
+      const inputSpy = vi.fn();
+      editorElement.addEventListener("input", inputSpy);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", { key: "Backspace" });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>HelloWorld</p>");
+      expect(inputSpy).toHaveBeenCalledTimes(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+
+      // Caret lands exactly at the join point.
+      const selection = globalThis.getSelection()!;
+      expect(selection.getRangeAt(0).startOffset).toBe(5);
+      expect(selection.getRangeAt(0).startContainer.textContent).toBe(
+        "HelloWorld"
+      );
+    });
+
+    it("Backspace mid-text does NOT preventDefault (native handles in-block deletion)", () => {
+      editorElement.innerHTML = "<p>Hello</p>";
+      const p = editorElement.children[0] as HTMLElement;
+      placeCaret(p.firstChild!, 3);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", { key: "Backspace" });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).not.toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>Hello</p>");
+    });
+
+    it("Delete at the end of a block pulls the next paragraph up", () => {
+      editorElement.innerHTML = "<p>Hello</p><p>World</p>";
+      const first = editorElement.children[0] as HTMLElement;
+      placeCaret(first.firstChild!, 5);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", { key: "Delete" });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>HelloWorld</p>");
+    });
+
+    it("modified Backspace (Ctrl) keeps native semantics", () => {
+      editorElement.innerHTML = "<p>Hello</p><p>World</p>";
+      const second = editorElement.children[1] as HTMLElement;
+      placeCaret(second.firstChild!, 0);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", {
+        key: "Backspace",
+        ctrlKey: true,
+      });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).not.toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>Hello</p><p>World</p>");
+    });
+
+    it("Backspace during IME composition is ignored entirely (guard runs first)", () => {
+      editorElement.innerHTML = "<p>Hello</p><p>World</p>";
+      const second = editorElement.children[1] as HTMLElement;
+      placeCaret(second.firstChild!, 0);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", {
+        key: "Backspace",
+        isComposing: true,
+      });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).not.toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>Hello</p><p>World</p>");
+    });
+
+    it("Backspace at the start of the FIRST block falls through to native (no-op)", () => {
+      editorElement.innerHTML = "<p>Hello</p>";
+      const p = editorElement.children[0] as HTMLElement;
+      placeCaret(p.firstChild!, 0);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", { key: "Backspace" });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).not.toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>Hello</p>");
+    });
+
+    it("Backspace inside a list item does not trigger block merging", () => {
+      editorElement.innerHTML = "<p>Above</p><ul><li>Item</li></ul>";
+      const li = editorElement.querySelector("li")!;
+      placeCaret(li.firstChild!, 0);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", { key: "Backspace" });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).not.toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>Above</p><ul><li>Item</li></ul>");
+    });
+  });
 });

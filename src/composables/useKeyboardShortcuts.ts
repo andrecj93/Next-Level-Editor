@@ -1,5 +1,11 @@
 import { type Ref } from "vue";
 import { indentListItem, outdentListItem } from "../utils/formatting";
+import {
+  MERGEABLE_BLOCKS,
+  isVisuallyEmptyBlock,
+  mergeBlockBackward,
+  mergeBlockForward,
+} from "../utils/blockMerge";
 
 const BLOCK_ELEMENT_TAGS = new Set([
   "p",
@@ -347,6 +353,114 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
   };
 
   /**
+   * Find the closest mergeable block (p/h1-h6/blockquote) around the caret,
+   * for Backspace/Delete boundary merging. Returns null when the caret sits
+   * anywhere inside a list item — li-level Backspace has its own semantics
+   * (outdent/exit) that native handling + the list utilities already cover,
+   * so block merging must not interfere.
+   */
+  const findMergeableBlock = (range: Range): HTMLElement | null => {
+    const root = editorContent.value;
+    if (!root) return null;
+
+    const start = range.startContainer;
+    let el: HTMLElement | null =
+      start.nodeType === Node.ELEMENT_NODE
+        ? (start as HTMLElement)
+        : start.parentElement;
+
+    let block: HTMLElement | null = null;
+    while (el && el !== root) {
+      if (el.tagName === "LI") return null;
+      if (!block && MERGEABLE_BLOCKS.has(el.tagName)) block = el;
+      el = el.parentElement;
+    }
+    // `el === root` confirms the block actually lives inside the editor.
+    return el === root ? block : null;
+  };
+
+  /**
+   * True when the collapsed caret sits at the very start (Backspace) or very
+   * end (Delete) of `block`. Computed from range boundaries so leading empty
+   * text nodes or empty inline wrappers before/after the caret still count
+   * as "at the edge". A placeholder <br> only counts as content when the
+   * block has real content (then it's a visible line break, not a
+   * placeholder, and native deletion should consume it instead).
+   */
+  const isCaretAtBlockEdge = (
+    block: HTMLElement,
+    range: Range,
+    edge: "start" | "end"
+  ): boolean => {
+    const probe = document.createRange();
+    if (edge === "start") {
+      probe.setStart(block, 0);
+      probe.setEnd(range.startContainer, range.startOffset);
+    } else {
+      probe.setStart(range.startContainer, range.startOffset);
+      probe.setEnd(block, block.childNodes.length);
+    }
+
+    const contents = probe.cloneContents();
+    if ((contents.textContent ?? "") !== "") return false;
+
+    const visibleSelector = isVisuallyEmptyBlock(block)
+      ? "img,hr,table,video,iframe"
+      : "img,hr,table,video,iframe,br";
+    return !contents.querySelector(visibleSelector);
+  };
+
+  /**
+   * Backspace at the start of a block / Delete at its end: perform a
+   * normalized merge with the adjacent block instead of trusting native
+   * contenteditable (which can produce <span style> soup, stray <div>s or
+   * inherit the target block's formatting — all browser-dependent).
+   *
+   * Returns true when the key was consumed. When the merge helpers return
+   * null (first/last block, table/embed neighbor) we deliberately fall
+   * through to native behavior, which is a safe no-op there.
+   */
+  const handleBlockBoundaryDelete = (event: KeyboardEvent): boolean => {
+    const root = editorContent.value;
+    if (!root) return false;
+
+    const selection = globalThis.getSelection();
+    if (!selection || selection.rangeCount === 0) return false;
+
+    const range = selection.getRangeAt(0);
+    // Range deletions (including Ctrl+A + Backspace) stay native.
+    if (!range.collapsed) return false;
+
+    const block = findMergeableBlock(range);
+    if (!block) return false;
+
+    const backward = event.key === "Backspace";
+    if (!isCaretAtBlockEdge(block, range, backward ? "start" : "end")) {
+      return false;
+    }
+
+    const caret = backward
+      ? mergeBlockBackward(block, root)
+      : mergeBlockForward(block, root);
+    if (!caret) return false;
+
+    event.preventDefault();
+
+    // Land the caret EXACTLY at the join point — no jump.
+    const newRange = document.createRange();
+    newRange.setStart(caret.caretNode, caret.caretOffset);
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+
+    // Same contract as the Enter handlers: ONE synthetic input event drives
+    // the host's full @input pipeline (snapshot + sanitize + emit +
+    // auto-save); calling onCaptureSnapshot as well would double-emit.
+    root.dispatchEvent(new Event("input", { bubbles: true }));
+    return true;
+  };
+
+  /**
    * Handle slash command (/) to open quick actions
    */
   const handleSlashCommand = (event: KeyboardEvent) => {
@@ -567,6 +681,20 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     ) {
       handleEnterKey(event);
       return;
+    }
+
+    // Handle Backspace/Delete at block boundaries with a normalized merge
+    // (the inverse of the Enter split model). Plain keypresses only —
+    // modified variants (Ctrl+Backspace word-delete, Shift+Delete cut, …)
+    // keep their native semantics.
+    if (
+      (event.key === "Backspace" || event.key === "Delete") &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !event.shiftKey
+    ) {
+      if (handleBlockBoundaryDelete(event)) return;
     }
 
     // Handle slash command
