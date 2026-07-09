@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { nextTick, h, defineComponent } from 'vue'
 import NextLevelEditor from '../NextLevelEditor.vue'
 import EditorToolbar from '../EditorToolbar.vue'
 import VariableAutocomplete from '../VariableAutocomplete.vue'
@@ -467,6 +467,93 @@ describe('NextLevelEditor — real-behaviour integration', () => {
 
       expect(w.emitted('focus')).toBeTruthy()
       expect(w.emitted('blur')).toBeTruthy()
+      w.unmount()
+    })
+  })
+
+  describe('accessibility: skip-link landmark targets', () => {
+    // SkipLinks ships default links (Skip to main content / toolbar / footer).
+    // The orchestrator MUST provide a real element for each, or every skip link
+    // falls into handleSkip()'s "target not found" branch and focus never moves
+    // — the feature is dead. Assertions are id-strategy-agnostic (they resolve
+    // the link's own href) so they hold whether ids are static or per-instance.
+    const targetOf = (link: { attributes: (n: string) => string | undefined }) =>
+      document.getElementById((link.attributes('href') ?? '').slice(1))
+
+    const skipLinkByLabel = (
+      w: ReturnType<typeof mount>,
+      text: string
+    ) =>
+      w
+        .findAll('a.skip-link')
+        .find((a) => a.text().toLowerCase().includes(text))
+
+    it('renders a real target element for every skip link (no dead links)', () => {
+      const w = mount(NextLevelEditor, { attachTo: document.body })
+
+      const links = w.findAll('a.skip-link')
+      expect(links.length).toBeGreaterThanOrEqual(3)
+      for (const link of links) {
+        expect(
+          targetOf(link),
+          `skip link ${link.attributes('href')} must resolve to a real element`
+        ).not.toBeNull()
+      }
+
+      w.unmount()
+    })
+
+    it('wires each skip link onto the correct region (toolbar / editor surface / footer)', () => {
+      const w = mount(NextLevelEditor, { attachTo: document.body })
+
+      expect(
+        targetOf(skipLinkByLabel(w, 'toolbar')!)?.classList.contains(
+          'editor-toolbar-modern'
+        )
+      ).toBe(true)
+      expect(
+        targetOf(skipLinkByLabel(w, 'main content')!)?.classList.contains(
+          'editor-container'
+        )
+      ).toBe(true)
+      expect(
+        targetOf(skipLinkByLabel(w, 'footer')!)?.classList.contains(
+          'editor-footer'
+        )
+      ).toBe(true)
+
+      w.unmount()
+    })
+
+    it('moves focus to the main-content region when its skip link is activated', async () => {
+      const w = mount(NextLevelEditor, { attachTo: document.body })
+      await flush()
+
+      const skip = skipLinkByLabel(w, 'main content')!
+      const target = targetOf(skip)
+      await skip.trigger('click')
+
+      expect(document.activeElement).toBe(target)
+      w.unmount()
+    })
+
+    it('scopes landmark ids per editor instance so two editors on a page do not collide', () => {
+      // Two editors in ONE app (the realistic multi-instance case). With static
+      // global ids both editors would emit #main-content/#toolbar/#footer, so
+      // the ids would collide (invalid HTML) and a skip link would jump to the
+      // wrong editor. Per-instance ids keep all six targets distinct and live.
+      const TwoEditors = defineComponent({
+        render: () => h('div', [h(NextLevelEditor), h(NextLevelEditor)]),
+      })
+      const w = mount(TwoEditors, { attachTo: document.body })
+
+      const hrefs = w.findAll('a.skip-link').map((l) => l.attributes('href'))
+      expect(hrefs).toHaveLength(6)
+      expect(new Set(hrefs).size).toBe(6)
+      for (const href of hrefs) {
+        expect(document.getElementById((href ?? '').slice(1))).not.toBeNull()
+      }
+
       w.unmount()
     })
   })
