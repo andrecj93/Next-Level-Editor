@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed } from "vue";
 import { useAccessibility } from "../composables/useAccessibility";
 import { smoothScrollIntoView } from "../utils/scroll";
 
@@ -28,27 +28,36 @@ interface SkipLink {
 
 /**
  * Props
+ *
+ * The three landmark target ids are configurable so the host (e.g. the editor
+ * orchestrator) can point them at per-instance ids that are guaranteed unique
+ * on the page. They default to the classic values for standalone use.
  */
 interface Props {
   customLinks?: SkipLink[];
+  mainTargetId?: string;
+  toolbarTargetId?: string;
+  footerTargetId?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   customLinks: () => [],
+  mainTargetId: "main-content",
+  toolbarTargetId: "toolbar",
+  footerTargetId: "footer",
 });
 
 // Composables
 const { setFocus, announce } = useAccessibility();
 
-// Default skip links
-const defaultLinks: SkipLink[] = [
-  { id: "skip-main", label: "Skip to main content", target: "main-content" },
-  { id: "skip-toolbar", label: "Skip to toolbar", target: "toolbar" },
-  { id: "skip-footer", label: "Skip to footer", target: "footer" },
-];
-
-// Merge default and custom links
-const links = ref<SkipLink[]>([...defaultLinks, ...props.customLinks]);
+// Default + custom skip links. Computed (not a one-shot ref) so target-id and
+// customLinks prop changes stay in sync.
+const links = computed<SkipLink[]>(() => [
+  { id: "skip-main", label: "Skip to main content", target: props.mainTargetId },
+  { id: "skip-toolbar", label: "Skip to toolbar", target: props.toolbarTargetId },
+  { id: "skip-footer", label: "Skip to footer", target: props.footerTargetId },
+  ...props.customLinks,
+]);
 
 /**
  * Handle skip link click
@@ -57,6 +66,23 @@ const handleSkip = (targetId: string) => {
   const targetElement = document.getElementById(targetId);
 
   if (targetElement) {
+    // Make the target focusable BEFORE focusing it. In a real browser,
+    // element.focus() on a non-focusable landmark (e.g. a <main>/<footer>
+    // without tabindex) is a silent no-op, so tabindex="-1" must be applied
+    // first or the very first skip-link activation fails to move focus.
+    if (!targetElement.hasAttribute("tabindex")) {
+      targetElement.setAttribute("tabindex", "-1");
+
+      // Remove the injected tabindex again once the landmark loses focus.
+      targetElement.addEventListener(
+        "blur",
+        () => {
+          targetElement.removeAttribute("tabindex");
+        },
+        { once: true }
+      );
+    }
+
     // Set focus to target
     setFocus(targetElement, {
       announce: `Skipped to ${targetId.replace("-", " ")}`,
@@ -68,20 +94,6 @@ const handleSkip = (targetId: string) => {
       behavior: "smooth",
       block: "start",
     });
-
-    // Make target focusable if it's not already
-    if (!targetElement.hasAttribute("tabindex")) {
-      targetElement.setAttribute("tabindex", "-1");
-
-      // Remove tabindex after focus (cleanup)
-      targetElement.addEventListener(
-        "blur",
-        () => {
-          targetElement.removeAttribute("tabindex");
-        },
-        { once: true }
-      );
-    }
   } else {
     announce(`Target ${targetId} not found`, { priority: "assertive" });
   }
