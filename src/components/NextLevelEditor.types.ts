@@ -32,6 +32,11 @@ export interface NextLevelEditorProps {
    * Toolbar density/layout: "comfortable" (default, labelled two-row) or
    * "compact" (a mini formatting-essentials row with an expand toggle that
    * reveals the full toolbar). An independent axis from `themePreset`.
+   *
+   * Responsive: whenever the editor is narrower than 640px (phones, narrow
+   * embeds), "comfortable" automatically behaves as "compact" so the writing
+   * surface stays dominant. The prop chooses the layout at comfortable
+   * widths; it does not pin the wide layout on small screens.
    */
   toolbarLayout?: "comfortable" | "compact";
   /**
