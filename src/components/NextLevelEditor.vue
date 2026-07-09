@@ -21,7 +21,11 @@
          rules to actually match .editor-toolbar-modern. The shell also owns
          the sticky positioning the toolbar previously had — sticky inside a
          tight wrapper would otherwise pin to the wrapper's own bounds. -->
-    <div v-if="showToolbar && !readonly" class="nle-toolbar-shell">
+    <div
+      v-if="showToolbar && !readonly"
+      ref="toolbarShellEl"
+      class="nle-toolbar-shell"
+    >
     <EditorToolbar
       :is-toolbar-section-visible="isToolbarSectionVisible"
       :format-dropdown-items="formatDropdownItems"
@@ -41,7 +45,7 @@
       :view-mode="viewMode"
       :theme="theme"
       :is-full-screen="isFullScreen"
-      :toolbar-layout="toolbarLayout"
+      :toolbar-layout="effectiveToolbarLayout"
       @remember-selection="rememberSelectionFromToolbar"
       @toggle-colors-dropdown="showColorsDropdown = !showColorsDropdown"
       @text-color-change="handleTextColor"
@@ -133,13 +137,13 @@
       :show="showContextMenu"
       :position="contextMenuPosition"
       :items="contextMenuItems"
-      :theme="themeClass"
+      :theme="teleportThemeClass"
       @close="closeContextMenu"
     />
 
     <!-- Modals Container -->
     <ModalsContainer
-      :theme="themeClass"
+      :theme="teleportThemeClass"
       :show-table-modal="showTableModal"
       :show-find-replace-modal="showFindReplaceModal"
       :show-code-block-modal="showCodeBlockModal"
@@ -521,11 +525,59 @@ const emit = defineEmits<Emits>();
 // Whole-editor theme preset → root class (composes with the light/dark class).
 const themePresetClass = computed(() => editorThemeClass(props.themePreset));
 
+// Teleported chrome (modals, context menu) renders outside the editor root,
+// so it must carry BOTH the light/dark class AND the theme-preset class —
+// the preset token files key off the preset class, and without it a Warm or
+// Midnight editor opened slate/white dialogs. (themeClass is defined by
+// useEditorComputed below; computeds are lazy so the forward reference is
+// safe by first render.)
+const teleportThemeClass = computed(() =>
+  [themeClass.value, themePresetClass.value].filter(Boolean).join(" ")
+);
+
 const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
 
 // This instance's root element — the ownership scope for document-level
 // listeners (e.g. the selection toolbar's selectionchange handling).
 const rootEl = ref<HTMLElement | null>(null);
+
+// Auto-compact: the CSS @container fallback can only restyle the bar — it
+// cannot flip EditorToolbar's mini/expand JS state, so on a default
+// 'comfortable' phone the intended mini → expand → ⋯More flow never
+// activated. Observe the toolbar shell's width and derive the layout;
+// the @container block stays as the no-JS fallback with matching styles.
+const toolbarShellEl = ref<HTMLElement | null>(null);
+const toolbarShellWidth = ref(Number.POSITIVE_INFINITY);
+let toolbarShellObserver: ResizeObserver | null = null;
+watch(toolbarShellEl, (el) => {
+  toolbarShellObserver?.disconnect();
+  toolbarShellObserver = null;
+  if (el && typeof ResizeObserver !== "undefined") {
+    toolbarShellObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      // Defer the reactive write out of the observer's delivery cycle: the
+      // layout flip it triggers (mini <-> full) resizes the shell in the same
+      // frame, which otherwise raises the window-level "ResizeObserver loop
+      // completed with undelivered notifications" error in WebKit/Blink.
+      if (width != null && width !== toolbarShellWidth.value) {
+        requestAnimationFrame(() => {
+          toolbarShellWidth.value = width;
+        });
+      }
+    });
+    toolbarShellObserver.observe(el);
+  }
+});
+onUnmounted(() => {
+  toolbarShellObserver?.disconnect();
+  toolbarShellObserver = null;
+});
+// Same 640px breakpoint as the @container rule in NextLevelEditor.css.
+const effectiveToolbarLayout = computed(() =>
+  props.toolbarLayout === "compact" || toolbarShellWidth.value <= 640
+    ? "compact"
+    : props.toolbarLayout
+);
 
 // View-mode state is declared early so the active-editable computed below can
 // close over it (the refs are passed into useViewMode further down). Starts in
@@ -1330,7 +1382,22 @@ const onMouseUp = () => {
 };
 
 // Wrap onInput to include variable detection and wrapping
-const onInput = () => {
+const onInput = (event?: Event) => {
+  // IME guard: while a composition is live the browser fires input events
+  // (inputType "insertCompositionText"); running the mutating passes below
+  // (autocomplete's deleteContents/addRange, variable wrapping, model sync)
+  // would tear down the IME buffer and displace the caret. Skip entirely —
+  // EditorPanels re-emits `input` on compositionend (that event carries no
+  // isComposing flag), so the deferred pass runs once when the IME commits.
+  if ((event as InputEvent | undefined)?.isComposing) {
+    return;
+  }
+
+  // (Placeholder recovery for <br>/<p><br></p> residues is handled purely in
+  // CSS via :has() — see NextLevelEditor.css. A JS innerHTML-wipe here would
+  // also destroy the paragraph that Enter legitimately seeds in an empty
+  // document, yanking the caret.)
+
   // Smart autocomplete (markdown shortcuts, URL/email auto-link, curly quotes,
   // "--"/"..." punctuation) — only on WYSIWYG surfaces, never in code view.
   // Runs BEFORE onInputBase so the converted DOM is what gets synced to
@@ -1736,6 +1803,15 @@ function handleGlobalDocumentClick(event: MouseEvent) {
   if (showColorsDropdown.value) {
     showColorsDropdown.value = false;
   }
+  // Variable autocomplete only re-evaluates on input, so a click elsewhere
+  // (which fires no input event) left it open with stale suggestions. Mirror
+  // the slash menu's outside-click dismissal.
+  if (
+    showVariableAutocomplete.value &&
+    !(event.target as HTMLElement | null)?.closest(".variable-autocomplete")
+  ) {
+    showVariableAutocomplete.value = false;
+  }
   handleDocumentClick(event);
 }
 
@@ -2082,6 +2158,16 @@ useEditorSetup({
    viewport, so every variable stays reachable via the list's internal scroll.
    The `bottom` is set inline, so the mobile override needs !important. */
 @media (max-width: 640px) {
+  /* Same clip class as the variables panel: fixed 360px at right:32px puts
+     the history panel's left edge at -17px on a 375px phone, cutting off
+     entry markers and nav buttons with no way to scroll them into view. */
+  .history-timeline-panel {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100vh - 160px - var(--nle-mobile-toolbar-clearance, 0px));
+  }
+
   .variables-panel {
     left: 12px;
     right: 12px;

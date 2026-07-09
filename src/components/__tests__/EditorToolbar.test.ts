@@ -534,7 +534,7 @@ describe("EditorToolbar", () => {
           "Editor view",
           "Code view",
           "Split view",
-          "Preview",
+          "Preview view",
           "Fullscreen",
         ])
       );
@@ -545,6 +545,74 @@ describe("EditorToolbar", () => {
       );
       await codeItem!.trigger("click");
       expect(compact.emitted("view-mode-change")?.[0]).toEqual(["code"]);
+    });
+  });
+
+  describe("Mini toolbar list trimming", () => {
+    const listAction = (id: string): ToolbarAction => ({
+      id,
+      label: id,
+      icon: "<svg></svg>",
+      tooltip: id,
+      onClick: vi.fn(),
+    });
+
+    const fullListActions = [
+      listAction("bullet-list"),
+      listAction("numbered-list"),
+      listAction("increase-indent"),
+      listAction("decrease-indent"),
+    ];
+
+    /** The stubbed ToolbarSection that received the list actions. */
+    const findListSection = (w: VueWrapper<any>) =>
+      w.findAllComponents({ name: "ToolbarSection" }).find((s) => {
+        const items = s.props("items") as ToolbarAction[] | undefined;
+        return Array.isArray(items) && items.some((i) => i.id === "bullet-list");
+      })!;
+
+    const idsOf = (w: VueWrapper<any>) =>
+      (findListSection(w).props("items") as ToolbarAction[]).map((i) => i.id);
+
+    it("mini state keeps only the two list toggles (indent/outdent behind expand)", async () => {
+      const compact = mount(EditorToolbar, {
+        props: {
+          ...defaultProps,
+          listActions: fullListActions,
+          toolbarLayout: "compact" as const,
+        },
+        global: { stubs: { ToolbarSection: true, ColorPicker: true } },
+      });
+
+      // Collapsed (mini): the essentials row must not carry indent/outdent, or
+      // the nowrap row overflows narrow phones and clips the expand toggle.
+      expect(idsOf(compact)).toEqual(["bullet-list", "numbered-list"]);
+
+      // Expanding restores the full list set.
+      await compact.find(".toolbar-expand-toggle").trigger("click");
+      expect(idsOf(compact)).toEqual([
+        "bullet-list",
+        "numbered-list",
+        "increase-indent",
+        "decrease-indent",
+      ]);
+
+      // Collapsing trims it again.
+      await compact.find(".toolbar-expand-toggle").trigger("click");
+      expect(idsOf(compact)).toEqual(["bullet-list", "numbered-list"]);
+    });
+
+    it("comfortable layout always passes the full list actions through", () => {
+      const comfortable = mount(EditorToolbar, {
+        props: { ...defaultProps, listActions: fullListActions },
+        global: { stubs: { ToolbarSection: true, ColorPicker: true } },
+      });
+      expect(idsOf(comfortable)).toEqual([
+        "bullet-list",
+        "numbered-list",
+        "increase-indent",
+        "decrease-indent",
+      ]);
     });
   });
 

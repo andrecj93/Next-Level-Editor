@@ -151,8 +151,17 @@
     min-height: 44px;
   }
 
-  /* Toolbar buttons */
-  .toolbar button,
+  /* Toolbar buttons (the editor toolbar is .editor-toolbar-modern; 44px, not
+     48px, so the compact/mini row still fits on narrow phones — the denser
+     .is-compact / @container min-widths in NextLevelEditor.css intentionally
+     out-specify this floor) */
+  .editor-toolbar-modern .toolbar-btn-modern,
+  .editor-toolbar-modern .dropdown-trigger {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* MobileToolbar's own buttons (also compose .touch-target-lg) */
   .toolbar-button {
     min-width: 48px;
     min-height: 48px;
@@ -271,7 +280,8 @@
     min-height: 40px;
   }
 
-  .toolbar button,
+  .editor-toolbar-modern .toolbar-btn-modern,
+  .editor-toolbar-modern .dropdown-trigger,
   .toolbar-button {
     min-width: 44px;
     min-height: 44px;

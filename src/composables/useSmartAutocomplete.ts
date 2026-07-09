@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { getCurrentScope, onScopeDispose, ref, watch } from "vue";
 
 /**
  * Autocomplete rule types
@@ -140,6 +140,78 @@ export function useSmartAutocomplete(
   // the host editor can sync v-model; that event must not re-trigger
   // handleInput synchronously.
   let isApplying = false;
+
+  // ============================================
+  // IME composition safety
+  // ============================================
+  //
+  // While an IME composition session is active (CJK input methods, predictive
+  // keyboards), applyAutocomplete's range.deleteContents() +
+  // selection.removeAllRanges() would abort or corrupt the live composition
+  // buffer. handleInput receives no event object (the host calls it bare), so
+  // composition state is tracked internally by listening for
+  // compositionstart/compositionend on the editor element itself.
+  let isComposing = false;
+  // An input that arrives mid-composition is deferred: one detection pass
+  // runs when the composition commits. This also covers the listener-order
+  // race where the host's compositionend-driven input handler fires before
+  // our own compositionend listener has cleared the flag.
+  let pendingCompositionInput = false;
+  let compositionTarget: HTMLElement | null = null;
+
+  const handleCompositionStart = () => {
+    isComposing = true;
+  };
+
+  const handleCompositionEnd = () => {
+    isComposing = false;
+    if (pendingCompositionInput) {
+      pendingCompositionInput = false;
+      handleInput();
+    }
+  };
+
+  const detachCompositionListeners = () => {
+    if (compositionTarget) {
+      compositionTarget.removeEventListener(
+        "compositionstart",
+        handleCompositionStart
+      );
+      compositionTarget.removeEventListener(
+        "compositionend",
+        handleCompositionEnd
+      );
+      compositionTarget = null;
+    }
+  };
+
+  /**
+   * (Re)binds the composition listeners to the current editor element.
+   * Idempotent — safe to call on every handleInput as a fallback for
+   * non-reactive editorRef objects.
+   */
+  const ensureCompositionListeners = () => {
+    const editor = editorRef.value;
+    if (editor === compositionTarget) return;
+    detachCompositionListeners();
+    if (editor) {
+      compositionTarget = editor;
+      editor.addEventListener("compositionstart", handleCompositionStart);
+      editor.addEventListener("compositionend", handleCompositionEnd);
+    }
+  };
+
+  // Bind eagerly. In the normal case editorRef is a reactive template ref
+  // (null during setup, set on mount) so the watcher attaches the listeners
+  // before the first keystroke; `immediate` covers plain-object refs whose
+  // element already exists at composable creation.
+  watch(() => editorRef.value, ensureCompositionListeners, {
+    immediate: true,
+  });
+
+  if (getCurrentScope()) {
+    onScopeDispose(detachCompositionListeners);
+  }
 
   // ============================================
   // URL Auto-linking
@@ -606,6 +678,9 @@ export function useSmartAutocomplete(
     const editor = editorRef.value;
     if (!editor) return;
     if (!result.original) return;
+    // Never mutate the DOM mid-composition: deleteContents/removeAllRanges
+    // below would abort or corrupt the live IME buffer.
+    if (isComposing) return;
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
@@ -740,7 +815,14 @@ export function useSmartAutocomplete(
    */
   const handleInput = () => {
     if (!editorRef.value) return;
+    ensureCompositionListeners();
     if (isApplying) return;
+    if (isComposing) {
+      // Defer: run one detection pass when the composition commits instead
+      // of mutating the DOM under a live IME buffer.
+      pendingCompositionInput = true;
+      return;
+    }
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;

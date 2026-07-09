@@ -387,11 +387,17 @@ describe("useKeyboardShortcuts", () => {
         handleBlockAction: mockHandleBlockAction,
       });
 
+      let inputCount = 0;
+      editorElement.addEventListener("input", () => inputCount++);
+
       const event = new KeyboardEvent("keydown", { key: "Tab" });
       handleKeydown(event);
 
       expect(formatting.indentListItem).toHaveBeenCalledWith(editorElement);
-      expect(mockOnCaptureSnapshot).toHaveBeenCalledTimes(1);
+      // The dispatched input event IS the emit path (host @input pipeline
+      // snapshots + emits); a separate snapshot call would double-emit.
+      expect(inputCount).toBe(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
     });
 
     it("should outdent list item on Shift+Tab", () => {
@@ -422,6 +428,9 @@ describe("useKeyboardShortcuts", () => {
         handleBlockAction: mockHandleBlockAction,
       });
 
+      let inputCount = 0;
+      editorElement.addEventListener("input", () => inputCount++);
+
       const event = new KeyboardEvent("keydown", {
         key: "Tab",
         shiftKey: true,
@@ -429,7 +438,8 @@ describe("useKeyboardShortcuts", () => {
       handleKeydown(event);
 
       expect(formatting.outdentListItem).toHaveBeenCalledWith(editorElement);
-      expect(mockOnCaptureSnapshot).toHaveBeenCalledTimes(1);
+      expect(inputCount).toBe(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
     });
 
     it("should not handle Tab outside of list", () => {
@@ -465,7 +475,7 @@ describe("useKeyboardShortcuts", () => {
       expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
     });
 
-    it("should not capture snapshot if indentation fails", () => {
+    it("should not dispatch input or capture snapshot if indentation fails", () => {
       vi.mocked(formatting.indentListItem).mockReturnValue(false);
 
       const ul = document.createElement("ul");
@@ -495,9 +505,112 @@ describe("useKeyboardShortcuts", () => {
         handleBlockAction: mockHandleBlockAction,
       });
 
+      let inputCount = 0;
+      editorElement.addEventListener("input", () => inputCount++);
+
       const event = new KeyboardEvent("keydown", { key: "Tab" });
       handleKeydown(event);
 
+      expect(inputCount).toBe(0);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Single Emit Per Enter (no double-emit)", () => {
+    const createShortcuts = () =>
+      useKeyboardShortcuts({
+        editorContent: ref(editorElement),
+        onInput: mockOnInput,
+        onCaptureSnapshot: mockOnCaptureSnapshot,
+        undo: mockUndo,
+        redo: mockRedo,
+        openCommandMenu: mockOpenCommandMenu,
+        insertLink: mockInsertLink,
+        openFindReplaceModal: mockOpenFindReplaceModal,
+        handleInlineAction: mockHandleInlineAction,
+        handleBlockAction: mockHandleBlockAction,
+      });
+
+    const placeCaret = (node: Node, offset: number) => {
+      const range = document.createRange();
+      range.setStart(node, offset);
+      range.collapse(true);
+      const selection = globalThis.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    };
+
+    const countInputs = () => {
+      let count = 0;
+      editorElement.addEventListener("input", () => count++);
+      return () => count;
+    };
+
+    it("dispatches exactly ONE input event and never calls onCaptureSnapshot on Enter in a paragraph", () => {
+      const p = document.createElement("p");
+      p.textContent = "Test";
+      editorElement.appendChild(p);
+      placeCaret(p.firstChild!, 4);
+
+      const { handleKeydown } = createShortcuts();
+      const inputs = countInputs();
+
+      handleKeydown(new KeyboardEvent("keydown", { key: "Enter" }));
+
+      // The dispatched input runs the host's full @input pipeline (snapshot +
+      // sanitize + emit + auto-save); a second onCaptureSnapshot would emit
+      // update:modelValue and auto-save TWICE per Enter.
+      expect(inputs()).toBe(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+    });
+
+    it("dispatches exactly ONE input event and never calls onCaptureSnapshot on Enter in a list item", () => {
+      const ul = document.createElement("ul");
+      const li = document.createElement("li");
+      li.textContent = "Item 1";
+      ul.appendChild(li);
+      editorElement.appendChild(ul);
+      placeCaret(li.firstChild!, 6);
+
+      const { handleKeydown } = createShortcuts();
+      const inputs = countInputs();
+
+      handleKeydown(new KeyboardEvent("keydown", { key: "Enter" }));
+
+      expect(ul.querySelectorAll("li").length).toBe(2);
+      expect(inputs()).toBe(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+    });
+
+    it("dispatches exactly ONE input event and never calls onCaptureSnapshot on Enter in an EMPTY list item (list exit)", () => {
+      const ul = document.createElement("ul");
+      const li = document.createElement("li");
+      li.innerHTML = "<br>";
+      ul.appendChild(li);
+      editorElement.appendChild(ul);
+      placeCaret(li, 0);
+
+      const { handleKeydown } = createShortcuts();
+      const inputs = countInputs();
+
+      handleKeydown(new KeyboardEvent("keydown", { key: "Enter" }));
+
+      expect(inputs()).toBe(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+    });
+
+    it("dispatches exactly ONE input event and never calls onCaptureSnapshot on Enter in a heading", () => {
+      const h1 = document.createElement("h1");
+      h1.textContent = "Heading";
+      editorElement.appendChild(h1);
+      placeCaret(h1.firstChild!, 7);
+
+      const { handleKeydown } = createShortcuts();
+      const inputs = countInputs();
+
+      handleKeydown(new KeyboardEvent("keydown", { key: "Enter" }));
+
+      expect(inputs()).toBe(1);
       expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
     });
   });

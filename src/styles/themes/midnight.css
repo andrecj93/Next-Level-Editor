@@ -10,7 +10,13 @@
    from NextLevelEditor.css.
    ============================================================ */
 
-/* Light mode */
+/* Light mode.
+   Two selector forms on purpose: the bare .nle-theme-midnight reaches
+   teleported modal overlays (they carry the preset class on a <body>-level
+   root with no .next-level-editor around it); the qualified form keeps the
+   specificity needed to beat the base token blocks in NextLevelEditor.css,
+   which come AFTER these @imports in the bundle. */
+.nle-theme-midnight,
 .next-level-editor.nle-theme-midnight {
   --editor-bg: #ffffff;
   --editor-border: #d4dbe8;
@@ -29,6 +35,7 @@
 }
 
 /* Dark mode */
+.nle-theme-midnight.theme-dark,
 .next-level-editor.nle-theme-midnight.theme-dark {
   --editor-bg: #0b1120;
   --editor-border: #1c2740;

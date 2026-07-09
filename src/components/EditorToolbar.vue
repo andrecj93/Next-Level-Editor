@@ -44,11 +44,11 @@
         @remember-selection="$emit('remember-selection')"
       />
 
-      <!-- Lists (Inline Buttons) -->
+      <!-- Lists (Inline Buttons) — trimmed to the two list toggles in mini -->
       <ToolbarSection
         type="buttons"
         :visible="isToolbarSectionVisible('lists')"
-        :items="listActions"
+        :items="miniListActions"
         @remember-selection="$emit('remember-selection')"
       />
     </div>
@@ -461,6 +461,19 @@ watch(
   }
 );
 
+// Mini = essentials only: keep just the two list toggles inline;
+// indent/outdent live behind the expand toggle. The collapsed row is
+// nowrap with visible overflow, so the full four-button list set pushed the
+// `margin-left:auto` expand toggle past the edge on 320-360px phones —
+// clipping the one affordance that reveals everything else.
+const miniListActions = computed(() =>
+  isMini.value
+    ? props.listActions.filter(
+        (a) => a.id === "bullet-list" || a.id === "numbered-list"
+      )
+    : props.listActions
+);
+
 const emit = defineEmits<{
   "remember-selection": [];
   "toggle-colors-dropdown": [];
@@ -486,7 +499,7 @@ const VIEW_MODES = [
   { mode: "editor" as const, label: "Editor view", paths: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>' },
   { mode: "code" as const, label: "Code view", paths: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>' },
   { mode: "split" as const, label: "Split view", paths: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/>' },
-  { mode: "preview" as const, label: "Preview", paths: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>' },
+  { mode: "preview" as const, label: "Preview view", paths: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>' },
 ];
 
 const compactMoreItems = computed(() => [

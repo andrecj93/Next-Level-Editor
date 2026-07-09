@@ -55,7 +55,11 @@
   />
 
   <!-- Emoji Picker -->
-  <div v-if="showEmojiPicker" class="emoji-picker-overlay">
+  <div
+    v-if="showEmojiPicker"
+    class="emoji-picker-overlay"
+    @click.self="$emit('close-emoji-picker')"
+  >
     <EmojiPicker
       :show="showEmojiPicker"
       @select="$emit('insert-emoji', $event)"
@@ -257,11 +261,20 @@ defineEmits<{
 </script>
 
 <style scoped>
+/*
+ * Full-viewport click-catcher so clicking outside the picker dismisses it,
+ * like every other modal overlay. Kept transparent (no scrim) to preserve
+ * the picker's lightweight floating-panel look.
+ */
 .emoji-picker-overlay {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 10000;
 }
 </style>

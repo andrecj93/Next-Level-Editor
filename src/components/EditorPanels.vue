@@ -1,6 +1,12 @@
 <template>
   <div :class="['editor-container', `view-mode-${viewMode}`]">
     <!-- WYSIWYG Editor Panel (editor mode) -->
+    <!--
+      @compositionend re-emits as 'input': the host's onInput skips mutating
+      passes while event.isComposing (IME safety), so it needs one deferred
+      run once the composition commits — a compositionend event carries no
+      isComposing=true flag, letting it through the host guard.
+    -->
     <div v-if="viewMode === 'editor'" class="editor-panel">
       <div
         ref="editorRef"
@@ -8,6 +14,7 @@
         :contenteditable="editable ? 'true' : 'false'"
         :placeholder="placeholder"
         @input="$emit('input', $event)"
+        @compositionend="$emit('input', $event)"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
         @mouseup="$emit('mouseup', $event)"
@@ -39,6 +46,7 @@
         :placeholder="placeholder"
         style="display: none"
         @input="$emit('input', $event)"
+        @compositionend="$emit('input', $event)"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
         @mouseup="$emit('mouseup', $event)"
@@ -104,6 +112,7 @@
           contenteditable="true"
           :placeholder="placeholder"
           @input="$emit('split-editor-input', $event)"
+          @compositionend="$emit('split-editor-input', $event)"
           @blur="$emit('blur', $event)"
           @focus="$emit('focus', $event)"
           @mouseup="$emit('mouseup', $event)"

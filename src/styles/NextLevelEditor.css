@@ -302,6 +302,18 @@
   pointer-events: none;
 }
 
+/* Visually-empty residues: after deleting all text the browser leaves a lone
+   <br> (or <p><br></p>) behind, so :empty above stops matching and the
+   placeholder never comes back. Kept as a SEPARATE rule (not appended to the
+   list above) so engines without :has() drop only this rule, not the :empty
+   case. Declarations must stay identical to the rule above. */
+.editor-content:has(> br:only-child):before,
+.editor-content:has(> p:only-child > br:only-child):before {
+  content: attr(placeholder);
+  color: var(--placeholder-color);
+  pointer-events: none;
+}
+
 .editor-content:focus {
   outline: none;
 }
@@ -1138,16 +1150,16 @@
    ============================================================ */
 @container nle-toolbar (max-width: 640px) {
   .editor-toolbar-modern {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: visible;
+    /* Mirror .is-compact exactly: wrap + overflow visible. NEVER scroll here —
+       `overflow-x: auto` next to `overflow-y: visible` computes overflow-y to
+       auto too, turning the bar into a clip/scroll box that cuts every
+       dropdown menu and tooltip off at the bar height (see the .is-compact
+       comment above). */
+    flex-wrap: wrap;
+    overflow: visible;
     gap: 4px;
     padding: 6px 12px;
     min-height: 46px;
-    scrollbar-width: none;
-  }
-  .editor-toolbar-modern::-webkit-scrollbar {
-    height: 0;
   }
   .editor-toolbar-modern .toolbar-section-group {
     gap: 3px;

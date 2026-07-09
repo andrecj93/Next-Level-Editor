@@ -1,27 +1,39 @@
 import { test, expect } from "@playwright/test";
+import { ensureToolbarExpanded, switchViewMode } from "./helpers/toolbar";
 
 test.describe("View Modes", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/?empty=true");
     await page.waitForSelector(".editor-content");
+    // View-mode buttons live behind the expand toggle in the auto-mini bar.
+    await ensureToolbarExpanded(page);
   });
 
   test("should show text labels on view mode buttons", async ({ page }) => {
-    // Check Editor button label
-    const editorButton = page.locator('.view-mode-btn:has-text("Editor")');
-    await expect(editorButton).toBeVisible();
-
-    // Check Code button label
-    const codeButton = page.locator('.view-mode-btn:has-text("Code")');
-    await expect(codeButton).toBeVisible();
-
-    // Check Split button label
-    const splitButton = page.locator('.view-mode-btn:has-text("Split")');
-    await expect(splitButton).toBeVisible();
-
-    // Check Preview button label
-    const previewButton = page.locator('.view-mode-btn:has-text("Preview")');
-    await expect(previewButton).toBeVisible();
+    const inlineEditorBtn = page.locator('.view-mode-btn:has-text("Editor")');
+    if (await inlineEditorBtn.isVisible().catch(() => false)) {
+      // Comfortable layout: the four labelled buttons are inline.
+      await expect(inlineEditorBtn).toBeVisible();
+      await expect(
+        page.locator('.view-mode-btn:has-text("Code")')
+      ).toBeVisible();
+      await expect(
+        page.locator('.view-mode-btn:has-text("Split")')
+      ).toBeVisible();
+      await expect(
+        page.locator('.view-mode-btn:has-text("Preview")')
+      ).toBeVisible();
+    } else {
+      // Compact (phone default): the switch lives in the "⋯ More" menu as
+      // labelled "<Mode> view" items.
+      await page.getByRole("button", { name: "More" }).first().click();
+      const menu = page.locator(".dropdown-menu");
+      for (const mode of ["Editor", "Code", "Split", "Preview"]) {
+        await expect(
+          menu.getByRole("button", { name: `${mode} view` })
+        ).toBeVisible();
+      }
+    }
   });
 
   test("should switch between Editor and Code view", async ({ page }) => {
@@ -31,12 +43,8 @@ test.describe("View Modes", () => {
       .first();
     await expect(editorPanel).toBeVisible();
 
-    // Click Code view button
-    const codeButton = page.locator('.view-mode-btn:has-text("Code")').first();
-    await codeButton.click();
-
-    // Wait for view mode to change
-    await page.waitForTimeout(500);
+    // Switch to Code view (inline button, or the ⋯ More item in compact)
+    await switchViewMode(page, "Code");
 
     // Should show code view (textarea or code editor)
     const codeView = page.locator(".code-editor");
@@ -46,13 +54,8 @@ test.describe("View Modes", () => {
     const container = page.locator(".editor-container.view-mode-code");
     await expect(container).toBeVisible();
 
-    // Click back to Editor view
-    const editorButton = page
-      .locator('.view-mode-btn:has-text("Editor")')
-      .first();
-    await editorButton.click();
-
-    await page.waitForTimeout(500);
+    // Switch back to Editor view
+    await switchViewMode(page, "Editor");
 
     // Check that container has view-mode-editor class
     const editorContainer = page.locator(".editor-container.view-mode-editor");

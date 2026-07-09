@@ -346,4 +346,85 @@ describe("useSmartAutocomplete - applyAutocomplete / handleInput", () => {
       expect(div.textContent).toBe("plain text");
     });
   });
+
+  describe("IME composition safety", () => {
+    // Our listeners never read CompositionEvent-specific properties, so a
+    // plain Event is enough (and avoids depending on happy-dom's
+    // CompositionEvent support).
+    const startComposition = (div: HTMLElement) =>
+      div.dispatchEvent(new Event("compositionstart", { bubbles: true }));
+    const endComposition = (div: HTMLElement) =>
+      div.dispatchEvent(new Event("compositionend", { bubbles: true }));
+
+    it("handleInput is a no-op while a composition is in progress (content untouched)", () => {
+      const { div, editorRef } = createEditor("--");
+      const { handleInput, autocompleteHistory } =
+        useSmartAutocomplete(editorRef);
+
+      startComposition(div);
+      handleInput();
+
+      expect(div.textContent).toBe("--");
+      expect(autocompleteHistory.value.length).toBe(0);
+    });
+
+    it("applyAutocomplete bails while composing (no deleteContents on a live IME buffer)", () => {
+      const { div, editorRef } = createEditor("--");
+      const { applyAutocomplete, autocompleteHistory } =
+        useSmartAutocomplete(editorRef);
+      // Composition listeners are attached eagerly (watch immediate) since
+      // the editor element is already set on the ref.
+      startComposition(div);
+
+      applyAutocomplete({
+        type: "smartPunctuation",
+        original: "--",
+        replacement: EMDASH,
+      });
+
+      expect(div.textContent).toBe("--");
+      expect(autocompleteHistory.value.length).toBe(0);
+    });
+
+    it("runs the deferred detection pass once the composition commits", () => {
+      const { div, editorRef } = createEditor("--");
+      const { handleInput } = useSmartAutocomplete(editorRef);
+
+      startComposition(div);
+      handleInput(); // mid-composition input: deferred, not applied
+      expect(div.textContent).toBe("--");
+
+      endComposition(div);
+
+      // The pending pass ran on compositionend and converted normally
+      expect(div.textContent).toBe(EMDASH);
+    });
+
+    it("resumes normal behavior on fresh input after compositionend", () => {
+      const { div, editorRef } = createEditor("wait--");
+      const { handleInput } = useSmartAutocomplete(editorRef);
+
+      startComposition(div);
+      endComposition(div); // canceled/committed composition, nothing pending
+
+      handleInput();
+
+      expect(div.textContent).toBe(`wait${EMDASH}`);
+    });
+
+    it("does not double-apply when the host also forwards compositionend as input", () => {
+      const { div, editorRef } = createEditor("--");
+      const { handleInput } = useSmartAutocomplete(editorRef);
+      // Simulate the host wiring: EditorPanels re-emits compositionend as
+      // 'input', and the host onInput calls handleInput.
+      div.addEventListener("compositionend", () => handleInput());
+
+      startComposition(div);
+      handleInput(); // deferred
+      endComposition(div);
+
+      // Exactly one conversion regardless of listener ordering
+      expect(div.textContent).toBe(EMDASH);
+    });
+  });
 });

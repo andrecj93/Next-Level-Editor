@@ -1,5 +1,6 @@
 import { computed, type Ref } from "vue";
 import { indentListItem, outdentListItem } from "../utils/formatting";
+import { selectionTick } from "./useActiveStates";
 
 /** Block-level tags that carry text alignment. */
 const ALIGNABLE_BLOCK_TAGS = new Set([
@@ -335,41 +336,55 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     },
   ]);
 
+  // getCaretAlignment/getCaretFontSize read the LIVE DOM selection, which Vue
+  // cannot track. Reading `selectionTick` (bumped by useActiveStates on every
+  // document `selectionchange`) inside each isActive closure makes computeds
+  // that call them — e.g. ToolbarDropdown's hasActiveItem/displayLabel —
+  // re-evaluate as the caret moves, mirroring how isBlockActionActive and
+  // isInlineActionActive gain their reactivity.
+  const caretAlignment = (): ReturnType<typeof getCaretAlignment> => {
+    void selectionTick.value;
+    return getCaretAlignment(editorContent.value);
+  };
+
   const alignmentDropdownItems = computed(() => [
     {
       id: "align-left",
       label: "Align Left",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="15" x2="3" y1="12" y2="12"/><line x1="17" x2="3" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("left"),
-      isActive: () => getCaretAlignment(editorContent.value) === "left",
+      isActive: () => caretAlignment() === "left",
     },
     {
       id: "align-center",
       label: "Center",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="17" x2="7" y1="12" y2="12"/><line x1="19" x2="5" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("center"),
-      isActive: () => getCaretAlignment(editorContent.value) === "center",
+      isActive: () => caretAlignment() === "center",
     },
     {
       id: "align-right",
       label: "Align Right",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="21" x2="9" y1="12" y2="12"/><line x1="21" x2="7" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("right"),
-      isActive: () => getCaretAlignment(editorContent.value) === "right",
+      isActive: () => caretAlignment() === "right",
     },
     {
       id: "align-justify",
       label: "Justify",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("justify"),
-      isActive: () => getCaretAlignment(editorContent.value) === "justify",
+      isActive: () => caretAlignment() === "justify",
     },
   ]);
 
   // Prefer the caret's actual font size, falling back to the last applied
-  // value when the caret is not inside a sized span (#19/#24).
-  const activeFontSize = () =>
-    getCaretFontSize(editorContent.value) ?? fontSize.value;
+  // value when the caret is not inside a sized span (#19/#24). Touches
+  // `selectionTick` so callers re-evaluate as the caret moves (see above).
+  const activeFontSize = () => {
+    void selectionTick.value;
+    return getCaretFontSize(editorContent.value) ?? fontSize.value;
+  };
 
   const fontSizeDropdownItems = computed(() => [
     {

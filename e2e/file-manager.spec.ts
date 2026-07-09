@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { ensureToolbarExpanded } from "./helpers/toolbar";
 
 test.describe("File Manager Modal", () => {
   test.beforeEach(async ({ page }) => {
@@ -9,6 +10,9 @@ test.describe("File Manager Modal", () => {
 
     // Wait for toolbar to be fully ready
     await page.waitForTimeout(500);
+
+    // On phone widths the toolbar auto-minifies; Insert is behind expand.
+    await ensureToolbarExpanded(page);
   });
 
   test("should open file manager when clicking Insert → File Manager", async ({

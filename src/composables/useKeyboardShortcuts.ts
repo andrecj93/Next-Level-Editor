@@ -16,6 +16,12 @@ const BLOCK_ELEMENT_TAGS = new Set([
 interface KeyboardShortcutsOptions {
   editorContent: Ref<HTMLDivElement | null>;
   onInput: () => void;
+  /**
+   * Retained for call-site compatibility but intentionally unused: every
+   * mutation path in this composable dispatches a synthetic "input" event,
+   * and the host's @input pipeline already captures the snapshot (plus
+   * sanitize + emit + auto-save). Calling this as well would double-emit.
+   */
   onCaptureSnapshot: () => void;
   undo: () => void;
   redo: () => void;
@@ -76,7 +82,6 @@ function populateNewElement(element: HTMLElement, content: DocumentFragment) {
 export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
   const {
     editorContent,
-    onCaptureSnapshot,
     undo,
     redo,
     openCommandMenu,
@@ -311,11 +316,12 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       range.startContainer
     );
 
-    // Handle list items specially
+    // Handle list items specially. The synthetic input event dispatched
+    // inside handleEnterInListItem runs the host's full @input pipeline
+    // (snapshot + sanitize + emit + auto-save), so no extra snapshot call
+    // is needed here — it would double-emit per Enter.
     if (currentBlock && currentBlockTag === "li") {
       handleEnterInListItem(range, currentBlock, selection);
-      // Capture snapshot after Enter in list
-      onCaptureSnapshot();
       return;
     }
 
@@ -331,12 +337,13 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     // Move cursor to new paragraph
     moveCursorToElement(newParagraph, selection);
 
+    // The dispatched input event runs the host's full @input pipeline
+    // (snapshot + sanitize + emit + auto-save) and also drives the floating
+    // toolbar, smart autocomplete, and variable wrapping — it is the single
+    // source of the emit for this Enter (no extra snapshot call).
     if (editorContent.value) {
       editorContent.value.dispatchEvent(new Event("input", { bubbles: true }));
     }
-
-    // Capture snapshot after Enter
-    onCaptureSnapshot();
   };
 
   /**
@@ -415,9 +422,9 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       : indentListItem(editorContent.value);
 
     if (success) {
-      // Always capture snapshot after indentation changes
-      onCaptureSnapshot();
-      // Dispatch input event to ensure UI updates
+      // Dispatch input event: the host's @input pipeline handles snapshot,
+      // sanitize, emit, and auto-save — a separate snapshot call here would
+      // fire a second emit + auto-save per indentation.
       editorContent.value.dispatchEvent(new Event("input", { bubbles: true }));
     }
     return true;

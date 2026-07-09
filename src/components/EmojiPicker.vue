@@ -1,7 +1,15 @@
 <template>
-  <div v-if="show" class="emoji-picker">
+  <div
+    v-if="show"
+    ref="pickerRoot"
+    class="emoji-picker"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Emoji picker"
+  >
     <div class="emoji-picker-header">
       <input
+        ref="searchInput"
         v-model="searchQuery"
         type="text"
         class="emoji-search"
@@ -48,6 +56,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
+import { useModalDialog } from "../composables/useModalDialog";
 
 interface Emoji {
   emoji: string;
@@ -70,6 +79,17 @@ const emit = defineEmits<Emits>();
 
 const searchQuery = ref("");
 const activeCategory = ref("smileys");
+const pickerRoot = ref<HTMLElement | null>(null);
+const searchInput = ref<HTMLInputElement | null>(null);
+
+// Escape-to-close, Tab trap, initial focus, and focus restore
+// (WAI-ARIA dialog pattern) — shared with every other modal.
+useModalDialog({
+  isOpen: () => props.show,
+  container: pickerRoot,
+  onClose: () => emit("close"),
+  initialFocus: () => searchInput.value,
+});
 
 const categories = [
   { id: "smileys", name: "Smileys & Emotion", icon: "😀" },

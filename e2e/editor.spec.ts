@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { ensureToolbarExpanded } from './helpers/toolbar'
 
 test.describe('Next Level Editor - Basic Functionality', () => {
   test.beforeEach(async ({ page }) => {
@@ -216,6 +217,8 @@ test.describe('Next Level Editor - Undo/Redo', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
+    // Undo/redo buttons live behind the expand toggle in the auto-mini bar.
+    await ensureToolbarExpanded(page)
   })
 
   test('should undo changes', async ({ page }) => {
@@ -325,6 +328,8 @@ test.describe('Next Level Editor - Theme Toggle', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
+    // The theme toggle lives behind the expand toggle in the auto-mini bar.
+    await ensureToolbarExpanded(page)
   })
 
   test('should toggle theme', async ({ page }) => {
@@ -348,6 +353,8 @@ test.describe('Next Level Editor - Font Size', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
+    // The Size dropdown lives behind the expand toggle in the auto-mini bar.
+    await ensureToolbarExpanded(page)
   })
 
   test('should change font size', async ({ page }) => {

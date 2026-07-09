@@ -9,19 +9,27 @@ export interface ActiveStates {
   isInlineActionActive: (tag: string) => boolean;
   isBlockActionActive: (tag: string) => boolean;
   isListActionActive: (tag: "ul" | "ol") => boolean;
+  /** Reactive tick bumped on every document `selectionchange`. */
+  selectionTick: Ref<number>;
 }
+
+// The active-state helpers read the LIVE DOM selection, which is not a Vue
+// reactive dependency. Without a reactive signal the toolbar would never
+// re-evaluate its highlights as the caret moves (it only refreshed as a side
+// effect of clicking a format button). This tick is bumped on every
+// `selectionchange`; each isActive helper reads it so any component that
+// calls them during render re-renders whenever the caret/selection moves.
+//
+// It lives at module level (shared by all editor instances — selectionchange
+// is document-global anyway) so sibling composables that also read the live
+// selection during render (e.g. useToolbarItems' align/font-size isActive
+// closures) can import it and gain the same reactivity without every call
+// site having to thread the tick through.
+export const selectionTick = ref(0);
 
 export function useActiveStates(
   editorContent: Ref<HTMLDivElement | null> | ComputedRef<HTMLDivElement | null>
 ): ActiveStates {
-  // The active-state helpers read the LIVE DOM selection, which is not a Vue
-  // reactive dependency. Without a reactive signal the toolbar would never
-  // re-evaluate its highlights as the caret moves (it only refreshed as a side
-  // effect of clicking a format button). This tick is bumped on every
-  // `selectionchange`; each isActive helper reads it so any component that
-  // calls them during render re-renders whenever the caret/selection moves.
-  const selectionTick = ref(0);
-
   const handleSelectionChange = () => {
     selectionTick.value++;
   };
@@ -57,5 +65,6 @@ export function useActiveStates(
     isInlineActionActive,
     isBlockActionActive,
     isListActionActive,
+    selectionTick,
   };
 }

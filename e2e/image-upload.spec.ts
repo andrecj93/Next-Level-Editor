@@ -1,9 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { ensureToolbarExpanded } from "./helpers/toolbar";
 
 test.describe("Image Upload", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/?empty=true");
     await page.waitForSelector(".editor-content");
+    // On phone widths the toolbar auto-minifies; Insert is behind expand.
+    await ensureToolbarExpanded(page);
   });
 
   test("should show helpful hint when no image provided", async ({ page }) => {
