@@ -274,9 +274,6 @@
       @execute-command="handleCommandExecute"
     />
 
-    <!-- Toast Notifications Container -->
-    <ToastContainer />
-
     <!-- Writing Stats Panel (opt-in feature) -->
     <WritingStatsPanel
       v-if="showWritingStats && writingAssistant && showWritingStatsPanel"
@@ -567,7 +564,6 @@ import EditorToolbar from "./EditorToolbar.vue";
 import EditorPanels from "./EditorPanels.vue";
 import EditorFooter from "./EditorFooter.vue";
 import CommandMenu from "./CommandMenu.vue";
-import ToastContainer from "./ToastContainer.vue";
 import SkipLinks from "./SkipLinks.vue";
 import AriaLiveRegion from "./AriaLiveRegion.vue";
 import WritingStatsPanel from "./WritingStatsPanel.vue";
