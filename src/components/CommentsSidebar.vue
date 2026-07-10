@@ -247,7 +247,9 @@ function createNewComment() {
   right: 0;
   bottom: 0;
   width: 0;
-  z-index: 9999;
+  /* Open panels sit ABOVE the toolbar shell (9999) so their content never
+     loses clicks to the sticky bar; FABs stay below it at 9998. */
+  z-index: 10000;
   pointer-events: none;
   overflow: visible;
 }

@@ -514,7 +514,9 @@ const getSEOClass = (score: number): string => {
     0 0 0 1px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 9998;
+  /* Open panels sit ABOVE the toolbar shell (9999) so their items never lose
+     clicks to the sticky bar; FABs stay below it at 9998. */
+  z-index: 10000;
 }
 
 .writing-stats-panel.collapsed {

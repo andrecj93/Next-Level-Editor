@@ -2111,7 +2111,11 @@ onUnmounted(() => {
   width: 360px;
   max-height: calc(100vh - 200px);
   overflow-y: auto;
-  z-index: 9998;
+  /* Open panels sit ABOVE the toolbar shell (9999): a bottom-anchored
+     panel can reach into the sticky toolbar's zone, and its items must not
+     lose clicks to the bar. FABs stay at 9998 (below the shell); dialog
+     overlays (10050) still top everything. */
+  z-index: 10000;
   border-radius: 14px;
   box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
     0 0 0 1px rgba(0, 0, 0, 0.04);
@@ -2268,7 +2272,11 @@ onUnmounted(() => {
   border-radius: 14px;
   box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
     0 0 0 1px rgba(0, 0, 0, 0.04);
-  z-index: 9998;
+  /* Open panels sit ABOVE the toolbar shell (9999): a bottom-anchored
+     panel can reach into the sticky toolbar's zone, and its items must not
+     lose clicks to the bar. FABs stay at 9998 (below the shell); dialog
+     overlays (10050) still top everything. */
+  z-index: 10000;
 }
 
 .variables-panel-header {
