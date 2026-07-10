@@ -190,7 +190,9 @@ const handleSelect = (e: MouseEvent) => {
 };
 
 const handleDeselect = (e: MouseEvent) => {
-  if (!containerRef.value?.contains(e.target as Node)) {
+  // Only deselect if we were actually selected — otherwise every outside click
+  // anywhere on the page would emit a spurious `deselect`.
+  if (isSelected.value && !containerRef.value?.contains(e.target as Node)) {
     isSelected.value = false;
     emit("deselect");
   }

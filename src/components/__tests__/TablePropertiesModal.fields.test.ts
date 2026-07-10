@@ -533,24 +533,24 @@ describe("TablePropertiesModal — field set", () => {
     // The reset uses `initial?.x || default` for padding/borderWidth, which
     // treats a legitimate 0 as "unset" and substitutes the default. Documented
     // here as CURRENT behaviour (reported as a product quirk, not fixed).
-    it("initialCellProps.padding = 0 is coerced to the default 8 (|| swallows 0)", async () => {
+    it("preserves an explicit initialCellProps.padding = 0 (nullish, not truthy, coalescing)", async () => {
       const w = mount(TablePropertiesModal, {
         props: { show: false, mode: "cell", initialCellProps: { padding: 0 } },
       });
       track(w);
       await w.setProps({ show: true });
       await nextTick();
-      expect(inGroup<HTMLInputElement>("Padding (px)", "input[type=number]").value).toBe("8");
+      expect(inGroup<HTMLInputElement>("Padding (px)", "input[type=number]").value).toBe("0");
     });
 
-    it("initialTableProps.borderWidth = 0 is coerced to the default 1 (|| swallows 0)", async () => {
+    it("preserves an explicit initialTableProps.borderWidth = 0 for a borderless table", async () => {
       const w = mount(TablePropertiesModal, {
         props: { show: false, mode: "table", initialTableProps: { borderWidth: 0 } },
       });
       track(w);
       await w.setProps({ show: true });
       await nextTick();
-      expect(inGroup<HTMLInputElement>("Border Width (px)", "input[type=number]").value).toBe("1");
+      expect(inGroup<HTMLInputElement>("Border Width (px)", "input[type=number]").value).toBe("0");
     });
   });
 });
