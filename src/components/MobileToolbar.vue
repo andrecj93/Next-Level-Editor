@@ -4,7 +4,11 @@
       v-if="showToolbar"
       ref="toolbarEl"
       class="mobile-toolbar"
-      :class="{ 'toolbar-collapsed': isCollapsed, 'theme-dark': isDark }"
+      :class="{
+        'toolbar-collapsed': isCollapsed,
+        'theme-dark': isDark,
+        'is-fullscreen': isFullscreen,
+      }"
     >
     <!-- Toolbar Header -->
     <div class="toolbar-header">
@@ -283,21 +287,28 @@ watch(
 );
 
 // Because the toolbar teleports to <body>, it escapes the editor's
-// `.theme-dark` scope. Mirror the editor root's theme onto our own root so the
-// global themed tokens (mapped in the <style> block) resolve to dark values.
+// `.theme-dark` AND `.fullscreen` scopes. Mirror both editor-root classes
+// onto our own root: theme so the global themed tokens (mapped in the
+// <style> block) resolve to dark values, and fullscreen so the bar can lift
+// itself above the fullscreen editor shell (see the z-index contract on
+// `.mobile-toolbar.is-fullscreen`) instead of being buried under it.
 const isDark = ref(false);
-let themeObserver: MutationObserver | null = null;
+const isFullscreen = ref(false);
+let editorClassObserver: MutationObserver | null = null;
 
-const syncTheme = () => {
+const syncEditorClasses = () => {
   isDark.value = !!document.querySelector(".next-level-editor.theme-dark");
+  isFullscreen.value = !!document.querySelector(
+    ".next-level-editor.fullscreen"
+  );
 };
 
 onMounted(() => {
-  syncTheme();
+  syncEditorClasses();
   const editorEl = document.querySelector(".next-level-editor");
   if (editorEl) {
-    themeObserver = new MutationObserver(syncTheme);
-    themeObserver.observe(editorEl, {
+    editorClassObserver = new MutationObserver(syncEditorClasses);
+    editorClassObserver.observe(editorEl, {
       attributes: true,
       attributeFilter: ["class"],
     });
@@ -305,8 +316,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  themeObserver?.disconnect();
-  themeObserver = null;
+  editorClassObserver?.disconnect();
+  editorClassObserver = null;
   clearClearance();
 });
 
@@ -572,6 +583,18 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+/* Fullscreen: the editor root becomes a fixed overlay at z-index 9999
+   (.next-level-editor.fullscreen in styles/NextLevelEditor.css), which would
+   bury this z-900 bar entirely. The `is-fullscreen` class is mirrored from
+   the editor root by the same MutationObserver as the theme classes.
+   Stacking contract in fullscreen: dialog overlays 10050 > this bar 10001 >
+   floating panels 10000 > fullscreen shell 9999 > FABs 9998 — the bar must
+   beat the shell (or mobile fullscreen has zero formatting chrome), while
+   every real dialog still wins. */
+.mobile-toolbar.is-fullscreen {
+  z-index: 10001;
 }
 
 .toolbar-collapsed {

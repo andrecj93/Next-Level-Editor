@@ -74,4 +74,73 @@ describe("clampMenuToViewport", () => {
     // Bottom limit falls back to the viewport, not the hidden bar's top: 0.
     expect(pos.top).toBe(768 - 400 - 8);
   });
+
+  // toolbarPosition="bottom": the same .editor-toolbar-modern element is a
+  // dock at the viewport bottom. It must be treated as a BOTTOM obstacle —
+  // the old clamp read its rect.bottom as minTop and pinned the menu below
+  // the viewport (invisible menu still owning the keyboard).
+  describe("bottom-docked toolbar", () => {
+    const DOCK = { top: 715, bottom: 768, height: 53, width: 1024 };
+
+    it("does not force the menu top below the dock", () => {
+      addBar("editor-toolbar-modern", DOCK);
+      const pos = clampMenuToViewport(100, 50, OPTS);
+      // A caret well above the dock keeps its position untouched.
+      expect(pos.top).toBe(100);
+      expect(pos.left).toBe(50);
+    });
+
+    it("uses the dock top as the bottom limit for flip and height budget", () => {
+      addBar("editor-toolbar-modern", DOCK);
+      // Caret right above the dock: the box is pulled up above it.
+      const pos = clampMenuToViewport(700, 50, OPTS);
+      expect(pos.top + 400).toBeLessThanOrEqual(715);
+      expect(pos.top + pos.maxHeight).toBeLessThanOrEqual(715);
+      // And it stays on-screen (the inverted bug placed it at ~innerHeight+8).
+      expect(pos.top).toBeLessThan(715);
+    });
+  });
+
+  // toolbarPosition="left": the toolbar is a tall, narrow, full-height rail.
+  // It claims horizontal space only — under the old clamp its rect.bottom
+  // (= the editor's bottom edge) became minTop, pushing menus below the
+  // whole document.
+  describe("left-rail toolbar", () => {
+    const RAIL = { top: 0, bottom: 768, height: 768, width: 48, right: 48 };
+
+    it("clamps the left edge to the rail's right side", () => {
+      addBar("editor-toolbar-modern", RAIL);
+      const pos = clampMenuToViewport(100, 10, OPTS);
+      expect(pos.left).toBe(48 + 8);
+    });
+
+    it("makes no vertical claim: caret position and full height budget kept", () => {
+      addBar("editor-toolbar-modern", RAIL);
+      const pos = clampMenuToViewport(100, 200, OPTS);
+      expect(pos.top).toBe(100);
+      expect(pos.left).toBe(200);
+      // Bottom limit is the viewport, not the rail's bottom edge.
+      expect(pos.maxHeight).toBe(768 - 100 - 8);
+    });
+  });
+
+  it("honors a top bar and a bottom dock simultaneously", () => {
+    // e.g. a host sticky header plus toolbarPosition="bottom".
+    addBar("editor-toolbar-modern", { top: 0, bottom: 64, height: 64, width: 1024 });
+    addBar("editor-toolbar-modern", { top: 715, bottom: 768, height: 53, width: 1024 });
+    const low = clampMenuToViewport(10, 50, OPTS);
+    expect(low.top).toBe(64 + 8); // kept below the top bar
+    const high = clampMenuToViewport(700, 50, OPTS);
+    expect(high.top + 400).toBeLessThanOrEqual(715); // pulled above the dock
+    expect(high.top + high.maxHeight).toBeLessThanOrEqual(715);
+  });
+
+  it("uses the full viewport when no toolbar exists at all (pill/zen mode)", () => {
+    const pos = clampMenuToViewport(700, 50, OPTS);
+    // Only the viewport bottom clamps: innerHeight 768 - height 400 - margin 8.
+    expect(pos.top).toBe(768 - 400 - 8);
+    const fits = clampMenuToViewport(5, 50, OPTS);
+    // No phantom top bar: only the margin floor applies.
+    expect(fits.top).toBe(8);
+  });
 });

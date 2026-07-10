@@ -35,11 +35,29 @@
   --focus-bg-high-contrast: #ffff00;
 }
 
+/* Inside the editor, the generic focus ring follows the ACTIVE theme accent
+   instead of the hardcoded blue: #4a90e2 fails the 3:1 indicator minimum on
+   the warm (2.83:1 on #f4ede0) and midnight (2.93:1 on #eef2f8) light
+   toolbars, and visibly mismatches the accent rings the masthead buttons
+   already use. var() must be resolved on an element that actually carries
+   --toolbar-accent, so this is declared on the editor root (and on the bare
+   .nle-theme-* roots the theme files also target, which reach teleported
+   overlays) — a :root declaration would resolve against :root, where the
+   accent is out of scope, and lock in the fallback. Every preset accent
+   clears 3:1 on its own toolbar/editor surfaces (worst: default light
+   #3b82f6 on #f8f9fb = 3.49:1). */
+.next-level-editor,
+[class*="nle-theme-"] {
+  --focus-color: var(--toolbar-accent, #4a90e2);
+}
+
 /* Dark mode adjustments — keyed to the editor's own theme class (.theme-dark
    on the .next-level-editor root), not the OS prefers-color-scheme setting.
-   Custom properties set here inherit to every element inside the dark editor. */
+   Custom properties set here inherit to every element inside the dark editor.
+   Follows the dark accent of the active preset; #60a5fa is the fallback for
+   .theme-dark surfaces where --toolbar-accent is out of scope. */
 .theme-dark {
-  --focus-color: #60a5fa;
+  --focus-color: var(--toolbar-accent, #60a5fa);
   --focus-color-high-contrast: #ffffff;
   --focus-bg-high-contrast: #000000;
 }

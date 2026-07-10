@@ -23,6 +23,12 @@
   --toolbar-bg: #f4ede0;
   --toolbar-text: #2e2a24;
   --toolbar-accent: #a8461f;
+  /* Accent-as-text / hero-fill split (see NextLevelEditor.css). The rust is
+     deep enough for both: text 5.07:1 on #f4ede0; white on fill 5.90:1
+     (hover 5.22:1). */
+  --toolbar-accent-ink: #a8461f;
+  --toolbar-accent-strong: #a8461f;
+  --toolbar-accent-contrast: #ffffff;
   --toolbar-hover: rgba(168,70,31,0.10);
   --content-color: #2e2a24;
   --color-surface: #fbf7ef;
@@ -31,7 +37,10 @@
   --color-border: #e6ddcc;
   --color-divider: #e6ddcc;
   --color-text: #2e2a24;
-  --color-text-secondary: #7a6f5f;
+  /* Deeper umber than the original #7a6f5f (which was only 4.23:1 on the
+     toolbar cream): 4.91:1 on --toolbar-bg #f4ede0, 5.35:1 on --color-surface
+     #fbf7ef — the resting toolbar labels are 13-14px text and need 4.5:1. */
+  --color-text-secondary: #6f6556;
 }
 
 /* Dark mode */
@@ -42,6 +51,11 @@
   --toolbar-bg: #1a1611;
   --toolbar-text: #ece3d4;
   --toolbar-accent: #e0895a;
+  /* The apricot glow stays the hero fill; ink flips to the theme's espresso:
+     6.36:1 on #e0895a. Accent as text: 6.77:1 on #1a1611. */
+  --toolbar-accent-ink: #e0895a;
+  --toolbar-accent-strong: #e0895a;
+  --toolbar-accent-contrast: #211c16;
   --toolbar-hover: rgba(224,137,90,0.20);
   --content-color: #ece3d4;
   --color-surface: #2a241c;

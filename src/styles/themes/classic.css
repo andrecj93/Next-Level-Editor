@@ -23,6 +23,12 @@
   --toolbar-bg: #f4f6fa;
   --toolbar-text: #26313f;
   --toolbar-accent: #2457b8;
+  /* Accent-as-text / hero-fill split (see NextLevelEditor.css). The classic
+     blue is already deep enough to carry both roles:
+     text 6.20:1 on #f4f6fa; white on fill 6.71:1 (hover 5.98:1). */
+  --toolbar-accent-ink: #2457b8;
+  --toolbar-accent-strong: #2457b8;
+  --toolbar-accent-contrast: #ffffff;
   --toolbar-hover: rgba(36,87,184,0.10);
   --content-color: #1e2a3a;
   --color-surface: #ffffff;
@@ -42,6 +48,11 @@
   --toolbar-bg: #101825;
   --toolbar-text: #dbe4f0;
   --toolbar-accent: #5b9bf0;
+  /* Pastel accent stays the hero fill; ink flips dark: 6.45:1 on #5b9bf0.
+     Accent as text: 6.27:1 on #101825. */
+  --toolbar-accent-ink: #5b9bf0;
+  --toolbar-accent-strong: #5b9bf0;
+  --toolbar-accent-contrast: #0d1520;
   --toolbar-hover: rgba(91,155,240,0.22);
   --content-color: #e5eaf2;
   --color-surface: #1a2434;

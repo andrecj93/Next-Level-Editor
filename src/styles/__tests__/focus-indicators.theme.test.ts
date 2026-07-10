@@ -20,7 +20,11 @@ describe("focus-indicators.css dark theme", () => {
   it("overrides focus tokens under the editor's .theme-dark class", () => {
     const darkBlock = css.match(/^\.theme-dark \{([^}]*)\}/m);
     expect(darkBlock).not.toBeNull();
-    expect(darkBlock![1]).toContain("--focus-color: #60a5fa");
+    // Follows the active preset accent; #60a5fa only as the out-of-scope
+    // fallback (a bare #60a5fa would hardcode the default-preset blue).
+    expect(darkBlock![1]).toContain(
+      "--focus-color: var(--toolbar-accent, #60a5fa)"
+    );
     expect(darkBlock![1]).toContain("--focus-color-high-contrast: #ffffff");
     expect(darkBlock![1]).toContain("--focus-bg-high-contrast: #000000");
   });
@@ -29,6 +33,21 @@ describe("focus-indicators.css dark theme", () => {
     const rootBlock = css.match(/^:root \{([^}]*)\}/m);
     expect(rootBlock).not.toBeNull();
     expect(rootBlock![1]).toContain("--focus-color: #4a90e2");
+  });
+
+  it("makes the editor-scoped focus ring follow the active theme accent", () => {
+    // The hardcoded #4a90e2 ring fails 3:1 on the warm/midnight light
+    // toolbars; inside the editor (and on teleported .nle-theme-* overlay
+    // roots) the ring must resolve to the preset's --toolbar-accent. The
+    // declaration has to live on those roots — declared at :root the var()
+    // would resolve out of the accent's scope and freeze the fallback.
+    const editorBlock = css.match(
+      /^\.next-level-editor,\s*\n\[class\*="nle-theme-"\] \{([^}]*)\}/m
+    );
+    expect(editorBlock).not.toBeNull();
+    expect(editorBlock![1]).toContain(
+      "--focus-color: var(--toolbar-accent, #4a90e2)"
+    );
   });
 
   it("keeps the high-contrast and forced-colors blocks", () => {

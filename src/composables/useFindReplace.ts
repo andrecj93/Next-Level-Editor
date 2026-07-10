@@ -143,6 +143,12 @@ export function useFindReplace(options: FindReplaceOptions) {
   }) => {
     if (!editorContent.value) return;
 
+    // A still-pending find highlight is inline style on a live element; it
+    // must be unwound BEFORE innerHTML is read, or the temporary yellow gets
+    // baked into the replaced content (and its restore timer would fire
+    // against a detached node, a no-op).
+    clearPendingHighlight();
+
     const html = editorContent.value.innerHTML;
     const newHtml = searchAndReplace(
       html,
@@ -165,6 +171,10 @@ export function useFindReplace(options: FindReplaceOptions) {
     options: { caseSensitive: boolean; wholeWord: boolean };
   }) => {
     if (!editorContent.value) return;
+
+    // Same as handleReplace: unwind any pending find highlight before the
+    // innerHTML round-trip so it can't be baked into the replaced content.
+    clearPendingHighlight();
 
     const html = editorContent.value.innerHTML;
     const newHtml = searchAndReplace(

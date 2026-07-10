@@ -8,6 +8,7 @@
         theme,
         {
           'is-settled': settled,
+          'is-traveling': traveling,
           'is-below': state === 'selection' && !!selectionPosition?.below,
         },
       ]"
@@ -16,26 +17,41 @@
       role="toolbar"
       aria-label="Editor toolbar"
       @mousedown.prevent
+      @keydown="handleRovingKeydown"
+      @focusin="handleFocusin"
     >
       <div class="playhead-pill">
-        <!-- AMBIENT — slim lozenge: save-state dot + word count. -->
+        <!-- AMBIENT — slim lozenge: save-state dot + word count. The lozenge
+             is a REAL button (focusable + clickable) so keyboard and pointer
+             users can expand the receded chrome from the pill itself. -->
         <div
           class="playhead-layer layer-ambient"
           :class="{ 'is-active': state === 'ambient' }"
           v-bind="layerAttrs(state === 'ambient')"
         >
-          <span
-            class="playhead-dot"
-            :class="{ 'is-saving': isSaving }"
-            aria-hidden="true"
-          />
+          <button
+            type="button"
+            class="playhead-ambient-btn"
+            aria-label="Show toolbar"
+            title="Show toolbar"
+            @click="$emit('expand')"
+            @focus="$emit('expand')"
+          >
+            <span
+              class="playhead-dot"
+              :class="{ 'is-saving': isSaving }"
+              aria-hidden="true"
+            />
+            <span class="playhead-count">{{ wordCountLabel }}</span>
+          </button>
           <span class="playhead-sr">{{
             isSaving ? "Saving…" : "All changes saved"
           }}</span>
-          <span class="playhead-count">{{ wordCountLabel }}</span>
         </div>
 
-        <!-- HOME — the writing essentials: Format, B/I/U/S, "+", "⋯". -->
+        <!-- HOME — the writing essentials: Format, inline set, lists, colors,
+             "+", "⋯". Triggers here emit remember-selection on mousedown (the
+             editor selection is about to be needed by a menu action). -->
         <div
           class="playhead-layer layer-home"
           :class="{ 'is-active': state === 'home' }"
@@ -108,7 +124,96 @@
             <span v-else class="playhead-btn-label">{{ action.label }}</span>
           </button>
 
+          <!-- List toggles (bullet/numbered/indent…) — inline, right after
+               the inline formatting set. -->
+          <button
+            v-for="action in listActions ?? []"
+            :key="action.id"
+            type="button"
+            class="playhead-btn"
+            :class="{ active: action.isActive?.() }"
+            :disabled="action.isDisabled?.()"
+            :aria-label="action.label"
+            :aria-pressed="action.isActive ? action.isActive() : undefined"
+            :title="action.tooltip"
+            @mousedown.prevent="$emit('remember-selection')"
+            @click="action.onClick()"
+          >
+            <span v-if="action.icon" class="playhead-btn-icon" v-html="action.icon" />
+            <span v-else class="playhead-btn-label">{{ action.label }}</span>
+          </button>
+
           <span class="playhead-sep" aria-hidden="true" />
+
+          <!-- Colors — same swatch-grid grammar as EditorToolbar's colors
+               menu (colors-section / colors-swatches / colors-swatch). -->
+          <div v-if="hasColors" class="playhead-menu-wrap">
+            <button
+              type="button"
+              class="playhead-trigger playhead-trigger-icon"
+              :class="{ 'is-open': openMenu === 'colors' }"
+              aria-label="Colors"
+              aria-haspopup="true"
+              :aria-expanded="openMenu === 'colors'"
+              title="Text &amp; background colors"
+              @mousedown.prevent="$emit('remember-selection')"
+              @click.stop="toggleMenu('colors')"
+            >
+              <span class="playhead-btn-icon" v-html="colorsIcon" />
+            </button>
+            <transition name="playhead-menu">
+              <div
+                v-if="openMenu === 'colors'"
+                class="dropdown-menu playhead-menu playhead-colors-menu"
+                role="menu"
+                @click.stop
+              >
+                <div v-if="textColorPresets?.length" class="colors-section">
+                  <div class="colors-section-label">Text color</div>
+                  <div class="colors-swatches">
+                    <button
+                      v-for="c in textColorPresets"
+                      :key="c"
+                      type="button"
+                      class="colors-swatch"
+                      :class="{ active: sameColor(textColor, c) }"
+                      :style="{ background: c }"
+                      :aria-label="`Text color ${c}`"
+                      :title="c"
+                      @mousedown.prevent="$emit('remember-selection')"
+                      @click="pickTextColor(c)"
+                    />
+                  </div>
+                </div>
+                <div v-if="highlightColorPresets?.length" class="colors-section">
+                  <div class="colors-section-label">Highlight</div>
+                  <div class="colors-swatches">
+                    <button
+                      type="button"
+                      class="colors-swatch colors-swatch-none"
+                      :class="{ active: noHighlightActive }"
+                      aria-label="No highlight"
+                      title="None"
+                      @mousedown.prevent="$emit('remember-selection')"
+                      @click="pickHighlightColor('transparent')"
+                    />
+                    <button
+                      v-for="c in highlightColorPresets"
+                      :key="c"
+                      type="button"
+                      class="colors-swatch"
+                      :class="{ active: sameColor(backgroundColor, c) }"
+                      :style="{ background: c }"
+                      :aria-label="`Highlight ${c}`"
+                      :title="c"
+                      @mousedown.prevent="$emit('remember-selection')"
+                      @click="pickHighlightColor(c)"
+                    />
+                  </div>
+                </div>
+              </div>
+            </transition>
+          </div>
 
           <div
             v-for="menu in trailingMenus"
@@ -162,7 +267,11 @@
           </div>
         </div>
 
-        <!-- SELECTION — the pill IS the bubble: inline formatting set. -->
+        <!-- SELECTION — the pill IS the bubble: inline formatting set.
+             mousedown is prevented (focus preservation) but deliberately does
+             NOT emit remember-selection: the selection is LIVE — there is
+             nothing to remember, and host-side suppression flipping the state
+             mid-press would kill the click (FloatingToolbar.vue's contract). -->
         <div
           class="playhead-layer layer-selection"
           :class="{ 'is-active': state === 'selection' }"
@@ -178,7 +287,7 @@
             :aria-label="action.label"
             :aria-pressed="action.isActive ? action.isActive() : undefined"
             :title="action.tooltip"
-            @mousedown.prevent="$emit('remember-selection')"
+            @mousedown.prevent
             @click="action.onClick()"
           >
             <span v-if="action.icon" class="playhead-btn-icon" v-html="action.icon" />
@@ -191,8 +300,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  nextTick,
+  onMounted,
+  onUpdated,
+  onBeforeUnmount,
+} from "vue";
 import type { ToolbarAction } from "../types/toolbar";
+import { EDGE_MARGIN } from "../utils/floatingToolbarPosition";
 import type {
   PlayheadState,
   PlayheadAnchorRect,
@@ -215,6 +333,11 @@ import type {
  *  - The element sits at fixed 0,0 and is positioned ENTIRELY via
  *    transform: translate3d(...). Travel between anchor and selection is a
  *    transform transition — top/left never animate (they never even change).
+ *  - Travel animates ONLY on a logical state change (state or the selection
+ *    below-flip): a state watch arms `.is-traveling` for one morph duration.
+ *    Geometry refreshes in the SAME state (the host re-measuring on scroll or
+ *    resize) reposition instantly — the pill tracks scroll 1:1, no
+ *    rubber-banding behind the document.
  *  - State size changes are a TWO-LAYER CROSSFADE: all three layers are
  *    pre-rendered, the active one is in-flow (it sizes the pill, which snaps),
  *    inactive ones are absolute + opacity 0 + scale. No width/height tweens.
@@ -225,15 +348,31 @@ import type {
  *  - prefers-reduced-motion: every morph/travel duration is a
  *    var(--nle-motion-morph) token, which tokens.css zeroes under reduced
  *    motion — movement collapses to the opacity crossfade.
+ *
+ * Viewport containment (ambient/home): the anchor-derived x is clamped so the
+ * ACTIVE layer's measured width stays inside the viewport (EDGE_MARGIN
+ * gutter, same math as computeToolbarPosition), and y is clamped to
+ * >= EDGE_MARGIN so an offscreen-top editor parks the pill at the viewport
+ * top edge instead of leaving entirely. When anchorRect.bottom is provided
+ * and the editor rect is fully above the viewport past a 24px grace
+ * (bottom <= -24), targetPoint goes null and the existing v-if hides the
+ * pill. Selection state is already clamped host-side.
+ *
+ * Keyboard: the ACTIVE layer's controls form a roving-tabindex composite
+ * (APG toolbar pattern) — one Tab stop, ArrowLeft/ArrowRight move,
+ * Home/End jump, the stop resets on state change. Open dropdown menus keep
+ * their own keys (roving skips anything inside .playhead-menu).
  */
 
 interface Props {
   /** Host-driven chrome state; the component never decides this itself. */
   state: PlayheadState;
   /**
-   * Viewport rect of the editor root ({top,left,width} from
+   * Viewport rect of the editor root ({top,left,width[,bottom]} from
    * getBoundingClientRect). Ambient/home anchor: the pill centers over it,
-   * 12px below the top edge. Host refreshes it on resize/scroll.
+   * 12px below the top edge — clamped into the viewport (see the containment
+   * notes above). Host refreshes it on resize/scroll. Pass `bottom` so the
+   * pill can hide once the editor is fully scrolled above the viewport.
    */
   anchorRect: PlayheadAnchorRect | null;
   /**
@@ -248,14 +387,45 @@ interface Props {
   wordCount: number;
   /** True while an auto-save is in flight — pulses the ambient dot. */
   isSaving: boolean;
-  /** Inline formatting set (B/I/U/S + link) — same objects EditorToolbar uses. */
+  /**
+   * Inline formatting set (the host's floating/inline actions — e.g.
+   * B/I/U + link) — same objects EditorToolbar/FloatingToolbar use. Rendered
+   * in BOTH the home and selection layers.
+   */
   inlineActions: ToolbarAction[];
   /** Format dropdown items (host's formatDropdownItems). */
   formatItems: PlayheadMenuItem[];
   /** Insert "+" menu items (host's insertDropdownItems). */
   insertItems: PlayheadMenuItem[];
-  /** "⋯" overflow menu items. */
+  /**
+   * "⋯" overflow menu items. May contain divider entries ({divider: true},
+   * rendered as hairlines) and active-state items (isActive), so the host
+   * can pass sectioned content like view modes.
+   */
   overflowItems: PlayheadMenuItem[];
+  /**
+   * Alignment items (host's alignmentDropdownItems). Rendered as the first
+   * section of the "⋯" overflow, separated by a hairline.
+   */
+  alignmentItems?: PlayheadMenuItem[];
+  /**
+   * Font-size items (host's fontSizeDropdownItems). Rendered as the second
+   * section of the "⋯" overflow, separated by a hairline.
+   */
+  sizeItems?: PlayheadMenuItem[];
+  /**
+   * List toggles (bullet/numbered/indent/outdent — host's listActions).
+   * Rendered inline in the home layer after the inline formatting set.
+   */
+  listActions?: ToolbarAction[];
+  /** Text-color swatches for the Colors menu (host's textColorPresets). */
+  textColorPresets?: string[];
+  /** Highlight swatches for the Colors menu (host's highlightColorPresets). */
+  highlightColorPresets?: string[];
+  /** Currently applied text color — drives the active swatch ring. */
+  textColor?: string;
+  /** Currently applied highlight color — drives the active swatch ring. */
+  backgroundColor?: string;
   /**
    * Theme passthrough for the teleported root (e.g. "theme-dark
    * nle-theme-warm") — teleporting to <body> escapes the editor's theme scope,
@@ -266,28 +436,85 @@ interface Props {
 
 const props = defineProps<Props>();
 
-defineEmits<{
+const emit = defineEmits<{
   /**
-   * Emitted on every trigger/button mousedown (which is prevented) so the
-   * host can save the editor selection before focus would move — the same
-   * contract as EditorToolbar/ToolbarDropdown.
+   * Emitted on HOME-layer trigger/button mousedown (which is prevented) so
+   * the host can save the editor selection before a menu action needs it —
+   * the same contract as EditorToolbar/ToolbarDropdown. The SELECTION layer
+   * deliberately does NOT emit this: its selection is live, and host-side
+   * suppression must never flip the pill state mid-press.
    */
   "remember-selection": [];
+  /**
+   * The ambient lozenge was clicked or keyboard-focused — the host should
+   * restore the chrome (receded = false), expanding the pill to home.
+   */
+  expand: [];
+  /** A text-color swatch was picked (hex or css color string). */
+  "text-color-change": [color: string];
+  /** A highlight swatch was picked ("transparent" clears the highlight). */
+  "background-color-change": [color: string];
 }>();
 
 /** Ambient/home vertical offset below the editor's top edge. */
 const ANCHOR_TOP_OFFSET = 12;
+/**
+ * Grace past "editor fully above the viewport" before the pill hides:
+ * with anchorRect.bottom provided, the pill parks at the viewport top edge
+ * while bottom > -ANCHOR_EXIT_GRACE and hides (targetPoint = null) once the
+ * editor has scrolled ANCHOR_EXIT_GRACE px past fully-offscreen.
+ */
+const ANCHOR_EXIT_GRACE = 24;
 
 // --- Positioning: everything through transform ------------------------------
+
+const rootEl = ref<HTMLElement | null>(null);
+
+/**
+ * Measured pill width (the ACTIVE layer sizes it) for the ambient/home x
+ * clamp. Kept fresh by a ResizeObserver (state morphs resize the pill) with
+ * a nextTick fallback on state change for environments without RO.
+ */
+const pillWidth = ref(0);
+
+const measurePill = () => {
+  pillWidth.value = rootEl.value?.offsetWidth ?? 0;
+};
+
+/**
+ * Clamp the pill CENTER so its real edges stay inside the viewport with an
+ * EDGE_MARGIN gutter — the same math computeToolbarPosition applies to the
+ * selection state. window.innerWidth is read non-reactively: the host
+ * refreshes anchorRect on every resize/scroll, which recomputes this.
+ */
+const clampAnchorX = (center: number): number => {
+  const viewportWidth = window.innerWidth;
+  const width = pillWidth.value;
+  if (width + EDGE_MARGIN * 2 >= viewportWidth) return viewportWidth / 2;
+  const half = width / 2;
+  return Math.min(
+    Math.max(center, half + EDGE_MARGIN),
+    viewportWidth - half - EDGE_MARGIN
+  );
+};
 
 const targetPoint = computed<{ x: number; y: number } | null>(() => {
   if (props.state === "selection" && props.selectionPosition) {
     return { x: props.selectionPosition.left, y: props.selectionPosition.top };
   }
   if (props.anchorRect) {
+    // Editor fully above the viewport (plus grace): no chrome to anchor to.
+    if (
+      props.anchorRect.bottom !== undefined &&
+      props.anchorRect.bottom <= -ANCHOR_EXIT_GRACE
+    ) {
+      return null;
+    }
     return {
-      x: props.anchorRect.left + props.anchorRect.width / 2,
-      y: props.anchorRect.top + ANCHOR_TOP_OFFSET,
+      x: clampAnchorX(props.anchorRect.left + props.anchorRect.width / 2),
+      // Park at the viewport top edge instead of following the editor top
+      // offscreen — mid-document writers keep their chrome.
+      y: Math.max(props.anchorRect.top + ANCHOR_TOP_OFFSET, EDGE_MARGIN),
     };
   }
   return null;
@@ -318,12 +545,44 @@ onMounted(() => {
   });
 });
 
+// --- Travel vs scroll tracking -----------------------------------------------
+
+/**
+ * The transform transition applies ONLY while `.is-traveling` — armed by a
+ * LOGICAL target change (state, or the selection below-flip) for one morph
+ * duration. Host-driven geometry refreshes in the same state (scroll/resize
+ * following) change the transform withOUT the class, so they apply
+ * instantly: no 260ms rubber-band lag behind the document. The host needs
+ * no extra wiring — it just keeps refreshing geometry as it already does.
+ */
+const traveling = ref(false);
+let travelTimer: ReturnType<typeof setTimeout> | undefined;
+/** Slightly longer than --nle-motion-morph (260ms) so the ease completes. */
+const TRAVEL_FALLBACK_MS = 360;
+
+watch(
+  [
+    () => props.state,
+    () => props.state === "selection" && !!props.selectionPosition?.below,
+  ],
+  () => {
+    if (!settled.value) return;
+    traveling.value = true;
+    clearTimeout(travelTimer);
+    travelTimer = setTimeout(() => {
+      traveling.value = false;
+    }, TRAVEL_FALLBACK_MS);
+  }
+);
+
 // --- Layer a11y: inactive layers are invisible AND unreachable --------------
 
 /**
  * Inactive layers stay pre-rendered (the crossfade needs both sides in the
  * DOM) but must not be readable or tabbable. `inert` blocks focus in modern
- * browsers; aria-hidden + pointer-events (CSS) cover the rest.
+ * browsers; aria-hidden + pointer-events (CSS) cover the rest. The ACTIVE
+ * layer carries neither — its controls (including the ambient lozenge
+ * button) are real, focusable affordances.
  */
 const layerAttrs = (active: boolean): Record<string, unknown> => ({
   "aria-hidden": active ? undefined : "true",
@@ -337,15 +596,35 @@ const wordCountLabel = computed(
     `${props.wordCount.toLocaleString()} ${props.wordCount === 1 ? "word" : "words"}`
 );
 
-// --- Menus (Format / insert / overflow) --------------------------------------
+// --- Menus (Format / colors / insert / overflow) -----------------------------
 
-type MenuId = "format" | "insert" | "overflow";
+type MenuId = "format" | "colors" | "insert" | "overflow";
 
 const openMenu = ref<MenuId | null>(null);
-const rootEl = ref<HTMLElement | null>(null);
 
 const svgIcon = (paths: string): string =>
   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+
+const colorsIcon = svgIcon(
+  '<path d="M12 3s6 5.5 6 10a6 6 0 0 1-12 0c0-4.5 6-10 6-10Z"/><path d="M5 21h14"/>'
+);
+
+/**
+ * The "⋯" overflow supports SECTIONS: alignment and font-size items are
+ * folded in ahead of the host's overflow items, separated by hairline
+ * dividers (the same divider rendering the menus already have).
+ */
+const overflowMenuItems = computed<PlayheadMenuItem[]>(() => {
+  const sections: PlayheadMenuItem[][] = [];
+  if (props.alignmentItems?.length) sections.push(props.alignmentItems);
+  if (props.sizeItems?.length) sections.push(props.sizeItems);
+  if (props.overflowItems.length) sections.push(props.overflowItems);
+  return sections.reduce<PlayheadMenuItem[]>(
+    (acc, section, index) =>
+      index === 0 ? [...section] : [...acc, { divider: true }, ...section],
+    []
+  );
+});
 
 const trailingMenus = computed(() => [
   {
@@ -360,7 +639,7 @@ const trailingMenus = computed(() => [
     ariaLabel: "More options",
     tooltip: "More options",
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
-    items: props.overflowItems,
+    items: overflowMenuItems.value,
   },
 ]);
 
@@ -373,13 +652,30 @@ const handleItemClick = (item: PlayheadMenuItem) => {
   openMenu.value = null;
 };
 
-// Leaving the state a menu lives in must not strand it open.
-watch(
-  () => props.state,
-  () => {
-    openMenu.value = null;
-  }
+// --- Colors ------------------------------------------------------------------
+
+const hasColors = computed(
+  () =>
+    (props.textColorPresets?.length ?? 0) > 0 ||
+    (props.highlightColorPresets?.length ?? 0) > 0
 );
+
+const sameColor = (a?: string, b?: string): boolean =>
+  !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+
+const noHighlightActive = computed(
+  () => !props.backgroundColor || sameColor(props.backgroundColor, "transparent")
+);
+
+const pickTextColor = (color: string) => {
+  emit("text-color-change", color);
+  openMenu.value = null;
+};
+
+const pickHighlightColor = (color: string) => {
+  emit("background-color-change", color);
+  openMenu.value = null;
+};
 
 // Standard menu dismissal — Escape (capture, so an open menu wins over the
 // editor's own document-level Escape handling) and click-outside; the same
@@ -398,13 +694,134 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
+// --- Roving tabindex (APG toolbar pattern) -----------------------------------
+
+const rovingIndex = ref(0);
+
+/** The ACTIVE layer's toolbar-level controls (open menus own their keys). */
+const rovingControls = (): HTMLButtonElement[] => {
+  const activeLayer = rootEl.value?.querySelector<HTMLElement>(
+    ".playhead-layer.is-active"
+  );
+  if (!activeLayer) return [];
+  return Array.from(
+    activeLayer.querySelectorAll<HTMLButtonElement>("button")
+  ).filter((button) => !button.disabled && !button.closest(".playhead-menu"));
+};
+
+/**
+ * One Tab stop for the whole pill: the roving control gets tabindex 0,
+ * every other button (including inert layers, belt-and-braces) gets -1.
+ * Re-applied after every patch — the template deliberately does not bind
+ * tabindex, so re-keyed v-for nodes are corrected here.
+ */
+function applyRoving() {
+  const root = rootEl.value;
+  if (!root) return;
+  const controls = rovingControls();
+  if (rovingIndex.value >= controls.length) {
+    rovingIndex.value = Math.max(0, controls.length - 1);
+  }
+  const activeControl = controls[rovingIndex.value] ?? null;
+  const all = Array.from(
+    root.querySelectorAll<HTMLButtonElement>(".playhead-layer button")
+  ).filter((button) => !button.closest(".playhead-menu"));
+  for (const button of all) {
+    button.tabIndex = button === activeControl ? 0 : -1;
+  }
+}
+
+const handleRovingKeydown = (event: KeyboardEvent) => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const target = event.target as HTMLElement | null;
+  if (target?.closest(".playhead-menu")) return;
+  const controls = rovingControls();
+  if (!controls.length) return;
+  const current = controls.indexOf(target as HTMLButtonElement);
+  let next = current >= 0 ? current : rovingIndex.value;
+  if (event.key === "ArrowRight") next = (next + 1) % controls.length;
+  else if (event.key === "ArrowLeft")
+    next = (next - 1 + controls.length) % controls.length;
+  else if (event.key === "Home") next = 0;
+  else next = controls.length - 1;
+  event.preventDefault();
+  rovingIndex.value = next;
+  applyRoving();
+  controls[next].focus();
+};
+
+/** Focus landing on a control (Tab, click) becomes the roving stop. */
+const handleFocusin = (event: FocusEvent) => {
+  const controls = rovingControls();
+  const index = controls.indexOf(event.target as HTMLButtonElement);
+  if (index >= 0 && index !== rovingIndex.value) {
+    rovingIndex.value = index;
+    applyRoving();
+  }
+};
+
+// Leaving the state a menu lives in must not strand it open; the roving
+// tab stop also resets to the new active layer's first control.
+watch(
+  () => props.state,
+  () => {
+    openMenu.value = null;
+    rovingIndex.value = 0;
+    nextTick(applyRoving);
+  }
+);
+
+// --- Lifecycle ----------------------------------------------------------------
+
+let pillResizeObserver: ResizeObserver | null = null;
+
+// The root is v-if'd on targetPoint: (re)wire measurement + roving whenever
+// the element (re)appears. flush: "post" — the DOM must exist.
+watch(
+  rootEl,
+  (el) => {
+    pillResizeObserver?.disconnect();
+    if (el) {
+      measurePill();
+      pillResizeObserver?.observe(el);
+      applyRoving();
+    }
+  },
+  { flush: "post" }
+);
+
+// State morphs resize the pill; re-measure once the new layer is in flow
+// (fallback for environments without ResizeObserver).
+watch(
+  () => props.state,
+  () => {
+    nextTick(measurePill);
+  }
+);
+
 onMounted(() => {
+  if (typeof ResizeObserver !== "undefined") {
+    pillResizeObserver = new ResizeObserver(() => measurePill());
+  }
+  if (rootEl.value) {
+    measurePill();
+    pillResizeObserver?.observe(rootEl.value);
+    applyRoving();
+  }
   document.addEventListener("keydown", handleKeydown, true);
   document.addEventListener("click", handleClickOutside);
 });
 
+// Items/disabled flips re-render buttons without tabindex bindings — keep
+// the roving contract true after every patch (imperative, no reactive loop).
+onUpdated(() => {
+  applyRoving();
+});
+
 onBeforeUnmount(() => {
   cancelAnimationFrame(settleFrame);
+  clearTimeout(travelTimer);
+  pillResizeObserver?.disconnect();
   document.removeEventListener("keydown", handleKeydown, true);
   document.removeEventListener("click", handleClickOutside);
 });
@@ -418,7 +835,11 @@ onBeforeUnmount(() => {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: var(--z-index-popover, 1060);
+  /* Stacking contract: dialogs 10050 > pill 10001 > panels/sidebars 10000 >
+     fullscreen shell 9999 > FABs 9998. The pill is primary chrome — it must
+     paint above panels, FABs and the fullscreen shell, and only modal
+     overlays may cover it. */
+  z-index: var(--nle-z-playhead, 10001);
   will-change: transform;
   /* First render: a plain opacity fade — never a transform animation. */
   animation: playhead-in var(--nle-motion-enter, 180ms)
@@ -434,10 +855,13 @@ onBeforeUnmount(() => {
   }
 }
 
-/* Travel (anchor <-> selection) is a transform transition, armed only after
-   the mount has settled. Duration token zeroes under prefers-reduced-motion
-   (tokens.css), so travel degrades to an instant reposition + crossfade. */
-.playhead.is-settled {
+/* Travel (anchor <-> selection) is a transform transition, armed only while
+   `.is-traveling` — set by a LOGICAL state change for one morph duration.
+   Scroll/resize geometry refreshes reposition WITHOUT the class, i.e.
+   instantly: the pill must track the document 1:1, never rubber-band behind
+   it. Duration token zeroes under prefers-reduced-motion (tokens.css), so
+   travel degrades to an instant reposition + crossfade. */
+.playhead.is-settled.is-traveling {
   transition: transform var(--nle-motion-morph, 260ms)
     var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
@@ -503,11 +927,37 @@ onBeforeUnmount(() => {
       var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
-/* --- Ambient: slim save-dot + word-count lozenge --------------------------- */
+/* --- Ambient: slim save-dot + word-count lozenge — a REAL button ----------- */
 .layer-ambient {
-  gap: 8px;
-  padding: 3px 12px;
   min-height: 24px;
+}
+
+.playhead-ambient-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding: 3px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Keep the lozenge visually slim but give the CONTROL a 36px effective
+   target: an invisible hit-area extension (24px lozenge + 2×6px). */
+.playhead-ambient-btn::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+}
+
+.playhead-ambient-btn:focus-visible {
+  outline: 2px solid var(--toolbar-accent, var(--color-primary, #3b82f6));
+  outline-offset: 2px;
 }
 
 .playhead-dot {
@@ -726,6 +1176,81 @@ onBeforeUnmount(() => {
   margin: 4px 0;
 }
 
+/* --- Colors menu — the same swatch-grid grammar as EditorToolbar's, styled
+   here because the pill teleports to <body> and must be self-sufficient. --- */
+.playhead-colors-menu {
+  min-width: 244px;
+  padding: 12px;
+}
+
+.colors-section + .colors-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-divider, #e5e7eb);
+}
+
+.colors-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary, #6b7280));
+  margin-bottom: 9px;
+}
+
+.colors-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.colors-swatch {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  transition: transform var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    box-shadow var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.playhead.theme-dark .colors-swatch {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.colors-swatch:hover {
+  transform: scale(1.16);
+}
+
+.colors-swatch.active {
+  box-shadow: 0 0 0 2px var(--toolbar-accent, var(--color-primary, #3b82f6)),
+    0 0 0 3px var(--color-surface-raised, #ffffff);
+}
+
+.colors-swatch-none {
+  position: relative;
+  background: var(--color-surface-raised, #ffffff);
+}
+
+.colors-swatch-none::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to top right,
+    transparent 43%,
+    #ef4444 43%,
+    #ef4444 57%,
+    transparent 57%
+  );
+}
+
 /* Menu enter/exit — enter decelerates in, exit accelerates away and is
    faster (motion tokens; see tokens.css). Base transform is the centering
    translateX, so the motion delta is translateY only. */
@@ -755,12 +1280,17 @@ onBeforeUnmount(() => {
 
 /* =============================================================================
    REDUCED MOTION — durations already collapse via the motion tokens; the
-   infinite dot pulse is the one animation tokens can't reach.
+   infinite dot pulse and the swatch hover-scale are the animations tokens
+   can't reach.
    ============================================================================= */
 @media (prefers-reduced-motion: reduce) {
   .playhead-dot.is-saving {
     animation: none;
     opacity: 0.6;
+  }
+
+  .colors-swatch:hover {
+    transform: none;
   }
 }
 </style>

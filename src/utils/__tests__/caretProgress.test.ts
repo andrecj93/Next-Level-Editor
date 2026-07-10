@@ -2,9 +2,15 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { getCaretDocumentProgress } from "../caretProgress";
 
 /**
- * Geometry tests for the caret "playhead" fraction. Rects and scroll metrics
- * are mocked (happy-dom has no layout), which is exactly what makes the math
- * assertable: progress = (rectMidY - rootTop + scrollTop) / scrollHeight.
+ * Geometry tests for the caret "playhead" fraction. Rects are mocked
+ * (happy-dom has no layout), which is exactly what makes the math assertable.
+ *
+ * Semantics under test (content-extent normalisation, NOT scrollHeight):
+ *   progress = (caretRect.top - firstBlockRect.top)
+ *            / max(lastBlockRect.bottom - firstBlockRect.top - caretRect.height, 1)
+ * so the first line of the document reads 0 and the last line reads 1 —
+ * for documents both shorter and taller than the visible pane. All rects
+ * share viewport space, so no scrollTop/root-offset conversion appears.
  */
 describe("getCaretDocumentProgress", () => {
   const makeRect = (top: number, height: number, width = 1): DOMRect =>
@@ -21,7 +27,10 @@ describe("getCaretDocumentProgress", () => {
     }) as DOMRect;
 
   let root: HTMLElement;
-  let textNode: Text;
+  let firstBlock: HTMLElement;
+  let lastBlock: HTMLElement;
+  let firstText: Text;
+  let lastText: Text;
 
   /** Point the (mocked) selection focus at a node inside/outside root. */
   const mockSelectionFocus = (
@@ -36,30 +45,30 @@ describe("getCaretDocumentProgress", () => {
     } as unknown as Selection);
   };
 
-  /** Configure the root's geometry: viewport rect + scroll metrics. */
-  const mockRootGeometry = (opts: {
-    top: number;
-    scrollTop: number;
-    scrollHeight: number;
-  }) => {
-    vi.spyOn(root, "getBoundingClientRect").mockReturnValue(
-      makeRect(opts.top, 600, 800)
+  /** Content extent: first block's top .. last block's bottom (viewport px). */
+  const mockContentExtent = (contentTop: number, contentBottom: number) => {
+    vi.spyOn(firstBlock, "getBoundingClientRect").mockReturnValue(
+      makeRect(contentTop, 40)
     );
-    Object.defineProperty(root, "scrollTop", {
-      value: opts.scrollTop,
-      configurable: true,
-    });
-    Object.defineProperty(root, "scrollHeight", {
-      value: opts.scrollHeight,
-      configurable: true,
-    });
+    vi.spyOn(lastBlock, "getBoundingClientRect").mockReturnValue(
+      makeRect(contentBottom - 40, 40)
+    );
+  };
+
+  const mockCaretRect = (top: number, height = 20) => {
+    vi.spyOn(Range.prototype, "getBoundingClientRect").mockReturnValue(
+      makeRect(top, height)
+    );
   };
 
   beforeEach(() => {
     root = document.createElement("div");
-    root.innerHTML = "<p>hello world</p>";
+    root.innerHTML = "<p>first block</p><p>last block</p>";
     document.body.appendChild(root);
-    textNode = root.querySelector("p")!.firstChild as Text;
+    firstBlock = root.children[0] as HTMLElement;
+    lastBlock = root.children[1] as HTMLElement;
+    firstText = firstBlock.firstChild as Text;
+    lastText = lastBlock.firstChild as Text;
   });
 
   afterEach(() => {
@@ -67,35 +76,55 @@ describe("getCaretDocumentProgress", () => {
     vi.restoreAllMocks();
   });
 
-  it("reports ~0.5 for a caret at the middle of the scrollable content", () => {
-    mockSelectionFocus(textNode, 3);
-    mockRootGeometry({ top: 100, scrollTop: 200, scrollHeight: 1000 });
-    // Caret rect mid = 390 + 20/2 = 400 → (400 - 100 + 200) / 1000 = 0.5
-    vi.spyOn(Range.prototype, "getBoundingClientRect").mockReturnValue(
-      makeRect(390, 20)
-    );
+  it("reports ~0.5 for a caret midway through a long document", () => {
+    mockSelectionFocus(firstText, 3);
+    mockContentExtent(0, 1000); // span 1000
+    mockCaretRect(500, 20); // (500 - 0) / (1000 - 20) ≈ 0.51
 
-    expect(getCaretDocumentProgress(root)).toBeCloseTo(0.5, 5);
+    expect(getCaretDocumentProgress(root)).toBeCloseTo(0.5, 1);
   });
 
-  it("clamps to 0 at (or above) the top of the document", () => {
-    mockSelectionFocus(textNode, 0);
-    mockRootGeometry({ top: 100, scrollTop: 0, scrollHeight: 1000 });
-    // Caret mid = 90, above rootTop 100 → raw -0.01 → clamped to 0
-    vi.spyOn(Range.prototype, "getBoundingClientRect").mockReturnValue(
-      makeRect(80, 20)
-    );
+  it("reads 0 on the first line of the document", () => {
+    mockSelectionFocus(firstText, 0);
+    mockContentExtent(100, 700);
+    mockCaretRect(100, 20); // caret top == content top
 
     expect(getCaretDocumentProgress(root)).toBe(0);
   });
 
-  it("clamps to 1 at (or past) the bottom of the document", () => {
-    mockSelectionFocus(textNode, 5);
-    mockRootGeometry({ top: 100, scrollTop: 950, scrollHeight: 1000 });
-    // Caret mid = 270 → (270 - 100 + 950) / 1000 = 1.12 → clamped to 1
-    vi.spyOn(Range.prototype, "getBoundingClientRect").mockReturnValue(
-      makeRect(260, 20)
-    );
+  it("clamps to 0 for a caret rect above the content top", () => {
+    mockSelectionFocus(firstText, 0);
+    mockContentExtent(100, 700);
+    mockCaretRect(80, 20); // raw negative → clamped
+
+    expect(getCaretDocumentProgress(root)).toBe(0);
+  });
+
+  it("short document (fits in the pane): caret on the last line reads ~1", () => {
+    // One short paragraph pair inside a tall flex pane — the old scrollHeight
+    // math would have read ~0.15 here; content-extent math must read the end.
+    mockSelectionFocus(lastText, 5);
+    mockContentExtent(100, 300); // span 200, tiny vs any pane
+    mockCaretRect(280, 20); // last line: (280 - 100) / (200 - 20) = 1
+
+    const progress = getCaretDocumentProgress(root);
+    expect(progress).not.toBeNull();
+    expect(progress!).toBeGreaterThanOrEqual(0.95);
+    expect(progress!).toBeLessThanOrEqual(1);
+  });
+
+  it("long document: caret on the last line reads exactly 1 (no padding cap)", () => {
+    mockSelectionFocus(lastText, 5);
+    mockContentExtent(-4000, 1000); // span 5000, mostly scrolled above
+    mockCaretRect(980, 20); // (980 - -4000) / (5000 - 20) = 1
+
+    expect(getCaretDocumentProgress(root)).toBe(1);
+  });
+
+  it("clamps to 1 for a caret rect past the content bottom", () => {
+    mockSelectionFocus(lastText, 5);
+    mockContentExtent(100, 300);
+    mockCaretRect(400, 20); // beyond the last block → clamped
 
     expect(getCaretDocumentProgress(root)).toBe(1);
   });
@@ -106,7 +135,7 @@ describe("getCaretDocumentProgress", () => {
     document.body.appendChild(stranger);
 
     mockSelectionFocus(stranger.firstChild, 2);
-    mockRootGeometry({ top: 100, scrollTop: 0, scrollHeight: 1000 });
+    mockContentExtent(100, 700);
 
     expect(getCaretDocumentProgress(root)).toBeNull();
   });
@@ -115,35 +144,43 @@ describe("getCaretDocumentProgress", () => {
     vi.spyOn(document, "getSelection").mockReturnValue(null);
     expect(getCaretDocumentProgress(root)).toBeNull();
 
-    mockSelectionFocus(textNode, 0, 0); // rangeCount === 0
+    mockSelectionFocus(firstText, 0, 0); // rangeCount === 0
     expect(getCaretDocumentProgress(root)).toBeNull();
   });
 
-  it("returns null when scrollHeight is degenerate", () => {
-    mockSelectionFocus(textNode, 3);
-    mockRootGeometry({ top: 100, scrollTop: 0, scrollHeight: 0 });
-    vi.spyOn(Range.prototype, "getBoundingClientRect").mockReturnValue(
-      makeRect(390, 20)
-    );
+  it("returns null when root has no element children (nothing to measure)", () => {
+    root.innerHTML = "";
+    const loose = document.createTextNode("loose text");
+    root.appendChild(loose);
+
+    mockSelectionFocus(loose, 2);
+    mockCaretRect(100, 20);
+
+    expect(getCaretDocumentProgress(root)).toBeNull();
+  });
+
+  it("returns null when the content extent is degenerate (zero-span rects)", () => {
+    mockSelectionFocus(firstText, 3);
+    // No child-rect mocks: happy-dom reports all-zero rects → span 0.
+    mockCaretRect(100, 20);
 
     expect(getCaretDocumentProgress(root)).toBeNull();
   });
 
   it("falls back to the closest element rect for an empty block's 0-rect", () => {
     const emptyBlock = document.createElement("p");
-    root.appendChild(emptyBlock);
+    root.appendChild(emptyBlock); // becomes the new last block
+    lastBlock = emptyBlock;
 
     mockSelectionFocus(emptyBlock, 0);
-    mockRootGeometry({ top: 100, scrollTop: 200, scrollHeight: 1000 });
-    // Range reports the empty-block degenerate 0-rect...
+    mockContentExtent(100, 300);
+    // Range reports the empty-block degenerate 0-rect (width 0 too)...
     vi.spyOn(Range.prototype, "getBoundingClientRect").mockReturnValue(
       makeRect(0, 0, 0)
     );
-    // ...so the element's own rect drives the math: mid 400 → 0.5
-    vi.spyOn(emptyBlock, "getBoundingClientRect").mockReturnValue(
-      makeRect(390, 20)
-    );
-
-    expect(getCaretDocumentProgress(root)).toBeCloseTo(0.5, 5);
+    // ...so the element's own rect drives the math. It is ALSO the last
+    // block, whose mocked rect spans 260..300; its top 260 with height 40:
+    // (260 - 100) / max(200 - 40, 1) = 1.
+    expect(getCaretDocumentProgress(root)).toBe(1);
   });
 });

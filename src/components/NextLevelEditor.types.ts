@@ -88,6 +88,14 @@ export interface NextLevelEditorProps {
    */
   toolbarMode?: "bar" | "pill";
   /**
+   * Make the auto-save "Saved" signal assert REAL persistence. When provided,
+   * each auto-save tick awaits this handler with the current HTML; resolve
+   * `false` (or throw) to surface a failed save instead of a false "Saved"
+   * pulse. Without it, the signal means "the latest content has been emitted
+   * to your `v-model`" — the host owns persistence from there.
+   */
+  saveHandler?: (content: string) => boolean | Promise<boolean>;
+  /**
    * Read-only / viewer mode. The content is displayed and selectable but not
    * editable: the main, selection and mobile toolbars are hidden, slash and
    * paste handling are inert, and `v-model` still reflects the (unchanging)

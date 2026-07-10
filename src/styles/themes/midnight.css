@@ -23,6 +23,12 @@
   --toolbar-bg: #eef2f8;
   --toolbar-text: #26324a;
   --toolbar-accent: #1667d6;
+  /* Accent-as-text / hero-fill split (see NextLevelEditor.css). The azure is
+     deep enough for both: text 4.74:1 on #eef2f8; white on fill 5.32:1
+     (hover 4.70:1). */
+  --toolbar-accent-ink: #1667d6;
+  --toolbar-accent-strong: #1667d6;
+  --toolbar-accent-contrast: #ffffff;
   --toolbar-hover: rgba(22,103,214,0.11);
   --content-color: #1a2233;
   --color-surface: #ffffff;
@@ -42,6 +48,11 @@
   --toolbar-bg: #0a0f1c;
   --toolbar-text: #cdd8ea;
   --toolbar-accent: #4f9dff;
+  /* The glowing azure stays the hero fill; ink flips dark: 6.81:1 on
+     #4f9dff. Accent as text: 6.92:1 on #0a0f1c. */
+  --toolbar-accent-ink: #4f9dff;
+  --toolbar-accent-strong: #4f9dff;
+  --toolbar-accent-contrast: #0b1120;
   --toolbar-hover: rgba(79,157,255,0.22);
   --content-color: #e6edf7;
   --color-surface: #131a2b;
