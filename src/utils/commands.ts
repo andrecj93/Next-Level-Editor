@@ -999,7 +999,10 @@ export function getTableProperties(table: HTMLTableElement): {
   if (firstCell) {
     const cellStyle = globalThis.getComputedStyle(firstCell);
     borderStyle = cellStyle.borderStyle || "solid";
-    borderWidth = Number.parseInt(cellStyle.borderWidth) || 1;
+    // Use a NaN guard, not `|| 1`, so a genuinely borderless table (0px) reads
+    // back as 0 instead of collapsing to the default 1.
+    const parsedWidth = Number.parseInt(cellStyle.borderWidth);
+    borderWidth = Number.isNaN(parsedWidth) ? 1 : parsedWidth;
     // Normalize to hex so the color input shows the real color, not black.
     borderColor = normalizeColorToHex(cellStyle.borderColor) || "#d1d5db";
   }

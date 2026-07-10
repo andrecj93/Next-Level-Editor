@@ -797,4 +797,66 @@ describe("useTableActions", () => {
       expect(commands.addTableColumn).toHaveBeenCalledWith(currentTable, 3);
     });
   });
+
+  describe("handleApplyTableProperties (captures target at modal-open)", () => {
+    it("applies table props to the CAPTURED table even after the live refs are nulled", () => {
+      const tableRef = ref<HTMLTableElement | null>(currentTable);
+      const cellRef = ref<HTMLTableCellElement | null>(currentCell);
+      const { handleTableProperties, handleApplyTableProperties } =
+        useTableActions({
+          currentTable: tableRef,
+          currentCell: cellRef,
+          showTableDesigner: ref(true),
+          showTablePropertiesModal: ref(false),
+          openTablePropertiesModal: vi.fn(),
+          initialCellProps: ref({}),
+          initialTableProps: ref({}),
+          tablePropertiesMode: ref("table"),
+          onUpdate: mockOnUpdate,
+        });
+
+      // Opening the modal captures the current table/cell.
+      handleTableProperties();
+
+      // Focusing a modal input fires selectionchange -> checkForTableSelection
+      // nulls the live refs. Apply must still target the captured table.
+      tableRef.value = null;
+      cellRef.value = null;
+
+      handleApplyTableProperties({ tableProps: { borderWidth: 5 } });
+
+      expect(commands.applyTableProperties).toHaveBeenCalledWith(currentTable, {
+        borderWidth: 5,
+      });
+      expect(mockOnUpdate).toHaveBeenCalled();
+    });
+
+    it("applies cell props to the CAPTURED cell even after the live refs are nulled", () => {
+      const tableRef = ref<HTMLTableElement | null>(currentTable);
+      const cellRef = ref<HTMLTableCellElement | null>(currentCell);
+      const { handleCellProperties, handleApplyTableProperties } =
+        useTableActions({
+          currentTable: tableRef,
+          currentCell: cellRef,
+          showTableDesigner: ref(false),
+          showTablePropertiesModal: ref(false),
+          openTablePropertiesModal: vi.fn(),
+          initialCellProps: ref({}),
+          initialTableProps: ref({}),
+          tablePropertiesMode: ref("cell"),
+          onUpdate: mockOnUpdate,
+        });
+
+      handleCellProperties();
+      tableRef.value = null;
+      cellRef.value = null;
+
+      // padding: 0 also guards against a truthiness bug in the apply payload.
+      handleApplyTableProperties({ cellProps: { padding: 0 } });
+
+      expect(commands.applyCellProperties).toHaveBeenCalledWith(currentCell, {
+        padding: 0,
+      });
+    });
+  });
 });
