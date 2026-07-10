@@ -98,8 +98,11 @@ jobs:
         run: npm ci
 
       - name: Install Playwright Browsers
-        # mobile-safari uses the webkit engine; chromium uses chromium.
-        run: npx playwright install --with-deps ${{ matrix.project == 'chromium' && 'chromium' || 'webkit' }}
+        # Install both browsers in every matrix job: the global-setup (and any
+        # shared launch) uses chromium regardless of the project under test, so
+        # installing only the project's engine breaks the mobile-safari job with
+        # "Executable doesn't exist" for chromium.
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Run E2E tests
         run: npm run test:e2e -- --project=${{ matrix.project }}
