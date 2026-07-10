@@ -74,6 +74,20 @@ export interface NextLevelEditorProps {
    */
   toolbarPosition?: "top" | "left" | "bottom" | "zen";
   /**
+   * The toolbar's overall FORM.
+   *
+   * - `"bar"` (default): the docked masthead bar (in whatever
+   *   `toolbarPosition` arrangement).
+   * - `"pill"`: Playhead — one floating glass capsule replaces both the
+   *   docked toolbar and the selection bubble. It contracts to an ambient
+   *   lozenge (save dot + word count) while you write, expands to the
+   *   writing essentials on intent, and travels to your selection to become
+   *   the formatting bubble. Desktop-only: falls back to `"bar"` below
+   *   640px. While active, `toolbarPosition` and `adaptiveChrome` are
+   *   inert — the pill carries its own state grammar.
+   */
+  toolbarMode?: "bar" | "pill";
+  /**
    * Read-only / viewer mode. The content is displayed and selectable but not
    * editable: the main, selection and mobile toolbars are hidden, slash and
    * paste handling are inert, and `v-model` still reflects the (unchanging)

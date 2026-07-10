@@ -89,6 +89,13 @@
               </select>
             </div>
             <div class="cfg-field">
+              <label>Toolbar form</label>
+              <select v-model="editorConfig.toolbarMode" class="select">
+                <option value="bar">Bar (docked)</option>
+                <option value="pill">Pill (Playhead)</option>
+              </select>
+            </div>
+            <div class="cfg-field">
               <label>Height</label>
               <input v-model="editorConfig.height" type="number" min="300" max="1200" class="num"> px
             </div>
@@ -149,6 +156,7 @@
           :autofocus="editorConfig.autofocus"
           :adaptive-chrome="editorConfig.adaptiveChrome"
           :toolbar-position="editorConfig.toolbarPosition"
+          :toolbar-mode="editorConfig.toolbarMode"
           :show-writing-stats="editorConfig.showWritingStats"
           :enable-comments="editorConfig.enableComments"
           :enable-variables="editorConfig.enableVariables"
@@ -208,6 +216,7 @@ const DEFAULT_CONFIG = {
   toolbarLayout: "comfortable" as "comfortable" | "compact",
   adaptiveChrome: "letterbox" as "letterbox" | "recede" | "off",
   toolbarPosition: "top" as "top" | "left" | "bottom" | "zen",
+  toolbarMode: "bar" as "bar" | "pill",
   showWritingStats: true,
   enableComments: true,
   enableVariables: true,

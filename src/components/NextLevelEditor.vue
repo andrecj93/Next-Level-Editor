@@ -9,7 +9,9 @@
     ]"
     :style="editorStyles"
     :data-toolbar-position="
-      effectiveToolbarPosition !== 'top' ? effectiveToolbarPosition : undefined
+      effectiveToolbarPosition !== 'top' && !isPillMode
+        ? effectiveToolbarPosition
+        : undefined
     "
   >
     <!-- Accessibility: Skip Links -->
@@ -25,7 +27,7 @@
          the sticky positioning the toolbar previously had — sticky inside a
          tight wrapper would otherwise pin to the wrapper's own bounds. -->
     <div
-      v-if="showToolbar && !readonly"
+      v-if="showToolbar && !readonly && !isPillMode"
       ref="toolbarShellEl"
       class="nle-toolbar-shell"
       :data-adaptive="effectiveAdaptiveChrome"
@@ -129,8 +131,30 @@
          two stacked formatting surfaces on a phone is duplicated, cramped
          UI (the bottom bar already carries the same actions). -->
     <FloatingToolbar
-      :show="showFloatingToolbar && !readonly && !mobileBarOnScreen"
+      :show="
+        showFloatingToolbar && !readonly && !mobileBarOnScreen && !isPillMode
+      "
       :actions="floatingActions"
+    />
+
+    <!-- Playhead pill (toolbarMode="pill"): the ONE floating capsule that is
+         the editor's entire chrome — it morphs between ambient / home /
+         selection states and travels to the selection. Replaces both the
+         docked toolbar and the selection bubble while active. -->
+    <PlayheadPill
+      v-if="isPillMode"
+      :state="pillState"
+      :anchor-rect="pillAnchorRect"
+      :selection-position="pillSelectionPosition"
+      :format-label="letterboxFormatLabel"
+      :word-count="wordCount"
+      :is-saving="isSaving || letterboxSavePulse"
+      :inline-actions="floatingActions"
+      :format-items="formatDropdownItems"
+      :insert-items="insertDropdownItems"
+      :overflow-items="pillOverflowItems"
+      :theme="teleportThemeClass"
+      @remember-selection="rememberSelectionFromToolbar"
     />
 
     <!-- Mobile bottom toolbar (self-hides on non-touch/desktop; off in
@@ -463,6 +487,7 @@ import {
   ref,
   computed,
   toRef,
+  unref,
   nextTick,
   onMounted,
   onUnmounted,
@@ -478,6 +503,16 @@ import {
 import { smoothScrollIntoView } from "../utils/scroll";
 import { clampMenuToViewport } from "../utils/menuPosition";
 import { getCaretDocumentProgress } from "../utils/caretProgress";
+import {
+  computeToolbarPosition,
+  ESTIMATED_WIDTH as PILL_ESTIMATED_WIDTH,
+} from "../utils/floatingToolbarPosition";
+import PlayheadPill from "./PlayheadPill.vue";
+import type {
+  PlayheadState,
+  PlayheadAnchorRect,
+  PlayheadSelectionPosition,
+} from "./PlayheadPill.types";
 import { useChromeRecede } from "../composables/useChromeRecede";
 import { selectionTick } from "../composables/useActiveStates";
 import { useDeviceDetection } from "../composables/useDeviceDetection";
@@ -552,6 +587,7 @@ const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   toolbarLayout: "comfortable",
   adaptiveChrome: "letterbox",
   toolbarPosition: "top",
+  toolbarMode: "bar",
   readonly: false,
   showToolbar: true,
   defaultViewMode: "editor",
@@ -640,6 +676,19 @@ onUnmounted(() => {
 // the mobile toolbar owns the screen and the docked top bar returns.
 const effectiveToolbarPosition = computed(() =>
   rootWidth.value <= 640 ? "top" : props.toolbarPosition
+);
+
+// Playhead: one floating capsule replaces both the docked toolbar and the
+// selection bubble. Desktop-only (bar below the breakpoint); while active,
+// toolbarPosition/adaptiveChrome are inert — the pill has its own grammar.
+const effectiveToolbarMode = computed(() =>
+  rootWidth.value <= 640 ? "bar" : props.toolbarMode
+);
+const isPillMode = computed(
+  () =>
+    effectiveToolbarMode.value === "pill" &&
+    props.showToolbar &&
+    !props.readonly
 );
 const isZen = computed(() => effectiveToolbarPosition.value === "zen");
 // Zen IS the letterbox, permanently — it overrides adaptiveChrome="off".
@@ -1968,14 +2017,17 @@ const chromeSuppressed = computed(
 // Desktop-only, and only when the main toolbar is actually rendered. Reuses
 // the auto-compact breakpoint: below it the MobileToolbar owns the phone.
 // The left rail has no letterbox either — its chrome is already marginal.
+// In PILL mode the recede state machine stays on regardless of
+// adaptiveChrome: it is what drives the pill's ambient contraction.
 const adaptiveChromeEnabled = computed(
   () =>
-    effectiveAdaptiveChrome.value !== "off" &&
     props.showToolbar &&
     !props.readonly &&
     viewMode.value !== "code" &&
-    effectiveToolbarPosition.value !== "left" &&
-    toolbarShellWidth.value > 640
+    (isPillMode.value ||
+      (effectiveAdaptiveChrome.value !== "off" &&
+        effectiveToolbarPosition.value !== "left" &&
+        toolbarShellWidth.value > 640))
 );
 
 const { receded: chromeReceded, restore: restoreChrome } = useChromeRecede({
@@ -2022,6 +2074,89 @@ watch([chromeReceded, isZen], ([receded, zen], [, wasZen]) => {
 onUnmounted(() => {
   if (zenTuckTimer) clearTimeout(zenTuckTimer);
 });
+
+// ---------------------------------------------------------------------------
+// Playhead pill wiring. The pill is presentational — the HOST owns the state
+// machine and geometry: selection wins (the pill IS the bubble), ambient
+// while the chrome-recede state machine says "you're writing", home at rest.
+// ---------------------------------------------------------------------------
+const pillState = computed<PlayheadState>(() => {
+  if (showFloatingToolbar.value) return "selection";
+  if (chromeReceded.value) return "ambient";
+  return "home";
+});
+
+// Anchor: the editor root's viewport rect (the pill is position: fixed, so
+// it must refresh on window resize AND any scroll).
+const pillAnchorRect = ref<PlayheadAnchorRect | null>(null);
+const updatePillAnchor = () => {
+  if (!isPillMode.value || !rootEl.value) {
+    pillAnchorRect.value = null;
+    return;
+  }
+  const r = rootEl.value.getBoundingClientRect();
+  pillAnchorRect.value = { top: r.top, left: r.left, width: r.width };
+};
+
+// Selection travel target — the bubble's clamp/flip math, in VIEWPORT
+// coordinates (scrollX/Y zero: fixed positioning, unlike the absolute
+// FloatingToolbar).
+const pillSelectionPosition = ref<PlayheadSelectionPosition | null>(null);
+const updatePillSelection = () => {
+  if (!isPillMode.value || pillState.value !== "selection") {
+    pillSelectionPosition.value = null;
+    return;
+  }
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    pillSelectionPosition.value = null;
+    return;
+  }
+  const rect = selection.getRangeAt(0).getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) {
+    pillSelectionPosition.value = null;
+    return;
+  }
+  const pos = computeToolbarPosition({
+    rect: {
+      top: rect.top,
+      bottom: rect.bottom,
+      left: rect.left,
+      width: rect.width,
+    },
+    toolbarWidth: PILL_ESTIMATED_WIDTH,
+    viewportWidth: window.innerWidth,
+    scrollX: 0,
+    scrollY: 0,
+  });
+  pillSelectionPosition.value = {
+    top: pos.top,
+    left: pos.left,
+    below: pos.below,
+  };
+};
+
+const refreshPillGeometry = () => {
+  updatePillAnchor();
+  updatePillSelection();
+};
+onMounted(() => {
+  window.addEventListener("resize", refreshPillGeometry);
+  window.addEventListener("scroll", refreshPillGeometry, true);
+  document.addEventListener("selectionchange", updatePillSelection);
+});
+onUnmounted(() => {
+  window.removeEventListener("resize", refreshPillGeometry);
+  window.removeEventListener("scroll", refreshPillGeometry, true);
+  document.removeEventListener("selectionchange", updatePillSelection);
+});
+watch([isPillMode, pillState], () => nextTick(refreshPillGeometry));
+
+// The pill's "⋯" carries the long tail: productivity tools + export.
+const pillOverflowItems = computed(() => [
+  ...unref(productivityDropdownItems),
+  ...unref(exportDropdownItems),
+]);
 
 // The letterbox band's three signals (hard cap — it must never become a
 // dashboard): current block format, document-position filament, save + count.

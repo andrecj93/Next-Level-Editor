@@ -416,6 +416,7 @@ announce("Document saved", "polite");
 | `toolbarLayout`    | `string`  | `'comfortable'`     | Toolbar density: `comfortable` (labelled) \| `compact` (mini bar + expand toggle). Below 640px the toolbar auto-compacts to the mini bar regardless |
 | `adaptiveChrome`   | `string`  | `'letterbox'`       | What the toolbar does while you write: `letterbox` (buttons dissolve into an ambient band — block format, position filament, save pulse, word count) \| `recede` (toolbar fades to a whisper) \| `off`. Returns instantly on pointer/Escape/toolbar focus; desktop-only; honors reduced motion |
 | `toolbarPosition`  | `string`  | `'top'`             | Where the toolbar lives: `top` \| `left` (slim margin rail) \| `bottom` (dock, menus open upward) \| `zen` (no persistent toolbar — the ambient band is the only chrome; intent peeks the full bar). All fall back to `top` below 640px |
+| `toolbarMode`      | `string`  | `'bar'`             | The toolbar's form: `bar` (docked masthead) \| `pill` (Playhead — one floating glass capsule that contracts while you write, expands on intent and travels to your selection to become the formatting bubble). Falls back to `bar` below 640px |
 | `readonly`         | `boolean` | `false`             | Viewer mode — content shown & selectable, not editable; toolbars hidden |
 | `showToolbar`      | `boolean` | `true`              | Show the main toolbar; set `false` for a headless editor     |
 | `defaultViewMode`  | `string`  | `'editor'`          | Initial view: `editor` \| `code` \| `split` \| `preview`     |
