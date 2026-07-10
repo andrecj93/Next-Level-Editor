@@ -15,7 +15,11 @@
     "
   >
     <!-- Accessibility: Skip Links -->
-    <SkipLinks />
+    <SkipLinks
+      :main-target-id="mainLandmarkId"
+      :toolbar-target-id="toolbarLandmarkId"
+      :footer-target-id="footerLandmarkId"
+    />
 
     <!-- Accessibility: ARIA Live Regions -->
     <AriaLiveRegion />
@@ -39,6 +43,7 @@
       "
     >
     <EditorToolbar
+      :id="toolbarLandmarkId"
       :is-toolbar-section-visible="isToolbarSectionVisible"
       :format-dropdown-items="formatDropdownItems"
       :inline-format-actions="inlineFormatActions"
@@ -104,6 +109,7 @@
 
     <!-- Editor and Preview Panels -->
     <EditorPanels
+      :id="mainLandmarkId"
       ref="editorPanelsRef"
       :view-mode="viewMode"
       :editable="!readonly"
@@ -123,7 +129,11 @@
     />
 
     <!-- Word Count Footer -->
-    <EditorFooter :word-count="wordCount" :character-count="characterCount" />
+    <EditorFooter
+      :id="footerLandmarkId"
+      :word-count="wordCount"
+      :character-count="characterCount"
+    />
 
     <!-- Floating Toolbar -->
     <!-- Selection toolbar (bubble over selected text) — never in readonly,
@@ -492,6 +502,7 @@ import {
   onMounted,
   onUnmounted,
   watch,
+  useId,
 } from "vue";
 
 import {
@@ -608,6 +619,14 @@ const themePresetClass = computed(() => editorThemeClass(props.themePreset));
 const teleportThemeClass = computed(() =>
   [themeClass.value, themePresetClass.value].filter(Boolean).join(" ")
 );
+
+// Per-instance landmark ids for the accessibility skip links. Derived from a
+// unique base (useId) so the skip-link targets never collide with the host
+// page or with a second editor instance on the same page.
+const landmarkBaseId = useId();
+const toolbarLandmarkId = `${landmarkBaseId}-toolbar`;
+const mainLandmarkId = `${landmarkBaseId}-main`;
+const footerLandmarkId = `${landmarkBaseId}-footer`;
 
 const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
 

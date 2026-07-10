@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { mount } from "@vue/test-utils";
 import SkipLinks from "../SkipLinks.vue";
@@ -178,6 +178,33 @@ describe("SkipLinks", () => {
       await w.findAll("a.skip-link")[0].trigger("click");
 
       expect(main.getAttribute("tabindex")).toBe("-1");
+      w.unmount();
+    });
+
+    it("makes the landmark focusable BEFORE focusing it (focus() no-ops on a not-yet-focusable element)", async () => {
+      // Regression guard: in a real browser, element.focus() on a <main>/<footer>
+      // that is not yet focusable is a SILENT no-op. So tabindex="-1" must be
+      // applied BEFORE setFocus() runs — otherwise the very first skip-link
+      // activation fails to move focus, defeating the entire feature. happy-dom
+      // focuses any element regardless of tabindex, so we assert the call ORDER
+      // (which encodes the bug) rather than the focus outcome it masks.
+      const main = addLandmark("main-content");
+      const setAttrSpy = vi.spyOn(main, "setAttribute");
+      const focusSpy = vi.spyOn(main, "focus");
+
+      const w = mount(SkipLinks, { attachTo: document.body });
+      await w.findAll("a.skip-link")[0].trigger("click");
+
+      const tabindexCallIdx = setAttrSpy.mock.calls.findIndex(
+        ([name, value]) => name === "tabindex" && value === "-1"
+      );
+      expect(tabindexCallIdx).toBeGreaterThanOrEqual(0);
+      expect(focusSpy).toHaveBeenCalled();
+
+      const tabindexOrder = setAttrSpy.mock.invocationCallOrder[tabindexCallIdx];
+      const focusOrder = focusSpy.mock.invocationCallOrder[0];
+      expect(tabindexOrder).toBeLessThan(focusOrder);
+
       w.unmount();
     });
 
