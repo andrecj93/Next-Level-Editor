@@ -4,8 +4,13 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // One local retry: WebKit under parallel load occasionally misses an
+  // actionability window (tests that pass 100% in isolation). A retried pass
+  // is reported as "flaky" — the signal stays visible, the run stays green.
+  retries: process.env.CI ? 2 : 1,
+  // Local WebKit contention is the flake source (CI runs 1 worker and never
+  // flakes; unbounded local runs used ~8). Four is the measured sweet spot.
+  workers: process.env.CI ? 1 : 4,
   reporter: "html",
   timeout: 60000, // 60s per test
   expect: {
