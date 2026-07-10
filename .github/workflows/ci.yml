@@ -77,14 +77,10 @@ jobs:
     # Parallel per-browser jobs keep each run short with a fresh server.
     name: E2E Tests (${{ matrix.project }})
     runs-on: ubuntu-latest
-    # chromium is the gating e2e project. mobile-safari is non-blocking for now:
-    # many existing specs exercise the DESKTOP toolbar (Colors/Export/Font Size
-    # etc.) which don't map to the mobile viewport, and webkit on the GitHub
-    # runner intermittently hangs those clicks (not reproducible locally, even
-    # with CI=true + the preview build). It still runs and reports here.
-    # TODO: scope desktop-only specs to chromium (like responsive.spec) so the
-    # mobile-safari project can gate again on genuinely mobile behaviour.
-    continue-on-error: ${{ matrix.project == 'mobile-safari' }}
+    # Both projects gate. Desktop-toolbar specs (Colors/Export/Font Size/View
+    # Modes/Image/Table/File Manager), which webkit on the GitHub runner
+    # intermittently hangs, are now scoped to chromium only (like responsive.spec),
+    # so the mobile-safari project runs a fast, stable, mobile-relevant subset.
     strategy:
       fail-fast: false
       matrix:
