@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="rootEl"
     :class="[
       'next-level-editor',
       themeClass,
@@ -7,6 +8,11 @@
       { fullscreen: isFullScreen },
     ]"
     :style="editorStyles"
+    :data-toolbar-position="
+      effectiveToolbarPosition !== 'top' && !isPillMode
+        ? effectiveToolbarPosition
+        : undefined
+    "
   >
     <!-- Accessibility: Skip Links -->
     <SkipLinks
@@ -18,7 +24,24 @@
     <!-- Accessibility: ARIA Live Regions -->
     <AriaLiveRegion />
 
-    <!-- Editor Toolbar -->
+    <!-- Editor Toolbar. The shell div is the @container query context: a
+         container query can never style the query container itself, so
+         container-type lives here (not on the toolbar) for the auto-compact
+         rules to actually match .editor-toolbar-modern. The shell also owns
+         the sticky positioning the toolbar previously had — sticky inside a
+         tight wrapper would otherwise pin to the wrapper's own bounds. -->
+    <div
+      v-if="showToolbar && !readonly && !isPillMode"
+      ref="toolbarShellEl"
+      class="nle-toolbar-shell"
+      :data-adaptive="effectiveAdaptiveChrome"
+      :data-receded="chromeReceded || undefined"
+      :data-position="
+        effectiveToolbarPosition !== 'top' && effectiveToolbarPosition !== 'zen'
+          ? effectiveToolbarPosition
+          : undefined
+      "
+    >
     <EditorToolbar
       :id="toolbarLandmarkId"
       :is-toolbar-section-visible="isToolbarSectionVisible"
@@ -39,7 +62,7 @@
       :view-mode="viewMode"
       :theme="theme"
       :is-full-screen="isFullScreen"
-      :toolbar-layout="toolbarLayout"
+      :toolbar-layout="effectiveToolbarLayout"
       @remember-selection="rememberSelectionFromToolbar"
       @toggle-colors-dropdown="showColorsDropdown = !showColorsDropdown"
       @text-color-change="handleTextColor"
@@ -47,10 +70,34 @@
       @undo="undo"
       @redo="redo"
       @view-mode-change="(mode) => (viewMode = mode)"
-      @format-html="handleFormatHtml"
+      @format-html="formatHtmlCode"
       @toggle-theme="toggleTheme"
       @toggle-fullscreen="toggleFullScreen"
     />
+    <!-- Letterbox band — the toolbar's while-you-write form: three quiet
+         signals in place of the buttons. Click (or any pointer intent /
+         Escape / toolbar focus) restores the full toolbar. -->
+    <div
+      v-if="effectiveAdaptiveChrome === 'letterbox'"
+      class="nle-letterbox"
+      :title="'Click to show the toolbar'"
+      @click="restoreChrome"
+    >
+      <span class="nle-letterbox-format">{{ letterboxFormatLabel }}</span>
+      <span class="nle-letterbox-filament" aria-hidden="true">
+        <span
+          class="nle-letterbox-filament-fill"
+          :style="{ width: `${Math.round(letterboxProgress * 100)}%` }"
+        />
+      </span>
+      <span
+        class="nle-letterbox-save"
+        :class="{ 'is-pulsing': letterboxSavePulse }"
+        aria-hidden="true"
+      />
+      <span class="nle-letterbox-count">{{ wordCount }} words</span>
+    </div>
+    </div>
 
     <CommandMenu
       :show="showCommandMenu"
@@ -65,6 +112,7 @@
       :id="mainLandmarkId"
       ref="editorPanelsRef"
       :view-mode="viewMode"
+      :editable="!readonly"
       :placeholder="placeholder"
       :code-content="codeContent"
       :html-content="htmlContent"
@@ -88,12 +136,47 @@
     />
 
     <!-- Floating Toolbar -->
-    <FloatingToolbar :show="showFloatingToolbar" :actions="floatingActions" />
+    <!-- Selection toolbar (bubble over selected text) — never in readonly,
+         and suppressed while the mobile bottom toolbar owns the screen:
+         two stacked formatting surfaces on a phone is duplicated, cramped
+         UI (the bottom bar already carries the same actions). -->
+    <FloatingToolbar
+      :show="
+        showFloatingToolbar && !readonly && !mobileBarOnScreen && !isPillMode
+      "
+      :actions="floatingActions"
+    />
 
-    <!-- Mobile bottom toolbar (self-hides on non-touch/desktop) -->
+    <!-- Playhead pill (toolbarMode="pill"): the ONE floating capsule that is
+         the editor's entire chrome — it morphs between ambient / home /
+         selection states and travels to the selection. Replaces both the
+         docked toolbar and the selection bubble while active. -->
+    <PlayheadPill
+      v-if="isPillMode"
+      :state="pillState"
+      :anchor-rect="pillAnchorRect"
+      :selection-position="pillSelectionPosition"
+      :format-label="letterboxFormatLabel"
+      :word-count="wordCount"
+      :is-saving="isSaving || letterboxSavePulse"
+      :inline-actions="floatingActions"
+      :format-items="formatDropdownItems"
+      :insert-items="insertDropdownItems"
+      :overflow-items="pillOverflowItems"
+      :theme="teleportThemeClass"
+      @remember-selection="rememberSelectionFromToolbar"
+    />
+
+    <!-- Mobile bottom toolbar (self-hides on non-touch/desktop; off in
+         readonly). Because it teleports to <body>, `visible` is driven by
+         focus/last-interaction ownership: only the instance the user is
+         working in shows a toolbar, so multi-editor pages never stack N
+         identical fixed bars. -->
     <MobileToolbar
+      :visible="mobileToolbarVisible && !readonly"
       :is-active="mobileIsActive"
       @action="handleMobileAction"
+      @close="mobileToolbarClosed = true"
     />
 
     <!-- History Timeline panel (toggled from the Tools dropdown) -->
@@ -121,13 +204,13 @@
       :show="showContextMenu"
       :position="contextMenuPosition"
       :items="contextMenuItems"
-      :theme="themeClass"
+      :theme="teleportThemeClass"
       @close="closeContextMenu"
     />
 
     <!-- Modals Container -->
     <ModalsContainer
-      :theme="themeClass"
+      :theme="teleportThemeClass"
       :show-table-modal="showTableModal"
       :show-find-replace-modal="showFindReplaceModal"
       :show-code-block-modal="showCodeBlockModal"
@@ -235,6 +318,7 @@
     <!-- Variable Autocomplete (opt-in feature) -->
     <VariableAutocomplete
       v-if="enableVariables && variablesComposable"
+      ref="variableAutocompleteRef"
       :variables="variablesComposable.variables.value"
       :categories="variablesComposable.categories.value"
       :query="variableAutocompleteQuery"
@@ -295,11 +379,131 @@
         </svg>
       </button>
     </Transition>
+
+    <!-- Variables Toggle FAB (opt-in feature) -->
+    <Transition name="fab-fade">
+      <button
+        v-if="enableVariables && variablesComposable"
+        class="variables-toggle-fab"
+        :style="{
+          bottom: `calc(${variablesFabBottom}px + var(--nle-mobile-toolbar-clearance, 0px))`,
+        }"
+        aria-label="Toggle variables panel"
+        :aria-expanded="showVariablesPanel"
+        :title="showVariablesPanel ? 'Hide variables' : 'Show variables'"
+        @click="showVariablesPanel = !showVariablesPanel"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M9 4C7.5 4 7 5 7 6.5V9c0 1.5-1 2.3-2.2 2.6v.8C6 12.7 7 13.5 7 15v2.5C7 19 7.5 20 9 20M15 4c1.5 0 2 1 2 2.5V9c0 1.5 1 2.3 2.2 2.6v.8C18 12.7 17 13.5 17 15v2.5c0 1.5-.5 2.5-2 2.5"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </Transition>
+
+    <!-- Variables Panel (opt-in feature): browse all template variables with
+         their current values and insert one at the caret with a click. -->
+    <Transition name="fab-fade">
+      <div
+        v-if="enableVariables && variablesComposable && showVariablesPanel"
+        class="variables-panel"
+        :style="{
+          bottom: `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px))`,
+        }"
+        role="dialog"
+        aria-label="Template variables"
+      >
+        <div class="variables-panel-header">
+          <span class="variables-panel-title">Variables</span>
+          <button
+            class="variables-panel-close"
+            aria-label="Close variables panel"
+            @click="showVariablesPanel = false"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M6 6l12 12M18 6L6 18"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="variables-panel-list">
+          <template
+            v-for="category in variablesComposable.categories.value"
+            :key="category.id"
+          >
+            <div
+              v-if="
+                variablesComposable.getVariablesByCategory(category.id).length
+              "
+              class="variables-panel-category"
+            >
+              {{ category.name }}
+            </div>
+            <button
+              v-for="variable in variablesComposable.getVariablesByCategory(
+                category.id
+              )"
+              :key="variable.id"
+              class="variables-panel-item"
+              :title="variable.description"
+              @mousedown.prevent
+              @click="handlePanelInsert(variable)"
+            >
+              <span class="variables-panel-item-name">{{
+                variable.name
+              }}</span>
+              <span class="variables-panel-item-value">{{
+                variable.value
+              }}</span>
+            </button>
+          </template>
+          <template v-if="uncategorizedVariables.length">
+            <div class="variables-panel-category">Other</div>
+            <button
+              v-for="variable in uncategorizedVariables"
+              :key="variable.id"
+              class="variables-panel-item"
+              :title="variable.description"
+              @mousedown.prevent
+              @click="handlePanelInsert(variable)"
+            >
+              <span class="variables-panel-item-name">{{
+                variable.name
+              }}</span>
+              <span class="variables-panel-item-value">{{
+                variable.value
+              }}</span>
+            </button>
+          </template>
+        </div>
+        <div class="variables-panel-footer">
+          Click a variable to insert it at the cursor
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRef, nextTick, onMounted, watch, useId } from "vue";
+import {
+  ref,
+  computed,
+  toRef,
+  unref,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  watch,
+  useId,
+} from "vue";
 
 import {
   applyTextAlignment,
@@ -308,6 +512,21 @@ import {
   applyFontSize,
 } from "../utils/commands";
 import { smoothScrollIntoView } from "../utils/scroll";
+import { clampMenuToViewport } from "../utils/menuPosition";
+import { getCaretDocumentProgress } from "../utils/caretProgress";
+import {
+  computeToolbarPosition,
+  ESTIMATED_WIDTH as PILL_ESTIMATED_WIDTH,
+} from "../utils/floatingToolbarPosition";
+import PlayheadPill from "./PlayheadPill.vue";
+import type {
+  PlayheadState,
+  PlayheadAnchorRect,
+  PlayheadSelectionPosition,
+} from "./PlayheadPill.types";
+import { useChromeRecede } from "../composables/useChromeRecede";
+import { selectionTick } from "../composables/useActiveStates";
+import { useDeviceDetection } from "../composables/useDeviceDetection";
 import { useTheme } from "../composables/useTheme";
 import { useAutoSave } from "../composables/useAutoSave";
 import { useSmartToolbar } from "../composables/useSmartToolbar";
@@ -357,40 +576,9 @@ import CommentModal from "./CommentModal.vue";
 import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
-import type { MentionSuggestion } from "../composables/useComments";
-import { useVariables } from "../composables/useVariables";
+import { useVariables, type Variable } from "../composables/useVariables";
 import { useSmartAutocomplete } from "../composables/useSmartAutocomplete";
-
-interface Props {
-  modelValue?: string;
-  placeholder?: string;
-  width?: string;
-  height?: string;
-  showWritingStats?: boolean;
-  enableComments?: boolean;
-  enableVariables?: boolean;
-  /**
-   * Whole-editor theme preset: "classic" | "minimal" | "midnight" | "warm"
-   * (or "default"). Skins the toolbar, menus, panels and editing surface via
-   * token overrides, and composes with the light/dark toggle. See
-   * {@link AVAILABLE_THEMES}.
-   */
-  themePreset?: string;
-  /**
-   * Toolbar density/layout: "comfortable" (default, labelled two-row) or
-   * "compact" (a single dense icon-first row; labels move to tooltips). An
-   * independent axis from `themePreset`.
-   */
-  toolbarLayout?: "comfortable" | "compact";
-  /**
-   * Host-supplied @mention provider for comments: given the text typed after
-   * "@", return the users to suggest. Without it the mention dropdown stays
-   * empty. [#4]
-   */
-  mentionSearch?: (
-    query: string
-  ) => Promise<MentionSuggestion[]> | MentionSuggestion[];
-}
+import type { NextLevelEditorProps } from "./NextLevelEditor.types";
 
 interface Emits {
   (e: "update:modelValue", value: string): void;
@@ -398,7 +586,7 @@ interface Emits {
   (e: "blur"): void;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   modelValue: "",
   placeholder: "Start typing...",
   width: undefined,
@@ -408,12 +596,29 @@ const props = withDefaults(defineProps<Props>(), {
   mentionSearch: undefined,
   themePreset: "default",
   toolbarLayout: "comfortable",
+  adaptiveChrome: "letterbox",
+  toolbarPosition: "top",
+  toolbarMode: "bar",
+  readonly: false,
+  showToolbar: true,
+  defaultViewMode: "editor",
+  autofocus: false,
 });
 
 const emit = defineEmits<Emits>();
 
 // Whole-editor theme preset → root class (composes with the light/dark class).
 const themePresetClass = computed(() => editorThemeClass(props.themePreset));
+
+// Teleported chrome (modals, context menu) renders outside the editor root,
+// so it must carry BOTH the light/dark class AND the theme-preset class —
+// the preset token files key off the preset class, and without it a Warm or
+// Midnight editor opened slate/white dialogs. (themeClass is defined by
+// useEditorComputed below; computeds are lazy so the forward reference is
+// safe by first render.)
+const teleportThemeClass = computed(() =>
+  [themeClass.value, themePresetClass.value].filter(Boolean).join(" ")
+);
 
 // Per-instance landmark ids for the accessibility skip links. Derived from a
 // unique base (useId) so the skip-link targets never collide with the host
@@ -425,9 +630,108 @@ const footerLandmarkId = `${landmarkBaseId}-footer`;
 
 const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
 
+// This instance's root element — the ownership scope for document-level
+// listeners (e.g. the selection toolbar's selectionchange handling).
+const rootEl = ref<HTMLElement | null>(null);
+
+// Auto-compact: the CSS @container fallback can only restyle the bar — it
+// cannot flip EditorToolbar's mini/expand JS state, so on a default
+// 'comfortable' phone the intended mini → expand → ⋯More flow never
+// activated. Observe the toolbar shell's width and derive the layout;
+// the @container block stays as the no-JS fallback with matching styles.
+const toolbarShellEl = ref<HTMLElement | null>(null);
+const toolbarShellWidth = ref(Number.POSITIVE_INFINITY);
+let toolbarShellObserver: ResizeObserver | null = null;
+watch(toolbarShellEl, (el) => {
+  toolbarShellObserver?.disconnect();
+  toolbarShellObserver = null;
+  if (el && typeof ResizeObserver !== "undefined") {
+    toolbarShellObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      // Defer the reactive write out of the observer's delivery cycle: the
+      // layout flip it triggers (mini <-> full) resizes the shell in the same
+      // frame, which otherwise raises the window-level "ResizeObserver loop
+      // completed with undelivered notifications" error in WebKit/Blink.
+      if (width != null && width !== toolbarShellWidth.value) {
+        requestAnimationFrame(() => {
+          toolbarShellWidth.value = width;
+        });
+      }
+    });
+    toolbarShellObserver.observe(el);
+  }
+});
+onUnmounted(() => {
+  toolbarShellObserver?.disconnect();
+  toolbarShellObserver = null;
+});
+
+// Root width drives the toolbarPosition fallback. The SHELL width cannot:
+// in left-rail mode the shell is a ~48px column, which would read as
+// "phone" forever. Same deferred-write pattern as the shell observer.
+const rootWidth = ref(Number.POSITIVE_INFINITY);
+let rootObserver: ResizeObserver | null = null;
+watch(rootEl, (el) => {
+  rootObserver?.disconnect();
+  rootObserver = null;
+  if (el && typeof ResizeObserver !== "undefined") {
+    rootObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width != null && width !== rootWidth.value) {
+        requestAnimationFrame(() => {
+          rootWidth.value = width;
+        });
+      }
+    });
+    rootObserver.observe(el);
+  }
+});
+onUnmounted(() => {
+  rootObserver?.disconnect();
+  rootObserver = null;
+});
+
+// Every non-top position is a desktop arrangement — below the breakpoint
+// the mobile toolbar owns the screen and the docked top bar returns.
+const effectiveToolbarPosition = computed(() =>
+  rootWidth.value <= 640 ? "top" : props.toolbarPosition
+);
+
+// Playhead: one floating capsule replaces both the docked toolbar and the
+// selection bubble. Desktop-only (bar below the breakpoint); while active,
+// toolbarPosition/adaptiveChrome are inert — the pill has its own grammar.
+const effectiveToolbarMode = computed(() =>
+  rootWidth.value <= 640 ? "bar" : props.toolbarMode
+);
+const isPillMode = computed(
+  () =>
+    effectiveToolbarMode.value === "pill" &&
+    props.showToolbar &&
+    !props.readonly
+);
+const isZen = computed(() => effectiveToolbarPosition.value === "zen");
+// Zen IS the letterbox, permanently — it overrides adaptiveChrome="off".
+const effectiveAdaptiveChrome = computed(() =>
+  isZen.value ? "letterbox" : props.adaptiveChrome
+);
+
+// Same 640px breakpoint as the @container rule in NextLevelEditor.css.
+// The left rail always runs the compact/mini mechanics — collapsed rail =
+// mini essentials, expand = the floating panel of everything else.
+const effectiveToolbarLayout = computed(() =>
+  props.toolbarLayout === "compact" ||
+  effectiveToolbarPosition.value === "left" ||
+  toolbarShellWidth.value <= 640
+    ? "compact"
+    : props.toolbarLayout
+);
+
 // View-mode state is declared early so the active-editable computed below can
-// close over it (the refs are passed into useViewMode further down).
-const viewMode = ref<"editor" | "code" | "split" | "preview">("editor");
+// close over it (the refs are passed into useViewMode further down). Starts in
+// the caller's preferred view.
+const viewMode = ref<"editor" | "code" | "split" | "preview">(
+  props.defaultViewMode
+);
 const splitRightMode = ref<"preview" | "editor">("preview");
 
 // The ACTIVE editable surface. In split view with the right pane in editor
@@ -507,9 +811,36 @@ const selectedTextForComment = ref("");
 const variablesComposable = props.enableVariables ? useVariables() : null;
 
 // Variable autocomplete state
+const variableAutocompleteRef = ref<InstanceType<
+  typeof VariableAutocomplete
+> | null>(null);
 const showVariableAutocomplete = ref(false);
 const variableAutocompleteQuery = ref("");
 const variableAutocompletePosition = ref({ top: 0, left: 0 });
+
+// Variables panel (FAB-toggled browse & insert surface)
+const showVariablesPanel = ref(false);
+
+// Stack the variables FAB above whichever of the comments/stats FABs are
+// enabled so the FAB column has no gaps regardless of feature flags.
+const variablesFabBottom = computed(() => {
+  let bottom = 28;
+  if (props.enableComments) bottom += 68;
+  if (props.showWritingStats) bottom += 68;
+  return bottom;
+});
+
+// Variables without a category (or with an unknown one) still need a home in
+// the panel — they render under a trailing "Other" group.
+const uncategorizedVariables = computed(() => {
+  if (!variablesComposable) return [];
+  const knownCategories = new Set(
+    variablesComposable.categories.value.map((c) => c.id)
+  );
+  return variablesComposable.variables.value.filter(
+    (v) => !v.category || !knownCategories.has(v.category)
+  );
+});
 
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
@@ -572,9 +903,9 @@ function handleExportHistory() {
 const { themeClass, editorStyles, wordCount, characterCount } =
   useEditorComputed({
     theme,
-    width: props.width,
-    height: props.height,
-    modelValue: props.modelValue,
+    width: toRef(props, "width"),
+    height: toRef(props, "height"),
+    modelValue: toRef(props, "modelValue"),
     editorContent,
     htmlContent,
     isApplyingHistory,
@@ -617,6 +948,7 @@ const {
   showTableModal,
   showTableDesigner,
   showTablePropertiesModal,
+  showShortcutHelpModal,
   openLinkModal,
   closeLinkModal,
   openImageUploadModal,
@@ -699,6 +1031,8 @@ const {
   handlePasteFormatBase,
   showColorsDropdown,
   formatPainterActive,
+  textColor,
+  backgroundColor,
 });
 
 // Context menu composable - needs to be after handleInlineAction, insertLink, insertImage are available
@@ -810,13 +1144,17 @@ const {
   emitUpdate: (value: string) => emit("update:modelValue", value),
 });
 
-// Export actions using composable
+// Export actions using composable. The toolbar's "Format HTML" button is only
+// shown in code/split views, where the code textarea is the editing surface —
+// so it's wired to formatHtmlCode (which pretty-prints codeContent), not to
+// handleFormatHtml (which only touches the hidden WYSIWYG div and left the
+// visible textarea unchanged).
 const {
   handleExportHtml,
   handleExportMarkdown,
-  handleFormatHtml,
   handleExportPdf,
   handleExportWord,
+  formatHtmlCode,
 } = useExportActions({
   editorContent,
   htmlContent,
@@ -824,6 +1162,21 @@ const {
   showToast: showToastNotification,
   updateCodeContent: (content: string) => {
     codeContent.value = content;
+    // Run the same sync flow as typing in the code editor (onCodeInput):
+    // mirror into the WYSIWYG surface + reactive model and capture an undo
+    // snapshot, so the reformat is visible, consistent, and undoable.
+    if (editorContent.value) {
+      editorContent.value.innerHTML = content;
+      htmlContent.value = content;
+    }
+    // In split view with the right pane in editor mode, editorContent
+    // resolves to the split editor — keep the hidden main editor mirrored
+    // too (same as onSplitEditorInput) so mode switches preserve content.
+    const hidden = editorPanelsRef.value?.editorRef;
+    if (hidden && hidden !== editorContent.value) {
+      hidden.innerHTML = content;
+    }
+    captureSnapshot();
   },
   captureSnapshot,
 });
@@ -853,6 +1206,9 @@ const {
   isAddingComment: comments?.isAddingComment,
   enableComments: props.enableComments,
   onAddComment: handleCreateComment,
+  // Ownership scope for the selection toolbar: only selections inside this
+  // instance's root may show its bubble (selectionchange is document-global).
+  editorRoot: rootEl,
 });
 
 // Toolbar Items - Using useToolbarItems composable
@@ -942,6 +1298,87 @@ function handleCommandExecute(command: any) {
   command.action();
 }
 
+// ---------------------------------------------------------------------------
+// Mobile toolbar ownership.
+// MobileToolbar teleports to <body> and (via useDeviceDetection) renders on
+// every narrow viewport — so a page with several editors used to stack one
+// identical fixed bottom bar PER instance. Same multi-instance family as the
+// selection bubble, fixed with the same idea as useFloatingToolbar's
+// `editorRoot` check: document-level events are scoped to THIS instance's
+// root, and only the instance owning the last focus/interaction shows its
+// toolbar. Before any interaction (e.g. while browsing the demo home page)
+// no instance owns it and no toolbar shows.
+// ---------------------------------------------------------------------------
+const ownsMobileToolbar = ref(false);
+// The toolbar's Close (X) hides it until this editor is focused/tapped again.
+const mobileToolbarClosed = ref(false);
+const mobileToolbarVisible = computed(
+  () => ownsMobileToolbar.value && !mobileToolbarClosed.value
+);
+
+// Whether the mobile bottom bar is actually ON SCREEN: ownership alone isn't
+// enough — MobileToolbar also self-gates on device detection, so on desktop
+// `mobileToolbarVisible` can be true while nothing renders. The selection
+// bubble must only be suppressed when the bar is really showing.
+const { showMobileToolbar: deviceShowsMobileToolbar } = useDeviceDetection();
+const mobileBarOnScreen = computed(
+  () => mobileToolbarVisible.value && deviceShowsMobileToolbar.value
+);
+
+const updateMobileToolbarOwnership = (event: Event) => {
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  if (rootEl.value?.contains(target)) {
+    // Interaction inside this editor claims ownership (and re-opens a
+    // toolbar previously dismissed with the X).
+    ownsMobileToolbar.value = true;
+    mobileToolbarClosed.value = false;
+    return;
+  }
+  const el = target instanceof Element ? target : target.parentElement;
+  // The mobile toolbar itself is teleported to <body>: using it must not
+  // release ownership (only the owning instance's toolbar is rendered).
+  if (el?.closest(".mobile-toolbar")) return;
+  // Anything else — another editor instance (which claims for itself) or
+  // plain page content — releases ownership, hiding this toolbar.
+  ownsMobileToolbar.value = false;
+};
+
+onMounted(() => {
+  // Capture phase so stopPropagation inside widgets can't desync ownership.
+  document.addEventListener("pointerdown", updateMobileToolbarOwnership, true);
+  document.addEventListener("focusin", updateMobileToolbarOwnership, true);
+
+  // autofocus: place the caret in the editing surface on mount so the user can
+  // type immediately. Meaningless (and skipped) when readonly.
+  if (props.autofocus && !props.readonly) {
+    nextTick(() => {
+      const surface = editorContent.value;
+      if (surface) {
+        surface.focus();
+        // Collapse the caret to the end of existing content.
+        const selection = globalThis.getSelection();
+        if (selection) {
+          const range = document.createRange();
+          range.selectNodeContents(surface);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+    });
+  }
+});
+
+onUnmounted(() => {
+  document.removeEventListener(
+    "pointerdown",
+    updateMobileToolbarOwnership,
+    true
+  );
+  document.removeEventListener("focusin", updateMobileToolbarOwnership, true);
+});
+
 // Dispatch MobileToolbar button actions to the real editor handlers. Previously
 // the mobile toolbar was never rendered and its buttons emitted a bare action id
 // that nothing listened for, so every button was a no-op. [#6/#45]
@@ -1004,7 +1441,9 @@ function handleMobileAction(actionId: string) {
       redo();
       break;
     default:
-      // checklist / export / settings / shortcuts have no handler yet.
+      // Every button MobileToolbar ships is wired above. checklist / export /
+      // settings / shortcuts were removed from the toolbar until they get
+      // real handlers — add their cases here when reinstating the buttons.
       break;
   }
 }
@@ -1091,7 +1530,22 @@ const onMouseUp = () => {
 };
 
 // Wrap onInput to include variable detection and wrapping
-const onInput = () => {
+const onInput = (event?: Event) => {
+  // IME guard: while a composition is live the browser fires input events
+  // (inputType "insertCompositionText"); running the mutating passes below
+  // (autocomplete's deleteContents/addRange, variable wrapping, model sync)
+  // would tear down the IME buffer and displace the caret. Skip entirely —
+  // EditorPanels re-emits `input` on compositionend (that event carries no
+  // isComposing flag), so the deferred pass runs once when the IME commits.
+  if ((event as InputEvent | undefined)?.isComposing) {
+    return;
+  }
+
+  // (Placeholder recovery for <br>/<p><br></p> residues is handled purely in
+  // CSS via :has() — see NextLevelEditor.css. A JS innerHTML-wipe here would
+  // also destroy the paragraph that Enter legitimately seeds in an empty
+  // document, yanking the caret.)
+
   // Smart autocomplete (markdown shortcuts, URL/email auto-link, curly quotes,
   // "--"/"..." punctuation) — only on WYSIWYG surfaces, never in code view.
   // Runs BEFORE onInputBase so the converted DOM is what gets synced to
@@ -1100,16 +1554,20 @@ const onInput = () => {
     handleSmartAutocomplete();
   }
 
+  // Wrap completed variable tokens BEFORE the capture+sanitize+emit pass so
+  // the emitted model already contains the pill. Wrapping after the emit made
+  // the v-model round-trip see a DOM (with pill) that differed from the model
+  // (without pill), rewriting innerHTML — and destroying the caret — one tick
+  // later. The wrap itself is caret-preserving and idempotent.
+  if (variablesComposable && editorContent.value) {
+    variablesComposable.wrapVariablesInContent(editorContent.value);
+  }
+
   onInputBase();
 
   // Detect variable syntax for autocomplete
   if (props.enableVariables) {
     detectVariableSyntax();
-  }
-
-  // Wrap variables in content
-  if (variablesComposable && editorContent.value) {
-    variablesComposable.wrapVariablesInContent(editorContent.value);
   }
 
   // Update writing statistics
@@ -1202,6 +1660,15 @@ const { handleKeydown } = useKeyboardShortcuts({
   handleBlockAction,
   handleSlashMenuKeydown,
 });
+
+// Editor keydown: the variable autocomplete (when open) claims
+// Arrow/Enter/Tab/Escape first — the same priority carve-out the slash menu
+// has inside useKeyboardShortcuts — so Enter inserts the highlighted variable
+// instead of a new paragraph.
+function onEditorKeydown(event: KeyboardEvent) {
+  if (variableAutocompleteRef.value?.handleEditorKeydown(event)) return;
+  handleKeydown(event);
+}
 
 // Comments handlers
 function handleSelectThread(threadId: string) {
@@ -1316,10 +1783,18 @@ function detectVariableSyntax() {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
 
-      variableAutocompletePosition.value = {
-        top: rect.bottom + window.scrollY + 5,
-        left: rect.left + window.scrollX,
-      };
+      // The dropdown is position: fixed, so viewport coordinates are used
+      // as-is — adding scrollY here pushed it below the viewport whenever
+      // the host page was scrolled. Clamp into the usable viewport (below
+      // the main toolbar, above the mobile toolbar, inside the horizontal
+      // bounds) exactly like the slash menu — an unclamped caret rect put
+      // the 320px box off-screen right on phones and its lower rows under
+      // the fixed mobile toolbar, where taps never landed.
+      variableAutocompletePosition.value = clampMenuToViewport(
+        rect.bottom + 5,
+        rect.left,
+        { estimatedWidth: 320, estimatedHeight: 400 }
+      );
 
       variableAutocompleteQuery.value = detection.query;
       showVariableAutocomplete.value = true;
@@ -1369,6 +1844,29 @@ function closeVariableAutocomplete() {
   showVariableAutocomplete.value = false;
 }
 
+// Insert a variable from the variables panel. The panel items use
+// @mousedown.prevent so the editor selection survives the click; if the caret
+// was never placed in the editor, the pill is appended at the end instead.
+function handlePanelInsert(variable: Variable) {
+  if (!variablesComposable || !editorContent.value) return;
+  const editor = editorContent.value;
+  const selection = window.getSelection();
+  const range =
+    selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+  if (!range || !editor.contains(range.startContainer)) {
+    const endRange = document.createRange();
+    endRange.selectNodeContents(editor);
+    endRange.collapse(false);
+    selection?.removeAllRanges();
+    selection?.addRange(endRange);
+  }
+
+  // insertVariable dispatches a bubbling "input" event, so the normal
+  // capture/sanitize/emit pipeline runs without extra plumbing here.
+  variablesComposable.insertVariable(editor, variable.name);
+}
+
 // Dismiss the top-most open overlay (modal / context menu / designer /
 // dropdown). Returns true if something was closed so callers can stop.
 function closeTopMostOverlay(): boolean {
@@ -1386,6 +1884,10 @@ function closeTopMostOverlay(): boolean {
   }
   if (showHistoryTimeline.value) {
     showHistoryTimeline.value = false;
+    return true;
+  }
+  if (showVariablesPanel.value) {
+    showVariablesPanel.value = false;
     return true;
   }
   if (showEmojiPicker.value) {
@@ -1449,6 +1951,15 @@ function handleGlobalDocumentClick(event: MouseEvent) {
   if (showColorsDropdown.value) {
     showColorsDropdown.value = false;
   }
+  // Variable autocomplete only re-evaluates on input, so a click elsewhere
+  // (which fires no input event) left it open with stale suggestions. Mirror
+  // the slash menu's outside-click dismissal.
+  if (
+    showVariableAutocomplete.value &&
+    !(event.target as HTMLElement | null)?.closest(".variable-autocomplete")
+  ) {
+    showVariableAutocomplete.value = false;
+  }
   handleDocumentClick(event);
 }
 
@@ -1483,11 +1994,261 @@ useEditorSetup({
   modelValue: props.modelValue,
   applySanitizedContent,
   captureSnapshot,
-  handleKeydown,
+  handleKeydown: onEditorKeydown,
   enableSpellCheck,
   handleDocumentClick: handleGlobalDocumentClick,
   handleEscape: handleGlobalEscape,
   onSelectionChange,
+});
+
+// ---------------------------------------------------------------------------
+// Cinematic adaptive chrome ("Letterbox") — typing dissolves the toolbar into
+// a quiet ambient band; intent (pointer, selection, Escape, toolbar focus)
+// brings it back instantly. Declared LAST in setup: useChromeRecede watches
+// `suppressed` with flush:"sync", so every flag it reads must already exist.
+// ---------------------------------------------------------------------------
+
+// Never recede while any overlay owns the screen — receding under an open
+// menu/dialog would yank its anchor away.
+const chromeSuppressed = computed(
+  () =>
+    showColorsDropdown.value ||
+    showCommandMenu.value ||
+    showVariableAutocomplete.value ||
+    showHistoryTimeline.value ||
+    showFloatingToolbar.value ||
+    showVariablesPanel.value ||
+    showLinkModal.value ||
+    showImageUploadModal.value ||
+    showEmbedModal.value ||
+    showFileManagerModal.value ||
+    showEmojiPicker.value ||
+    showTemplateModal.value ||
+    showHtmlCodeModal.value ||
+    showFindReplaceModal.value ||
+    showCodeBlockModal.value ||
+    showTableModal.value ||
+    showTableDesigner.value ||
+    showTablePropertiesModal.value ||
+    showShortcutHelpModal.value
+);
+
+// Desktop-only, and only when the main toolbar is actually rendered. Reuses
+// the auto-compact breakpoint: below it the MobileToolbar owns the phone.
+// The left rail has no letterbox either — its chrome is already marginal.
+// In PILL mode the recede state machine stays on regardless of
+// adaptiveChrome: it is what drives the pill's ambient contraction.
+const adaptiveChromeEnabled = computed(
+  () =>
+    props.showToolbar &&
+    !props.readonly &&
+    viewMode.value !== "code" &&
+    (isPillMode.value ||
+      (effectiveAdaptiveChrome.value !== "off" &&
+        effectiveToolbarPosition.value !== "left" &&
+        toolbarShellWidth.value > 640))
+);
+
+const { receded: chromeReceded, restore: restoreChrome } = useChromeRecede({
+  root: rootEl,
+  enabled: adaptiveChromeEnabled,
+  suppressed: chromeSuppressed,
+});
+
+// Zen ("Estúdio"): the letterbox IS the toolbar. Receded from the very first
+// paint (set synchronously in setup, so there is no mount transition), and
+// any restore is only a PEEK — a few seconds after intent brought the full
+// toolbar out, it tucks itself away again unless the pointer is parked on it
+// or an overlay is open.
+if (props.toolbarPosition === "zen") {
+  chromeReceded.value = true;
+}
+let zenTuckTimer: ReturnType<typeof setTimeout> | null = null;
+const scheduleZenTuck = () => {
+  if (zenTuckTimer) clearTimeout(zenTuckTimer);
+  zenTuckTimer = setTimeout(() => {
+    if (!isZen.value || chromeReceded.value) return;
+    if (chromeSuppressed.value || toolbarShellEl.value?.matches(":hover")) {
+      scheduleZenTuck();
+      return;
+    }
+    chromeReceded.value = true;
+  }, 2500);
+};
+watch([chromeReceded, isZen], ([receded, zen], [, wasZen]) => {
+  // Entering zen at runtime (e.g. the playground select) recedes NOW —
+  // the mode switch should read as an immediate scene change, not wait
+  // out a tuck cycle.
+  if (zen && !wasZen) {
+    chromeReceded.value = true;
+    return;
+  }
+  if (zen && !receded) {
+    scheduleZenTuck();
+  } else if (zenTuckTimer) {
+    clearTimeout(zenTuckTimer);
+    zenTuckTimer = null;
+  }
+});
+onUnmounted(() => {
+  if (zenTuckTimer) clearTimeout(zenTuckTimer);
+});
+
+// ---------------------------------------------------------------------------
+// Playhead pill wiring. The pill is presentational — the HOST owns the state
+// machine and geometry: selection wins (the pill IS the bubble), ambient
+// while the chrome-recede state machine says "you're writing", home at rest.
+// ---------------------------------------------------------------------------
+const pillState = computed<PlayheadState>(() => {
+  if (showFloatingToolbar.value) return "selection";
+  if (chromeReceded.value) return "ambient";
+  return "home";
+});
+
+// Anchor: the editor root's viewport rect (the pill is position: fixed, so
+// it must refresh on window resize AND any scroll).
+const pillAnchorRect = ref<PlayheadAnchorRect | null>(null);
+const updatePillAnchor = () => {
+  if (!isPillMode.value || !rootEl.value) {
+    pillAnchorRect.value = null;
+    return;
+  }
+  const r = rootEl.value.getBoundingClientRect();
+  pillAnchorRect.value = { top: r.top, left: r.left, width: r.width };
+};
+
+// Selection travel target — the bubble's clamp/flip math, in VIEWPORT
+// coordinates (scrollX/Y zero: fixed positioning, unlike the absolute
+// FloatingToolbar).
+const pillSelectionPosition = ref<PlayheadSelectionPosition | null>(null);
+const updatePillSelection = () => {
+  if (!isPillMode.value || pillState.value !== "selection") {
+    pillSelectionPosition.value = null;
+    return;
+  }
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    pillSelectionPosition.value = null;
+    return;
+  }
+  const rect = selection.getRangeAt(0).getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) {
+    pillSelectionPosition.value = null;
+    return;
+  }
+  const pos = computeToolbarPosition({
+    rect: {
+      top: rect.top,
+      bottom: rect.bottom,
+      left: rect.left,
+      width: rect.width,
+    },
+    toolbarWidth: PILL_ESTIMATED_WIDTH,
+    viewportWidth: window.innerWidth,
+    scrollX: 0,
+    scrollY: 0,
+  });
+  pillSelectionPosition.value = {
+    top: pos.top,
+    left: pos.left,
+    below: pos.below,
+  };
+};
+
+const refreshPillGeometry = () => {
+  updatePillAnchor();
+  updatePillSelection();
+};
+onMounted(() => {
+  window.addEventListener("resize", refreshPillGeometry);
+  window.addEventListener("scroll", refreshPillGeometry, true);
+  document.addEventListener("selectionchange", updatePillSelection);
+});
+onUnmounted(() => {
+  window.removeEventListener("resize", refreshPillGeometry);
+  window.removeEventListener("scroll", refreshPillGeometry, true);
+  document.removeEventListener("selectionchange", updatePillSelection);
+});
+watch([isPillMode, pillState], () => nextTick(refreshPillGeometry));
+
+// The pill's "⋯" carries the long tail: productivity tools + export.
+const pillOverflowItems = computed(() => [
+  ...unref(productivityDropdownItems),
+  ...unref(exportDropdownItems),
+]);
+
+// The letterbox band's three signals (hard cap — it must never become a
+// dashboard): current block format, document-position filament, save + count.
+const BLOCK_FORMAT_LABELS: Record<string, string> = {
+  P: "Paragraph",
+  H1: "Heading 1",
+  H2: "Heading 2",
+  H3: "Heading 3",
+  H4: "Heading 4",
+  H5: "Heading 5",
+  H6: "Heading 6",
+  BLOCKQUOTE: "Quote",
+  PRE: "Code",
+  LI: "List",
+};
+const letterboxFormatLabel = computed(() => {
+  void selectionTick.value;
+  const root = editorContent.value;
+  const selection =
+    typeof window !== "undefined" ? window.getSelection() : null;
+  if (!root || !selection || selection.rangeCount === 0) return "Paragraph";
+  let el: HTMLElement | null =
+    selection.anchorNode?.nodeType === Node.ELEMENT_NODE
+      ? (selection.anchorNode as HTMLElement)
+      : selection.anchorNode?.parentElement ?? null;
+  while (el && el !== root) {
+    const label = BLOCK_FORMAT_LABELS[el.tagName];
+    if (label) return label;
+    el = el.parentElement;
+  }
+  return "Paragraph";
+});
+
+// Playhead filament: the caret's position through the document, throttled —
+// selectionchange fires on every keystroke and the value only needs to feel
+// alive, not be frame-perfect.
+const letterboxProgress = ref(0);
+let progressLastUpdate = 0;
+const updateLetterboxProgress = () => {
+  if (
+    !adaptiveChromeEnabled.value ||
+    effectiveAdaptiveChrome.value !== "letterbox"
+  ) {
+    return;
+  }
+  const now = Date.now();
+  if (now - progressLastUpdate < 150) return;
+  progressLastUpdate = now;
+  const root = editorContent.value;
+  if (!root) return;
+  const progress = getCaretDocumentProgress(root);
+  if (progress != null) letterboxProgress.value = progress;
+};
+onMounted(() =>
+  document.addEventListener("selectionchange", updateLetterboxProgress)
+);
+onUnmounted(() =>
+  document.removeEventListener("selectionchange", updateLetterboxProgress)
+);
+
+// Auto-save pulse: one soft beat on the band's dot per completed save — the
+// band's single use of accent (accent-as-signal).
+const letterboxSavePulse = ref(false);
+let savePulseTimer: ReturnType<typeof setTimeout> | null = null;
+watch(lastSaved, () => {
+  letterboxSavePulse.value = true;
+  if (savePulseTimer) clearTimeout(savePulseTimer);
+  savePulseTimer = setTimeout(() => {
+    letterboxSavePulse.value = false;
+  }, 1200);
+});
+onUnmounted(() => {
+  if (savePulseTimer) clearTimeout(savePulseTimer);
 });
 </script>
 
@@ -1504,7 +2265,11 @@ useEditorSetup({
   width: 360px;
   max-height: calc(100vh - 200px);
   overflow-y: auto;
-  z-index: 9998;
+  /* Open panels sit ABOVE the toolbar shell (9999): a bottom-anchored
+     panel can reach into the sticky toolbar's zone, and its items must not
+     lose clicks to the bar. FABs stay at 9998 (below the shell); dialog
+     overlays (10050) still top everything. */
+  z-index: 10000;
   border-radius: 14px;
   box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
     0 0 0 1px rgba(0, 0, 0, 0.04);
@@ -1527,10 +2292,11 @@ useEditorSetup({
   transform: scale(0.8) translateY(20px);
 }
 
-/* Comments / Stats FABs — refined surface controls, one shared material
-   (no gradient blobs). Sized as a matched pair; the icon is currentColor. */
+/* Comments / Stats / Variables FABs — refined surface controls, one shared
+   material (no gradient blobs). Sized as a matched set; icon is currentColor. */
 .comments-toggle-fab,
-.writing-stats-toggle-fab {
+.writing-stats-toggle-fab,
+.variables-toggle-fab {
   position: fixed;
   right: 28px;
   border: 1px solid var(--color-border);
@@ -1544,19 +2310,26 @@ useEditorSetup({
     0 1px 3px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.25s ease, background 0.2s ease, color 0.2s ease,
-    border-color 0.2s ease;
+    border-color 0.2s ease, bottom 0.25s ease;
   z-index: 9998;
 }
 
 .theme-dark .comments-toggle-fab,
-.theme-dark .writing-stats-toggle-fab {
+.theme-dark .writing-stats-toggle-fab,
+.theme-dark .variables-toggle-fab {
   box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.5),
     0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+/* The whole fixed FAB column lifts above the mobile bottom toolbar while it
+   is open: MobileToolbar publishes its measured on-screen height as
+   --nle-mobile-toolbar-clearance on <html> (0 when hidden), so the offset is
+   keyed on actual toolbar state — not a viewport guess — and the FABs never
+   cover (or get covered by) the bar despite their higher z-index. */
+
 /* Comments = the primary action: accent icon + a quiet accent ring. */
 .comments-toggle-fab {
-  bottom: 28px;
+  bottom: calc(28px + var(--nle-mobile-toolbar-clearance, 0px));
   width: 56px;
   height: 56px;
   color: var(--toolbar-accent);
@@ -1565,14 +2338,23 @@ useEditorSetup({
 
 /* Stats = secondary: a calm neutral icon until hovered. */
 .writing-stats-toggle-fab {
-  bottom: 96px;
+  bottom: calc(96px + var(--nle-mobile-toolbar-clearance, 0px));
+  width: 52px;
+  height: 52px;
+  color: var(--color-text-secondary);
+}
+
+/* Variables = secondary too; its `bottom` is computed inline so the FAB
+   column stays gapless whichever feature flags are on. */
+.variables-toggle-fab {
   width: 52px;
   height: 52px;
   color: var(--color-text-secondary);
 }
 
 .comments-toggle-fab:hover,
-.writing-stats-toggle-fab:hover {
+.writing-stats-toggle-fab:hover,
+.variables-toggle-fab:hover {
   transform: translateY(-3px);
   background: var(--color-surface-overlay);
   color: var(--toolbar-accent);
@@ -1582,13 +2364,15 @@ useEditorSetup({
 }
 
 .theme-dark .comments-toggle-fab:hover,
-.theme-dark .writing-stats-toggle-fab:hover {
+.theme-dark .writing-stats-toggle-fab:hover,
+.theme-dark .variables-toggle-fab:hover {
   box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.6),
     0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .comments-toggle-fab:active,
-.writing-stats-toggle-fab:active {
+.writing-stats-toggle-fab:active,
+.variables-toggle-fab:active {
   transform: translateY(-1px) scale(0.96);
 }
 
@@ -1612,15 +2396,136 @@ useEditorSetup({
 
 @media (prefers-reduced-motion: reduce) {
   .comments-toggle-fab,
-  .writing-stats-toggle-fab {
+  .writing-stats-toggle-fab,
+  .variables-toggle-fab {
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
   .comments-toggle-fab:hover,
   .writing-stats-toggle-fab:hover,
+  .variables-toggle-fab:hover,
   .comments-toggle-fab:active,
-  .writing-stats-toggle-fab:active {
+  .writing-stats-toggle-fab:active,
+  .variables-toggle-fab:active {
     transform: none;
   }
+}
+
+/* Variables panel — floating browse & insert surface anchored to its FAB.
+   Same material as the other floating panels: raised surface, neutral
+   shadow, accent used only as a signal. */
+.variables-panel {
+  position: fixed;
+  right: 28px;
+  width: 320px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  /* Open panels sit ABOVE the toolbar shell (9999): a bottom-anchored
+     panel can reach into the sticky toolbar's zone, and its items must not
+     lose clicks to the bar. FABs stay at 9998 (below the shell); dialog
+     overlays (10050) still top everything. */
+  z-index: 10000;
+}
+
+.variables-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.variables-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.variables-panel-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.variables-panel-close:hover {
+  background: var(--color-surface-overlay);
+  color: var(--color-text);
+}
+
+.variables-panel-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.variables-panel-category {
+  padding: 10px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.variables-panel-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.variables-panel-item:hover,
+.variables-panel-item:focus-visible {
+  background: var(--color-surface-overlay);
+}
+
+.variables-panel-item-name {
+  font-family: "Courier New", Consolas, Monaco, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--toolbar-accent);
+  white-space: nowrap;
+}
+
+.variables-panel-item-value {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.variables-panel-footer {
+  padding: 8px 16px;
+  border-top: 1px solid var(--color-border);
+  font-size: 11px;
+  color: var(--color-text-secondary);
 }
 
 /* Comment Highlight Pulse */
@@ -1645,10 +2550,186 @@ useEditorSetup({
 /* Responsive */
 @media (max-width: 768px) {
   .comments-toggle-fab {
-    bottom: 20px;
+    bottom: calc(20px + var(--nle-mobile-toolbar-clearance, 0px));
     right: 20px;
     width: 56px;
     height: 56px;
   }
+}
+
+/* On narrow screens the fixed 320px panel could grow taller than the viewport
+   and clip its own top off-screen, stranding the first category (its items
+   can't be scrolled into the visible area). Reflow it into a bottom sheet that
+   spans the width with margins and is capped to a safe fraction of the
+   viewport, so every variable stays reachable via the list's internal scroll.
+   The `bottom` is set inline, so the mobile override needs !important. */
+@media (max-width: 640px) {
+  /* Same clip class as the variables panel: fixed 360px at right:32px puts
+     the history panel's left edge at -17px on a 375px phone, cutting off
+     entry markers and nav buttons with no way to scroll them into view. */
+  .history-timeline-panel {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100vh - 160px - var(--nle-mobile-toolbar-clearance, 0px));
+  }
+
+  .variables-panel {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: 70vh;
+    bottom: calc(16px + var(--nle-mobile-toolbar-clearance, 0px)) !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Toolbar position layouts. The root carries data-toolbar-position (mirroring
+   effectiveToolbarPosition — absent for "top"); the shell carries
+   data-position for the toolbar's own form (styled in NextLevelEditor.css).
+   This block only PLACES the shell; below 640px the attribute disappears and
+   the classic top layout returns untouched.
+--------------------------------------------------------------------------- */
+
+/* Margem: a slim rail absolutely placed in the left padding — the content
+   simply flows in the reserved gutter, so no child needs individual offsets. */
+.next-level-editor[data-toolbar-position="left"] {
+  padding-left: 48px;
+}
+
+.next-level-editor[data-toolbar-position="left"] .nle-toolbar-shell {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 48px;
+  z-index: 20;
+}
+
+/* Baseline: the shell docks under the page. Flex column keeps source order
+   for everything else; sticky bottom pins the dock while the editor is in
+   view. Menus/tooltips open upward via the shell's data-position styles. */
+.next-level-editor[data-toolbar-position="bottom"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.next-level-editor[data-toolbar-position="bottom"] .nle-toolbar-shell {
+  order: 99;
+  position: sticky;
+  bottom: 0;
+  top: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Cinematic adaptive chrome. Two stacked layers in the toolbar shell (which is
+   position: sticky, i.e. a containing block): the toolbar itself and the
+   letterbox band. All choreography is opacity-only inside RESERVED space —
+   the shell's height never changes, so the text below never reflows. Recede
+   is slow and beneath notice (gentle ease); return is near-instant (ease-out).
+   Durations come from the --nle-motion tokens, which prefers-reduced-motion
+   already collapses to plain quick crossfades.
+--------------------------------------------------------------------------- */
+.nle-toolbar-shell[data-adaptive] :deep(.editor-toolbar-modern) {
+  transition: opacity var(--nle-motion-return, 160ms)
+    var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1));
+}
+
+.nle-toolbar-shell[data-adaptive][data-receded] :deep(.editor-toolbar-modern) {
+  transition: opacity var(--nle-motion-recede, 450ms)
+    var(--nle-ease-gentle, cubic-bezier(0.4, 0, 0.6, 1));
+  pointer-events: none;
+}
+
+/* Letterbox: the buttons dissolve fully — the band takes their place. */
+.nle-toolbar-shell[data-adaptive="letterbox"][data-receded]
+  :deep(.editor-toolbar-modern) {
+  opacity: 0;
+}
+
+/* Recede: the conservative variant — a whisper of the toolbar remains. */
+.nle-toolbar-shell[data-adaptive="recede"][data-receded]
+  :deep(.editor-toolbar-modern) {
+  opacity: 0.16;
+}
+
+/* The ambient band: absolute over the toolbar's reserved space, inert until
+   the chrome recedes. One shade deeper than the toolbar surface (the house
+   lights going down); progressive enhancement via color-mix. */
+.nle-letterbox {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+  background: var(--toolbar-bg, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--toolbar-bg, var(--color-surface)) 88%,
+    #000 12%
+  );
+  border-bottom: 1px solid var(--color-divider, var(--color-border));
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity var(--nle-motion-return, 160ms)
+    var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1));
+}
+
+.nle-toolbar-shell[data-adaptive="letterbox"][data-receded] .nle-letterbox {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity var(--nle-motion-recede, 450ms)
+    var(--nle-ease-gentle, cubic-bezier(0.4, 0, 0.6, 1));
+}
+
+.nle-letterbox-format {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
+}
+
+/* The playhead: a 2px filament that fills as the caret moves through the
+   document — the one detail that makes scrolling-while-writing meaningful. */
+.nle-letterbox-filament {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.nle-letterbox-filament-fill {
+  display: block;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--toolbar-text-secondary, var(--color-text-secondary));
+  transition: width 300ms var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* Auto-save dot — the band's ONLY use of accent (accent-as-signal). */
+.nle-letterbox-save {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--toolbar-text-secondary, var(--color-text-secondary));
+  opacity: 0.35;
+  transition: opacity var(--nle-motion-quick, 120ms) ease,
+    background var(--nle-motion-quick, 120ms) ease;
+}
+
+.nle-letterbox-save.is-pulsing {
+  background: var(--toolbar-accent, var(--color-primary));
+  opacity: 1;
+}
+
+.nle-letterbox-count {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
 }
 </style>

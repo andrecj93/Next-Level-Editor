@@ -2,23 +2,38 @@
   "name": "next-level-editor",
   "version": "1.0.0",
   "description": "A beautiful and feature-rich WYSIWYG editor for Vue.js",
+  "author": "André Jordão <andre.cjordao@gmail.com>",
+  "license": "MIT",
   "main": "./dist/next-level-editor.umd.js",
-  "module": "./dist/next-level-editor.es.js",
+  "module": "./dist/next-level-editor.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/next-level-editor.es.js",
-      "require": "./dist/next-level-editor.umd.js"
+      "import": "./dist/next-level-editor.mjs",
+      "require": "./dist/next-level-editor.umd.js",
+      "default": "./dist/next-level-editor.mjs"
     },
-    "./dist/style.css": "./dist/style.css"
+    "./style.css": "./dist/next-level-editor.css",
+    "./dist/next-level-editor.css": "./dist/next-level-editor.css",
+    "./package.json": "./package.json"
   },
+  "sideEffects": [
+    "**/*.css"
+  ],
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && copyfiles -f src/index.d.ts dist",
+    "build": "vite build && vue-tsc -p tsconfig.build.json",
     "build:demo": "vite build --config vite.demo.config.ts",
     "preview": "vite preview",
     "lint": "eslint . --fix",
@@ -28,7 +43,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "prepublishOnly": "vue-tsc --noEmit && npm run build"
   },
   "keywords": [
     "vue",
@@ -42,8 +58,6 @@
     "tinymce",
     "quill"
   ],
-  "author": "",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/andrecj93/next-level-editor.git"
@@ -67,10 +81,10 @@
     "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/test-utils": "^2.4.6",
     "autoprefixer": "^10.4.22",
-    "copyfiles": "^2.4.1",
     "eslint": "^9.39.2",
     "eslint-plugin-vue": "^9.18.0",
     "happy-dom": "^20.0.10",
+    "jsdom": "^27.1.0",
     "markdown-it": "^14.1.1",
     "postcss": "^8.5.6",
     "prismjs": "^1.30.0",
@@ -85,7 +99,6 @@
     "dompurify": "^3.3.0",
     "html-docx-js-typescript": "^0.1.5",
     "html2canvas": "^1.4.1",
-    "jsdom": "^27.1.0",
     "jspdf": "^4.1.0"
   }
 }

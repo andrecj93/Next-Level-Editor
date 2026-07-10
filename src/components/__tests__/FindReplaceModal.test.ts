@@ -342,16 +342,16 @@ describe("FindReplaceModal", () => {
       w.unmount();
     });
 
-    it("emits close on Escape from the find field", async () => {
+    it("emits close on Escape (shared useModalDialog contract)", async () => {
+      // Escape handling moved from per-field keydown handlers to the shared
+      // useModalDialog DOCUMENT listener — one dialog contract for all 13
+      // modals, regardless of which field has focus.
       const w = mountModal();
-      await w.get("#find-input").trigger("keydown.esc");
-      expect(w.emitted("close")).toHaveLength(1);
-      w.unmount();
-    });
-
-    it("emits close on Escape from the replace field", async () => {
-      const w = mountModal();
-      await w.get("#replace-input").trigger("keydown.esc");
+      await nextTick();
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+      await nextTick();
       expect(w.emitted("close")).toHaveLength(1);
       w.unmount();
     });
@@ -403,6 +403,11 @@ describe("FindReplaceModal", () => {
 
     it("does not hijack Ctrl+F when the modal is closed", async () => {
       const w = mountModal({ show: true });
+      // Let useModalDialog's async INITIAL focus land before spying — it is
+      // legitimate open-behavior, not a Ctrl+F hijack, and would otherwise
+      // count as a call.
+      await flushPromises();
+      await nextTick();
       // keep a stable reference to this instance's find input element
       const input = w.get("#find-input").element as HTMLInputElement;
       const focusSpy = vi.spyOn(input, "focus");

@@ -186,3 +186,108 @@ img { max-width: 100%; }
 
 /* ---- Utility ---- */
 .grid-auto { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); }
+
+/* =====================================================================
+   Tactile "Editorial Ink" primitives
+   The site is a writing instrument, so the vocabulary is physical: paper
+   sheets that lift off the ground, a ruled manuscript margin, a live pen
+   caret, and ink that draws itself in. Every motion is gated behind
+   prefers-reduced-motion.
+   ===================================================================== */
+
+/* Extra design tokens for the elevated system */
+:root {
+  --paper-edge: #fffef9;                    /* highlight strip on a sheet's top edge */
+  --rule-red: rgba(196, 57, 44, 0.28);      /* manuscript margin line */
+  --hair: rgba(40, 30, 20, 0.08);           /* hairline separators on paper */
+  --tile-bg: #fffdf8;
+}
+.site-dark {
+  --paper-edge: rgba(255, 255, 255, 0.06);
+  --rule-red: rgba(240, 112, 90, 0.34);
+  --hair: rgba(255, 255, 255, 0.06);
+  --tile-bg: #241d14;
+}
+
+/* The paper SHEET — a document lifting off the page. A hair-thin bright top
+   edge + layered shadow reads as a physical sheet with thickness. */
+.sheet {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.sheet::before {                            /* the lit paper edge */
+  content: "";
+  position: absolute; inset: 0 0 auto 0; height: 1px;
+  background: var(--paper-edge); opacity: 0.9; pointer-events: none; z-index: 1;
+}
+/* The document chrome bar (filename + traffic dots) reused across demos */
+.sheet-chrome {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border); background: var(--bg-subtle);
+}
+.sheet-dots { display: flex; gap: 6px; }
+.sheet-dots i { width: 11px; height: 11px; border-radius: 50%; background: var(--border-strong); }
+.sheet-dots i:nth-child(1) { background: #ff5f57; }
+.sheet-dots i:nth-child(2) { background: #febc2e; }
+.sheet-dots i:nth-child(3) { background: #28c840; }
+.sheet-name { font-size: 12.5px; color: var(--ink-muted); font-family: var(--font-mono); }
+
+/* MANUSCRIPT margin — a ruled vermilion line, like a legal pad / proof sheet.
+   Applied as a left border + faint baseline rules behind content. */
+.ruled { position: relative; padding-left: clamp(20px, 4vw, 46px); }
+.ruled::before {
+  content: ""; position: absolute; top: 2px; bottom: 2px; left: clamp(12px, 2.4vw, 30px);
+  width: 2px; background: var(--rule-red); border-radius: 2px;
+}
+
+/* The PEN CARET — a living vermilion caret used as a display element. */
+.caret {
+  display: inline-block; width: 3px; height: 1.05em; margin-left: 2px;
+  vertical-align: -0.12em; background: var(--accent); border-radius: 1px;
+  animation: caret-blink 1.05s steps(1) infinite;
+}
+@keyframes caret-blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+
+/* INK-UNDERLINE — a hand-drawn accent stroke under a word that wipes in when
+   revealed. Wrap the word: <span class="ink">native</span>. */
+.ink { position: relative; white-space: nowrap; }
+.ink::after {
+  content: ""; position: absolute; left: -2px; right: -2px; bottom: -0.08em; height: 0.5em;
+  background: no-repeat center/100% 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='24' viewBox='0 0 240 24' fill='none'%3E%3Cpath d='M3 15c40-7 120-11 234-6' stroke='%23c4392c' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E");
+  transform: scaleX(0); transform-origin: left center;
+  transition: transform 0.7s var(--ease) 0.15s;
+}
+.site-dark .ink::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='24' viewBox='0 0 240 24' fill='none'%3E%3Cpath d='M3 15c40-7 120-11 234-6' stroke='%23f0705a' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.reveal-in .ink::after, .ink.is-in::after { transform: scaleX(1); }
+
+/* REVEAL — fade + rise as a block scrolls into view (added by RevealOnScroll) */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+.reveal.reveal-in { opacity: 1; transform: none; }
+
+/* ICON TILE — a crafted container for a feature glyph (replaces emoji chips) */
+.icon-tile {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 46px; height: 46px; border-radius: 13px; color: var(--accent);
+  background: var(--tile-bg); border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 var(--paper-edge), var(--shadow-sm);
+}
+
+/* A small inline "pill" that mimics the editor's variable token, for copy */
+.token-pill {
+  font-family: var(--font-mono); font-size: 0.86em; color: var(--accent);
+  background: var(--brand-gradient-soft); border: 1px solid var(--rule-red);
+  padding: 1px 8px; border-radius: 999px; white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret { animation: none; opacity: 1; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .ink::after { transition: none; transform: scaleX(1); }
+}

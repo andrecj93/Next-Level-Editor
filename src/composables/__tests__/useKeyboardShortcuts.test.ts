@@ -387,11 +387,17 @@ describe("useKeyboardShortcuts", () => {
         handleBlockAction: mockHandleBlockAction,
       });
 
+      let inputCount = 0;
+      editorElement.addEventListener("input", () => inputCount++);
+
       const event = new KeyboardEvent("keydown", { key: "Tab" });
       handleKeydown(event);
 
       expect(formatting.indentListItem).toHaveBeenCalledWith(editorElement);
-      expect(mockOnCaptureSnapshot).toHaveBeenCalledTimes(1);
+      // The dispatched input event IS the emit path (host @input pipeline
+      // snapshots + emits); a separate snapshot call would double-emit.
+      expect(inputCount).toBe(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
     });
 
     it("should outdent list item on Shift+Tab", () => {
@@ -422,6 +428,9 @@ describe("useKeyboardShortcuts", () => {
         handleBlockAction: mockHandleBlockAction,
       });
 
+      let inputCount = 0;
+      editorElement.addEventListener("input", () => inputCount++);
+
       const event = new KeyboardEvent("keydown", {
         key: "Tab",
         shiftKey: true,
@@ -429,7 +438,8 @@ describe("useKeyboardShortcuts", () => {
       handleKeydown(event);
 
       expect(formatting.outdentListItem).toHaveBeenCalledWith(editorElement);
-      expect(mockOnCaptureSnapshot).toHaveBeenCalledTimes(1);
+      expect(inputCount).toBe(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
     });
 
     it("should not handle Tab outside of list", () => {
@@ -465,7 +475,7 @@ describe("useKeyboardShortcuts", () => {
       expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
     });
 
-    it("should not capture snapshot if indentation fails", () => {
+    it("should not dispatch input or capture snapshot if indentation fails", () => {
       vi.mocked(formatting.indentListItem).mockReturnValue(false);
 
       const ul = document.createElement("ul");
@@ -495,9 +505,112 @@ describe("useKeyboardShortcuts", () => {
         handleBlockAction: mockHandleBlockAction,
       });
 
+      let inputCount = 0;
+      editorElement.addEventListener("input", () => inputCount++);
+
       const event = new KeyboardEvent("keydown", { key: "Tab" });
       handleKeydown(event);
 
+      expect(inputCount).toBe(0);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Single Emit Per Enter (no double-emit)", () => {
+    const createShortcuts = () =>
+      useKeyboardShortcuts({
+        editorContent: ref(editorElement),
+        onInput: mockOnInput,
+        onCaptureSnapshot: mockOnCaptureSnapshot,
+        undo: mockUndo,
+        redo: mockRedo,
+        openCommandMenu: mockOpenCommandMenu,
+        insertLink: mockInsertLink,
+        openFindReplaceModal: mockOpenFindReplaceModal,
+        handleInlineAction: mockHandleInlineAction,
+        handleBlockAction: mockHandleBlockAction,
+      });
+
+    const placeCaret = (node: Node, offset: number) => {
+      const range = document.createRange();
+      range.setStart(node, offset);
+      range.collapse(true);
+      const selection = globalThis.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    };
+
+    const countInputs = () => {
+      let count = 0;
+      editorElement.addEventListener("input", () => count++);
+      return () => count;
+    };
+
+    it("dispatches exactly ONE input event and never calls onCaptureSnapshot on Enter in a paragraph", () => {
+      const p = document.createElement("p");
+      p.textContent = "Test";
+      editorElement.appendChild(p);
+      placeCaret(p.firstChild!, 4);
+
+      const { handleKeydown } = createShortcuts();
+      const inputs = countInputs();
+
+      handleKeydown(new KeyboardEvent("keydown", { key: "Enter" }));
+
+      // The dispatched input runs the host's full @input pipeline (snapshot +
+      // sanitize + emit + auto-save); a second onCaptureSnapshot would emit
+      // update:modelValue and auto-save TWICE per Enter.
+      expect(inputs()).toBe(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+    });
+
+    it("dispatches exactly ONE input event and never calls onCaptureSnapshot on Enter in a list item", () => {
+      const ul = document.createElement("ul");
+      const li = document.createElement("li");
+      li.textContent = "Item 1";
+      ul.appendChild(li);
+      editorElement.appendChild(ul);
+      placeCaret(li.firstChild!, 6);
+
+      const { handleKeydown } = createShortcuts();
+      const inputs = countInputs();
+
+      handleKeydown(new KeyboardEvent("keydown", { key: "Enter" }));
+
+      expect(ul.querySelectorAll("li").length).toBe(2);
+      expect(inputs()).toBe(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+    });
+
+    it("dispatches exactly ONE input event and never calls onCaptureSnapshot on Enter in an EMPTY list item (list exit)", () => {
+      const ul = document.createElement("ul");
+      const li = document.createElement("li");
+      li.innerHTML = "<br>";
+      ul.appendChild(li);
+      editorElement.appendChild(ul);
+      placeCaret(li, 0);
+
+      const { handleKeydown } = createShortcuts();
+      const inputs = countInputs();
+
+      handleKeydown(new KeyboardEvent("keydown", { key: "Enter" }));
+
+      expect(inputs()).toBe(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+    });
+
+    it("dispatches exactly ONE input event and never calls onCaptureSnapshot on Enter in a heading", () => {
+      const h1 = document.createElement("h1");
+      h1.textContent = "Heading";
+      editorElement.appendChild(h1);
+      placeCaret(h1.firstChild!, 7);
+
+      const { handleKeydown } = createShortcuts();
+      const inputs = countInputs();
+
+      handleKeydown(new KeyboardEvent("keydown", { key: "Enter" }));
+
+      expect(inputs()).toBe(1);
       expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
     });
   });
@@ -916,6 +1029,131 @@ describe("useKeyboardShortcuts", () => {
     });
   });
 
+  describe("IME Composition Guard", () => {
+    const createShortcuts = () =>
+      useKeyboardShortcuts({
+        editorContent: ref(editorElement),
+        onInput: mockOnInput,
+        onCaptureSnapshot: mockOnCaptureSnapshot,
+        undo: mockUndo,
+        redo: mockRedo,
+        openCommandMenu: mockOpenCommandMenu,
+        insertLink: mockInsertLink,
+        openFindReplaceModal: mockOpenFindReplaceModal,
+        handleInlineAction: mockHandleInlineAction,
+        handleBlockAction: mockHandleBlockAction,
+      });
+
+    /**
+     * Build a keydown event that reports an active IME composition. The
+     * KeyboardEvent constructor accepts isComposing, but happy-dom may not
+     * carry it through — fall back to defining the property directly.
+     */
+    const composingKeydown = (
+      init: KeyboardEventInit & { keyCode?: number }
+    ) => {
+      const event = new KeyboardEvent("keydown", {
+        cancelable: true,
+        ...init,
+      });
+      if (init.isComposing && !event.isComposing) {
+        Object.defineProperty(event, "isComposing", { value: true });
+      }
+      if (init.keyCode !== undefined && event.keyCode !== init.keyCode) {
+        Object.defineProperty(event, "keyCode", { value: init.keyCode });
+      }
+      return event;
+    };
+
+    const placeCaretIn = (p: HTMLElement, offset: number) => {
+      const range = document.createRange();
+      range.setStart(p.firstChild!, offset);
+      range.collapse(true);
+      const selection = globalThis.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    };
+
+    it("must NOT intercept Enter while composing (candidate commit)", () => {
+      const p = document.createElement("p");
+      p.textContent = "こんにちは";
+      editorElement.appendChild(p);
+      placeCaretIn(p, 3);
+
+      const { handleKeydown } = createShortcuts();
+
+      const event = composingKeydown({ key: "Enter", isComposing: true });
+      const preventSpy = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      // Enter must reach the IME: no preventDefault, no block split.
+      expect(preventSpy).not.toHaveBeenCalled();
+      expect(editorElement.querySelectorAll("p").length).toBe(1);
+      expect(editorElement.textContent).toBe("こんにちは");
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+    });
+
+    it("must NOT intercept Enter when keyCode is 229 (legacy IME signal)", () => {
+      const p = document.createElement("p");
+      p.textContent = "input";
+      editorElement.appendChild(p);
+      placeCaretIn(p, 5);
+
+      const { handleKeydown } = createShortcuts();
+
+      const event = composingKeydown({ key: "Enter", keyCode: 229 });
+      const preventSpy = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(preventSpy).not.toHaveBeenCalled();
+      expect(editorElement.querySelectorAll("p").length).toBe(1);
+    });
+
+    it("does not open the slash menu while composing", () => {
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      editorElement.appendChild(p);
+
+      const range = document.createRange();
+      range.setStart(p, 0);
+      range.collapse(true);
+      const selection = globalThis.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const { handleKeydown } = createShortcuts();
+
+      handleKeydown(composingKeydown({ key: "/", isComposing: true }));
+
+      expect(mockOpenCommandMenu).not.toHaveBeenCalled();
+    });
+
+    it("does not run formatting shortcuts while composing", () => {
+      const { handleKeydown } = createShortcuts();
+
+      handleKeydown(
+        composingKeydown({ key: "b", ctrlKey: true, isComposing: true })
+      );
+
+      expect(mockHandleInlineAction).not.toHaveBeenCalled();
+    });
+
+    it("still handles Enter normally when NOT composing", () => {
+      const p = document.createElement("p");
+      p.textContent = "Test";
+      editorElement.appendChild(p);
+      placeCaretIn(p, 4);
+
+      const { handleKeydown } = createShortcuts();
+
+      handleKeydown(new KeyboardEvent("keydown", { key: "Enter" }));
+
+      expect(editorElement.querySelectorAll("p").length).toBeGreaterThanOrEqual(
+        2
+      );
+    });
+  });
+
   describe("Edge Cases", () => {
     it("should handle null editor content gracefully", () => {
       const { handleKeydown } = useKeyboardShortcuts({
@@ -1141,6 +1379,148 @@ describe("useKeyboardShortcuts", () => {
       // Test uppercase Z
       handleKeydown(new KeyboardEvent("keydown", { key: "Z", ctrlKey: true }));
       expect(mockUndo).toHaveBeenCalled();
+    });
+  });
+
+  describe("Block-Boundary Backspace/Delete (normalized merge)", () => {
+    const setup = () => {
+      return useKeyboardShortcuts({
+        editorContent: ref(editorElement),
+        onInput: mockOnInput,
+        onCaptureSnapshot: mockOnCaptureSnapshot,
+        undo: mockUndo,
+        redo: mockRedo,
+        openCommandMenu: mockOpenCommandMenu,
+        insertLink: mockInsertLink,
+        openFindReplaceModal: mockOpenFindReplaceModal,
+        handleInlineAction: mockHandleInlineAction,
+        handleBlockAction: mockHandleBlockAction,
+      });
+    };
+
+    const placeCaret = (node: Node, offset: number) => {
+      const range = document.createRange();
+      range.setStart(node, offset);
+      range.collapse(true);
+      const selection = globalThis.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    };
+
+    it("Backspace at the start of the second <p> merges into the first and dispatches exactly one input event", () => {
+      editorElement.innerHTML = "<p>Hello</p><p>World</p>";
+      const second = editorElement.children[1] as HTMLElement;
+      placeCaret(second.firstChild!, 0);
+
+      const inputSpy = vi.fn();
+      editorElement.addEventListener("input", inputSpy);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", { key: "Backspace" });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>HelloWorld</p>");
+      expect(inputSpy).toHaveBeenCalledTimes(1);
+      expect(mockOnCaptureSnapshot).not.toHaveBeenCalled();
+
+      // Caret lands exactly at the join point.
+      const selection = globalThis.getSelection()!;
+      expect(selection.getRangeAt(0).startOffset).toBe(5);
+      expect(selection.getRangeAt(0).startContainer.textContent).toBe(
+        "HelloWorld"
+      );
+    });
+
+    it("Backspace mid-text does NOT preventDefault (native handles in-block deletion)", () => {
+      editorElement.innerHTML = "<p>Hello</p>";
+      const p = editorElement.children[0] as HTMLElement;
+      placeCaret(p.firstChild!, 3);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", { key: "Backspace" });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).not.toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>Hello</p>");
+    });
+
+    it("Delete at the end of a block pulls the next paragraph up", () => {
+      editorElement.innerHTML = "<p>Hello</p><p>World</p>";
+      const first = editorElement.children[0] as HTMLElement;
+      placeCaret(first.firstChild!, 5);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", { key: "Delete" });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>HelloWorld</p>");
+    });
+
+    it("modified Backspace (Ctrl) keeps native semantics", () => {
+      editorElement.innerHTML = "<p>Hello</p><p>World</p>";
+      const second = editorElement.children[1] as HTMLElement;
+      placeCaret(second.firstChild!, 0);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", {
+        key: "Backspace",
+        ctrlKey: true,
+      });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).not.toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>Hello</p><p>World</p>");
+    });
+
+    it("Backspace during IME composition is ignored entirely (guard runs first)", () => {
+      editorElement.innerHTML = "<p>Hello</p><p>World</p>";
+      const second = editorElement.children[1] as HTMLElement;
+      placeCaret(second.firstChild!, 0);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", {
+        key: "Backspace",
+        isComposing: true,
+      });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).not.toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>Hello</p><p>World</p>");
+    });
+
+    it("Backspace at the start of the FIRST block falls through to native (no-op)", () => {
+      editorElement.innerHTML = "<p>Hello</p>";
+      const p = editorElement.children[0] as HTMLElement;
+      placeCaret(p.firstChild!, 0);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", { key: "Backspace" });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).not.toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>Hello</p>");
+    });
+
+    it("Backspace inside a list item does not trigger block merging", () => {
+      editorElement.innerHTML = "<p>Above</p><ul><li>Item</li></ul>";
+      const li = editorElement.querySelector("li")!;
+      placeCaret(li.firstChild!, 0);
+
+      const { handleKeydown } = setup();
+      const event = new KeyboardEvent("keydown", { key: "Backspace" });
+      const prevented = vi.spyOn(event, "preventDefault");
+      handleKeydown(event);
+
+      expect(prevented).not.toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe("<p>Above</p><ul><li>Item</li></ul>");
     });
   });
 });

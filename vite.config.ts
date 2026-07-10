@@ -5,6 +5,10 @@ import autoprefixer from "autoprefixer";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => ({
+  // Types are emitted separately by `vue-tsc -p tsconfig.build.json` in the
+  // build script (the official Vue path). It handles the main component's
+  // `<script setup>` props cleanly, unlike vite-plugin-dts's .vue→virtual
+  // transform, which trips TS4082 on this component.
   plugins: [vue()],
 
   // Transpilation target for broader browser support
@@ -15,7 +19,11 @@ export default defineConfig(({ command }) => ({
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
       name: "NextLevelEditor",
-      fileName: (format) => `next-level-editor.${format}.js`,
+      // ES build ships as .mjs (always ESM) and UMD as .umd.js (CJS-compatible),
+      // so no top-level "type" field is needed and both Node ESM + CJS resolve
+      // correctly via the package.json exports conditions.
+      fileName: (format) =>
+        format === "es" ? "next-level-editor.mjs" : "next-level-editor.umd.js",
       formats: ["es", "umd"],
     },
 
@@ -28,9 +36,12 @@ export default defineConfig(({ command }) => ({
         },
         // Keep names for better debugging
         compact: false,
-        sourcemap: true,
       },
     },
+
+    // Don't ship source maps in the published tarball (they were ~13 MB and
+    // dominated the package). Consumers debug against their own app build.
+    sourcemap: false,
 
     // Module preload polyfill (updated config name)
     modulePreload: {
@@ -87,5 +98,8 @@ export default defineConfig(({ command }) => ({
   // Disable HMR when running tests
   server: {
     hmr: process.env.DISABLE_HMR !== "true",
+    // Honour a harness-assigned port (e.g. the preview tool) when present so the
+    // dev server binds where the tooling expects it; fall back to Vite's default.
+    port: process.env.PORT ? Number(process.env.PORT) : undefined,
   },
 }));

@@ -302,6 +302,18 @@
   pointer-events: none;
 }
 
+/* Visually-empty residues: after deleting all text the browser leaves a lone
+   <br> (or <p><br></p>) behind, so :empty above stops matching and the
+   placeholder never comes back. Kept as a SEPARATE rule (not appended to the
+   list above) so engines without :has() drop only this rule, not the :empty
+   case. Declarations must stay identical to the rule above. */
+.editor-content:has(> br:only-child):before,
+.editor-content:has(> p:only-child > br:only-child):before {
+  content: attr(placeholder);
+  color: var(--placeholder-color);
+  pointer-events: none;
+}
+
 .editor-content:focus {
   outline: none;
 }
@@ -738,18 +750,10 @@
   flex: 1;
 }
 
-/* Fullscreen Toggle Button Styling */
-.toolbar-btn-modern.fullscreen-toggle {
-  transition: all 0.2s ease;
-}
-
+/* Fullscreen Toggle Button Styling — "on" is accent ink, like every other
+   active state in the masthead (no fills, no hover growth). */
 .toolbar-btn-modern.fullscreen-toggle[aria-pressed="true"] {
-  background: var(--toolbar-hover);
   color: var(--toolbar-accent);
-}
-
-.toolbar-btn-modern.fullscreen-toggle:hover {
-  transform: scale(1.05);
 }
 
 /* Emoji Picker Container */
@@ -830,60 +834,90 @@
 }
 
 /* Modern Toolbar Styles */
+/* The toolbar's query-container shell. A container query cannot style its own
+   query container, so container-type lives on this wrapper — the auto-compact
+   @container rules below can then match .editor-toolbar-modern itself. The
+   shell also carries the sticky positioning (sticky on the toolbar inside a
+   tight wrapper would pin to the wrapper's own bounds and never stick). It has
+   no fixed-position descendants, so the containing-block side effect of
+   container-type can't re-parent the editor's fullscreen/emoji/auto-save
+   elements. */
+.nle-toolbar-shell {
+  position: sticky;
+  top: 0;
+  /* Above the floating FABs/panels (9998-9999): primary chrome must never
+     lose clicks to a floating affordance — at 375px an unscrolled page could
+     park the comments FAB directly on the expand toggle and swallow every
+     tap. Dialog overlays (10050) still win. This also keeps the toolbar's
+     own open menus above the FABs. */
+  z-index: 9999;
+  container-type: inline-size;
+  container-name: nle-toolbar;
+}
+
+/* ============================================================
+   MASTHEAD toolbar — a magazine masthead, not a row of boxed
+   chips. Ghost controls (no borders, no fills at rest), hairline
+   separators, air between families; the accent appears only as
+   INK: colored glyphs and a short underline bar on active
+   formatting states. Opaque --toolbar-bg keeps contrast AA.
+   ============================================================ */
 .editor-toolbar-modern {
+  /* Containing block for the staging overlays (sweep clip + elevation
+     pseudo). No z-index — the letterbox band above must keep winning. */
+  position: relative;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  /* Between families: generous. Within a family: tight (see .toolbar-group). */
+  gap: 14px;
   padding: 10px 16px;
   background: var(--toolbar-bg);
-  border-bottom: 1px solid var(--editor-border);
+  /* A single hairline underlines the masthead — no slab shadows. The hairline
+     yields to the elevation shadow when content scrolls beneath the bar
+     (paint-only crossfade; see the staging section below). */
+  border-bottom: 1px solid var(--color-divider);
+  transition: border-bottom-color var(--nle-motion-quick, 120ms)
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
   min-height: 52px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  /* A lit top edge makes the bar read as a solid slab, not a flat strip. */
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.theme-dark .editor-toolbar-modern {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 1px 3px rgba(0, 0, 0, 0.25);
+/* Finer icon line for the masthead: CSS wins over the SVG presentation
+   attribute (stroke-width="2") without touching dozens of icon strings.
+   Fill-based glyphs (e.g. the "⋯ More" dots, stroke="none") are unaffected —
+   stroke-width is inert when there is no stroke. */
+.editor-toolbar-modern svg {
+  stroke-width: 1.5;
 }
 
 /* Toolbar section grouping */
 .toolbar-section-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .toolbar-divider {
   width: 1px;
-  height: 24px;
+  height: 16px;
   background: var(--color-divider);
-  opacity: 0.7;
-  margin: 0 4px;
+  margin: 0 8px;
   align-self: center;
 }
 
+/* A family of sibling controls (undo/redo, inline format toggles) sits
+   flush — no box, no fill; the shared hover pill is the only surface. */
 .toolbar-group {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.04);
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  gap: 2px;
 }
 
-.theme-dark .toolbar-group {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
+/* Ghost control: transparent at rest, secondary ink; hover restores full ink
+   over a soft --toolbar-hover pill. NEVER a `background` shorthand in the
+   state rules below — the active underline lives in background-image and a
+   shorthand would wipe it. */
 .toolbar-btn-modern {
   display: flex;
   align-items: center;
@@ -892,45 +926,53 @@
   min-width: 34px;
   height: 34px;
   padding: 0 9px;
-  border: 1px solid transparent;
+  border: none;
   background: transparent;
-  color: var(--toolbar-text);
-  border-radius: 6px;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  border-radius: var(--radius-md, 6px);
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
   /* Deliberately NOT 'all' — animating outline/transform lags the focus ring
-     and makes hover bob. Only tween paint properties. */
-  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+     and makes hover bob. Only tween paint properties, on the quick step. */
+  transition: background-color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    opacity var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
   position: relative;
 }
 
 .toolbar-btn-modern:hover {
-  background: var(--toolbar-hover);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-}
-
-.theme-dark .toolbar-btn-modern:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background-color: var(--toolbar-hover);
+  color: var(--toolbar-text);
 }
 
 .toolbar-btn-modern:active {
-  background: var(--toolbar-hover);
-  transition: background 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--toolbar-hover);
+  transition-duration: var(--nle-motion-instant, 0ms);
 }
 
+/* Active FORMATTING state — the masthead's signature mark: accent INK plus a
+   2px accent underline bar (~60% wide, centered at the baseline). Painted as
+   a background-image because both pseudo-elements are already taken by the
+   tooltip bubble + arrow. */
 .toolbar-btn-modern.active {
-  background: var(--toolbar-accent);
-  color: #ffffff;
-  border-color: var(--toolbar-accent);
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+  background-color: transparent;
+  color: var(--toolbar-accent);
+  background-image: linear-gradient(
+    var(--toolbar-accent),
+    var(--toolbar-accent)
+  );
+  background-repeat: no-repeat;
+  background-size: 60% 2px;
+  background-position: center calc(100% - 3px);
 }
 
-.theme-dark .toolbar-btn-modern.active {
-  box-shadow: 0 2px 6px rgba(96, 165, 250, 0.4);
+.toolbar-btn-modern.active:hover {
+  background-color: var(--toolbar-hover);
+  color: var(--toolbar-accent);
 }
 
 /* ============================================================
@@ -957,7 +999,8 @@
   transition-duration: 0.08s;
 }
 
-/* Toggle a format on → the icon pops and the accent fill blooms outward. */
+/* Toggle a format on → the icon pops. (The chip-era accent "bloom" is gone:
+   the masthead's active mark is the underline bar, drawn instantly.) */
 .toolbar-btn-modern.active svg {
   animation: nle-icon-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -965,18 +1008,6 @@
   0% { transform: scale(0.55); }
   50% { transform: scale(1.3); }
   100% { transform: scale(1); }
-}
-.toolbar-btn-modern.active {
-  box-shadow: 0 4px 14px -3px rgba(59, 130, 246, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  animation: nle-active-bloom 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes nle-active-bloom {
-  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.55); }
-}
-.theme-dark .toolbar-btn-modern.active {
-  box-shadow: 0 4px 14px -3px rgba(96, 165, 250, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 /* Dropdown caret: smooth spring flip when the menu opens. */
@@ -995,13 +1026,17 @@
 }
 
 /* A whisper-soft opacity fade-in for the whole bar on mount — no transform, so
-   it never leaves buttons "unstable"/intercepting for automated clicks. */
+   it never leaves buttons "unstable"/intercepting for automated clicks.
+   Fill mode MUST be `backwards`, never `both`/`forwards`: a persisting fill
+   keeps the keyframe's opacity:1 at the animation cascade level FOREVER,
+   which silently defeats every later opacity rule (the adaptive-chrome
+   letterbox dissolve died to exactly this). */
 @keyframes nle-toolbar-in {
   from { opacity: 0.4; }
   to { opacity: 1; }
 }
 .editor-toolbar-modern {
-  animation: nle-toolbar-in 0.4s ease both;
+  animation: nle-toolbar-in 0.4s ease backwards;
 }
 
 /* ============================================================
@@ -1025,7 +1060,7 @@
   flex-wrap: nowrap;
 }
 .editor-toolbar-modern.is-compact .toolbar-divider {
-  height: 20px;
+  height: 14px;
   margin: 0 3px;
 }
 /* Every label → its tooltip. Dropdowns, view-modes and the Export pill
@@ -1047,16 +1082,10 @@
   min-width: 32px;
   padding: 0 6px;
 }
-/* Flatten the remaining inline pill (undo/redo) so compact is clean icons +
-   dividers, not boxes-within-a-box. */
-.editor-toolbar-modern.is-compact .toolbar-group {
-  padding: 0;
-  gap: 2px;
-  background: transparent;
-  border-color: transparent;
-}
+/* Families are already ghost (no box) in the masthead; compact just keeps
+   them tight. */
+.editor-toolbar-modern.is-compact .toolbar-group,
 .editor-toolbar-modern.is-compact .view-mode-group {
-  padding: 2px;
   gap: 2px;
 }
 .editor-toolbar-modern.is-compact .view-mode-btn,
@@ -1080,6 +1109,248 @@
     0 0 0 1px rgba(255, 255, 255, 0.08) inset;
 }
 
+/* ============================================================
+   MINI toolbar (compact + collapsed) — the default state of a compact editor.
+   Only the formatting essentials show; the expand toggle (pinned right, in the
+   accent so it reads as an affordance) reveals the rest. The bar doesn't scroll
+   here because the essentials fit, which also lets the button tooltips escape.
+   ============================================================ */
+.editor-toolbar-modern.is-compact.is-mini {
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+.editor-toolbar-modern.is-compact.is-mini .toolbar-expand-toggle {
+  margin-left: auto;
+}
+
+/* EXPANDED (compact + open) — the "show me everything" state the user opted
+   into: the full toolbar wraps so every control is visible at once, no scroll. */
+.editor-toolbar-modern.is-compact:not(.is-mini) {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+/* The expand/collapse affordance — accent-tinted; its chevron flips when open. */
+.editor-toolbar-modern.is-compact .toolbar-expand-toggle {
+  color: var(--toolbar-accent);
+  flex: none;
+}
+.toolbar-expand-toggle svg {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.toolbar-expand-toggle.is-open svg {
+  transform: rotate(180deg);
+}
+
+/* ============================================================
+   "TITLE SEQUENCE" staging — choreography for the toolbar's STATE
+   CHANGES only. The one-shot classes (.is-unfolding, .is-folding,
+   .is-sweeping) are added exclusively by the expand toggle and the
+   toolbarLayout watcher in EditorToolbar.vue, so none of this can
+   ever run on mount. transform/opacity only; every animation lives
+   on CHILDREN or overlays — swapping animation-name on the nav root
+   itself would replay the nle-toolbar-in mount fade when the class
+   clears. Bold/active rings and other keyboard-frequency states are
+   untouched and stay instant.
+   ============================================================ */
+
+/* 1 — Staggered unfold: when the mini bar expands, the revealed
+   families fade in left→right, one --nle-stagger-step (20ms) apart
+   (indices 0-3 → ≤60ms of added delay). `backwards` holds each
+   family invisible through its delay; NEVER forwards/both — a
+   persisting fill pins opacity at the animation cascade level
+   forever (see the mount-fade comment above). The keyframe only
+   plays while .is-unfolding is present, so plain v-show flips
+   (e.g. re-renders while expanded) never re-animate. */
+@keyframes nle-toolbar-unfold {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+.editor-toolbar-modern.is-unfolding .nle-unfold {
+  animation: nle-toolbar-unfold var(--nle-motion-enter, 180ms)
+    var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1)) backwards;
+  animation-delay: calc(var(--nle-group-i, 0) * var(--nle-stagger-step, 20ms));
+}
+
+/* Collapse is the reverse but FASTER and without stagger: the
+   surviving mini row settles with one quick fade. */
+@keyframes nle-toolbar-refold {
+  from {
+    opacity: 0.55;
+  }
+}
+.editor-toolbar-modern.is-folding .toolbar-section-group {
+  animation: nle-toolbar-refold var(--nle-motion-exit, 140ms)
+    var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1)) backwards;
+}
+
+/* 2 — Elevation on scroll: content moving beneath the sticky bar
+   swaps the hairline for a soft neutral shadow. The shadow is
+   pre-painted on ::after and opacity-crossfaded — never transition
+   box-shadow itself. Both pseudo slots on the nav are free: the
+   tooltip system uses the BUTTONS' pseudos and the active underline
+   is painted via background-image. Outer box-shadows don't paint
+   inside their own box, so the inset:0 pseudo only casts below the
+   bar; pointer-events:none keeps it inert for e2e clicks. */
+.editor-toolbar-modern::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 18px -10px rgba(15, 23, 42, 0.3),
+    0 2px 6px -3px rgba(15, 23, 42, 0.16);
+  opacity: 0;
+  transition: opacity var(--nle-motion-quick, 120ms)
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+.editor-toolbar-modern.is-elevated {
+  border-bottom-color: transparent;
+}
+.editor-toolbar-modern.is-elevated::after {
+  opacity: 1;
+}
+.theme-dark .editor-toolbar-modern::after {
+  box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.6),
+    0 2px 6px -3px rgba(0, 0, 0, 0.4);
+}
+
+/* 3 — Light sweep on density change (and on expand): a single
+   400ms diagonal --toolbar-hover band crossing the bar. It lives in
+   its OWN clipped overlay — the nav must keep overflow: visible for
+   dropdowns/tooltips, so the nav itself can't mask the band. First
+   child + z-index: 0 paints it above the bar surface but beneath the
+   later (positioned, z-auto) buttons and every dropdown menu. */
+.toolbar-sweep-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.toolbar-sweep {
+  position: absolute;
+  inset: 0;
+  /* Invisible at rest; only the keyframes lift opacity. Default fill
+     (none) returns it to this base the instant the sweep ends. */
+  opacity: 0;
+  transform: translateX(-101%);
+  background: linear-gradient(
+    105deg,
+    transparent 32%,
+    var(--toolbar-hover) 50%,
+    transparent 68%
+  );
+}
+@keyframes nle-toolbar-sweep {
+  from {
+    opacity: 1;
+    transform: translateX(-101%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(101%);
+  }
+}
+.editor-toolbar-modern.is-unfolding .toolbar-sweep,
+.editor-toolbar-modern.is-sweeping .toolbar-sweep {
+  animation: nle-toolbar-sweep 400ms
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* ============================================================
+   AUTO-compact (container query) — the same single dense row as
+   toolbarLayout="compact", but triggered by the toolbar's OWN width instead
+   of an explicit prop. So an editor embedded narrow (a sidebar, a split-pane,
+   the full editor on a phone, a demo panel) collapses the desktop toolbar to
+   one quiet strip on its own — no prop needed — and the document gets the room.
+   The @media rules react to the viewport; this reacts to the container, which
+   is what makes it right for narrow-inside-wide embeds. Values mirror
+   .is-compact so both paths look identical.
+
+   Every selector is gated on the shell NOT being the left rail: the rail is
+   ~48px wide, so its own container query would always match and these
+   horizontal-bar rules would fight the vertical form. A container query can't
+   see the container's attributes from inside, but the selectors themselves
+   still evaluate normally — and the shell is an ancestor — so an ancestor
+   guard works. `:where()` keeps the guard at zero specificity: the default
+   top bar resolves the cascade exactly as before.
+   ============================================================ */
+@container nle-toolbar (max-width: 640px) {
+  :where(.nle-toolbar-shell:not([data-position="left"])) .editor-toolbar-modern {
+    /* Mirror .is-compact exactly: wrap + overflow visible. NEVER scroll here —
+       `overflow-x: auto` next to `overflow-y: visible` computes overflow-y to
+       auto too, turning the bar into a clip/scroll box that cuts every
+       dropdown menu and tooltip off at the bar height (see the .is-compact
+       comment above). */
+    flex-wrap: wrap;
+    overflow: visible;
+    gap: 4px;
+    padding: 6px 12px;
+    min-height: 46px;
+  }
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .toolbar-section-group {
+    gap: 3px;
+    flex-wrap: nowrap;
+  }
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .toolbar-divider {
+    height: 14px;
+    margin: 0 3px;
+  }
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .dropdown-label,
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .view-mode-btn
+    .btn-label {
+    display: none;
+  }
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .dropdown-trigger {
+    gap: 2px;
+    padding: 0 8px;
+    min-height: 32px;
+  }
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .dropdown-arrow {
+    font-size: 8px;
+  }
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .toolbar-btn-modern {
+    height: 32px;
+    min-width: 32px;
+    padding: 0 6px;
+  }
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .toolbar-group,
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .view-mode-group {
+    gap: 2px;
+  }
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .view-mode-btn,
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern
+    .view-mode-btn.with-text {
+    min-width: 34px;
+    height: 32px;
+    padding: 0 9px;
+    gap: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toolbar-btn-modern svg,
   .view-mode-btn svg,
@@ -1092,6 +1363,17 @@
     animation: none !important;
     transition: none !important;
     transform: none !important;
+  }
+
+  /* Staging choreography: the stagger tokens already collapse to 0 here, but
+     disable the unfold/settle/sweep animations outright — states still apply
+     instantly (and the elevation shadow snaps rather than fading). */
+  .editor-toolbar-modern.is-unfolding .nle-unfold,
+  .editor-toolbar-modern.is-folding .toolbar-section-group,
+  .editor-toolbar-modern .toolbar-sweep,
+  .editor-toolbar-modern::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
 
@@ -1202,19 +1484,11 @@
   font-size: 18px;
 }
 
-/* View Mode Toggle Styles */
+/* View Mode Toggle Styles — a ghost family like the rest of the masthead:
+   no segmented box; the active mode carries the accent ink + underline. */
 .view-mode-group {
   display: flex;
-  gap: 3px;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 8px;
-}
-
-.theme-dark .view-mode-group {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+  gap: 2px;
 }
 
 .view-mode-btn {
@@ -1223,13 +1497,16 @@
   padding: 0 10px;
   border: none;
   background: transparent;
-  color: var(--toolbar-text);
-  border-radius: 6px;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  border-radius: var(--radius-md, 6px);
   cursor: pointer;
   font-size: 15px;
-  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    opacity var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
   position: relative;
   display: flex;
   align-items: center;
@@ -1250,19 +1527,27 @@
 }
 
 .view-mode-btn:hover:not(.active) {
-  background: rgba(59, 130, 246, 0.08);
-  color: var(--toolbar-accent);
+  background-color: var(--toolbar-hover);
+  color: var(--toolbar-text);
 }
 
+/* Active mode: accent ink + the signature underline bar (background-image;
+   both pseudo-elements belong to the tooltip). */
 .view-mode-btn.active {
-  background: var(--editor-bg);
+  background-color: transparent;
   color: var(--toolbar-accent);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-image: linear-gradient(
+    var(--toolbar-accent),
+    var(--toolbar-accent)
+  );
+  background-repeat: no-repeat;
+  background-size: 60% 2px;
+  background-position: center calc(100% - 3px);
   font-weight: 600;
 }
 
-.theme-dark .view-mode-btn.active {
-  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.25), 0 1px 3px rgba(0, 0, 0, 0.4);
+.view-mode-btn.active:hover {
+  background-color: var(--toolbar-hover);
 }
 
 .view-mode-btn:focus-visible {
@@ -1517,36 +1802,29 @@
   align-items: center;
   gap: 7px;
   padding: 7px 11px;
-  border: 1px solid transparent;
+  border: none;
   background: transparent;
-  color: var(--toolbar-text);
-  border-radius: 6px;
+  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  border-radius: var(--radius-md, 6px);
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    color var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    opacity var(--nle-motion-quick, 120ms)
+      var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
   min-height: 34px;
 }
 
 .dropdown-trigger:hover {
-  background: var(--toolbar-hover);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-}
-
-.theme-dark .dropdown-trigger:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background-color: var(--toolbar-hover);
+  color: var(--toolbar-text);
 }
 
 .dropdown-trigger.open {
-  background: var(--toolbar-hover);
+  background-color: var(--toolbar-hover);
   color: var(--toolbar-accent);
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
-}
-
-.theme-dark .dropdown-trigger.open {
-  box-shadow: 0 2px 6px rgba(96, 165, 250, 0.25);
 }
 
 .dropdown-icon {
@@ -1563,10 +1841,23 @@
   letter-spacing: 0.01em;
 }
 
+/* The Format dropdown reads as typography, not UI: its trigger shows the
+   ACTIVE block format name ("Paragraph", "Heading 1") set in the editorial
+   serif — the masthead's nameplate. Scoped via the .format-dropdown hook on
+   that one ToolbarSection instance. */
+.editor-toolbar-modern .format-dropdown .dropdown-label {
+  font-family: var(--nle-font-serif, Georgia, serif);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--toolbar-text);
+}
+
 .dropdown-arrow {
   font-size: 9px;
   opacity: 0.5;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--nle-motion-quick, 120ms)
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
 .dropdown-trigger.open .dropdown-arrow {
@@ -1622,7 +1913,8 @@
   top: calc(100% + 4px);
   left: 0;
   background: var(--editor-bg);
-  border: 1px solid var(--editor-border);
+  /* Menus stay surfaces, but soft ones: hairline edge, shadow does the work. */
+  border: 1px solid var(--color-divider);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   z-index: 1000;
@@ -1732,9 +2024,20 @@
   }
 }
 
-.dropdown-fade-enter-active,
+/* Menu open/close: enter decelerates in, exit accelerates away and is
+   faster than the entry (motion tokens; see tokens.css). */
+.dropdown-fade-enter-active {
+  transition: opacity var(--nle-motion-enter, 180ms)
+      var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1)),
+    transform var(--nle-motion-enter, 180ms)
+      var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1));
+}
+
 .dropdown-fade-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
+  transition: opacity var(--nle-motion-exit, 140ms)
+      var(--nle-ease-in, cubic-bezier(0.3, 0, 0.8, 0.15)),
+    transform var(--nle-motion-exit, 140ms)
+      var(--nle-ease-in, cubic-bezier(0.3, 0, 0.8, 0.15));
 }
 
 .dropdown-fade-enter-from {
@@ -1772,12 +2075,10 @@
   }
 
   .toolbar-divider {
-    height: 24px;
     margin: 0 3px;
   }
 
   .toolbar-group {
-    padding: 2px;
     gap: 2px;
   }
 
@@ -1819,6 +2120,302 @@
   .view-mode-btn.with-text {
     min-width: 38px;
     padding: 0 8px;
+  }
+}
+
+/* ============================================================
+   TOOLBAR POSITION VARIANTS — keyed off the data-position attribute the host
+   places on .nle-toolbar-shell (absent = classic top bar, untouched; the host
+   root also carries data-toolbar-position for the surrounding layout).
+
+   "left" (Margem): the toolbar is a slim vertical rail hugging the editor's
+   left edge — the mini essentials as a column, expand toggle at the rail's
+   foot; the non-essential families open as a floating vertical panel to the
+   rail's right. "bottom" (Baseline): the familiar horizontal bar docked under
+   the page — menus and tooltips flip upward so nothing clips at the editor's
+   bottom edge. This section sits LAST among the toolbar styles on purpose:
+   equal-specificity ties (e.g. against .is-compact.is-mini) resolve to the
+   position variant.
+   ============================================================ */
+
+/* The non-essential families' wrapper is layout-inert everywhere except the
+   left rail: display: contents removes its box, so the horizontal bars keep
+   their exact flex layout (the groups stay direct flex items of the nav). */
+.nle-toolbar-panel {
+  display: contents;
+}
+
+/* ---------------- Margem — data-position="left" ---------------- */
+
+/* The rail: a full-height 48px column. min-height resets (the top bar's would
+   force a squat block); the masthead hairline moves to the right edge. The
+   host owns the shell's placement (absolute in the root's reserved 48px
+   gutter), so only the toolbar's own form lives here. */
+.nle-toolbar-shell[data-position="left"] .editor-toolbar-modern {
+  flex-direction: column;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 8px;
+  padding: 8px 4px;
+  border-bottom: none;
+  border-right: 1px solid var(--color-divider);
+}
+
+/* Elevation casts sideways here — content scrolls beside the rail, not
+   beneath it. */
+.nle-toolbar-shell[data-position="left"] .editor-toolbar-modern::after {
+  box-shadow: 8px 0 18px -10px rgba(15, 23, 42, 0.3),
+    2px 0 6px -3px rgba(15, 23, 42, 0.16);
+}
+.theme-dark
+  .nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern::after {
+  box-shadow: 10px 0 20px -10px rgba(0, 0, 0, 0.6),
+    2px 0 6px -3px rgba(0, 0, 0, 0.4);
+}
+.nle-toolbar-shell[data-position="left"] .editor-toolbar-modern.is-elevated {
+  border-right-color: transparent;
+}
+
+/* The essentials family stacks vertically; labels and carets yield to the
+   tooltips (which flip to the rail's right, below). */
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  > .toolbar-section-group {
+  flex-direction: column;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  > .toolbar-section-group
+  .toolbar-group {
+  flex-direction: column;
+  gap: 2px;
+}
+.nle-toolbar-shell[data-position="left"] .editor-toolbar-modern .dropdown-label,
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  > .toolbar-section-group
+  .dropdown-arrow {
+  display: none;
+}
+
+/* The expand toggle pins to the rail's foot; its chevron points into the
+   panel (static transforms — the transition only runs on the open flip). */
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  .toolbar-expand-toggle {
+  margin-left: 0;
+  margin-top: auto;
+}
+.nle-toolbar-shell[data-position="left"] .toolbar-expand-toggle svg {
+  transform: rotate(-90deg);
+}
+.nle-toolbar-shell[data-position="left"] .toolbar-expand-toggle.is-open svg {
+  transform: rotate(90deg);
+}
+
+/* The floating panel — the same surface language as the dropdown menus:
+   hairline edge, soft shadow, --radius-lg. It caps to the editor's height and
+   scrolls internally; that scroll box is also why the dropdowns INSIDE it
+   open downward instead of flying right — overflow-y: auto computes
+   overflow-x to auto too, so a right-flyout would clip at the panel edge. */
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern:not(.is-mini)
+  .nle-toolbar-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 0;
+  z-index: 60;
+  min-width: 264px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--editor-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* The unfold staging reads as a vertical cascade here: the panel surface
+   rises with the same one-shot keyframe as its staggered families. Only ever
+   triggered by .is-unfolding (the expand toggle) — never on mount. */
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern.is-unfolding
+  .nle-toolbar-panel {
+  animation: nle-toolbar-unfold var(--nle-motion-enter, 180ms)
+    var(--nle-ease-out, cubic-bezier(0.05, 0.7, 0.1, 1)) backwards;
+}
+
+/* Panel families read as menu sections: full-width rows, labels restored
+   (they out-specify the .is-compact label hiding). */
+.nle-toolbar-shell[data-position="left"]
+  .nle-toolbar-panel
+  .toolbar-section-group {
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .dropdown-label {
+  display: inline;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .toolbar-dropdown {
+  display: block;
+  width: 100%;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .dropdown-trigger {
+  width: 100%;
+  justify-content: flex-start;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .dropdown-arrow {
+  margin-left: auto;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .toolbar-divider {
+  width: auto;
+  align-self: stretch;
+  height: 1px;
+  margin: 4px 2px;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .export-section {
+  display: flex;
+}
+
+/* Rail dropdowns (Format — and Align once expanded) fly out to the RIGHT of
+   their trigger; a drop-down would run off the rail. Panel dropdowns open
+   below their trigger inside the panel's scroll box (see the overflow note
+   above). Both out-specify the export section's right-anchor. */
+.nle-toolbar-shell[data-position="left"] .editor-toolbar-modern .dropdown-menu {
+  top: 0;
+  left: calc(100% + 4px);
+  right: auto;
+}
+.nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .dropdown-menu {
+  top: calc(100% + 4px);
+  left: 0;
+  right: auto;
+}
+
+/* Rail tooltips flip to the RIGHT of the control: dropping down would overlap
+   the next button, and a centered bubble would clip at the editor's left
+   edge. Inside the panel the labels are visible and a tooltip would clip
+   against the panel's scroll box, so they're suppressed there. */
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  [data-tooltip]::after {
+  top: 50%;
+  bottom: auto;
+  left: calc(100% + 10px);
+  right: auto;
+  transform: translateY(-50%);
+}
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  [data-tooltip]:hover::after {
+  transform: translateY(-50%);
+}
+.nle-toolbar-shell[data-position="left"]
+  .editor-toolbar-modern
+  [data-tooltip]::before {
+  top: 50%;
+  bottom: auto;
+  left: calc(100% + 4px);
+  right: auto;
+  transform: translateY(-50%);
+  border-color: transparent;
+  border-right-color: var(--tooltip-bg);
+}
+.nle-toolbar-shell[data-position="left"]
+  .nle-toolbar-panel
+  [data-tooltip]::after,
+.nle-toolbar-shell[data-position="left"]
+  .nle-toolbar-panel
+  [data-tooltip]::before {
+  display: none;
+}
+
+/* ---------------- Baseline — data-position="bottom" ---------------- */
+
+/* The host owns the dock's placement (order flip + sticky bottom on the
+   shell); these values are a belt-and-suspenders mirror so a bare shell
+   attribute behaves too. */
+.nle-toolbar-shell[data-position="bottom"] {
+  top: auto;
+  bottom: 0;
+}
+
+/* The masthead hairline moves to the TOP edge; elevation casts upward. */
+.nle-toolbar-shell[data-position="bottom"] .editor-toolbar-modern {
+  border-bottom: none;
+  border-top: 1px solid var(--color-divider);
+}
+.nle-toolbar-shell[data-position="bottom"] .editor-toolbar-modern.is-elevated {
+  border-top-color: transparent;
+}
+.nle-toolbar-shell[data-position="bottom"] .editor-toolbar-modern::after {
+  box-shadow: 0 -8px 18px -10px rgba(15, 23, 42, 0.3),
+    0 -2px 6px -3px rgba(15, 23, 42, 0.16);
+}
+.theme-dark
+  .nle-toolbar-shell[data-position="bottom"]
+  .editor-toolbar-modern::after {
+  box-shadow: 0 -10px 20px -10px rgba(0, 0, 0, 0.6),
+    0 -2px 6px -3px rgba(0, 0, 0, 0.4);
+}
+
+/* Menus open UPWARD — a drop-down would fall past the editor's bottom edge.
+   (The export section's right-anchor is left/right only, so it survives.) */
+.nle-toolbar-shell[data-position="bottom"]
+  .editor-toolbar-modern
+  .dropdown-menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+/* The open/close motion mirrors too: rise from the trigger, settle back. */
+.nle-toolbar-shell[data-position="bottom"] .dropdown-fade-enter-from {
+  transform: translateY(8px);
+}
+.nle-toolbar-shell[data-position="bottom"] .dropdown-fade-leave-to {
+  transform: translateY(4px);
+}
+
+/* Tooltips flip ABOVE the buttons (below would clip at the container's
+   bottom edge); the caret arrow flips with them. */
+.nle-toolbar-shell[data-position="bottom"]
+  .editor-toolbar-modern
+  [data-tooltip]::after {
+  top: auto;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(4px);
+}
+.nle-toolbar-shell[data-position="bottom"]
+  .editor-toolbar-modern
+  [data-tooltip]:hover::after {
+  transform: translateX(-50%) translateY(0);
+}
+.nle-toolbar-shell[data-position="bottom"]
+  .editor-toolbar-modern
+  [data-tooltip]::before {
+  top: auto;
+  bottom: calc(100% + 4px);
+  border-color: transparent;
+  border-top-color: var(--tooltip-bg);
+}
+
+/* Position-variant motion honors reduced-motion like the rest of the
+   staging: states still apply, nothing tweens. */
+@media (prefers-reduced-motion: reduce) {
+  .editor-toolbar-modern.is-unfolding .nle-toolbar-panel {
+    animation: none !important;
   }
 }
 

@@ -31,7 +31,10 @@ describe("useVariables - initial state", () => {
       "document",
       "company",
     ]);
-    expect(categories.value[0]).toMatchObject({ name: "User", icon: "👤" });
+    // Icons are stroke SVGs keyed by category id in the UI — the data layer
+    // carries no emoji.
+    expect(categories.value[0]).toMatchObject({ name: "User" });
+    expect(categories.value[0].icon).toBeUndefined();
   });
 
   it("gives each composable instance an independent variable list", () => {
@@ -360,7 +363,7 @@ describe("useVariables - wrapVariablesInContent", () => {
     )).toBe(true);
   });
 
-  it("does not rewrite the text node currently holding the caret", () => {
+  it("wraps the caret node's completed token and keeps the caret in place", () => {
     const { wrapVariablesInContent } = useVariables();
     editor.textContent = "Hello {{ user.name }}";
     const textNode = editor.firstChild as Text;
@@ -374,12 +377,18 @@ describe("useVariables - wrapVariablesInContent", () => {
 
     wrapVariablesInContent(editor);
 
-    expect(editor.querySelector(".editor-variable")).toBeNull();
+    // The completed token is wrapped even under the caret...
+    const span = editor.querySelector<HTMLElement>(".editor-variable");
+    expect(span?.dataset.variable).toBe("user.name");
     expect(editor.textContent).toBe("Hello {{ user.name }}");
-    expect(editor.contains(textNode)).toBe(true);
+    // ...and the caret is restored right after the pill, not at doc start.
+    const restored = window.getSelection()!.getRangeAt(0);
+    expect(restored.collapsed).toBe(true);
+    expect(restored.startContainer).toBe(editor);
+    expect(restored.startOffset).toBe(2);
   });
 
-  it("wraps a token in a different node while skipping the caret node", () => {
+  it("wraps tokens in both the caret node and other nodes in one pass", () => {
     const { wrapVariablesInContent } = useVariables();
     const caretPara = document.createElement("p");
     caretPara.textContent = "typing {{ user.name }}";
@@ -398,11 +407,13 @@ describe("useVariables - wrapVariablesInContent", () => {
 
     wrapVariablesInContent(editor);
 
-    // The caret paragraph is left as raw text.
-    expect(caretPara.querySelector(".editor-variable")).toBeNull();
-    // The other paragraph gets its token wrapped.
+    const caretSpan = caretPara.querySelector<HTMLElement>(".editor-variable");
+    expect(caretSpan?.dataset.variable).toBe("user.name");
     const otherSpan = otherPara.querySelector<HTMLElement>(".editor-variable");
     expect(otherSpan?.dataset.variable).toBe("user.email");
+    // The caret stays inside its paragraph (after the new pill).
+    const restored = window.getSelection()!.getRangeAt(0);
+    expect(caretPara.contains(restored.startContainer)).toBe(true);
   });
 });
 

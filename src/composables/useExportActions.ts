@@ -9,11 +9,13 @@ import {
 
 interface ExportActionsOptions {
   editorContent: Ref<HTMLElement | null>;
-  htmlContent: Ref<string>;
+  /** Kept for call-site compatibility; no current action writes it. */
+  htmlContent?: Ref<string>;
   codeContent: Ref<string>;
   showToast: (message: string, type?: "success" | "error") => void;
   updateCodeContent: (content: string) => void;
-  captureSnapshot: () => void;
+  /** Kept for call-site compatibility; no current action snapshots. */
+  captureSnapshot?: () => void;
 }
 
 /**
@@ -21,14 +23,7 @@ interface ExportActionsOptions {
  * Provides export to various formats: HTML, Markdown, PDF, Word
  */
 export function useExportActions(options: ExportActionsOptions) {
-  const {
-    editorContent,
-    htmlContent,
-    codeContent,
-    showToast,
-    updateCodeContent,
-    captureSnapshot,
-  } = options;
+  const { editorContent, codeContent, showToast, updateCodeContent } = options;
 
   /**
    * Export content as HTML file
@@ -111,16 +106,9 @@ export function useExportActions(options: ExportActionsOptions) {
     showToast("✓ HTML formatted successfully!");
   };
 
-  /**
-   * Format HTML content in the editor (prettify)
-   */
-  const handleFormatHtml = () => {
-    if (!editorContent.value) return;
-    const formatted = formatHtml(editorContent.value.innerHTML);
-    editorContent.value.innerHTML = formatted;
-    htmlContent.value = formatted;
-    captureSnapshot();
-  };
+  // (The old handleFormatHtml — which rewrote the hidden WYSIWYG div instead
+  // of the code textarea — was removed when the Format HTML button was wired
+  // to formatHtmlCode above; it had no remaining callers.)
 
   return {
     exportHtml,
@@ -128,7 +116,6 @@ export function useExportActions(options: ExportActionsOptions) {
     exportPdf,
     exportWord,
     formatHtmlCode,
-    handleFormatHtml,
     // Aliases for backwards compatibility
     handleExportHtml: exportHtml,
     handleExportMarkdown: exportMarkdown,

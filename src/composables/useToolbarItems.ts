@@ -1,5 +1,6 @@
 import { computed, type Ref } from "vue";
 import { indentListItem, outdentListItem } from "../utils/formatting";
+import { selectionTick } from "./useActiveStates";
 
 /** Block-level tags that carry text alignment. */
 const ALIGNABLE_BLOCK_TAGS = new Set([
@@ -214,6 +215,12 @@ interface ToolbarItemsOptions {
   spellCheckEnabled: Ref<boolean>;
   captureSnapshot: () => void;
   toggleHistoryTimeline: () => void;
+  /**
+   * Opens the keyboard-shortcuts help modal. Optional so hosts that don't
+   * render ShortcutHelpModal can omit it — the Tools item only appears when
+   * a handler is provided.
+   */
+  openShortcutHelpModal?: () => void;
 }
 
 /**
@@ -256,6 +263,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     spellCheckEnabled,
     captureSnapshot,
     toggleHistoryTimeline,
+    openShortcutHelpModal,
   } = options;
 
   const formatDropdownItems = computed(() => [
@@ -328,41 +336,55 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     },
   ]);
 
+  // getCaretAlignment/getCaretFontSize read the LIVE DOM selection, which Vue
+  // cannot track. Reading `selectionTick` (bumped by useActiveStates on every
+  // document `selectionchange`) inside each isActive closure makes computeds
+  // that call them — e.g. ToolbarDropdown's hasActiveItem/displayLabel —
+  // re-evaluate as the caret moves, mirroring how isBlockActionActive and
+  // isInlineActionActive gain their reactivity.
+  const caretAlignment = (): ReturnType<typeof getCaretAlignment> => {
+    void selectionTick.value;
+    return getCaretAlignment(editorContent.value);
+  };
+
   const alignmentDropdownItems = computed(() => [
     {
       id: "align-left",
       label: "Align Left",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="15" x2="3" y1="12" y2="12"/><line x1="17" x2="3" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("left"),
-      isActive: () => getCaretAlignment(editorContent.value) === "left",
+      isActive: () => caretAlignment() === "left",
     },
     {
       id: "align-center",
       label: "Center",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="17" x2="7" y1="12" y2="12"/><line x1="19" x2="5" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("center"),
-      isActive: () => getCaretAlignment(editorContent.value) === "center",
+      isActive: () => caretAlignment() === "center",
     },
     {
       id: "align-right",
       label: "Align Right",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="21" x2="9" y1="12" y2="12"/><line x1="21" x2="7" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("right"),
-      isActive: () => getCaretAlignment(editorContent.value) === "right",
+      isActive: () => caretAlignment() === "right",
     },
     {
       id: "align-justify",
       label: "Justify",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>',
       onClick: () => handleTextAlignment("justify"),
-      isActive: () => getCaretAlignment(editorContent.value) === "justify",
+      isActive: () => caretAlignment() === "justify",
     },
   ]);
 
   // Prefer the caret's actual font size, falling back to the last applied
-  // value when the caret is not inside a sized span (#19/#24).
-  const activeFontSize = () =>
-    getCaretFontSize(editorContent.value) ?? fontSize.value;
+  // value when the caret is not inside a sized span (#19/#24). Touches
+  // `selectionTick` so callers re-evaluate as the caret moves (see above).
+  const activeFontSize = () => {
+    void selectionTick.value;
+    return getCaretFontSize(editorContent.value) ?? fontSize.value;
+  };
 
   const fontSizeDropdownItems = computed(() => [
     {
@@ -567,7 +589,13 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       label: "Paste Format",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg>',
       onClick: handlePasteFormat,
-      disabled: !hasFormatCopied(),
+      // Lazily evaluated on each property read (i.e. every menu render) so it
+      // tracks the format painter's module-level state — copying a format
+      // doesn't touch any reactive dependency, so a plain boolean captured
+      // when this computed ran would stay stale forever.
+      get disabled() {
+        return !hasFormatCopied();
+      },
     },
     { divider: true },
     {
@@ -595,6 +623,18 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>',
       onClick: toggleHistoryTimeline,
     },
+    // Keyboard-shortcuts help — only offered when the host wires a handler
+    // (the modal itself is rendered by the host's modals container).
+    ...(openShortcutHelpModal
+      ? [
+          {
+            id: "keyboard-shortcuts",
+            label: "Keyboard Shortcuts",
+            icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M6 12h.01"/><path d="M10 12h.01"/><path d="M14 12h.01"/><path d="M18 12h.01"/><path d="M7 16h10"/></svg>',
+            onClick: openShortcutHelpModal,
+          },
+        ]
+      : []),
   ]);
 
   return {

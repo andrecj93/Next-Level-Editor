@@ -22,6 +22,15 @@ export interface UseFloatingToolbarOptions {
   isAddingComment?: Ref<boolean>;
   onAddComment?: () => void;
   enableComments?: boolean;
+  /**
+   * The root element of THIS editor instance. The selection toolbar (the
+   * bubble over selected text) must only appear for selections inside its own
+   * editor: every instance listens to the document-level `selectionchange`,
+   * so without this ownership check a page with several editors (e.g. the
+   * demo home page) shows one stacked bubble per instance for a single
+   * selection.
+   */
+  editorRoot?: Ref<HTMLElement | null>;
 }
 
 /**
@@ -70,6 +79,27 @@ export function useFloatingToolbar(options?: UseFloatingToolbarOptions) {
     if (floatingToolbarTimer.value) {
       clearTimeout(floatingToolbarTimer.value);
       floatingToolbarTimer.value = null;
+    }
+
+    // Ownership: only react to selections inside THIS editor instance.
+    // selectionchange is document-global, so without this check every mounted
+    // editor shows its own bubble for the same selection (stacked duplicates
+    // on multi-editor pages), and selections outside any editor trigger all
+    // of them.
+    if (options?.editorRoot) {
+      const root = options.editorRoot.value;
+      const anchor = selection?.anchorNode ?? null;
+      const focus = selection?.focusNode ?? null;
+      if (
+        !root ||
+        !anchor ||
+        !focus ||
+        !root.contains(anchor) ||
+        !root.contains(focus)
+      ) {
+        showFloatingToolbar.value = false;
+        return;
+      }
     }
 
     // Check if we have a valid text selection

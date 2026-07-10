@@ -35,10 +35,11 @@ interface Ctx {
   options: EditorComputedOptions;
 }
 
-// Fresh reactive inputs + spy collaborators for one test. `modelValue`, `width`
-// and `height` are PLAIN values (that is how the real caller passes them —
-// NextLevelEditor.vue: `modelValue: props.modelValue`), so they are fixed at
-// construction; the refs are what tests mutate afterwards.
+// Fresh reactive inputs + spy collaborators for one test. `modelValue`,
+// `width` and `height` are REFS on this branch — the real caller passes
+// `toRef(props, "width")` etc. so that editorStyles recomputes when the host
+// changes them (the old plain-value signature froze them at construction,
+// which was the "Height field does nothing" bug).
 const makeCtx = (
   plain: { modelValue?: string; width?: string; height?: string } = {}
 ): Ctx => {
@@ -51,9 +52,9 @@ const makeCtx = (
   const triggerAutoSave = vi.fn();
   const options: EditorComputedOptions = {
     theme,
-    width: plain.width,
-    height: plain.height,
-    modelValue: plain.modelValue ?? "",
+    width: ref(plain.width),
+    height: ref(plain.height),
+    modelValue: ref(plain.modelValue ?? ""),
     editorContent,
     htmlContent,
     isApplyingHistory,

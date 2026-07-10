@@ -457,6 +457,33 @@ describe("ModalsContainer", () => {
       expect(wrapper.emitted("delete-table")).toBeTruthy();
     });
 
+    it("should emit close-emoji-picker when the emoji overlay backdrop is clicked", async () => {
+      const wrapper = mount(ModalsContainer, {
+        props: {
+          ...defaultProps,
+          showEmojiPicker: true,
+        },
+      });
+
+      await wrapper.get(".emoji-picker-overlay").trigger("click");
+
+      expect(wrapper.emitted("close-emoji-picker")).toHaveLength(1);
+    });
+
+    it("should not emit close-emoji-picker when the click lands inside the picker", async () => {
+      const wrapper = mount(ModalsContainer, {
+        props: {
+          ...defaultProps,
+          showEmojiPicker: true,
+        },
+      });
+
+      // @click.self: a click bubbling up from the picker must not dismiss it.
+      await wrapper.get(".mock-emoji-picker").trigger("click");
+
+      expect(wrapper.emitted("close-emoji-picker")).toBeUndefined();
+    });
+
     it("should emit emoji picker events", async () => {
       const wrapper = mount(ModalsContainer, {
         props: {

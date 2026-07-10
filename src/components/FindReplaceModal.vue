@@ -8,9 +8,16 @@
         :class="theme"
         @click="handleOverlayClick"
       >
-        <div class="modal-content find-replace-modal" @click.stop>
+        <div
+          ref="modalContent"
+          class="modal-content find-replace-modal"
+          role="dialog"
+          aria-labelledby="find-replace-modal-title"
+          aria-modal="true"
+          @click.stop
+        >
           <div class="modal-header">
-            <h3>Find & Replace</h3>
+            <h3 id="find-replace-modal-title">Find & Replace</h3>
             <button class="close-btn" aria-label="Close modal" @click="close">
               ✕
             </button>
@@ -27,7 +34,6 @@
                 class="text-input"
                 placeholder="Search text..."
                 @keydown.enter="findNext"
-                @keydown.esc="close"
               />
               <div class="search-info">
                 <span v-if="matches > 0"
@@ -48,7 +54,6 @@
                 class="text-input"
                 placeholder="Replacement text..."
                 @keydown.enter="replaceOne"
-                @keydown.esc="close"
               />
             </div>
 
@@ -106,7 +111,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onUnmounted } from "vue";
+import { ref, watch, onMounted, onBeforeUnmount } from "vue";
+import { useModalDialog } from "../composables/useModalDialog";
 
 interface Props {
   show: boolean;
@@ -133,6 +139,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const findInput = ref<HTMLInputElement | null>(null);
+const modalContent = ref<HTMLElement | null>(null);
 const findText = ref("");
 const replaceText = ref("");
 const caseSensitive = ref(false);
@@ -227,21 +234,16 @@ watch([findText, caseSensitive, wholeWord, () => props.content], () => {
   updateMatches();
 });
 
-watch(
-  () => props.show,
-  (newShow) => {
-    if (newShow) {
-      nextTick(() => {
-        findInput.value?.focus();
-      });
-    }
-  }
-);
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.show,
+  container: modalContent,
+  onClose: close,
+  initialFocus: () => findInput.value,
+});
 
-// Handle Ctrl+F shortcut globally. Declared at setup scope so onUnmounted can
-// remove it — a cleanup function returned from onMounted is ignored by Vue, so
-// the listener previously leaked one handler per unmount.
-const handleKeydown = (e: KeyboardEvent) => {
+// Handle Ctrl+F while the dialog is open: refocus and select the search box.
+const handleGlobalKeydown = (e: KeyboardEvent) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "f" && props.show) {
     e.preventDefault();
     findInput.value?.focus();
@@ -250,17 +252,22 @@ const handleKeydown = (e: KeyboardEvent) => {
 };
 
 onMounted(() => {
-  window.addEventListener("keydown", handleKeydown);
+  window.addEventListener("keydown", handleGlobalKeydown);
 });
 
-onUnmounted(() => {
-  window.removeEventListener("keydown", handleKeydown);
+// (The previous version returned a cleanup function from onMounted, which
+// Vue ignores — the listener leaked across unmounts. Both lines fixed this
+// independently; Escape/focus-trap live in the shared useModalDialog.)
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleGlobalKeydown);
 });
 </script>
 
 <style scoped>
 .find-replace-modal {
-  min-width: 500px;
+  /* Cap the floor to the viewport (overlay has 20px padding per side) so the
+     dialog stays fully reachable on narrow/mobile screens. */
+  min-width: min(500px, calc(100vw - 40px));
   max-width: 600px;
 }
 
@@ -275,7 +282,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10050; /* above floating panels/FABs (9998-9999) */
   padding: 20px;
 }
 
@@ -395,6 +402,9 @@ onUnmounted(() => {
 .modal-footer {
   display: flex;
   justify-content: space-between;
+  /* Let the button groups stack instead of forcing the dialog wider than
+     narrow/mobile viewports (the buttons are white-space: nowrap). */
+  flex-wrap: wrap;
   padding: 16px 24px;
   border-top: 1px solid var(--color-border);
   gap: 12px;
@@ -402,6 +412,7 @@ onUnmounted(() => {
 
 .btn-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 

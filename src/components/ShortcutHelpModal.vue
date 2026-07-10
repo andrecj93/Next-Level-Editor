@@ -4,10 +4,16 @@
     class="shortcut-help-overlay"
     @click.self="close"
   >
-    <div class="shortcut-help-modal">
+    <div
+      ref="modalContent"
+      class="shortcut-help-modal"
+      role="dialog"
+      aria-labelledby="shortcut-help-modal-title"
+      aria-modal="true"
+    >
       <!-- Header -->
       <div class="modal-header">
-        <h2>⌨️ Keyboard Shortcuts Reference</h2>
+        <h2 id="shortcut-help-modal-title">⌨️ Keyboard Shortcuts Reference</h2>
         <button
           class="close-button"
           aria-label="Close"
@@ -20,6 +26,7 @@
       <!-- Quick Search -->
       <div class="search-bar">
         <input
+          ref="searchInput"
           v-model="searchQuery"
           type="text"
           placeholder="Search shortcuts..."
@@ -84,6 +91,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { useModalDialog } from "../composables/useModalDialog";
 
 interface Props {
   isOpen: boolean;
@@ -98,6 +106,16 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 const searchQuery = ref("");
+const modalContent = ref<HTMLElement | null>(null);
+const searchInput = ref<HTMLInputElement | null>(null);
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.isOpen,
+  container: modalContent,
+  onClose: () => emit("close"),
+  initialFocus: () => searchInput.value,
+});
 
 // Get categories and shortcuts
 const categories = computed(() => props.registry.getAllCategories());

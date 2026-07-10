@@ -1,13 +1,20 @@
 <template>
   <div :class="['editor-container', `view-mode-${viewMode}`]">
     <!-- WYSIWYG Editor Panel (editor mode) -->
+    <!--
+      @compositionend re-emits as 'input': the host's onInput skips mutating
+      passes while event.isComposing (IME safety), so it needs one deferred
+      run once the composition commits — a compositionend event carries no
+      isComposing=true flag, letting it through the host guard.
+    -->
     <div v-if="viewMode === 'editor'" class="editor-panel">
       <div
         ref="editorRef"
         class="editor-content"
-        contenteditable="true"
+        :contenteditable="editable ? 'true' : 'false'"
         :placeholder="placeholder"
         @input="$emit('input', $event)"
+        @compositionend="$emit('input', $event)"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
         @mouseup="$emit('mouseup', $event)"
@@ -25,6 +32,7 @@
         ref="codeEditorRef"
         class="code-editor"
         :value="codeContent"
+        :readonly="!editable"
         spellcheck="false"
         @input="$emit('code-input', $event)"
         @blur="$emit('code-blur', $event)"
@@ -34,10 +42,11 @@
       <div
         ref="editorRef"
         class="editor-content"
-        contenteditable="true"
+        :contenteditable="editable ? 'true' : 'false'"
         :placeholder="placeholder"
         style="display: none"
         @input="$emit('input', $event)"
+        @compositionend="$emit('input', $event)"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
         @mouseup="$emit('mouseup', $event)"
@@ -103,6 +112,7 @@
           contenteditable="true"
           :placeholder="placeholder"
           @input="$emit('split-editor-input', $event)"
+          @compositionend="$emit('split-editor-input', $event)"
           @blur="$emit('blur', $event)"
           @focus="$emit('focus', $event)"
           @mouseup="$emit('mouseup', $event)"
@@ -134,6 +144,8 @@ interface Props {
   codeContent?: string;
   htmlContent?: string;
   splitRightMode?: "preview" | "editor";
+  /** When false, the editing surfaces are contenteditable=false / readonly. */
+  editable?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -141,6 +153,7 @@ withDefaults(defineProps<Props>(), {
   codeContent: "",
   htmlContent: "",
   splitRightMode: "preview",
+  editable: true,
 });
 
 defineEmits<{

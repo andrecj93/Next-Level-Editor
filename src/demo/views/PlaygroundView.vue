@@ -1,10 +1,10 @@
 <template>
   <div class="playground">
     <div class="container container-wide">
-      <header class="pg-head">
+      <header class="pg-head ruled">
         <div>
-          <span class="eyebrow">Playground</span>
-          <h1 class="h-section">Try every feature, live</h1>
+          <span class="eyebrow"><Icon name="bolt" :size="15" /> Playground</span>
+          <h1 class="h-display pg-title">Try every feature, <span class="ink is-in">live.</span></h1>
           <p class="lede">
             A fully-configured editor — formatting, tables, slash commands, comments,
             variables, export and more. Load a template or start from scratch.
@@ -32,7 +32,7 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" /></svg>
           Configure
         </button>
-        <a class="btn btn-ghost btn-sm" href="https://github.com/andrecj93/next-level-editor" target="_blank" rel="noopener">Star ⭐</a>
+        <a class="btn btn-ghost btn-sm" href="https://github.com/andrecj93/next-level-editor" target="_blank" rel="noopener"><Icon name="star" :size="15" /> Star</a>
       </div>
 
       <!-- Config panel -->
@@ -54,8 +54,47 @@
               <span class="toggle-track"><span class="toggle-thumb" /></span>
               <span class="toggle-text"><strong>Variables</strong><small><span v-pre>{{ mustache }}</span> template tokens</small></span>
             </label>
+            <label class="toggle">
+              <input v-model="editorConfig.readonly" type="checkbox">
+              <span class="toggle-track"><span class="toggle-thumb" /></span>
+              <span class="toggle-text"><strong>Read-only</strong><small>Viewer mode — no editing or toolbars</small></span>
+            </label>
+            <label class="toggle">
+              <input v-model="editorConfig.showToolbar" type="checkbox">
+              <span class="toggle-track"><span class="toggle-thumb" /></span>
+              <span class="toggle-text"><strong>Main toolbar</strong><small>Hide for a headless editor</small></span>
+            </label>
+            <label class="toggle">
+              <input v-model="editorConfig.autofocus" type="checkbox">
+              <span class="toggle-track"><span class="toggle-thumb" /></span>
+              <span class="toggle-text"><strong>Autofocus</strong><small>Focus the editor on load</small></span>
+            </label>
           </div>
           <div class="cfg-row">
+            <div class="cfg-field">
+              <label>While writing</label>
+              <select v-model="editorConfig.adaptiveChrome" class="select">
+                <option value="letterbox">Letterbox band</option>
+                <option value="recede">Recede</option>
+                <option value="off">Keep toolbar</option>
+              </select>
+            </div>
+            <div class="cfg-field">
+              <label>Toolbar position</label>
+              <select v-model="editorConfig.toolbarPosition" class="select">
+                <option value="top">Top (masthead)</option>
+                <option value="left">Left rail</option>
+                <option value="bottom">Bottom dock</option>
+                <option value="zen">Zen (band only)</option>
+              </select>
+            </div>
+            <div class="cfg-field">
+              <label>Toolbar form</label>
+              <select v-model="editorConfig.toolbarMode" class="select">
+                <option value="bar">Bar (docked)</option>
+                <option value="pill">Pill (Playhead)</option>
+              </select>
+            </div>
             <div class="cfg-field">
               <label>Height</label>
               <input v-model="editorConfig.height" type="number" min="300" max="1200" class="num"> px
@@ -103,7 +142,7 @@
       </div>
 
       <!-- Editor -->
-      <div class="pg-editor">
+      <EditorSheet filename="playground.vue" badge="live" class="pg-editor">
         <NextLevelEditor
           v-model="content"
           width="100%"
@@ -111,6 +150,13 @@
           :placeholder="editorConfig.placeholder"
           :theme-preset="editorConfig.themePreset"
           :toolbar-layout="editorConfig.toolbarLayout"
+          :readonly="editorConfig.readonly"
+          :show-toolbar="editorConfig.showToolbar"
+          :default-view-mode="editorConfig.defaultViewMode"
+          :autofocus="editorConfig.autofocus"
+          :adaptive-chrome="editorConfig.adaptiveChrome"
+          :toolbar-position="editorConfig.toolbarPosition"
+          :toolbar-mode="editorConfig.toolbarMode"
           :show-writing-stats="editorConfig.showWritingStats"
           :enable-comments="editorConfig.enableComments"
           :enable-variables="editorConfig.enableVariables"
@@ -118,7 +164,7 @@
           @focus="handleFocus"
           @blur="handleBlur"
         />
-      </div>
+      </EditorSheet>
 
       <!-- Output -->
       <div class="pg-output card">
@@ -140,11 +186,14 @@
 import { ref, computed } from "vue";
 import NextLevelEditor from "../../components/NextLevelEditor.vue";
 import { AVAILABLE_THEMES } from "../../composables/useEditorThemes";
+import Icon from "../components/Icon.vue";
+import EditorSheet from "../components/EditorSheet.vue";
 import {
   getAllTemplates,
   getTemplateById,
   getDefaultTemplate,
 } from "../examples/exampleTemplates";
+import { demoMentionSearch } from "../examples/demoTeam";
 
 const templates = getAllTemplates();
 const editorThemes = AVAILABLE_THEMES;
@@ -160,14 +209,35 @@ const urlParams = new URLSearchParams(window.location.search);
 const startEmpty = urlParams.get("empty") === "true";
 const content = ref(startEmpty ? "" : getDefaultTemplate().content);
 
-const editorConfig = ref({
+type ViewMode = "editor" | "code" | "split" | "preview";
+const DEFAULT_CONFIG = {
   height: "620",
-  themePreset: "default",
+  themePreset: "warm",
   toolbarLayout: "comfortable" as "comfortable" | "compact",
+  adaptiveChrome: "letterbox" as "letterbox" | "recede" | "off",
+  toolbarPosition: "top" as "top" | "left" | "bottom" | "zen",
+  toolbarMode: "bar" as "bar" | "pill",
   showWritingStats: true,
   enableComments: true,
   enableVariables: true,
+  readonly: false,
+  showToolbar: true,
+  defaultViewMode: "editor" as ViewMode,
+  autofocus: false,
   placeholder: "Start typing your content here… Try typing / for quick commands!",
+};
+
+// Deep-link overrides so the docs/e2e can showcase each option directly.
+const editorConfig = ref({
+  ...DEFAULT_CONFIG,
+  readonly: urlParams.get("readonly") === "1",
+  showToolbar: urlParams.get("hideToolbar") !== "1",
+  autofocus: urlParams.get("autofocus") === "1",
+  defaultViewMode: (["editor", "code", "split", "preview"].includes(
+    urlParams.get("editorView") ?? ""
+  )
+    ? (urlParams.get("editorView") as ViewMode)
+    : "editor") as ViewMode,
 });
 
 const editorHeight = computed(() => `${editorConfig.value.height}px`);
@@ -181,39 +251,19 @@ const loadTemplate = () => {
 };
 
 const resetConfig = () => {
-  editorConfig.value = {
-    height: "620",
-    themePreset: "default",
-    toolbarLayout: "comfortable",
-    showWritingStats: true,
-    enableComments: true,
-    enableVariables: true,
-    placeholder: "Start typing your content here… Try typing / for quick commands!",
-  };
+  editorConfig.value = { ...DEFAULT_CONFIG };
 };
 
 const handleFocus = () => {};
 const handleBlur = () => {};
-
-// Demo @mention provider: a real app would query its user directory.
-const demoTeam = [
-  { id: "u1", name: "Ada Lovelace", email: "ada@example.com" },
-  { id: "u2", name: "Alan Turing", email: "alan@example.com" },
-  { id: "u3", name: "Grace Hopper", email: "grace@example.com" },
-  { id: "u4", name: "Margaret Hamilton", email: "margaret@example.com" },
-];
-const demoMentionSearch = (query: string) => {
-  const q = query.toLowerCase();
-  return demoTeam.filter(
-    (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-  );
-};
 </script>
 
 <style scoped>
-.playground { padding: 40px 0 40px; }
-.pg-head { max-width: 640px; margin-bottom: 28px; }
-.pg-head .h-section { margin: 10px 0 12px; }
+.playground { padding: 48px 0 40px; }
+.pg-head { max-width: 680px; margin-bottom: 30px; }
+.pg-head .eyebrow { display: inline-flex; }
+.pg-title { font-size: clamp(2rem, 4.2vw, 3rem); margin: 12px 0 14px; }
+.pg-editor { margin-bottom: 20px; }
 
 .pg-controls { display: flex; align-items: center; gap: 12px; padding: 14px 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .ctrl-group { display: flex; align-items: center; gap: 10px; }

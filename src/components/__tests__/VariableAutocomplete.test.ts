@@ -228,13 +228,22 @@ describe("VariableAutocomplete", () => {
   });
 
   describe("category icons (per-item)", () => {
-    it("renders each variable's category icon, with a 📝 fallback for unknown categories", () => {
+    it("renders each variable's category as a stroke SVG icon (no emoji in chrome), with a tag fallback for unknown categories", () => {
       const w = mountAC({ query: "" });
-      const icons = w
-        .findAll(".variable-autocomplete-item-icon")
-        .map((n) => n.text());
+      const icons = w.findAll(".variable-autocomplete-item-icon");
       // order follows VARIABLES: user, user, user, date, company, unknown
-      expect(icons).toEqual(["👤", "👤", "👤", "📅", "🏢", "📝"]);
+      expect(icons).toHaveLength(6);
+      const paths = icons.map((n) => n.find("svg path").attributes("d"));
+      // Same category -> same icon path; unknown falls back to the tag icon.
+      expect(paths[0]).toBe(paths[1]);
+      expect(paths[0]).toBe(paths[2]);
+      expect(paths[3]).not.toBe(paths[0]); // date differs from user
+      expect(paths[4]).not.toBe(paths[0]); // company differs from user
+      expect(paths[5]).toMatch(/^M12 2H2/); // DEFAULT_ICON_PATH (tag shape)
+      // And absolutely no emoji anywhere in the item icons.
+      for (const icon of icons) {
+        expect(icon.text()).toBe("");
+      }
     });
   });
 

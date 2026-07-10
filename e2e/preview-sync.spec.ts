@@ -1,9 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { ensureToolbarExpanded, switchViewMode } from "./helpers/toolbar";
 
 test.describe("Preview Synchronization", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/?empty=true");
     await page.waitForSelector(".editor-content");
+    // View-mode buttons live behind the expand toggle in the auto-mini bar.
+    await ensureToolbarExpanded(page);
   });
 
   test("should update preview immediately after slash command", async ({
@@ -16,12 +19,8 @@ test.describe("Preview Synchronization", () => {
     await page.keyboard.press("Delete");
     await page.waitForTimeout(200);
 
-    // Switch to split view
-    const splitButton = page
-      .locator('.view-mode-btn:has-text("Split")')
-      .first();
-    await splitButton.click();
-    await page.waitForTimeout(500);
+    // Switch to split view (inline button, or the ⋯ More item in compact)
+    await switchViewMode(page, "Split");
 
     // In split view, interact with code editor
     const codeEditor = page.locator(".code-editor");
@@ -56,12 +55,8 @@ test.describe("Preview Synchronization", () => {
     await page.keyboard.press("Delete");
     await page.waitForTimeout(200);
 
-    // Switch to split view
-    const splitButton = page
-      .locator('.view-mode-btn:has-text("Split")')
-      .first();
-    await splitButton.click();
-    await page.waitForTimeout(500);
+    // Switch to split view (inline button, or the ⋯ More item in compact)
+    await switchViewMode(page, "Split");
 
     // In split view, interact with code editor
     const codeEditor = page.locator(".code-editor");

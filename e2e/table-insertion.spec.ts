@@ -1,9 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { ensureToolbarExpanded } from "./helpers/toolbar";
 
 test.describe("Table Insertion", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/?empty=true");
     await page.waitForSelector(".editor-content");
+    // On phone widths the toolbar auto-minifies; Insert is behind expand.
+    await ensureToolbarExpanded(page);
   });
 
   test("should show notification when table is inserted", async ({ page }) => {

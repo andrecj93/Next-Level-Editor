@@ -77,6 +77,40 @@ describe('Formatting multi-block behaviour', () => {
       expect(Array.from(paras).map((p) => p.textContent)).toEqual(['A', 'B'])
     })
 
+    it('applies the heading uniformly to a MIXED selection (Word behavior)', () => {
+      // [h1, p, p] + H1 must yield [h1, h1, h1] — the toggle decision is made
+      // once for the whole selection, not per block (which produced the
+      // inverted [p, h1, h1]).
+      root.innerHTML = '<h1>One</h1><p>Two</p><p>Three</p>'
+      const first = root.querySelector('h1')!
+      const last = root.querySelectorAll('p')[1]
+      selectAcrossBlocks(first, last)
+
+      toggleBlock(root, 'h1')
+
+      const headings = root.querySelectorAll('h1')
+      expect(headings.length).toBe(3)
+      expect(root.querySelectorAll('p').length).toBe(0)
+      expect(Array.from(headings).map((h) => h.textContent)).toEqual([
+        'One',
+        'Two',
+        'Three',
+      ])
+    })
+
+    it('toggles OFF to the fallback only when EVERY block matches the target', () => {
+      root.innerHTML = '<h1>A</h1><h1>B</h1>'
+      const headings = root.querySelectorAll('h1')
+      selectAcrossBlocks(headings[0], headings[1])
+
+      toggleBlock(root, 'h1', 'p')
+
+      expect(root.querySelectorAll('h1').length).toBe(0)
+      const paras = root.querySelectorAll('p')
+      expect(paras.length).toBe(2)
+      expect(Array.from(paras).map((p) => p.textContent)).toEqual(['A', 'B'])
+    })
+
     it('reselects the converted blocks', () => {
       root.innerHTML = '<p>One</p><p>Two</p>'
       const paras = root.querySelectorAll('p')

@@ -2,6 +2,7 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
     <div
+      ref="modalContent"
       class="modal-content"
       role="dialog"
       aria-labelledby="modal-title"
@@ -21,6 +22,7 @@
           <label for="image-url">Image URL</label>
           <input
             id="image-url"
+            ref="urlInput"
             v-model="imageUrl"
             type="url"
             placeholder="https://example.com/image.jpg"
@@ -105,6 +107,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { useModalDialog } from "../composables/useModalDialog";
 
 const props = defineProps<{
   isOpen: boolean;
@@ -120,6 +123,8 @@ const altText = ref("");
 const previewUrl = ref("");
 const imageError = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
+const modalContent = ref<HTMLElement | null>(null);
+const urlInput = ref<HTMLInputElement | null>(null);
 
 /**
  * Handle URL input change
@@ -192,6 +197,14 @@ const resetForm = () => {
   }
 };
 
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.isOpen,
+  container: modalContent,
+  onClose: close,
+  initialFocus: () => urlInput.value,
+});
+
 // Reset form when modal opens
 watch(
   () => props.isOpen,
@@ -214,7 +227,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10050; /* above floating panels/FABs (9998-9999) */
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -388,6 +401,14 @@ watch(
   border-radius: 6px;
   font-size: 13px;
   text-align: center;
+}
+
+/* Dark theme (keyed to the editor's .theme-dark root class, like the rest of
+   the editor's dark styles): the hardcoded light-pink #fee/#c33 pair is
+   illegible on dark surfaces. */
+.theme-dark .error-message {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-error-light, #f87171);
 }
 
 .modal-footer {

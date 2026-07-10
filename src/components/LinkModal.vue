@@ -5,6 +5,7 @@
     @click="close"
   >
     <div
+      ref="modalContent"
       class="modal-content"
       role="dialog"
       aria-labelledby="link-modal-title"
@@ -67,7 +68,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch } from "vue";
+import { useModalDialog } from "../composables/useModalDialog";
 
 const props = defineProps<{ isOpen: boolean }>();
 
@@ -79,6 +81,7 @@ const emit = defineEmits<{
 const url = ref("");
 const text = ref("");
 const urlInput = ref<HTMLInputElement | null>(null);
+const modalContent = ref<HTMLElement | null>(null);
 
 const isValid = computed(() => url.value.trim().length > 0);
 
@@ -90,7 +93,8 @@ const submit = () => {
     ? raw
     : `https://${raw}`;
   emit("insert", normalized, text.value.trim());
-  reset();
+  // Self-close after a successful insert, like the other insert modals.
+  close();
 };
 
 const reset = () => {
@@ -103,13 +107,20 @@ const close = () => {
   reset();
 };
 
+// Escape-to-close, Tab trap, initial focus, and focus restore
+// (WAI-ARIA dialog pattern) — shared with every other modal.
+useModalDialog({
+  isOpen: () => props.isOpen,
+  container: modalContent,
+  onClose: close,
+  initialFocus: () => urlInput.value,
+});
+
+// Start from a clean form each time the dialog opens.
 watch(
   () => props.isOpen,
   (open) => {
-    if (open) {
-      reset();
-      nextTick(() => urlInput.value?.focus());
-    }
+    if (open) reset();
   }
 );
 </script>
@@ -122,7 +133,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10050; /* above floating panels/FABs (9998-9999) */
   animation: link-modal-fade 0.18s ease-out;
 }
 

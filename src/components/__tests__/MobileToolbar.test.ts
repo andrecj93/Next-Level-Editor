@@ -52,8 +52,6 @@ const formatBtn = (w: ReturnType<typeof mountToolbar>, label: string) =>
   w.get(`#panel-format [aria-label="${label}"]`);
 const insertBtn = (w: ReturnType<typeof mountToolbar>, label: string) =>
   w.get(`#panel-insert [aria-label="${label}"]`);
-const moreBtn = (w: ReturnType<typeof mountToolbar>, label: string) =>
-  w.get(`#panel-more [aria-label="${label}"]`);
 
 describe("MobileToolbar", () => {
   describe("visibility gate", () => {
@@ -327,6 +325,9 @@ describe("MobileToolbar", () => {
       const labels = w
         .findAll("#panel-blocks .block-button")
         .map((b) => b.attributes("aria-label"));
+      // "Convert to Checklist" is intentionally absent: the editor has no
+      // checklist command yet, so the button was a silent no-op (see the
+      // NOTE in MobileToolbar.vue's block actions).
       expect(labels).toEqual([
         "Convert to Paragraph",
         "Convert to Heading 1",
@@ -334,7 +335,6 @@ describe("MobileToolbar", () => {
         "Convert to Heading 3",
         "Convert to Bullet List",
         "Convert to Numbered List",
-        "Convert to Checklist",
         "Convert to Quote",
         "Convert to Code Block",
       ]);
@@ -354,7 +354,6 @@ describe("MobileToolbar", () => {
         ["h3"],
         ["bullet-list"],
         ["numbered-list"],
-        ["checklist"],
         ["blockquote"],
         ["code-block"],
       ]);
@@ -369,40 +368,27 @@ describe("MobileToolbar", () => {
       const labels = w
         .findAll("#panel-more .more-button")
         .map((b) => b.attributes("aria-label"));
-      expect(labels).toEqual([
-        "Undo",
-        "Redo",
-        "Find & Replace",
-        "Keyboard Shortcuts",
-        "Export",
-        "Settings",
-      ]);
+      // "Keyboard Shortcuts", "Export" and "Settings" are intentionally
+      // absent: NextLevelEditor's handleMobileAction has no handlers for
+      // them yet, so the buttons silently did nothing (see the NOTE in
+      // MobileToolbar.vue's more actions).
+      expect(labels).toEqual(["Undo", "Redo", "Find & Replace"]);
 
       for (const btn of w.findAll("#panel-more .more-button")) {
         await btn.trigger("click");
       }
-      expect(w.emitted("action")).toEqual([
-        ["undo"],
-        ["redo"],
-        ["find"],
-        ["shortcuts"],
-        ["export"],
-        ["settings"],
-      ]);
+      expect(w.emitted("action")).toEqual([["undo"], ["redo"], ["find"]]);
       w.unmount();
     });
 
-    it("renders the 'New' badge only on the Export action", async () => {
+    it("renders no 'New' badge (the badged Export button was a dead action)", async () => {
       const w = mountToolbar();
       await w.findAll(".toolbar-tab")[3].trigger("click");
 
-      const badges = w.findAll("#panel-more .more-badge");
-      expect(badges).toHaveLength(1);
-      expect(badges[0].text()).toBe("New");
-
-      // The badge belongs to the Export button.
-      expect(moreBtn(w, "Export").find(".more-badge").exists()).toBe(true);
-      expect(moreBtn(w, "Undo").find(".more-badge").exists()).toBe(false);
+      // The old Export action carried a "New" badge while doing nothing at
+      // all on click — the whole button was removed with the other dead
+      // overflow actions, so no badge remains.
+      expect(w.findAll("#panel-more .more-badge")).toHaveLength(0);
       w.unmount();
     });
   });

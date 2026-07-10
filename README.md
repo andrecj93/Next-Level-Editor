@@ -234,7 +234,7 @@ We test on **8 configurations** using Playwright:
 <script setup lang="ts">
 import { ref } from "vue";
 import { NextLevelEditor } from "next-level-editor";
-import "next-level-editor/dist/style.css";
+import "next-level-editor/style.css";
 
 const content = ref("<p>Hello World!</p>");
 
@@ -278,7 +278,7 @@ For apps that use the editor throughout:
 import { createApp } from "vue";
 import App from "./App.vue";
 import NextLevelEditor from "next-level-editor";
-import "next-level-editor/dist/style.css";
+import "next-level-editor/style.css";
 
 const app = createApp(App);
 app.use(NextLevelEditor);
@@ -412,8 +412,19 @@ announce("Document saved", "polite");
 | `placeholder`      | `string`  | `'Start typing...'` | Placeholder text when editor is empty                        |
 | `width`            | `string`  | `undefined`         | Custom width for the editor (e.g., '800px', '100%', '50rem') |
 | `height`           | `string`  | `undefined`         | Custom height for the editor (e.g., '500px', '80vh', '30em') |
+| `themePreset`      | `string`  | `'default'`         | Whole-editor theme: `default` \| `classic` \| `minimal` \| `midnight` \| `warm` |
+| `toolbarLayout`    | `string`  | `'comfortable'`     | Toolbar density: `comfortable` (labelled) \| `compact` (mini bar + expand toggle). Below 640px the toolbar auto-compacts to the mini bar regardless |
+| `adaptiveChrome`   | `string`  | `'letterbox'`       | What the toolbar does while you write: `letterbox` (buttons dissolve into an ambient band — block format, position filament, save pulse, word count) \| `recede` (toolbar fades to a whisper) \| `off`. Returns instantly on pointer/Escape/toolbar focus; desktop-only; honors reduced motion |
+| `toolbarPosition`  | `string`  | `'top'`             | Where the toolbar lives: `top` \| `left` (slim margin rail) \| `bottom` (dock, menus open upward) \| `zen` (no persistent toolbar — the ambient band is the only chrome; intent peeks the full bar). All fall back to `top` below 640px |
+| `toolbarMode`      | `string`  | `'bar'`             | The toolbar's form: `bar` (docked masthead) \| `pill` (Playhead — one floating glass capsule that contracts while you write, expands on intent and travels to your selection to become the formatting bubble). Falls back to `bar` below 640px |
+| `readonly`         | `boolean` | `false`             | Viewer mode — content shown & selectable, not editable; toolbars hidden |
+| `showToolbar`      | `boolean` | `true`              | Show the main toolbar; set `false` for a headless editor     |
+| `defaultViewMode`  | `string`  | `'editor'`          | Initial view: `editor` \| `code` \| `split` \| `preview`     |
+| `autofocus`        | `boolean` | `false`             | Focus the editing surface on mount                           |
 | `showWritingStats` | `boolean` | `false`             | Enable Writing Assistant & Analytics panel                   |
 | `enableComments`   | `boolean` | `false`             | Enable Comments & Collaboration system                       |
+| `enableVariables`  | `boolean` | `false`             | Enable `{{ variable }}` template tokens                      |
+| `mentionSearch`    | `fn`      | `undefined`         | Async provider for @mention suggestions                      |
 
 ### Events
 
@@ -628,7 +639,7 @@ npm run test:e2e:debug
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.es.js` (~224 KB total with chunks, 61 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs` (~224 KB total with chunks, 61 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Lazy-loaded chunks for optimal performance
   - Recommended for Vite, Webpack 5+, Rollup

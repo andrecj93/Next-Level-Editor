@@ -1,9 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { ensureToolbarExpanded } from "./helpers/toolbar";
 
 test.describe("Color Picker", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/?empty=true");
     await page.waitForSelector(".editor-content");
+    // Colors lives behind the expand toggle in the auto-mini phone toolbar.
+    await ensureToolbarExpanded(page);
   });
 
   test("should auto-close after color selection", async ({ page }) => {

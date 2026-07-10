@@ -19,9 +19,9 @@
 
     <!-- Content -->
     <article class="docs-body">
-      <header class="docs-hero">
-        <span class="eyebrow">Documentation</span>
-        <h1 class="h-section">Get started in a minute</h1>
+      <header class="docs-hero ruled">
+        <span class="eyebrow"><Icon name="layers" :size="15" /> Documentation</span>
+        <h1 class="h-display docs-title">Get started in <span class="ink is-in">a minute.</span></h1>
         <p class="lede">Everything you need to add a full-featured rich-text editor to your Vue&nbsp;3 app.</p>
       </header>
 
@@ -77,6 +77,21 @@
         </ul>
       </section>
 
+      <section id="usage-modes" class="doc-section">
+        <h2>Usage modes</h2>
+        <p>
+The same component adapts to different jobs — an editor, a headless
+          surface, or a read-only viewer for saved documents.
+</p>
+        <CodeBlock :code="usageModesSnippet" lang="vue" />
+        <ul class="feat-list">
+          <li><strong>readonly</strong> — content is shown and selectable but not editable; the main, selection and mobile toolbars are hidden. Perfect for rendering stored HTML.</li>
+          <li><strong>showToolbar</strong> — set <code>false</code> to drop the main toolbar and drive the editor from your own UI, shortcuts and the selection bubble.</li>
+          <li><strong>defaultViewMode</strong> — open in <code>editor</code>, <code>code</code>, <code>split</code> or <code>preview</code>.</li>
+          <li><strong>autofocus</strong> — put the caret in the editor on mount.</li>
+        </ul>
+      </section>
+
       <section id="mentions" class="doc-section">
         <h2>@mentions</h2>
         <p>Provide a <code>mention-search</code> function to power @mentions from your own user directory. It can return a promise.</p>
@@ -96,12 +111,13 @@
         <p class="muted">See <code>src/demo/examples/example-plugin.ts</code> for a complete, worked example.</p>
       </section>
 
-      <div class="docs-next card">
+      <div class="docs-next sheet ruled">
         <div>
+          <span class="eyebrow"><Icon name="pen" :size="14" /> Next</span>
           <h3>Ready to build?</h3>
           <p>Jump into the playground and try every feature with live output.</p>
         </div>
-        <button class="btn btn-primary" @click="$emit('navigate', 'playground')">Open playground →</button>
+        <button class="btn btn-primary" @click="$emit('navigate', 'playground')">Open playground <Icon name="arrow" :size="16" /></button>
       </div>
     </article>
   </div>
@@ -110,6 +126,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import CodeBlock from "../components/CodeBlock.vue";
+import Icon from "../components/Icon.vue";
 
 defineEmits<{ navigate: [id: string] }>();
 
@@ -119,6 +136,7 @@ const sections = [
   { id: "v-model", label: "v-model" },
   { id: "props", label: "Props" },
   { id: "features", label: "Feature flags" },
+  { id: "usage-modes", label: "Usage modes" },
   { id: "mentions", label: "@mentions" },
   { id: "theming", label: "Theming" },
   { id: "plugins", label: "Plugins" },
@@ -131,7 +149,14 @@ const props = [
   { name: "width", type: "string", def: "'100%'", desc: "Editor width (any CSS length)." },
   { name: "height", type: "string", def: "'600px'", desc: "Editor height (any CSS length)." },
   { name: "themePreset", type: "string", def: "'default'", desc: "Whole-editor theme: default | classic | minimal | midnight | warm." },
-  { name: "toolbarLayout", type: "string", def: "'comfortable'", desc: "Toolbar density: comfortable (labelled) | compact (icon-first, one row)." },
+  { name: "toolbarLayout", type: "string", def: "'comfortable'", desc: "Toolbar density: comfortable (labelled) | compact (mini bar + expand toggle). Below 640px the toolbar auto-compacts to the mini bar regardless." },
+  { name: "adaptiveChrome", type: "string", def: "'letterbox'", desc: "While you write: letterbox (toolbar dissolves into an ambient band with block format, position filament, save pulse and word count) | recede (fades to a whisper) | off. Pointer, Escape or toolbar focus bring it back instantly. Desktop-only; honors reduced motion." },
+  { name: "toolbarPosition", type: "string", def: "'top'", desc: "Where the toolbar lives: top | left (slim margin rail) | bottom (dock, menus open upward) | zen (no persistent toolbar — the ambient band is the only chrome; intent peeks the full bar). All fall back to top below 640px." },
+  { name: "toolbarMode", type: "string", def: "'bar'", desc: "The toolbar's form: bar (docked masthead) | pill (Playhead — one floating glass capsule that contracts while you write, expands on intent and travels to your selection to become the formatting bubble). Falls back to bar below 640px." },
+  { name: "readonly", type: "boolean", def: "false", desc: "Viewer mode — content shown & selectable, not editable; toolbars hidden." },
+  { name: "showToolbar", type: "boolean", def: "true", desc: "Show the main toolbar. Set false for a headless editor." },
+  { name: "defaultViewMode", type: "string", def: "'editor'", desc: "Initial view: editor | code | split | preview." },
+  { name: "autofocus", type: "boolean", def: "false", desc: "Focus the editing surface on mount." },
   { name: "showWritingStats", type: "boolean", def: "false", desc: "Enable the writing-stats panel." },
   { name: "enableComments", type: "boolean", def: "false", desc: "Enable inline comments & mentions." },
   { name: "enableVariables", type: "boolean", def: "false", desc: "Enable {{ variable }} tokens." },
@@ -166,6 +191,15 @@ const flagsSnippet = `<NextLevelEditor
   :enable-comments="true"
   :enable-variables="true"
 />`;
+
+const usageModesSnippet = `<!-- A read-only viewer for a saved document -->
+<NextLevelEditor v-model="savedHtml" readonly />
+
+<!-- Headless: your own UI, no built-in toolbar -->
+<NextLevelEditor v-model="content" :show-toolbar="false" autofocus />
+
+<!-- Open straight into the raw-HTML view -->
+<NextLevelEditor v-model="content" default-view-mode="code" />`;
 
 const mentionSnippet = `async function mentionSearch(query) {
   const res = await fetch('/api/users?q=' + query)
@@ -229,7 +263,8 @@ onUnmounted(() => observer?.disconnect());
 
 .docs-body { max-width: 760px; min-width: 0; }
 .docs-hero { margin-bottom: 40px; }
-.docs-hero .h-section { margin: 12px 0; }
+.docs-hero .eyebrow { display: inline-flex; }
+.docs-title { font-size: clamp(2rem, 4vw, 2.9rem); margin: 12px 0; }
 .doc-section { padding: 26px 0; border-top: 1px solid var(--border); scroll-margin-top: calc(var(--nav-h) + 20px); }
 .doc-section:first-of-type { border-top: none; padding-top: 0; }
 .doc-section h2 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 14px; }
@@ -254,8 +289,9 @@ onUnmounted(() => observer?.disconnect());
 .props-table td code { font-family: var(--font-mono); font-size: 12.5px; color: var(--brand-500); font-weight: 600; }
 .props-table .ty { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-muted); white-space: nowrap; }
 
-.docs-next { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 26px; margin-top: 40px; flex-wrap: wrap; }
-.docs-next h3 { margin: 0 0 4px; font-size: 1.15rem; }
+.docs-next { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 28px 30px; margin-top: 40px; flex-wrap: wrap; }
+.docs-next .eyebrow { display: inline-flex; margin-bottom: 8px; }
+.docs-next h3 { margin: 0 0 4px; font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; }
 .docs-next p { margin: 0; color: var(--ink-soft); font-size: 0.94rem; }
 
 @media (max-width: 900px) {

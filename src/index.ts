@@ -98,6 +98,7 @@ export type { Variable, VariableCategory } from "./composables/useVariables";
 export { default as VariableAutocomplete } from "./components/VariableAutocomplete.vue";
 
 export { NextLevelEditor };
+export type { NextLevelEditorProps } from "./components/NextLevelEditor.types";
 
 export default {
   install: (app: App) => {

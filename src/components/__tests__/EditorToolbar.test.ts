@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount, type VueWrapper } from "@vue/test-utils";
 import EditorToolbar from "../EditorToolbar.vue";
 import type { ToolbarAction } from "../../types/toolbar";
@@ -534,7 +534,7 @@ describe("EditorToolbar", () => {
           "Editor view",
           "Code view",
           "Split view",
-          "Preview",
+          "Preview view",
           "Fullscreen",
         ])
       );
@@ -545,6 +545,299 @@ describe("EditorToolbar", () => {
       );
       await codeItem!.trigger("click");
       expect(compact.emitted("view-mode-change")?.[0]).toEqual(["code"]);
+    });
+  });
+
+  describe("Mini toolbar list trimming", () => {
+    const listAction = (id: string): ToolbarAction => ({
+      id,
+      label: id,
+      icon: "<svg></svg>",
+      tooltip: id,
+      onClick: vi.fn(),
+    });
+
+    const fullListActions = [
+      listAction("bullet-list"),
+      listAction("numbered-list"),
+      listAction("increase-indent"),
+      listAction("decrease-indent"),
+    ];
+
+    /** The stubbed ToolbarSection that received the list actions. */
+    const findListSection = (w: VueWrapper<any>) =>
+      w.findAllComponents({ name: "ToolbarSection" }).find((s) => {
+        const items = s.props("items") as ToolbarAction[] | undefined;
+        return Array.isArray(items) && items.some((i) => i.id === "bullet-list");
+      })!;
+
+    const idsOf = (w: VueWrapper<any>) =>
+      (findListSection(w).props("items") as ToolbarAction[]).map((i) => i.id);
+
+    it("mini state keeps only the two list toggles (indent/outdent behind expand)", async () => {
+      const compact = mount(EditorToolbar, {
+        props: {
+          ...defaultProps,
+          listActions: fullListActions,
+          toolbarLayout: "compact" as const,
+        },
+        global: { stubs: { ToolbarSection: true, ColorPicker: true } },
+      });
+
+      // Collapsed (mini): the essentials row must not carry indent/outdent, or
+      // the nowrap row overflows narrow phones and clips the expand toggle.
+      expect(idsOf(compact)).toEqual(["bullet-list", "numbered-list"]);
+
+      // Expanding restores the full list set.
+      await compact.find(".toolbar-expand-toggle").trigger("click");
+      expect(idsOf(compact)).toEqual([
+        "bullet-list",
+        "numbered-list",
+        "increase-indent",
+        "decrease-indent",
+      ]);
+
+      // Collapsing trims it again.
+      await compact.find(".toolbar-expand-toggle").trigger("click");
+      expect(idsOf(compact)).toEqual(["bullet-list", "numbered-list"]);
+    });
+
+    it("comfortable layout always passes the full list actions through", () => {
+      const comfortable = mount(EditorToolbar, {
+        props: { ...defaultProps, listActions: fullListActions },
+        global: { stubs: { ToolbarSection: true, ColorPicker: true } },
+      });
+      expect(idsOf(comfortable)).toEqual([
+        "bullet-list",
+        "numbered-list",
+        "increase-indent",
+        "decrease-indent",
+      ]);
+    });
+  });
+
+  describe("Position-variant panel wrapper", () => {
+    // The left-rail toolbar position floats the non-essential families as a
+    // panel; that needs them under ONE wrapper. The wrapper must be
+    // layout-inert everywhere else (display: contents via CSS), so the
+    // structural contract is: essentials + expand toggle stay direct nav
+    // children, the other three families live inside .nle-toolbar-panel.
+    it("wraps exactly the three non-essential families", () => {
+      const panels = wrapper.findAll(".nle-toolbar-panel");
+      expect(panels.length).toBe(1);
+      const panel = panels[0];
+
+      const grouped = panel
+        .findAll(".toolbar-section-group")
+        .map((g) => g.attributes("aria-label"));
+      expect(grouped).toEqual([
+        "Insert and styling",
+        "History and tools",
+        "View and display controls",
+      ]);
+    });
+
+    it("keeps the essentials family and expand toggle outside the panel", () => {
+      const compact = mount(EditorToolbar, {
+        props: { ...defaultProps, toolbarLayout: "compact" as const },
+        global: { stubs: { ToolbarSection: true, ColorPicker: true } },
+      });
+      const panel = compact.find(".nle-toolbar-panel");
+      expect(panel.exists()).toBe(true);
+      expect(panel.find('[aria-label="Text formatting"]').exists()).toBe(
+        false
+      );
+      expect(panel.find(".toolbar-expand-toggle").exists()).toBe(false);
+      // Both still render — as siblings of the panel inside the nav.
+      const nav = compact.find(".editor-toolbar-modern");
+      expect(nav.find('[aria-label="Text formatting"]').exists()).toBe(true);
+      expect(nav.find(".toolbar-expand-toggle").exists()).toBe(true);
+    });
+
+    it("is a plain layout wrapper — no role, no label", () => {
+      const panel = wrapper.find(".nle-toolbar-panel");
+      expect(panel.attributes("role")).toBeUndefined();
+      expect(panel.attributes("aria-label")).toBeUndefined();
+    });
+  });
+
+  describe("Unfold choreography (title-sequence staging)", () => {
+    const mountCompact = () =>
+      mount(EditorToolbar, {
+        props: { ...defaultProps, toolbarLayout: "compact" as const },
+        global: { stubs: { ToolbarSection: true, ColorPicker: true } },
+      });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("never carries a choreography class on initial mount", () => {
+      // Comfortable (starts fully expanded) and compact (starts mini): the
+      // one-shot classes only ever come from the toggle handler / watcher.
+      for (const w of [wrapper, mountCompact()]) {
+        const classes = w.find(".editor-toolbar-modern").classes();
+        expect(classes).not.toContain("is-unfolding");
+        expect(classes).not.toContain("is-folding");
+        expect(classes).not.toContain("is-sweeping");
+      }
+    });
+
+    it("expand adds is-unfolding and clears it after the one-shot window", async () => {
+      vi.useFakeTimers();
+      const compact = mountCompact();
+      await compact.find(".toolbar-expand-toggle").trigger("click");
+      const nav = compact.find(".editor-toolbar-modern");
+      expect(nav.classes()).toContain("is-unfolding");
+      expect(nav.classes()).not.toContain("is-folding");
+
+      vi.advanceTimersByTime(450);
+      await compact.vm.$nextTick();
+      expect(nav.classes()).not.toContain("is-unfolding");
+    });
+
+    it("collapse does NOT add is-unfolding — it runs the fast is-folding settle", async () => {
+      vi.useFakeTimers();
+      const compact = mountCompact();
+      const toggle = compact.find(".toolbar-expand-toggle");
+
+      await toggle.trigger("click"); // expand
+      vi.advanceTimersByTime(450);
+      await compact.vm.$nextTick();
+
+      await toggle.trigger("click"); // collapse
+      const nav = compact.find(".editor-toolbar-modern");
+      expect(nav.classes()).not.toContain("is-unfolding");
+      expect(nav.classes()).toContain("is-folding");
+
+      vi.advanceTimersByTime(250);
+      await compact.vm.$nextTick();
+      expect(nav.classes()).not.toContain("is-folding");
+    });
+
+    it("collapsing mid-unfold cancels the unfold one-shot", async () => {
+      vi.useFakeTimers();
+      const compact = mountCompact();
+      const toggle = compact.find(".toolbar-expand-toggle");
+
+      await toggle.trigger("click"); // expand
+      await toggle.trigger("click"); // collapse immediately
+      const nav = compact.find(".editor-toolbar-modern");
+      expect(nav.classes()).not.toContain("is-unfolding");
+      expect(nav.classes()).toContain("is-folding");
+    });
+
+    it("staggers the revealed families left-to-right via --nle-group-i", () => {
+      const compact = mountCompact();
+      const groups = compact.findAll(".nle-unfold");
+      expect(groups.length).toBe(4);
+      groups.forEach((g, i) => {
+        expect(g.attributes("style")).toContain(`--nle-group-i: ${i}`);
+      });
+    });
+
+    it("a density change runs the one-shot light sweep (is-sweeping)", async () => {
+      vi.useFakeTimers();
+      const nav = wrapper.find(".editor-toolbar-modern");
+      expect(nav.classes()).not.toContain("is-sweeping");
+
+      await wrapper.setProps({ toolbarLayout: "compact" });
+      expect(nav.classes()).toContain("is-sweeping");
+
+      vi.advanceTimersByTime(500);
+      await wrapper.vm.$nextTick();
+      expect(nav.classes()).not.toContain("is-sweeping");
+    });
+
+    it("renders the sweep as its own clipped, inert overlay", () => {
+      const clip = wrapper.find(".toolbar-sweep-clip");
+      expect(clip.exists()).toBe(true);
+      expect(clip.attributes("aria-hidden")).toBe("true");
+      expect(clip.find(".toolbar-sweep").exists()).toBe(true);
+    });
+  });
+
+  describe("Elevation on scroll", () => {
+    let host: HTMLElement;
+    let content: HTMLElement;
+    let attached: VueWrapper<any>;
+
+    beforeEach(() => {
+      // Elevation reads immediately inside the scroll handler's rAF; run it
+      // synchronously so the test is deterministic. Return 0 so the throttle
+      // guard doesn't latch: the sync callback resets the handle BEFORE the
+      // return value is assigned (real rAF assigns first, fires later).
+      vi.stubGlobal(
+        "requestAnimationFrame",
+        (cb: FrameRequestCallback): number => {
+          cb(0);
+          return 0;
+        }
+      );
+      host = document.createElement("div");
+      host.className = "next-level-editor";
+      document.body.appendChild(host);
+      attached = mount(EditorToolbar, {
+        props: defaultProps,
+        attachTo: host,
+        global: { stubs: { ToolbarSection: true, ColorPicker: true } },
+      });
+      content = document.createElement("div");
+      content.className = "editor-content";
+      host.appendChild(content);
+    });
+
+    afterEach(() => {
+      try {
+        attached.unmount();
+      } catch {
+        // already unmounted inside the test
+      }
+      host.remove();
+      vi.unstubAllGlobals();
+    });
+
+    const setScrollTop = (value: number) =>
+      Object.defineProperty(content, "scrollTop", {
+        value,
+        configurable: true,
+      });
+
+    it("is not elevated at mount", () => {
+      expect(attached.find(".editor-toolbar-modern").classes()).not.toContain(
+        "is-elevated"
+      );
+    });
+
+    it("adds is-elevated when the editor content scrolls, removes it back at top", async () => {
+      const nav = attached.find(".editor-toolbar-modern");
+
+      setScrollTop(120);
+      content.dispatchEvent(new Event("scroll"));
+      await attached.vm.$nextTick();
+      expect(nav.classes()).toContain("is-elevated");
+
+      setScrollTop(0);
+      content.dispatchEvent(new Event("scroll"));
+      await attached.vm.$nextTick();
+      expect(nav.classes()).not.toContain("is-elevated");
+    });
+
+    it("ignores scrolls when there is no surrounding editor content", async () => {
+      // The default (non-attached) wrapper has no .next-level-editor ancestor:
+      // document-level scrolls must be a no-op, not a crash.
+      document.dispatchEvent(new Event("scroll"));
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(".editor-toolbar-modern").classes()).not.toContain(
+        "is-elevated"
+      );
+    });
+
+    it("stops reacting after unmount (listener cleaned up)", async () => {
+      attached.unmount();
+      setScrollTop(120);
+      // Must not throw once the component is gone.
+      expect(() => content.dispatchEvent(new Event("scroll"))).not.toThrow();
     });
   });
 

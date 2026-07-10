@@ -12,6 +12,9 @@ interface UseFormattingHandlersParams {
   handlePasteFormatBase: () => void;
   showColorsDropdown: Ref<boolean>;
   formatPainterActive: Ref<boolean>;
+  /** Last-applied colors — feed the custom picker inputs in the Colors menu. */
+  textColor?: Ref<string>;
+  backgroundColor?: Ref<string>;
 }
 
 export function useFormattingHandlers({
@@ -21,6 +24,8 @@ export function useFormattingHandlers({
   handleBackgroundColorBase,
   handlePasteFormatBase,
   formatPainterActive,
+  textColor,
+  backgroundColor,
 }: UseFormattingHandlersParams) {
   /**
    * Apply inline style (bold, italic, underline, etc.)
@@ -56,6 +61,8 @@ export function useFormattingHandlers({
    */
   const handleTextColor = (color: string) => {
     handleTextColorBase(color);
+    // Remember it so the custom picker input reflects the last choice.
+    if (textColor) textColor.value = color;
   };
 
   /**
@@ -64,6 +71,9 @@ export function useFormattingHandlers({
    */
   const handleBackgroundColor = (color: string) => {
     handleBackgroundColorBase(color);
+    if (backgroundColor && color !== "transparent") {
+      backgroundColor.value = color;
+    }
   };
 
   /**

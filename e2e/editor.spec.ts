@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { ensureToolbarExpanded } from './helpers/toolbar'
 
 test.describe('Next Level Editor - Basic Functionality', () => {
   test.beforeEach(async ({ page }) => {
@@ -216,6 +217,8 @@ test.describe('Next Level Editor - Undo/Redo', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
+    // Undo/redo buttons live behind the expand toggle in the auto-mini bar.
+    await ensureToolbarExpanded(page)
   })
 
   test('should undo changes', async ({ page }) => {
@@ -300,16 +303,24 @@ test.describe('Next Level Editor - Floating Toolbar', () => {
     const editor = page.locator('.editor-content')
     await editor.click()
     await editor.pressSequentially('Select this text')
-    
+
     // Select all
     await page.keyboard.press('Control+A')
-    
+
     // Wait a bit for floating toolbar to appear
     await page.waitForTimeout(500)
-    
-    // Floating toolbar should be visible
+
     const floatingToolbar = page.locator('.floating-toolbar')
-    await expect(floatingToolbar).toBeVisible()
+    if (test.info().project.name === 'mobile-safari') {
+      // On phones the bottom MobileToolbar owns formatting; the selection
+      // bubble is intentionally suppressed so two stacked formatting
+      // surfaces never compete on a 375px screen.
+      await expect(page.locator('.mobile-toolbar')).toBeVisible()
+      await expect(floatingToolbar).toBeHidden()
+    } else {
+      // Floating toolbar should be visible
+      await expect(floatingToolbar).toBeVisible()
+    }
   })
 })
 
@@ -317,6 +328,8 @@ test.describe('Next Level Editor - Theme Toggle', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
+    // The theme toggle lives behind the expand toggle in the auto-mini bar.
+    await ensureToolbarExpanded(page)
   })
 
   test('should toggle theme', async ({ page }) => {
@@ -340,6 +353,8 @@ test.describe('Next Level Editor - Font Size', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?empty=true')
     await page.waitForSelector('.editor-content')
+    // The Size dropdown lives behind the expand toggle in the auto-mini bar.
+    await ensureToolbarExpanded(page)
   })
 
   test('should change font size', async ({ page }) => {

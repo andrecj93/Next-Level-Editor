@@ -10,6 +10,9 @@ const ALLOWED_TAGS = new Set([
   "H1",
   "H2",
   "H3",
+  "H4",
+  "H5",
+  "H6",
   "HR",
   "I",
   "IMG",
@@ -25,6 +28,9 @@ const ALLOWED_TAGS = new Set([
   "U",
   "UL",
   "TABLE",
+  "CAPTION",
+  "COLGROUP",
+  "COL",
   "THEAD",
   "TBODY",
   "TR",
@@ -37,7 +43,25 @@ const ALLOWED_TAGS = new Set([
 ]);
 
 const GLOBAL_ALLOWED_ATTRIBUTES = new Set(["title"]);
-const UNWRAP_TAGS = new Set(["DIV"]);
+// Semantic containers commonly found in pasted content (figures, sectioning
+// elements, description lists). They are not part of the editor's document
+// model, so they are unwrapped — children survive and are still recursively
+// sanitized — rather than removed with their subtree.
+const UNWRAP_TAGS = new Set([
+  "DIV",
+  "FIGURE",
+  "FIGCAPTION",
+  "SECTION",
+  "ARTICLE",
+  "HEADER",
+  "FOOTER",
+  "MAIN",
+  "ASIDE",
+  "NAV",
+  "DL",
+  "DT",
+  "DD",
+]);
 
 // The editor's media wrapper (created by utils/embeddedResizable.ts). Kept as
 // a special-cased DIV: its attributes are rebuilt from validated data-* values
@@ -52,10 +76,21 @@ const EMBED_ALIGNMENTS = new Set(["left", "center", "right"]);
 const SAFE_EMBED_IFRAME_PATTERN =
   /^https:\/\/(?:www\.)?(?:youtube\.com|youtube-nocookie\.com)\/embed\/[\w-]+|^https:\/\/player\.vimeo\.com\/video\/\d+/i;
 
+// The inline template-variable pill (created by useVariables). Like the embed
+// container above it is a special-cased element: a SPAN whose class is exactly
+// "editor-variable" has its attribute set REBUILT from a validated
+// data-variable value rather than trusted, and its visible text is regenerated
+// from that validated name. Anything that fails validation falls back to the
+// generic span path (class and unknown attributes stripped).
+const VARIABLE_PILL_CLASS = "editor-variable";
+const VARIABLE_NAME_PATTERN = /^[\w.-]{1,64}$/;
+
 const ELEMENT_ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
   a: new Set(["href", "rel", "target", "title"]),
   img: new Set(["alt", "src", "title", "width", "height", "style"]),
   table: new Set(["border", "cellpadding", "cellspacing", "style"]),
+  colgroup: new Set(["span", "style"]),
+  col: new Set(["span", "style"]),
   td: new Set(["colspan", "rowspan", "style"]),
   th: new Set(["colspan", "rowspan", "style"]),
   span: new Set(["style"]),
@@ -63,6 +98,9 @@ const ELEMENT_ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
   h1: new Set(["style"]),
   h2: new Set(["style"]),
   h3: new Set(["style"]),
+  h4: new Set(["style"]),
+  h5: new Set(["style"]),
+  h6: new Set(["style"]),
   li: new Set(["style"]),
   ul: new Set(["style"]),
   ol: new Set(["style"]),
@@ -88,6 +126,9 @@ const STYLE_ALLOWED_PROPERTIES = new Set([
   "color",
   "background-color",
   "font-size",
+  // Highlight pills (applyBackgroundColor) round-trip padding/border-radius.
+  "padding",
+  "border-radius",
   // Safe sizing properties used by media inside embed containers.
   "width",
   "height",
@@ -171,6 +212,18 @@ export function useHtmlSanitizer() {
             // Iframes are only allowed from the embed-host allowlist; an
             // iframe without a safe src is useless and gets removed whole.
             element.remove();
+          } else if (
+            element.tagName === "SPAN" &&
+            (element.getAttribute("class") ?? "").trim() ===
+              VARIABLE_PILL_CLASS
+          ) {
+            if (!sanitizeVariablePill(element)) {
+              // Invalid or missing data-variable: not a real pill. Fall back
+              // to the generic span path, which strips the class and every
+              // other spoofed attribute but keeps the (sanitized) children.
+              sanitizeAttributes(element);
+              sanitizeTree(element);
+            }
           } else if (ALLOWED_TAGS.has(element.tagName)) {
             sanitizeAttributes(element);
             sanitizeTree(element);
@@ -236,6 +289,37 @@ export function useHtmlSanitizer() {
       );
       element.setAttribute("contenteditable", "false");
       element.setAttribute("tabindex", "0");
+      return true;
+    };
+
+    /**
+     * Normalize a template-variable pill: validate its data-variable name,
+     * drop every attribute, and rebuild the trusted set. The pill's visible
+     * text is regenerated from the validated name so no markup can hide
+     * inside the span. Returns false when data-variable does not validate.
+     *
+     * NOTE: the attribute rebuild order (class, contenteditable,
+     * data-variable, data-value, title) mirrors the pill construction in
+     * useVariables so a sanitize round-trip of a freshly built pill is
+     * string-identical — innerHTML string comparisons decide whether the
+     * editor DOM gets rewritten (destroying the caret), so keep them in sync.
+     */
+    const sanitizeVariablePill = (element: HTMLElement): boolean => {
+      const name = element.getAttribute("data-variable") ?? "";
+      if (!VARIABLE_NAME_PATTERN.test(name)) return false;
+
+      const value = element.getAttribute("data-value");
+      const title = element.getAttribute("title");
+
+      for (const attribute of Array.from(element.attributes)) {
+        element.removeAttribute(attribute.name);
+      }
+      element.setAttribute("class", VARIABLE_PILL_CLASS);
+      element.setAttribute("contenteditable", "false");
+      element.setAttribute("data-variable", name);
+      if (value !== null) element.setAttribute("data-value", value);
+      if (title !== null) element.setAttribute("title", title);
+      element.textContent = `{{ ${name} }}`;
       return true;
     };
 

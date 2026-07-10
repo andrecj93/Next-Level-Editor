@@ -1,4 +1,10 @@
-import { type Ref, type ComputedRef, onMounted, onBeforeUnmount } from "vue";
+import {
+  type Ref,
+  type ComputedRef,
+  onMounted,
+  onBeforeUnmount,
+  watch,
+} from "vue";
 import { formatHtml } from "../utils/export";
 
 export interface UseEditorSetupOptions {
@@ -35,6 +41,25 @@ export function useEditorSetup(options: UseEditorSetupOptions) {
     handleEscape,
     onSelectionChange,
   } = options;
+
+  // The editable surface is destroyed and recreated by the host on view-mode
+  // switches (EditorPanels renders it with v-if) and swapped entirely in split
+  // view. A one-time onMounted binding would leave the recreated element with
+  // no app-level keydown handling — shortcuts, Tab list indent, the slash menu
+  // and Enter handling would silently die after switching to Code view and
+  // back — so track the element itself and re-bind whenever it changes.
+  watch(
+    editorContent,
+    (el, prevEl) => {
+      if (prevEl) {
+        prevEl.removeEventListener("keydown", handleKeydown);
+      }
+      if (el) {
+        el.addEventListener("keydown", handleKeydown);
+      }
+    },
+    { flush: "post" }
+  );
 
   onMounted(() => {
     if (editorContent.value) {

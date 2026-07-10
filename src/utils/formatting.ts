@@ -169,8 +169,25 @@ const isRangeFullyStyled = (
   tagName: string,
   root: HTMLElement
 ): boolean => {
+  const container = range.commonAncestorContainer;
+
+  // A TreeWalker never yields its own root, so when both range endpoints sit
+  // inside a single text node (a double-click word selection) the walk below
+  // visits nothing and misreports the range as unstyled — the "toggle bold
+  // nests <strong><strong>" bug. Check that lone text node directly.
+  if (container.nodeType === Node.TEXT_NODE) {
+    return (
+      !!container.textContent &&
+      getClosestElement(
+        container,
+        (element) => element.tagName.toLowerCase() === tagName.toLowerCase(),
+        root
+      ) !== null
+    );
+  }
+
   const walker = document.createTreeWalker(
-    range.commonAncestorContainer,
+    container,
     NodeFilter.SHOW_TEXT,
     {
       acceptNode: (node) => {
@@ -373,7 +390,26 @@ export const applyInlineStyle = (
     return;
   }
 
-  wrapSelection(root, tagName, attributes);
+  // Wrap path (partly-styled or unstyled selection): strip any same-tag
+  // descendants from the extracted contents before wrapping, otherwise
+  // bolding across "<strong>foo</strong> bar" nests
+  // <strong><strong>foo</strong> bar</strong>.
+  const element = document.createElement(tagName);
+  Object.entries(attributes).forEach(([key, value]) => {
+    element.setAttribute(key, value);
+  });
+  const contents = range.extractContents();
+  unwrapMatchingElements(contents, tagName);
+  element.appendChild(contents);
+  range.insertNode(element);
+
+  const selection = getSelection();
+  if (selection) {
+    const newRange = document.createRange();
+    newRange.selectNodeContents(element);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+  }
 };
 
 const getBlockAncestor = (
@@ -498,8 +534,25 @@ const unnestListItem = (li: HTMLElement, tagName: string): HTMLElement => {
 };
 
 /**
- * Convert a single block element to the target tag, handling the special case
- * of unnesting a list item when converting to a heading. Returns the resulting
+ * Convert a single block element to a specific tag with NO toggle logic,
+ * handling the special case of unnesting a list item when converting to a
+ * heading. Returns the resulting block element.
+ */
+const convertBlockTo = (block: HTMLElement, newTag: string): HTMLElement => {
+  // Special handling for list items - unnest them when converting to headings
+  if (
+    block.tagName.toLowerCase() === "li" &&
+    ["h1", "h2", "h3", "h4", "h5", "h6"].includes(newTag)
+  ) {
+    return unnestListItem(block, newTag);
+  }
+
+  return replaceTag(block, newTag);
+};
+
+/**
+ * Toggle a single block element: convert it to the target tag, or to the
+ * fallback tag when it already matches the target. Returns the resulting
  * block element.
  */
 const convertBlock = (
@@ -508,17 +561,8 @@ const convertBlock = (
   fallbackTag: string
 ): HTMLElement => {
   const currentTag = block.tagName.toLowerCase();
-
-  // Special handling for list items - unnest them when converting to headings
-  if (
-    currentTag === "li" &&
-    ["h1", "h2", "h3", "h4", "h5", "h6"].includes(targetTag)
-  ) {
-    return unnestListItem(block, targetTag);
-  }
-
   const newTag = currentTag === targetTag ? fallbackTag : targetTag;
-  return replaceTag(block, newTag);
+  return convertBlockTo(block, newTag);
 };
 
 export const toggleBlock = (
@@ -537,8 +581,17 @@ export const toggleBlock = (
   if (!range.collapsed) {
     const blocks = getBlocksInRange(range, root);
     if (blocks.length > 1) {
+      // Word-style uniform conversion: decide the target ONCE for the whole
+      // selection. Only when EVERY selected block already matches the target
+      // tag does the action toggle off to the fallback; a mixed [h1, p, p]
+      // selection + H1 becomes [h1, h1, h1], never the per-block flip
+      // [p, h1, h1].
+      const everyBlockMatchesTarget = blocks.every(
+        (block) => block.tagName.toLowerCase() === targetTag
+      );
+      const decidedTag = everyBlockMatchesTarget ? fallbackTag : targetTag;
       const converted = blocks.map((block) =>
-        convertBlock(block, targetTag, fallbackTag)
+        convertBlockTo(block, decidedTag)
       );
       selectElements(converted);
       return;

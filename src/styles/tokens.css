@@ -39,6 +39,10 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   --font-serif: Georgia, "Times New Roman", Times, serif;
+  /* Editorial serif for the toolbar's typographic accents (the masthead
+     Format label). Iowan Old Style is the book face on Apple platforms;
+     Georgia is the metrically-sturdy universal fallback. */
+  --nle-font-serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
   --font-mono: "Courier New", Courier, monospace, "SF Mono", Monaco,
     "Cascadia Code", "Roboto Mono";
 
@@ -221,6 +225,39 @@
   --ease-elastic: cubic-bezier(0.68, -0.55, 0.265, 1.55);
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   --ease-sharp: cubic-bezier(0.4, 0, 0.6, 1);
+
+  /* ------------------------------------------
+     MOTION TOKENS (nle) — chrome retiming system.
+     Research-derived values on M3 "emphasized" curves. Rules of thumb:
+     entries use --nle-ease-out, exits use --nle-ease-in, and exits are
+     always FASTER than entries — chrome must feel instant, never showy.
+     ------------------------------------------ */
+  /* Durations — what each step is for:
+     instant  state that must not be perceived as animated (pressed ink)
+     quick    hover/active micro-feedback on toolbar controls
+     enter    surfaces appearing (dropdown menus, bubbles)
+     exit     surfaces dismissing (always < enter: get out of the way)
+     morph    a control changing shape/size in place
+     recede   chrome stepping back while the user writes (long, gentle)
+     return   chrome coming back to attention (snappy) */
+  --nle-motion-instant: 0ms;
+  --nle-motion-quick: 120ms;
+  --nle-motion-enter: 180ms;
+  --nle-motion-exit: 140ms;
+  --nle-motion-morph: 260ms;
+  --nle-motion-recede: 450ms;
+  --nle-motion-return: 160ms;
+
+  /* Easing — entries decelerate into place (out), exits accelerate away
+     (in), same-surface tint/ink changes use standard, and large passive
+     surfaces that must not draw the eye use gentle. */
+  --nle-ease-out: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --nle-ease-in: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --nle-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --nle-ease-gentle: cubic-bezier(0.4, 0, 0.6, 1);
+
+  /* Stagger — per-sibling delay when a group of items reveals together. */
+  --nle-stagger-step: 20ms;
 
   /* Combined Transitions */
   --transition-base: all var(--duration-base) var(--ease-smooth);
@@ -459,6 +496,16 @@
     --transition-colors: none;
     --transition-transform: none;
     --transition-opacity: none;
+
+    /* Motion tokens under reduced motion: keep a barely-there crossfade on
+       enters/exits (a hard pop can be more jarring than a short fade) and
+       zero out anything that reads as movement or choreography. */
+    --nle-motion-enter: 80ms;
+    --nle-motion-exit: 80ms;
+    --nle-motion-morph: 0ms;
+    --nle-motion-recede: 120ms;
+    --nle-motion-return: 0ms;
+    --nle-stagger-step: 0ms;
   }
 }
 

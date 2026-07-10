@@ -2,9 +2,11 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
     <dialog
+      ref="modalContent"
       open
       class="modal-content file-manager-modal"
       aria-labelledby="modal-title"
+      aria-modal="true"
       @click.stop
     >
       <div class="modal-header">
@@ -236,6 +238,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { fileManager, type ManagedFile } from "../utils/fileManager";
+import { useModalDialog } from "../composables/useModalDialog";
 
 interface Props {
   isOpen: boolean;
@@ -250,6 +253,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 const fileInput = ref<HTMLInputElement | null>(null);
+const modalContent = ref<HTMLElement | null>(null);
 const files = ref<ManagedFile[]>([]);
 const selectedFiles = ref<string[]>([]);
 const viewMode = ref<"grid" | "list">("grid");
@@ -268,6 +272,13 @@ const allFilesSelected = computed(
   () =>
     files.value.length > 0 && selectedFiles.value.length === files.value.length
 );
+
+// Escape-to-close, Tab trap, initial focus, focus restore (WAI-ARIA dialog)
+useModalDialog({
+  isOpen: () => props.isOpen,
+  container: modalContent,
+  onClose: () => emit("close"),
+});
 
 // Load files when modal opens
 watch(
@@ -424,7 +435,7 @@ function close() {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10050; /* above floating panels/FABs (9998-9999) */
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -858,6 +869,15 @@ function close() {
   border-radius: 6px;
   color: #c33;
   font-size: 13px;
+}
+
+/* Dark theme (keyed to the editor's .theme-dark root class, like the rest of
+   the editor's dark styles): the hardcoded light-pink #fee/#fcc/#c33 trio is
+   illegible on dark surfaces. */
+.theme-dark .error-message {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--color-error-light, #f87171);
 }
 
 .modal-footer {
