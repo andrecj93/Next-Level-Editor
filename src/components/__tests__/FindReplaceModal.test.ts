@@ -450,4 +450,25 @@ describe("FindReplaceModal", () => {
       w.unmount();
     });
   });
+
+  describe("global keydown listener lifecycle", () => {
+    it("removes its window keydown listener on unmount (no leak)", () => {
+      const add = vi.spyOn(window, "addEventListener");
+      const remove = vi.spyOn(window, "removeEventListener");
+
+      const w = mountModal();
+      const keydownAdds = add.mock.calls.filter(([type]) => type === "keydown");
+      expect(keydownAdds.length).toBeGreaterThanOrEqual(1);
+      const handler = keydownAdds[0][1];
+
+      w.unmount();
+
+      // onMounted returned a cleanup function, but Vue ignores onMounted return
+      // values — so without an explicit onUnmounted the handler leaked.
+      const removedSameHandler = remove.mock.calls.some(
+        ([type, fn]) => type === "keydown" && fn === handler
+      );
+      expect(removedSameHandler).toBe(true);
+    });
+  });
 });

@@ -256,7 +256,8 @@ onMounted(() => {
 });
 
 // (The previous version returned a cleanup function from onMounted, which
-// Vue ignores — the listener leaked across unmounts.)
+// Vue ignores — the listener leaked across unmounts. Both lines fixed this
+// independently; Escape/focus-trap live in the shared useModalDialog.)
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
 });

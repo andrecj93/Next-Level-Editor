@@ -502,12 +502,11 @@ describe("EmbeddedResizable — selection & document-level deselect", () => {
     w.unmount();
   });
 
-  it("[documents PRODUCT BUG] emits a phantom deselect on an outside click even when never selected", async () => {
-    // handleDeselect() has NO `isSelected` guard, so ANY document click that
-    // lands outside the container emits `deselect` — even before the component
-    // was ever selected. A parent bound to @deselect receives spurious events on
-    // essentially every click anywhere on the page. This test asserts the REAL
-    // (buggy) current behaviour; it is intentionally left unfixed here.
+  it("does not emit a phantom deselect on an outside click when never selected", async () => {
+    // handleDeselect() guards on isSelected: an outside document click BEFORE the
+    // component was ever selected must NOT emit `deselect`. Without the guard a
+    // parent bound to @deselect received spurious events on essentially every
+    // click anywhere on the page.
     const w = mountER({}, true);
     // Deliberately do NOT select first.
     expect(w.emitted("select")).toBeUndefined();
@@ -517,9 +516,8 @@ describe("EmbeddedResizable — selection & document-level deselect", () => {
     outside.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextTick();
 
-    // The phantom emit: a deselect with no matching prior select.
-    expect(w.emitted("deselect")).toBeTruthy();
-    expect(w.emitted("deselect")!).toHaveLength(1);
+    // No prior select -> no deselect.
+    expect(w.emitted("deselect")).toBeUndefined();
     outside.remove();
     w.unmount();
   });

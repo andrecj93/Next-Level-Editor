@@ -360,14 +360,14 @@ watch(() => props.show, (newShow) => {
       backgroundColor: props.initialCellProps?.backgroundColor || '',
       textAlign: props.initialCellProps?.textAlign || 'left',
       verticalAlign: props.initialCellProps?.verticalAlign || 'middle',
-      padding: props.initialCellProps?.padding || 8,
+      padding: props.initialCellProps?.padding ?? 8,
       width: props.initialCellProps?.width || '',
       height: props.initialCellProps?.height || ''
     }
     
     tableProps.value = {
       borderStyle: props.initialTableProps?.borderStyle || 'solid',
-      borderWidth: props.initialTableProps?.borderWidth || 1,
+      borderWidth: props.initialTableProps?.borderWidth ?? 1,
       borderColor: props.initialTableProps?.borderColor || '#d1d5db',
       width: props.initialTableProps?.width || '100%',
       backgroundColor: props.initialTableProps?.backgroundColor || '',
