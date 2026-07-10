@@ -7,12 +7,9 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
-  // CI runs both projects serially on a shared runner; webkit (mobile-safari)
-  // runs after chromium, by which point the long-lived dev server can be slow,
-  // so give clicks/navigation more headroom in CI to avoid spurious timeouts.
-  timeout: process.env.CI ? 90000 : 60000,
+  timeout: 60000, // 60s per test
   expect: {
-    timeout: process.env.CI ? 15000 : 10000,
+    timeout: 10000, // 10s for assertions
   },
   globalSetup: "./e2e/global-setup.ts",
 
@@ -21,8 +18,8 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
-    navigationTimeout: process.env.CI ? 45000 : 30000,
-    actionTimeout: process.env.CI ? 30000 : 15000,
+    navigationTimeout: 30000,
+    actionTimeout: 15000,
   },
 
   projects: [
@@ -52,14 +49,16 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "npm run dev",
+    // Serve a PRODUCTION build of the demo (base '/' so the e2e paths resolve
+    // at root) instead of the vite dev server. The dev server compiles modules
+    // on demand, which on a cold CI runner made the slower webkit/mobile-safari
+    // project time out on clicks; a prebuilt static bundle is fast and stable.
+    command:
+      "npm run build:demo -- --base=/ && npx vite preview --config vite.demo.config.ts --base=/ --port 5173 --strictPort",
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
-    timeout: 120000,
+    timeout: 180000,
     stdout: "ignore",
     stderr: "ignore",
-    env: {
-      DISABLE_HMR: "true",
-    },
   },
 });
