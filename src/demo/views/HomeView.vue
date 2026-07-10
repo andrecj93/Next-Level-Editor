@@ -145,6 +145,78 @@ These aren't screenshots. Each panel below is the real component — type in
       </div>
     </section>
 
+    <!-- ==================== CINEMATIC CHROME ====================== -->
+    <section class="section">
+      <div class="container">
+        <RevealOnScroll class="section-head">
+          <span class="eyebrow"><Icon name="pen" :size="15" /> Cinematic chrome</span>
+          <h2 class="h-section">An interface that knows <span class="ink">when to disappear.</span></h2>
+          <p class="lede">
+The toolbar earns its keep by leaving. Start writing and the chrome folds
+            into a quiet band at the edge of the page — then it's back the instant
+            you reach for it.
+</p>
+        </RevealOnScroll>
+
+        <div class="demos chrome-demos">
+          <LiveDemo
+            index="05 — LETTERBOX"
+            icon="layers"
+            title="Type, and the toolbar steps aside"
+            desc="This is the default, no props required. The masthead dissolves into an ambient band while you write, leaving nothing between you and the page — and it never interrupts a thought to come back."
+            hint="Start typing and watch the toolbar step aside"
+            filename="chapter-one.md"
+          >
+            <NextLevelEditor
+              v-if="!compact"
+              v-model="letterboxContent"
+              theme-preset="warm"
+              toolbar-layout="compact"
+              width="100%"
+              height="320px"
+            />
+            <div v-else class="demo-static" v-html="letterboxContent" />
+          </LiveDemo>
+
+          <LiveDemo
+            index="06 — PLAYHEAD"
+            icon="sparkle"
+            title="Or one capsule that follows you"
+            desc="One prop — toolbar-mode=&quot;pill&quot; — replaces the docked bar and the selection bubble with a single floating capsule: an ambient lozenge while you write, the essentials on approach, a formatting bubble at your selection."
+            hint="Select a sentence and watch the capsule travel"
+            filename="travel-notes.md"
+          >
+            <NextLevelEditor
+              v-if="!compact"
+              v-model="playheadContent"
+              theme-preset="warm"
+              toolbar-mode="pill"
+              width="100%"
+              height="320px"
+            />
+            <div v-else class="demo-static" v-html="playheadContent" />
+          </LiveDemo>
+        </div>
+
+        <RevealOnScroll class="chrome-more">
+          <p class="chrome-more-line">
+            And when the bar should live somewhere else entirely — one prop,
+            <code>toolbar-position</code>, three more arrangements.
+          </p>
+        </RevealOnScroll>
+        <div class="chrome-modes">
+          <RevealOnScroll v-for="(m, i) in chromeModes" :key="m.name" :delay="i * 70">
+            <ChromeThumb :name="m.name" :prop="m.prop" :desc="m.desc" :position="m.position" />
+          </RevealOnScroll>
+        </div>
+        <p class="demo-hint">
+          <Icon name="sparkle" :size="15" /> Try every arrangement — open the
+          <button class="linklike" @click="$emit('navigate', 'playground')">playground</button>
+          and pick a toolbar position in the Configure panel.
+        </p>
+      </div>
+    </section>
+
     <!-- ====================== DX / v-model ======================== -->
     <section class="section alt">
       <div class="container">
@@ -222,6 +294,7 @@ import type { IconName } from "../components/icons";
 import EditorSheet from "../components/EditorSheet.vue";
 import RevealOnScroll from "../components/RevealOnScroll.vue";
 import LiveDemo from "../components/LiveDemo.vue";
+import ChromeThumb from "../components/ChromeThumb.vue";
 
 defineEmits<{ navigate: [id: string] }>();
 
@@ -284,6 +357,37 @@ const variablesContent = ref(
 const exportContent = ref(
   `<h2>v2.0 — highlights</h2><p>A <strong>faster</strong> editor with <em>live</em> collaboration.</p><ul><li>Slash commands</li><li>Comments &amp; mentions</li></ul><blockquote>Ship it.</blockquote>`
 );
+
+/* ---- Cinematic chrome demos ---- */
+const letterboxContent = ref(
+  `<h3>The quiet page</h3>` +
+    `<p>Click into this paragraph and begin typing. The toolbar above will fold into a thin ambient band — the page is yours until you reach for the chrome again.</p>` +
+    `<p>Move the pointer toward the top, or select something. It returns exactly when you mean it to.</p>`
+);
+const playheadContent = ref(
+  `<h3>Travel notes</h3>` +
+    `<p>The best interfaces are the ones you never notice until you need them. Select that sentence — the capsule leaves its perch and lands on your words.</p>`
+);
+const chromeModes: { name: string; prop: string; desc: string; position: "left" | "bottom" | "zen" }[] = [
+  {
+    name: "Margin",
+    prop: 'toolbar-position="left"',
+    desc: "The essentials stack in a slim rail beside the page, like notes in a margin.",
+    position: "left",
+  },
+  {
+    name: "Baseline",
+    prop: 'toolbar-position="bottom"',
+    desc: "The bar docks under the page and its menus open upward — the reading line stays clear.",
+    position: "bottom",
+  },
+  {
+    name: "Studio",
+    prop: 'toolbar-position="zen"',
+    desc: "No bar at all. An ambient band holds the edge; everything arrives on intent.",
+    position: "zen",
+  },
+];
 
 /* ---- Export demo output ---- */
 const exportMode = ref<"markdown" | "html">("markdown");
@@ -403,6 +507,29 @@ const content = ref('<h1>Hello world</h1>')
 .export-tabs button.on { color: #fff; background: rgba(255, 255, 255, 0.12); }
 .export-pre { margin: 0; padding: 14px 16px; overflow: auto; flex: 1; color: var(--code-ink); font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; }
 @media (max-width: 720px) { .export-demo { grid-template-columns: 1fr; } .export-out { border-left: none; border-top: 1px solid var(--border); max-height: 260px; } }
+
+/* ====================== CINEMATIC CHROME ====================== */
+/* The chrome demos need the FULL container width: the desktop toolbar
+   arrangements switch themselves off below 640px of *editor* width, and the
+   two-column LiveDemo grid would leave the sheet under that. Stack the
+   caption above a full-bleed sheet instead. */
+.chrome-demos { gap: clamp(44px, 7vw, 88px); }
+.chrome-demos .live-demo { grid-template-columns: 1fr; gap: 22px; align-items: start; }
+.chrome-demos :deep(.ld-head) { max-width: 720px; }
+
+.chrome-more { text-align: center; margin: clamp(52px, 8vw, 100px) auto 0; max-width: 560px; }
+.chrome-more-line {
+  margin: 0; font-family: var(--font-display); font-style: italic;
+  font-size: 1.12rem; line-height: 1.55; color: var(--ink-soft);
+}
+.chrome-more-line code {
+  font-family: var(--font-mono); font-style: normal; font-size: 0.82em;
+  background: var(--brand-gradient-soft); padding: 2px 7px; border-radius: 6px;
+}
+.chrome-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 34px; }
+.chrome-modes > * { min-width: 0; }
+.chrome-modes + .demo-hint { margin-top: 26px; }
+@media (max-width: 980px) { .chrome-modes { grid-template-columns: 1fr; max-width: 560px; margin-inline: auto; } }
 
 /* ============================ SPLIT ============================ */
 .section.alt { background: var(--bg-subtle); }
