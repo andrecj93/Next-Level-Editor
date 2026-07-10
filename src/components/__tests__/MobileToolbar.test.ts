@@ -417,6 +417,71 @@ describe("MobileToolbar", () => {
     });
   });
 
+  describe("fullscreen mirroring (teleported root, z-index contract)", () => {
+    // Flush the MutationObserver callback (delivered async) + Vue reactivity.
+    const flushMutations = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await nextTick();
+    };
+
+    it("mirrors .fullscreen from an editor root already fullscreen at mount", async () => {
+      const editor = document.createElement("div");
+      editor.className = "next-level-editor fullscreen";
+      document.body.appendChild(editor);
+
+      const w = mountToolbar();
+      await nextTick(); // sync runs in onMounted
+      expect(w.get(".mobile-toolbar").classes()).toContain("is-fullscreen");
+      w.unmount();
+    });
+
+    it("toggling the editor's fullscreen class flips is-fullscreen on the toolbar root", async () => {
+      const editor = document.createElement("div");
+      editor.className = "next-level-editor";
+      document.body.appendChild(editor);
+
+      const w = mountToolbar();
+      await nextTick();
+      expect(w.get(".mobile-toolbar").classes()).not.toContain(
+        "is-fullscreen"
+      );
+
+      // Enter fullscreen: the z-9999 editor shell would bury the z-900 bar —
+      // the mirrored class raises the bar above it (z 10001, below dialogs).
+      editor.classList.add("fullscreen");
+      await flushMutations();
+      expect(w.get(".mobile-toolbar").classes()).toContain("is-fullscreen");
+
+      // Exit fullscreen: back to the normal stacking tier.
+      editor.classList.remove("fullscreen");
+      await flushMutations();
+      expect(w.get(".mobile-toolbar").classes()).not.toContain(
+        "is-fullscreen"
+      );
+      w.unmount();
+    });
+
+    it("fullscreen and theme mirroring are independent (both classes coexist)", async () => {
+      const editor = document.createElement("div");
+      editor.className = "next-level-editor theme-dark";
+      document.body.appendChild(editor);
+
+      const w = mountToolbar();
+      await nextTick();
+      expect(w.get(".mobile-toolbar").classes()).toContain("theme-dark");
+      expect(w.get(".mobile-toolbar").classes()).not.toContain(
+        "is-fullscreen"
+      );
+
+      editor.classList.add("fullscreen");
+      await flushMutations();
+      const classes = w.get(".mobile-toolbar").classes();
+      expect(classes).toContain("theme-dark");
+      expect(classes).toContain("is-fullscreen");
+      w.unmount();
+    });
+  });
+
   describe("haptic feedback", () => {
     it("vibrates and flashes the indicator when acting, then clears it", async () => {
       vi.useFakeTimers();

@@ -23,6 +23,13 @@
   --toolbar-bg: #fbfbfb;
   --toolbar-text: #202124;
   --toolbar-accent: #1a73e8;
+  /* Accent-as-text / hero-fill split (see NextLevelEditor.css), staying in
+     the Google-blue family: text ink #1967d2 = 5.19:1 on #fbfbfb; hero fill
+     #1765cc keeps white ≥4.5:1 through the hover brightness lift
+     (5.57:1, hover 4.93:1 — #1a73e8 itself drops to 3.94:1 on hover). */
+  --toolbar-accent-ink: #1967d2;
+  --toolbar-accent-strong: #1765cc;
+  --toolbar-accent-contrast: #ffffff;
   --toolbar-hover: rgba(26,115,232,0.10);
   --content-color: #202124;
   --color-surface: #ffffff;
@@ -42,6 +49,11 @@
   --toolbar-bg: #1b1c1e;
   --toolbar-text: #e3e3e6;
   --toolbar-accent: #8ab4f8;
+  /* Pastel accent stays the hero fill; ink flips dark (Google dark-surface
+     ink): 7.64:1 on #8ab4f8. Accent as text: 8.09:1 on #1b1c1e. */
+  --toolbar-accent-ink: #8ab4f8;
+  --toolbar-accent-strong: #8ab4f8;
+  --toolbar-accent-contrast: #202124;
   --toolbar-hover: rgba(138,180,248,0.20);
   --content-color: #e3e3e6;
   --color-surface: #1f2023;

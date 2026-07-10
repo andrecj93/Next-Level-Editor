@@ -462,8 +462,11 @@
 
 /* ==========================================
    HIGH CONTRAST MODE
+   Standard value is 'more' — the draft-era 'high' never matches in any
+   shipping browser, which left this whole block dead (focus-indicators.css,
+   SkipLinks and useAccessibility already use 'more').
    ========================================== */
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
   :root {
     --color-border: #000000;
     --color-text: #000000;

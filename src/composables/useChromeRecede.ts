@@ -8,6 +8,8 @@ import { ref, watch, onScopeDispose, type Ref } from "vue";
  * selection, or a chrome-access key (Escape / Alt / F10) is "intent": the
  * chrome returns instantly. A mere typing pause does NOT bring the chrome
  * back — a thinking writer shouldn't see the toolbar pop in mid-thought.
+ * Keyboard shortcuts (Ctrl/Cmd chords) are commands, not writing: a
+ * Ctrl+Z streak neither arms the machine nor sustains a pending recede.
  *
  * This is a pure state composable: it never touches DOM styles. The host
  * binds the returned `receded` ref to a data attribute / class and animates
@@ -71,6 +73,16 @@ export interface UseChromeRecedeOptions {
   armKeystrokes?: number;
   /** Window within which the arming keystrokes must land. */
   armWindowMs?: number;
+  /**
+   * Escape hatch for overlays with no reactive flag (e.g. DOM-only open
+   * dropdowns/menus). Evaluated at the moment the recede timer FIRES: when it
+   * returns true the recede is simply skipped — nothing is re-armed and no
+   * new timer is scheduled, but the armed state is kept, so the next writing
+   * keystroke of a later natural burst schedules a fresh recede as usual.
+   * Unlike `suppressed`, becoming true does NOT restore an already-receded
+   * chrome (it is a point-in-time check, not a reactive source).
+   */
+  blockWhen?: () => boolean;
 }
 
 export interface UseChromeRecedeReturn {
@@ -84,6 +96,12 @@ export interface UseChromeRecedeReturn {
  * Is this keydown "writing"? Printable characters count, and so do
  * Backspace / Delete / Enter (deleting and splitting paragraphs IS writing).
  * Pure modifiers, F-keys, Tab and Escape are chrome/navigation, not content.
+ * Ctrl/Cmd shortcut chords (Ctrl+B, Ctrl+Z, Cmd+C, ...) are COMMANDS, not
+ * writing — a keyboard-shortcut streak must neither arm the machine nor keep
+ * an armed recede timer alive. Two carve-outs: Ctrl+Backspace / Ctrl+Delete
+ * are word deletion (which IS writing), and Windows AltGr chords report
+ * ctrlKey+altKey while producing printable characters (@, €, {), so the
+ * ctrl+alt combination falls through to the normal printable check.
  * IME composition keydowns (isComposing, or the synthetic "Process" key)
  * count too — a composing user is very much writing.
  */
@@ -92,6 +110,10 @@ const isWritingKeydown = (event: KeyboardEvent): boolean => {
   if (key === "Escape" || key === "Tab") return false;
   if (MODIFIER_KEYS.has(key)) return false;
   if (FUNCTION_KEY_RE.test(key)) return false;
+  if ((event.ctrlKey || event.metaKey) && !event.altKey) {
+    // Shortcut chord: only word deletion counts as writing.
+    return key === "Backspace" || key === "Delete";
+  }
   if (key === "Backspace" || key === "Delete" || key === "Enter") return true;
   if (event.isComposing || key === "Process") return true;
   return key.length === 1;
@@ -146,15 +168,18 @@ export function useChromeRecede(
   /**
    * (Re)start the quiet-delay timer. Each qualifying keydown while armed
    * restarts it, so the recede lands ~recedeDelayMs after the LAST
-   * keystroke of a burst — not mid-burst.
+   * keystroke of a burst — not mid-burst. `blockWhen` (a DOM-based host
+   * check for overlays with no reactive flag) is consulted at fire time:
+   * when it blocks, the recede is skipped without scheduling anything —
+   * the machine stays armed, so a later burst recedes normally.
    */
   const startRecedeTimer = () => {
     clearRecedeTimer();
     recedeTimer = setTimeout(() => {
       recedeTimer = null;
-      if (isEnabled() && !isSuppressed()) {
-        receded.value = true;
-      }
+      if (!isEnabled() || isSuppressed()) return;
+      if (options.blockWhen?.()) return;
+      receded.value = true;
     }, recedeDelayMs);
   };
 

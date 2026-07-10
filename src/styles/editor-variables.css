@@ -245,8 +245,9 @@
   }
 }
 
-/* High contrast mode */
-@media (prefers-contrast: high) {
+/* High contrast mode. "high" is not a valid prefers-contrast value (the
+   spec says "more") — the old query could never match. */
+@media (prefers-contrast: more) {
   .editor-variable {
     border-width: 2px;
   }

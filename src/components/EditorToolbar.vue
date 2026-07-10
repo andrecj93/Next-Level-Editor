@@ -14,6 +14,8 @@
     ]"
     role="toolbar"
     aria-label="Text formatting toolbar"
+    @keydown="onRovingKeydown"
+    @focusin="onRovingFocusin"
   >
     <!-- Light-sweep overlay — its OWN clipped layer (the toolbar must keep
          overflow: visible for dropdowns/tooltips, so the band can't be masked
@@ -576,6 +578,114 @@ onMounted(() => {
     passive: true,
   });
 });
+
+/**
+ * Roving tabindex — the ARIA toolbar pattern the role="toolbar" announcement
+ * promises: the whole masthead is ONE tab stop; ArrowLeft/ArrowRight move
+ * focus between its controls (Home/End jump to the extremes) instead of ~30
+ * individual Tab stops between the page and the document.
+ *
+ * The roving stop is tracked imperatively (tabindex attributes, no reactive
+ * re-render): controls live across ToolbarSection/ToolbarDropdown children
+ * and v-show'd families, so a fresh DOM query per interaction is both simpler
+ * and always in sync. Controls inside open dropdown MENUS are excluded — the
+ * pattern roves across top-level controls only; menus own their navigation.
+ */
+const ROVING_KEYS = ["ArrowLeft", "ArrowRight", "Home", "End"];
+let rovingStop: HTMLElement | null = null;
+
+const isRovingVisible = (el: HTMLElement, root: HTMLElement): boolean => {
+  let node: HTMLElement | null = el;
+  while (node && node !== root) {
+    // v-show hides via inline display; [hidden] covers the rest. (CSS-class
+    // hiding is additionally caught by checkVisibility below where supported.)
+    if (node.hidden || node.style.display === "none") return false;
+    node = node.parentElement;
+  }
+  if (typeof el.checkVisibility === "function" && !el.checkVisibility()) {
+    return false;
+  }
+  return true;
+};
+
+const getRovingControls = (): HTMLElement[] => {
+  const root = rootEl.value;
+  if (!root) return [];
+  return Array.from(
+    root.querySelectorAll<HTMLElement>("button, [href]")
+  ).filter(
+    (el) =>
+      !el.hasAttribute("disabled") &&
+      !el.closest(".dropdown-menu") &&
+      isRovingVisible(el, root)
+  );
+};
+
+const applyRovingTabindex = () => {
+  const controls = getRovingControls();
+  if (!controls.length) return;
+  if (!rovingStop || !controls.includes(rovingStop)) {
+    rovingStop = controls[0];
+  }
+  for (const el of controls) {
+    el.tabIndex = el === rovingStop ? 0 : -1;
+  }
+};
+
+const onRovingFocusin = (event: FocusEvent) => {
+  const target = (event.target as HTMLElement | null)?.closest?.(
+    "button, [href]"
+  ) as HTMLElement | null;
+  if (!target || target.closest(".dropdown-menu")) return;
+  rovingStop = target;
+  applyRovingTabindex();
+};
+
+const onRovingKeydown = (event: KeyboardEvent) => {
+  if (!ROVING_KEYS.includes(event.key)) return;
+  const target = event.target as HTMLElement | null;
+  // Menus (and any future text inputs) keep their own arrow behavior.
+  if (!target || target.closest(".dropdown-menu")) return;
+  if (target.matches?.("input, textarea, select")) return;
+  const controls = getRovingControls();
+  if (!controls.length) return;
+
+  const current = controls.indexOf(
+    (target.closest("button, [href]") as HTMLElement | null) ?? target
+  );
+  let next: number;
+  if (event.key === "Home") {
+    next = 0;
+  } else if (event.key === "End") {
+    next = controls.length - 1;
+  } else {
+    const delta = event.key === "ArrowRight" ? 1 : -1;
+    const from = current === -1 ? (delta === 1 ? -1 : 0) : current;
+    next = (from + delta + controls.length) % controls.length;
+  }
+
+  event.preventDefault();
+  rovingStop = controls[next];
+  applyRovingTabindex();
+  rovingStop.focus();
+};
+
+// One tab stop from the start, and re-managed whenever density/expansion/view
+// changes which controls exist or are visible (mini fold, compact "More",
+// the code-view Format-HTML button, disabled undo/redo).
+onMounted(applyRovingTabindex);
+watch(
+  [
+    isMini,
+    () => props.toolbarLayout,
+    () => props.viewMode,
+    () => props.historyIndex,
+    () => props.historyLength,
+  ],
+  () => {
+    nextTick(applyRovingTabindex);
+  }
+);
 
 // Mini = essentials only: keep just the two list toggles inline;
 // indent/outdent live behind the expand toggle. The collapsed row is

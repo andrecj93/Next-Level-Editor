@@ -24,13 +24,23 @@ export type PlayheadState = "ambient" | "home" | "selection";
 
 /**
  * Viewport-relative rect of the editor root (from getBoundingClientRect).
- * The pill centers over it, 12px below its top edge, in ambient/home states.
+ * The pill centers over it, 12px below its top edge, in ambient/home states —
+ * clamped so the pill's measured width stays inside the viewport (EDGE_MARGIN
+ * gutter) and its y never goes above the viewport top edge (the pill PARKS at
+ * the edge while the editor top is scrolled offscreen).
  * The host must refresh it on resize/scroll — the pill is position: fixed.
  */
 export interface PlayheadAnchorRect {
   top: number;
   left: number;
   width: number;
+  /**
+   * Optional editor bottom edge (viewport-relative). When provided, the pill
+   * hides entirely (renders nothing) once the editor rect is fully above the
+   * viewport past a 24px grace — i.e. `bottom <= -24`. Omitting it preserves
+   * the old always-anchored behavior.
+   */
+  bottom?: number;
 }
 
 /**
@@ -44,8 +54,10 @@ export interface PlayheadAnchorRect {
 export type PlayheadSelectionPosition = ToolbarPosition;
 
 /**
- * Inline formatting buttons (B/I/U/S + link). Exactly the ToolbarAction shape
+ * Inline formatting buttons (the host's floating/inline action set — e.g.
+ * B/I/U + link + comment). Exactly the ToolbarAction shape
  * EditorToolbar/FloatingToolbar consume, so the host passes the SAME objects.
+ * Also the shape of the optional `listActions` prop (list/indent toggles).
  */
 export type PlayheadAction = ToolbarAction;
 

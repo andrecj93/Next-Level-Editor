@@ -32,6 +32,7 @@ describe("useChromeRecede", () => {
       recedeDelayMs?: number;
       armKeystrokes?: number;
       armWindowMs?: number;
+      blockWhen?: () => boolean;
     } = {}
   ): Harness => {
     const rootEl = document.createElement("div");
@@ -62,6 +63,7 @@ describe("useChromeRecede", () => {
         recedeDelayMs: overrides.recedeDelayMs,
         armKeystrokes: overrides.armKeystrokes,
         armWindowMs: overrides.armWindowMs,
+        blockWhen: overrides.blockWhen,
       })
     )!;
     scopes.push(scope);
@@ -76,6 +78,17 @@ describe("useChromeRecede", () => {
         new KeyboardEvent("keydown", { key, bubbles: true })
       );
     }
+  };
+
+  /** Dispatch a single keydown with explicit modifier state (chords). */
+  const chord = (
+    target: Element,
+    key: string,
+    init: Pick<KeyboardEventInit, "ctrlKey" | "metaKey" | "altKey"> = {}
+  ) => {
+    target.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, ...init })
+    );
   };
 
   /** happy-dom: MouseEvent carries clientX/Y fine for a "pointermove". */
@@ -253,6 +266,98 @@ describe("useChromeRecede", () => {
     h.api.restore();
 
     expect(h.api.receded.value).toBe(false);
+  });
+
+  describe("keyboard shortcuts are commands, not writing", () => {
+    it("a Ctrl shortcut streak (e.g. Ctrl+Z x3) never arms or recedes", () => {
+      const h = createHarness();
+
+      chord(h.inner, "z", { ctrlKey: true });
+      chord(h.inner, "z", { ctrlKey: true });
+      chord(h.inner, "z", { ctrlKey: true });
+      vi.advanceTimersByTime(5000);
+
+      expect(h.api.receded.value).toBe(false);
+    });
+
+    it("a Meta (Cmd) shortcut streak never arms or recedes", () => {
+      const h = createHarness();
+
+      chord(h.inner, "b", { metaKey: true });
+      chord(h.inner, "i", { metaKey: true });
+      chord(h.inner, "u", { metaKey: true });
+      vi.advanceTimersByTime(5000);
+
+      expect(h.api.receded.value).toBe(false);
+    });
+
+    it("a shortcut while armed does not restart the recede timer", () => {
+      const h = createHarness();
+
+      type(h.inner, ["a", "b", "c"]); // armed; recede due at +900ms
+      vi.advanceTimersByTime(800);
+      chord(h.inner, "b", { ctrlKey: true }); // command — must NOT push it out
+
+      // Fires at the original deadline (100ms later), not 900ms later.
+      vi.advanceTimersByTime(100);
+      expect(h.api.receded.value).toBe(true);
+    });
+
+    it("Ctrl+Backspace / Ctrl+Delete are word deletion and DO count as writing", () => {
+      const h = createHarness();
+
+      chord(h.inner, "Backspace", { ctrlKey: true });
+      chord(h.inner, "Backspace", { ctrlKey: true });
+      chord(h.inner, "Delete", { ctrlKey: true });
+      vi.advanceTimersByTime(900);
+
+      expect(h.api.receded.value).toBe(true);
+    });
+
+    it("AltGr-style chords (ctrlKey+altKey, printable key) count as writing", () => {
+      const h = createHarness();
+
+      // Windows AltGr reports ctrlKey && altKey while producing @, €, {, ...
+      chord(h.inner, "@", { ctrlKey: true, altKey: true });
+      chord(h.inner, "€", { ctrlKey: true, altKey: true });
+      chord(h.inner, "{", { ctrlKey: true, altKey: true });
+      vi.advanceTimersByTime(900);
+
+      expect(h.api.receded.value).toBe(true);
+    });
+  });
+
+  describe("blockWhen (DOM-based host veto at fire time)", () => {
+    it("blocks the recede when true at fire time, and a later burst recedes once it clears", () => {
+      let blocked = true;
+      const h = createHarness({ blockWhen: () => blocked });
+
+      // Burst arms and the timer fires — but the host vetoes: no recede, and
+      // nothing is rescheduled.
+      type(h.inner, ["a", "b", "c"]);
+      vi.advanceTimersByTime(900);
+      expect(h.api.receded.value).toBe(false);
+      vi.advanceTimersByTime(5000); // nothing pending re-fires
+      expect(h.api.receded.value).toBe(false);
+
+      // Overlay gone: the machine is still armed, so a later natural burst
+      // schedules a fresh recede that now lands.
+      blocked = false;
+      type(h.inner, ["d"]);
+      vi.advanceTimersByTime(900);
+      expect(h.api.receded.value).toBe(true);
+    });
+
+    it("is consulted per fire: a false blockWhen never interferes", () => {
+      const blockWhen = vi.fn(() => false);
+      const h = createHarness({ blockWhen });
+
+      type(h.inner, ["a", "b", "c"]);
+      vi.advanceTimersByTime(900);
+
+      expect(blockWhen).toHaveBeenCalledTimes(1);
+      expect(h.api.receded.value).toBe(true);
+    });
   });
 
   it("removes listeners and cancels timers on scope dispose", () => {

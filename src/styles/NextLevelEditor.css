@@ -26,6 +26,15 @@
   --toolbar-bg: #f8f9fb;
   --toolbar-text: #1f2937;
   --toolbar-accent: #3b82f6;
+  /* Accent SPLIT by use — the raw accent only has to clear the 3:1 non-text
+     bar (icons, the 2px underline, focus rings). Where the accent renders as
+     13-14px TEXT it needs 4.5:1, so text takes the darker -ink shade. The
+     Export hero pill gets its own fill (-strong) + on-fill ink (-contrast)
+     pair, tuned so white-on-fill stays ≥4.5:1 even under the hover
+     brightness(1.08) lift. Every theme preset overrides all three. */
+  --toolbar-accent-ink: #2563eb; /* 4.91:1 on #f8f9fb */
+  --toolbar-accent-strong: #2563eb; /* white on it: 5.17:1, hover 4.54:1 */
+  --toolbar-accent-contrast: #ffffff;
   --toolbar-hover: rgba(59, 130, 246, 0.12);
   --content-color: #1f2937;
   --placeholder-color: #6b7280; /* ~4.8:1 on white — WCAG AA (was #9ca3af, 2.5:1) */
@@ -53,6 +62,11 @@
   --toolbar-bg: #111827;
   --toolbar-text: #e2e8f0;
   --toolbar-accent: #60a5fa;
+  /* Dark presets keep the pastel accent as the hero FILL (its glow is the
+     theme) and flip the hero ink dark instead: #0f172a on #60a5fa = 7.02:1. */
+  --toolbar-accent-ink: #60a5fa; /* 6.98:1 on #111827 */
+  --toolbar-accent-strong: #60a5fa;
+  --toolbar-accent-contrast: #0f172a;
   --toolbar-hover: rgba(96, 165, 250, 0.2);
   --content-color: #e2e8f0;
   --placeholder-color: #7c8aa0; /* ~4.7:1 on #0f172a — WCAG AA (was #475569, 2.4:1) */
@@ -860,7 +874,11 @@
    chips. Ghost controls (no borders, no fills at rest), hairline
    separators, air between families; the accent appears only as
    INK: colored glyphs and a short underline bar on active
-   formatting states. Opaque --toolbar-bg keeps contrast AA.
+   formatting states. Opaque --toolbar-bg keeps the backdrop
+   predictable; wherever the accent renders as TEXT it takes the
+   darker --toolbar-accent-ink shade so 13-14px labels clear
+   4.5:1 text AA (raw --toolbar-accent only guarantees the 3:1
+   non-text bar for glyphs/underlines/focus rings).
    ============================================================ */
 .editor-toolbar-modern {
   /* Containing block for the staging overlays (sweep clip + elevation
@@ -960,7 +978,9 @@
    tooltip bubble + arrow. */
 .toolbar-btn-modern.active {
   background-color: transparent;
-  color: var(--toolbar-accent);
+  /* -ink for the glyph/label (text-safe shade), raw accent for the 2px
+     underline (non-text, 3:1 is enough everywhere). */
+  color: var(--toolbar-accent-ink, var(--toolbar-accent));
   background-image: linear-gradient(
     var(--toolbar-accent),
     var(--toolbar-accent)
@@ -972,7 +992,7 @@
 
 .toolbar-btn-modern.active:hover {
   background-color: var(--toolbar-hover);
-  color: var(--toolbar-accent);
+  color: var(--toolbar-accent-ink, var(--toolbar-accent));
 }
 
 /* ============================================================
@@ -1388,10 +1408,14 @@
 }
 .editor-toolbar-modern .export-section .dropdown-trigger {
   /* Flat accent so it reskins with any theme; depth from a neutral shadow +
-     top-highlight rather than a hardcoded blue gradient. */
-  background: var(--toolbar-accent);
+     top-highlight rather than a hardcoded blue gradient. The fill/ink pair is
+     the per-theme -strong/-contrast split (NOT raw accent + white): dark
+     presets run pastel accents that can't carry white text (2.1-2.8:1), so
+     they keep the pastel fill and flip the ink dark; light presets deepen the
+     fill where needed. Every pair is ≥4.5:1, hover brightness included. */
+  background: var(--toolbar-accent-strong, var(--toolbar-accent));
   border-color: transparent;
-  color: #ffffff;
+  color: var(--toolbar-accent-contrast, #ffffff);
   font-weight: 600;
   box-shadow: 0 2px 8px -1px rgba(15, 23, 42, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
@@ -1407,7 +1431,7 @@
 .editor-toolbar-modern .export-section .dropdown-trigger:hover:not(:disabled) {
   filter: brightness(1.08);
   border-color: transparent;
-  color: #ffffff;
+  color: var(--toolbar-accent-contrast, #ffffff);
   box-shadow: 0 5px 14px -2px rgba(15, 23, 42, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
@@ -1535,7 +1559,9 @@
    both pseudo-elements belong to the tooltip). */
 .view-mode-btn.active {
   background-color: transparent;
-  color: var(--toolbar-accent);
+  /* 13px/600 label = text AA territory: the -ink shade clears 4.5:1 on the
+     light presets where the raw accent sat at 3.49-4.35:1. */
+  color: var(--toolbar-accent-ink, var(--toolbar-accent));
   background-image: linear-gradient(
     var(--toolbar-accent),
     var(--toolbar-accent)
@@ -1548,6 +1574,26 @@
 
 .view-mode-btn.active:hover {
   background-color: var(--toolbar-hover);
+}
+
+/* Windows High Contrast (forced colors): the masthead's only active-state
+   marks are accent ink + a background-image underline — forced colors strips
+   both ('color' is forced to ButtonText, non-url() background-images are
+   dropped), leaving Bold-on identical to Bold-off. System-color pairs survive
+   the forcing, so the active control takes the platform's selection colors.
+   Highlight/HighlightText first as the legacy fallback; SelectedItem(Text) —
+   the dedicated "selected control" pair — refines it where supported. */
+@media (forced-colors: active) {
+  .toolbar-btn-modern.active,
+  .toolbar-btn-modern.active:hover,
+  .view-mode-btn.active,
+  .view-mode-btn.active:hover,
+  .dropdown-trigger.open {
+    background-color: Highlight;
+    color: HighlightText;
+    background-color: SelectedItem;
+    color: SelectedItemText;
+  }
 }
 
 .view-mode-btn:focus-visible {
@@ -1824,7 +1870,8 @@
 
 .dropdown-trigger.open {
   background-color: var(--toolbar-hover);
-  color: var(--toolbar-accent);
+  /* 14px/600 label — same accent-as-text rule as the view-mode switch. */
+  color: var(--toolbar-accent-ink, var(--toolbar-accent));
 }
 
 .dropdown-icon {

@@ -128,8 +128,11 @@
       @split-editor-input="onSplitEditorInput"
     />
 
-    <!-- Word Count Footer -->
+    <!-- Word Count Footer. Hidden while the toolbar docks at the bottom —
+         two stacked bottom bands duplicated the word count (the dock's
+         letterbox band carries it while writing). -->
     <EditorFooter
+      v-if="effectiveToolbarPosition !== 'bottom'"
       :id="footerLandmarkId"
       :word-count="wordCount"
       :character-count="characterCount"
@@ -163,8 +166,18 @@
       :format-items="formatDropdownItems"
       :insert-items="insertDropdownItems"
       :overflow-items="pillOverflowItems"
+      :alignment-items="alignmentDropdownItems"
+      :size-items="fontSizeDropdownItems"
+      :list-actions="listActions"
+      :text-color-presets="pillTextColorPresets"
+      :highlight-color-presets="pillHighlightColorPresets"
+      :text-color="textColor"
+      :background-color="backgroundColor"
       :theme="teleportThemeClass"
-      @remember-selection="rememberSelectionFromToolbar"
+      @remember-selection="rememberSelectionBase"
+      @expand="restoreChrome"
+      @text-color-change="handleTextColor"
+      @background-color-change="handleBackgroundColor"
     />
 
     <!-- Mobile bottom toolbar (self-hides on non-touch/desktop; off in
@@ -383,7 +396,7 @@
         v-if="enableVariables && variablesComposable"
         class="variables-toggle-fab"
         :style="{
-          bottom: `calc(${variablesFabBottom}px + var(--nle-mobile-toolbar-clearance, 0px))`,
+          bottom: `calc(${variablesFabBottom}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
         }"
         aria-label="Toggle variables panel"
         :aria-expanded="showVariablesPanel"
@@ -409,7 +422,7 @@
         v-if="enableVariables && variablesComposable && showVariablesPanel"
         class="variables-panel"
         :style="{
-          bottom: `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px))`,
+          bottom: `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
         }"
         role="dialog"
         aria-label="Template variables"
@@ -499,6 +512,7 @@ import {
   onMounted,
   onUnmounted,
   watch,
+  watchEffect,
   useId,
 } from "vue";
 
@@ -637,20 +651,26 @@ const rootEl = ref<HTMLElement | null>(null);
 // the @container block stays as the no-JS fallback with matching styles.
 const toolbarShellEl = ref<HTMLElement | null>(null);
 const toolbarShellWidth = ref(Number.POSITIVE_INFINITY);
+const toolbarShellHeight = ref(0);
 let toolbarShellObserver: ResizeObserver | null = null;
 watch(toolbarShellEl, (el) => {
   toolbarShellObserver?.disconnect();
   toolbarShellObserver = null;
   if (el && typeof ResizeObserver !== "undefined") {
     toolbarShellObserver = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width;
+      const rect = entries[0]?.contentRect;
       // Defer the reactive write out of the observer's delivery cycle: the
       // layout flip it triggers (mini <-> full) resizes the shell in the same
       // frame, which otherwise raises the window-level "ResizeObserver loop
       // completed with undelivered notifications" error in WebKit/Blink.
-      if (width != null && width !== toolbarShellWidth.value) {
+      if (rect && rect.width !== toolbarShellWidth.value) {
         requestAnimationFrame(() => {
-          toolbarShellWidth.value = width;
+          toolbarShellWidth.value = rect.width;
+        });
+      }
+      if (rect && rect.height !== toolbarShellHeight.value) {
+        requestAnimationFrame(() => {
+          toolbarShellHeight.value = rect.height;
         });
       }
     });
@@ -687,25 +707,51 @@ onUnmounted(() => {
   rootObserver = null;
 });
 
-// Every non-top position is a desktop arrangement — below the breakpoint
-// the mobile toolbar owns the screen and the docked top bar returns.
+// Every non-top position is a desktop arrangement. Fall back to the classic
+// top bar below the breakpoint AND whenever the device says the mobile
+// bottom toolbar owns the screen — the two breakpoints differ (root 640px vs
+// device 768px), and between them a bottom dock and the mobile bar would
+// both claim the bottom edge. (deviceShowsMobileToolbar is declared later
+// in setup; computeds are lazy, so the forward reference is safe.)
 const effectiveToolbarPosition = computed(() =>
-  rootWidth.value <= 640 ? "top" : props.toolbarPosition
+  rootWidth.value <= 640 || deviceShowsMobileToolbar.value
+    ? "top"
+    : props.toolbarPosition
 );
 
 // Playhead: one floating capsule replaces both the docked toolbar and the
-// selection bubble. Desktop-only (bar below the breakpoint); while active,
-// toolbarPosition/adaptiveChrome are inert — the pill has its own grammar.
+// selection bubble. Desktop-only (bar below the breakpoint / when the mobile
+// bar owns the screen); while active, toolbarPosition/adaptiveChrome are
+// inert — the pill has its own grammar. The pill needs an editable WYSIWYG
+// surface: in code/preview views the docked bar returns (it carries the
+// view-mode switch, which the pill deliberately doesn't).
 const effectiveToolbarMode = computed(() =>
-  rootWidth.value <= 640 ? "bar" : props.toolbarMode
+  rootWidth.value <= 640 || deviceShowsMobileToolbar.value
+    ? "bar"
+    : props.toolbarMode
 );
 const isPillMode = computed(
   () =>
     effectiveToolbarMode.value === "pill" &&
     props.showToolbar &&
-    !props.readonly
+    !props.readonly &&
+    (viewMode.value === "editor" || viewMode.value === "split")
 );
 const isZen = computed(() => effectiveToolbarPosition.value === "zen");
+
+// Bottom-dock clearance: like the MobileToolbar, the desktop dock publishes
+// its measured on-screen height so the FAB column and bottom-anchored
+// panels rise above it instead of being buried under a full-width z-9999
+// bar (the audit's "dock swallows the FABs").
+watchEffect(() => {
+  const el = rootEl.value;
+  if (!el) return;
+  const clearance =
+    effectiveToolbarPosition.value === "bottom" && !isPillMode.value
+      ? `${Math.round(toolbarShellHeight.value)}px`
+      : "0px";
+  el.style.setProperty("--nle-bottom-dock-clearance", clearance);
+});
 // Zen IS the letterbox, permanently — it overrides adaptiveChrome="off".
 const effectiveAdaptiveChrome = computed(() =>
   isZen.value ? "letterbox" : props.adaptiveChrome
@@ -841,7 +887,18 @@ const uncategorizedVariables = computed(() => {
 // Auto-save
 const { isSaving, lastSaved, triggerAutoSave } = useAutoSave(
   async (content: string, version: number) => {
-    // Emit the content for parent to save
+    // With a host-provided saveHandler the "Saved" signal is TRUTHFUL: it
+    // asserts real persistence and reports real failures. Without one, the
+    // v-model emission IS the handoff — the host owns the content the moment
+    // it is emitted — and the signal keeps its historical meaning.
+    if (props.saveHandler) {
+      try {
+        const ok = await props.saveHandler(content);
+        return { success: ok !== false, serverVersion: version + 1 };
+      } catch {
+        return { success: false, serverVersion: version };
+      }
+    }
     emit("update:modelValue", content);
     return { success: true, serverVersion: version + 1 };
   },
@@ -2026,7 +2083,15 @@ const chromeSuppressed = computed(
     showTableModal.value ||
     showTableDesigner.value ||
     showTablePropertiesModal.value ||
-    showShortcutHelpModal.value
+    showShortcutHelpModal.value ||
+    // The audit's suppression gaps: typing in the command palette's search,
+    // a comment (modal or sidebar reply), or with the context menu / stats
+    // panel open must never dissolve the chrome underneath the overlay.
+    showCommandPalette.value ||
+    showCommentModal.value ||
+    showCommentsSidebar.value ||
+    showWritingStatsPanel.value ||
+    showContextMenu.value
 );
 
 // Desktop-only, and only when the main toolbar is actually rendered. Reuses
@@ -2049,6 +2114,13 @@ const { receded: chromeReceded, restore: restoreChrome } = useChromeRecede({
   root: rootEl,
   enabled: adaptiveChromeEnabled,
   suppressed: chromeSuppressed,
+  // Point-in-time check at the moment the recede timer fires: toolbar
+  // dropdowns (and the pill's menus) manage their open state internally,
+  // with no reactive flag to include in chromeSuppressed — the chrome must
+  // never dissolve under a menu the user is reading.
+  blockWhen: () =>
+    !!rootEl.value?.querySelector(".dropdown-menu") ||
+    !!document.querySelector(".playhead .dropdown-menu"),
 });
 
 // Zen ("Estúdio"): the letterbox IS the toolbar. Receded from the very first
@@ -2064,7 +2136,17 @@ const scheduleZenTuck = () => {
   if (zenTuckTimer) clearTimeout(zenTuckTimer);
   zenTuckTimer = setTimeout(() => {
     if (!isZen.value || chromeReceded.value) return;
-    if (chromeSuppressed.value || toolbarShellEl.value?.matches(":hover")) {
+    // Never tuck when the adaptive chrome is disabled (code view, sub-640px,
+    // readonly) — zen must not smuggle the letterbox past those gates. And
+    // never tuck under a keyboard user: :hover only sees the pointer, so
+    // also hold while focus lives inside the shell.
+    if (!adaptiveChromeEnabled.value) return;
+    const shell = toolbarShellEl.value;
+    const focusInside =
+      shell != null &&
+      document.activeElement instanceof Node &&
+      shell.contains(document.activeElement);
+    if (chromeSuppressed.value || shell?.matches(":hover") || focusInside) {
       scheduleZenTuck();
       return;
     }
@@ -2110,7 +2192,15 @@ const updatePillAnchor = () => {
     return;
   }
   const r = rootEl.value.getBoundingClientRect();
-  pillAnchorRect.value = { top: r.top, left: r.left, width: r.width };
+  // `bottom` lets the pill hide once the editor is FULLY scrolled offscreen
+  // (it parks at the viewport top edge until then — never chrome for a
+  // document you can't see).
+  pillAnchorRect.value = {
+    top: r.top,
+    left: r.left,
+    width: r.width,
+    bottom: r.bottom,
+  };
 };
 
 // Selection travel target — the bubble's clamp/flip math, in VIEWPORT
@@ -2132,6 +2222,14 @@ const updatePillSelection = () => {
     pillSelectionPosition.value = null;
     return;
   }
+  // Width from the REAL selection layer (n 36px buttons + 2px gaps + 10px
+  // padding) instead of the bubble's generic 240px estimate — the
+  // over-estimate parked near-edge selections short of their true clamp.
+  const actionCount = unref(floatingActions)?.length ?? 5;
+  const selectionLayerWidth = Math.max(
+    actionCount * 36 + Math.max(actionCount - 1, 0) * 2 + 10,
+    PILL_ESTIMATED_WIDTH / 2
+  );
   const pos = computeToolbarPosition({
     rect: {
       top: rect.top,
@@ -2139,7 +2237,7 @@ const updatePillSelection = () => {
       left: rect.left,
       width: rect.width,
     },
-    toolbarWidth: PILL_ESTIMATED_WIDTH,
+    toolbarWidth: selectionLayerWidth,
     viewportWidth: window.innerWidth,
     scrollX: 0,
     scrollY: 0,
@@ -2159,6 +2257,11 @@ onMounted(() => {
   window.addEventListener("resize", refreshPillGeometry);
   window.addEventListener("scroll", refreshPillGeometry, true);
   document.addEventListener("selectionchange", updatePillSelection);
+  // A consumer that mounts with toolbar-mode="pill" STATICALLY never flips
+  // isPillMode and never scrolls before writing — without this seed the
+  // anchor stays null and the entire chrome is absent until first
+  // interaction (the audit's "no pill on initial mount").
+  nextTick(refreshPillGeometry);
 });
 onUnmounted(() => {
   window.removeEventListener("resize", refreshPillGeometry);
@@ -2166,12 +2269,91 @@ onUnmounted(() => {
   document.removeEventListener("selectionchange", updatePillSelection);
 });
 watch([isPillMode, pillState], () => nextTick(refreshPillGeometry));
+// The editor can move/resize without any window resize or scroll (panels
+// opening, content growing, host layout changes) — the root ResizeObserver
+// already tracks that; ride its reactive width to re-anchor the pill.
+watch(rootWidth, () => {
+  if (isPillMode.value) nextTick(refreshPillGeometry);
+});
 
 // The pill's "⋯" carries the long tail: productivity tools + export.
+// The pill's "⋯" carries every capability that has no inline home in the
+// capsule — the audit's reachability sweep: undo/redo, the tool actions
+// (Find & Replace, View HTML, Clear Formatting), the view-mode switch,
+// fullscreen + theme, then productivity and export. Sections are hairline
+// dividers.
+const PILL_VIEW_MODES = [
+  { mode: "editor", label: "Editor view" },
+  { mode: "code", label: "Code view" },
+  { mode: "split", label: "Split view" },
+  { mode: "preview", label: "Preview view" },
+] as const;
 const pillOverflowItems = computed(() => [
+  {
+    id: "pill-undo",
+    label: "Undo",
+    isDisabled: () => historyIndex.value <= 0,
+    onClick: undo,
+  },
+  {
+    id: "pill-redo",
+    label: "Redo",
+    isDisabled: () => historyIndex.value >= history.value.length - 1,
+    onClick: redo,
+  },
+  { divider: true },
+  ...unref(toolActions),
+  { divider: true },
+  ...PILL_VIEW_MODES.map((v) => ({
+    id: `pill-view-${v.mode}`,
+    label: v.label,
+    isActive: () => viewMode.value === v.mode,
+    onClick: () => {
+      viewMode.value = v.mode;
+    },
+  })),
+  { divider: true },
+  {
+    id: "pill-theme",
+    label: "Toggle theme",
+    onClick: toggleTheme,
+  },
+  {
+    id: "pill-fullscreen",
+    label: "Fullscreen",
+    isActive: () => isFullScreen.value,
+    onClick: toggleFullScreen,
+  },
+  { divider: true },
   ...unref(productivityDropdownItems),
   ...unref(exportDropdownItems),
 ]);
+
+// Same curated quick-pick palettes the masthead's Colors menu uses.
+const pillTextColorPresets = [
+  "#000000",
+  "#374151",
+  "#6b7280",
+  "#dc2626",
+  "#ea580c",
+  "#ca8a04",
+  "#16a34a",
+  "#0891b2",
+  "#2563eb",
+  "#7c3aed",
+  "#db2777",
+  "#ffffff",
+];
+const pillHighlightColorPresets = [
+  "#fde047",
+  "#fca5a5",
+  "#fdba74",
+  "#86efac",
+  "#5eead4",
+  "#93c5fd",
+  "#c4b5fd",
+  "#f9a8d4",
+];
 
 // The letterbox band's three signals (hard cap — it must never become a
 // dashboard): current block format, document-position filament, save + count.
@@ -2186,22 +2368,37 @@ const BLOCK_FORMAT_LABELS: Record<string, string> = {
   BLOCKQUOTE: "Quote",
   PRE: "Code",
   LI: "List",
+  // Structural stops — the walk-up must not skip past a table cell or a
+  // figure and mislabel the position as a bare "Paragraph".
+  TD: "Table",
+  TH: "Table",
+  FIGURE: "Figure",
+  FIGCAPTION: "Figure",
 };
+// The last in-editor label survives clicks outside the editor (band clicks,
+// FABs, the host page) — snapping back to "Paragraph" on every outside
+// click made the band flicker lies.
+let lastFormatLabel = "Paragraph";
 const letterboxFormatLabel = computed(() => {
   void selectionTick.value;
   const root = editorContent.value;
   const selection =
     typeof window !== "undefined" ? window.getSelection() : null;
-  if (!root || !selection || selection.rangeCount === 0) return "Paragraph";
+  const anchor = selection?.anchorNode ?? null;
+  if (!root || !anchor || !root.contains(anchor)) return lastFormatLabel;
   let el: HTMLElement | null =
-    selection.anchorNode?.nodeType === Node.ELEMENT_NODE
-      ? (selection.anchorNode as HTMLElement)
-      : selection.anchorNode?.parentElement ?? null;
+    anchor.nodeType === Node.ELEMENT_NODE
+      ? (anchor as HTMLElement)
+      : anchor.parentElement;
   while (el && el !== root) {
     const label = BLOCK_FORMAT_LABELS[el.tagName];
-    if (label) return label;
+    if (label) {
+      lastFormatLabel = label;
+      return label;
+    }
     el = el.parentElement;
   }
+  lastFormatLabel = "Paragraph";
   return "Paragraph";
 });
 
@@ -2210,6 +2407,13 @@ const letterboxFormatLabel = computed(() => {
 // alive, not be frame-perfect.
 const letterboxProgress = ref(0);
 let progressLastUpdate = 0;
+let progressTrailing: ReturnType<typeof setTimeout> | null = null;
+const readLetterboxProgress = () => {
+  const root = editorContent.value;
+  if (!root) return;
+  const progress = getCaretDocumentProgress(root);
+  if (progress != null) letterboxProgress.value = progress;
+};
 const updateLetterboxProgress = () => {
   if (
     !adaptiveChromeEnabled.value ||
@@ -2218,13 +2422,28 @@ const updateLetterboxProgress = () => {
     return;
   }
   const now = Date.now();
-  if (now - progressLastUpdate < 150) return;
+  if (now - progressLastUpdate < 150) {
+    // Leading-edge-only throttling permanently dropped the LAST caret
+    // position of a burst — schedule one trailing read so the filament
+    // always settles on the truth.
+    if (!progressTrailing) {
+      progressTrailing = setTimeout(() => {
+        progressTrailing = null;
+        progressLastUpdate = Date.now();
+        readLetterboxProgress();
+      }, 160);
+    }
+    return;
+  }
   progressLastUpdate = now;
-  const root = editorContent.value;
-  if (!root) return;
-  const progress = getCaretDocumentProgress(root);
-  if (progress != null) letterboxProgress.value = progress;
+  readLetterboxProgress();
 };
+onUnmounted(() => {
+  if (progressTrailing) clearTimeout(progressTrailing);
+});
+// Content replacement (undo/redo/history jump) moves the caret without a
+// reliable selectionchange — refresh the filament off the history index.
+watch(historyIndex, () => nextTick(readLetterboxProgress));
 onMounted(() =>
   document.addEventListener("selectionchange", updateLetterboxProgress)
 );
@@ -2325,7 +2544,7 @@ onUnmounted(() => {
 
 /* Comments = the primary action: accent icon + a quiet accent ring. */
 .comments-toggle-fab {
-  bottom: calc(28px + var(--nle-mobile-toolbar-clearance, 0px));
+  bottom: calc(28px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px));
   width: 56px;
   height: 56px;
   color: var(--toolbar-accent);
@@ -2334,7 +2553,7 @@ onUnmounted(() => {
 
 /* Stats = secondary: a calm neutral icon until hovered. */
 .writing-stats-toggle-fab {
-  bottom: calc(96px + var(--nle-mobile-toolbar-clearance, 0px));
+  bottom: calc(96px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px));
   width: 52px;
   height: 52px;
   color: var(--color-text-secondary);
@@ -2546,7 +2765,7 @@ onUnmounted(() => {
 /* Responsive */
 @media (max-width: 768px) {
   .comments-toggle-fab {
-    bottom: calc(20px + var(--nle-mobile-toolbar-clearance, 0px));
+    bottom: calc(20px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px));
     right: 20px;
     width: 56px;
     height: 56px;
@@ -2681,11 +2900,27 @@ onUnmounted(() => {
     var(--nle-ease-gentle, cubic-bezier(0.4, 0, 0.6, 1));
 }
 
+/* Band ink: the band's surface is the toolbar bg deepened by 12%, so raw
+   text-secondary lands at 3.2-4.5:1 in the light presets — below AA for
+   12px text. Compensate by mixing the ink toward full text color; the
+   plain-var fallback keeps non-color-mix engines readable. */
 .nle-letterbox-format {
   font-size: 12px;
   letter-spacing: 0.02em;
-  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  color: var(--toolbar-text, var(--color-text));
+  color: color-mix(
+    in srgb,
+    var(--toolbar-text-secondary, var(--color-text-secondary)) 45%,
+    var(--toolbar-text, var(--color-text)) 55%
+  );
   white-space: nowrap;
+}
+
+/* Bottom dock: the band's hairline must sit on the edge FACING the content
+   (the top), mirroring the docked toolbar's own border flip. */
+.nle-toolbar-shell[data-position="bottom"] .nle-letterbox {
+  border-bottom: none;
+  border-top: 1px solid var(--color-divider, var(--color-border));
 }
 
 /* The playhead: a 2px filament that fills as the caret moves through the
@@ -2703,7 +2938,11 @@ onUnmounted(() => {
   height: 100%;
   border-radius: 1px;
   background: var(--toolbar-text-secondary, var(--color-text-secondary));
-  transition: width 300ms var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
+  /* Motion token so prefers-reduced-motion collapses the slide; the fill is
+     2px tall inside its own overflow:hidden track, so the width transition
+     repaints a sliver — acceptable, and scaleX would blur the rounded tip. */
+  transition: width var(--nle-motion-morph, 260ms)
+    var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
 /* Auto-save dot — the band's ONLY use of accent (accent-as-signal). */
@@ -2725,7 +2964,12 @@ onUnmounted(() => {
 .nle-letterbox-count {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  color: var(--toolbar-text-secondary, var(--color-text-secondary));
+  color: var(--toolbar-text, var(--color-text));
+  color: color-mix(
+    in srgb,
+    var(--toolbar-text-secondary, var(--color-text-secondary)) 45%,
+    var(--toolbar-text, var(--color-text)) 55%
+  );
   white-space: nowrap;
 }
 </style>

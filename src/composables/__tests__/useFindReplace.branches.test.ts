@@ -481,6 +481,88 @@ describe("useFindReplace — branch/edge coverage", () => {
       expect(() => clearPendingHighlight()).not.toThrow();
     });
 
+    it("handleReplace during an active find highlight bakes NO highlight markup into the content", () => {
+      // Regression: replace reads editorContent.innerHTML while the 1s find
+      // highlight is still applied — without clearing it first, the yellow
+      // background is written back permanently (and snapshotted to history).
+      vi.useFakeTimers();
+      const span = document.createElement("span");
+      span.textContent = "target word";
+      editorElement.appendChild(span);
+
+      stubMatch(span.firstChild); // text node → highlights the span
+      const { handleFind, handleReplace } = make();
+
+      handleFind({ findText: "target", direction: "next" });
+      expect(span.style.backgroundColor).not.toBe(""); // highlight active
+
+      // Within the 1s window, replace mutates the content.
+      handleReplace({
+        findText: "target",
+        replaceText: "replaced",
+        options: opts(false, false),
+      });
+
+      expect(editorElement.innerHTML).toContain("replaced");
+      expect(editorElement.innerHTML).not.toContain("background-color");
+      expect(editorElement.innerHTML).not.toContain("255, 255, 0");
+      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+
+      // The pending restore timer was cancelled too — nothing left to fire.
+      expect(() => vi.advanceTimersByTime(1000)).not.toThrow();
+      expect(editorElement.innerHTML).not.toContain("background-color");
+    });
+
+    it("handleReplaceAll during an active find highlight bakes NO highlight markup into the content", () => {
+      vi.useFakeTimers();
+      const span = document.createElement("span");
+      span.textContent = "target target";
+      editorElement.appendChild(span);
+
+      stubMatch(span);
+      const { handleFind, handleReplaceAll } = make();
+
+      handleFind({ findText: "target", direction: "next" });
+      expect(span.style.backgroundColor).not.toBe("");
+
+      handleReplaceAll({
+        findText: "target",
+        replaceText: "done",
+        options: opts(false, false),
+      });
+
+      expect(editorElement.innerHTML).toContain("done done");
+      expect(editorElement.innerHTML).not.toContain("background-color");
+      expect(editorElement.innerHTML).not.toContain("255, 255, 0");
+      expect(captureSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    it("replace preserves a REAL pre-existing inline background while dropping only the find highlight", () => {
+      // The clear must restore the element's original background, not blank it.
+      const span = document.createElement("span");
+      span.textContent = "target";
+      span.style.backgroundColor = "green";
+      const originalBg = span.style.backgroundColor;
+      editorElement.appendChild(span);
+
+      stubMatch(span);
+      const { handleFind, handleReplaceAll } = make();
+
+      handleFind({ findText: "target", direction: "next" });
+      expect(span.style.backgroundColor).not.toBe(originalBg);
+
+      handleReplaceAll({
+        findText: "target",
+        replaceText: "kept",
+        options: opts(false, false),
+      });
+
+      // The user's own green background survives in the replaced HTML; the
+      // temporary yellow does not.
+      expect(editorElement.innerHTML).toContain("green");
+      expect(editorElement.innerHTML).not.toContain("255, 255, 0");
+    });
+
     it("passes the backwards flag through window.find for previous vs next", () => {
       const span = document.createElement("span");
       span.textContent = "target";
