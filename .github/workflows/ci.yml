@@ -70,40 +70,47 @@ jobs:
         run: npx vue-tsc --noEmit
 
   e2e:
-    name: E2E Tests
+    # Run each Playwright project in its OWN job so the two browsers don't share
+    # one long-lived dev server. Previously both ran serially in a single job:
+    # once the suite grew, the ~20min run left the dev server slow by the time
+    # the webkit (mobile-safari) project ran, tripping spurious click timeouts.
+    # Parallel per-browser jobs keep each run short with a fresh server.
+    name: E2E Tests (${{ matrix.project }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, mobile-safari]
     permissions:
       contents: read
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright Browsers
-        # Install both browsers the Playwright config runs (chromium + the
-        # mobile-safari / webkit project). Installing chromium only left every
-        # mobile-safari test erroring with "Executable doesn't exist".
-        run: npx playwright install --with-deps chromium webkit
-        
+        # mobile-safari uses the webkit engine; chromium uses chromium.
+        run: npx playwright install --with-deps ${{ matrix.project == 'chromium' && 'chromium' || 'webkit' }}
+
       - name: Run E2E tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --project=${{ matrix.project }}
         env:
           CI: true
-        
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: playwright-report/
           retention-days: 7
 

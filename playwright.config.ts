@@ -7,9 +7,12 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
-  timeout: 60000, // 60s per test
+  // CI runs both projects serially on a shared runner; webkit (mobile-safari)
+  // runs after chromium, by which point the long-lived dev server can be slow,
+  // so give clicks/navigation more headroom in CI to avoid spurious timeouts.
+  timeout: process.env.CI ? 90000 : 60000,
   expect: {
-    timeout: 10000, // 10s for assertions
+    timeout: process.env.CI ? 15000 : 10000,
   },
   globalSetup: "./e2e/global-setup.ts",
 
@@ -18,8 +21,8 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
-    navigationTimeout: 30000,
-    actionTimeout: 15000,
+    navigationTimeout: process.env.CI ? 45000 : 30000,
+    actionTimeout: process.env.CI ? 30000 : 15000,
   },
 
   projects: [
