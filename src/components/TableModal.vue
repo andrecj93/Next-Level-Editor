@@ -9,10 +9,13 @@
       >
         <div
           class="modal-content"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="table-modal-title"
           @click.stop
         >
           <div class="modal-header">
-            <h3>Insert Table</h3>
+            <h3 id="table-modal-title">Insert Table</h3>
             <button
               class="close-btn"
               aria-label="Close modal"

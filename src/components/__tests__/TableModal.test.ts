@@ -282,4 +282,19 @@ describe("TableModal", () => {
       w.unmount();
     });
   });
+
+  describe("dialog accessibility", () => {
+    it("marks the dialog as a modal and labels it by its heading (WAI-ARIA, like EmbedModal)", () => {
+      const w = mountModal();
+      const dialog = w.get(".modal-content");
+      expect(dialog.attributes("role")).toBe("dialog");
+      expect(dialog.attributes("aria-modal")).toBe("true");
+
+      const labelledby = dialog.attributes("aria-labelledby");
+      expect(labelledby).toBeTruthy();
+      const title = w.get(`#${labelledby}`);
+      expect(title.text()).toBe("Insert Table");
+      w.unmount();
+    });
+  });
 });

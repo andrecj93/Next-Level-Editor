@@ -106,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted } from "vue";
+import { ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 interface Props {
   show: boolean;
@@ -238,21 +238,23 @@ watch(
   }
 );
 
+// Handle Ctrl+F shortcut globally. Declared at setup scope so onUnmounted can
+// remove it — a cleanup function returned from onMounted is ignored by Vue, so
+// the listener previously leaked one handler per unmount.
+const handleKeydown = (e: KeyboardEvent) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "f" && props.show) {
+    e.preventDefault();
+    findInput.value?.focus();
+    findInput.value?.select();
+  }
+};
+
 onMounted(() => {
-  // Handle Ctrl+F shortcut globally
-  const handleKeydown = (e: KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "f" && props.show) {
-      e.preventDefault();
-      findInput.value?.focus();
-      findInput.value?.select();
-    }
-  };
-
   window.addEventListener("keydown", handleKeydown);
+});
 
-  return () => {
-    window.removeEventListener("keydown", handleKeydown);
-  };
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleKeydown);
 });
 </script>
 
