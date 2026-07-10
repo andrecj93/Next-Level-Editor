@@ -16,7 +16,27 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
   };
 
   const rememberSelection = () => {
-    const range = saveSelection();
+    let range = saveSelection();
+    const root = editorContent.value;
+
+    // If the live selection has been lost or collapsed because focus left the
+    // editor (e.g. clicking a toolbar dropdown item to open a modal collapses
+    // the editor selection before this runs), fall back to the last valid
+    // in-editor selection so a real non-collapsed selection isn't clobbered by
+    // the spurious collapsed one. lastValidRange is tracked continuously while
+    // the caret is in the editor, so for a genuine collapsed caret it matches
+    // the live selection and this is a no-op.
+    const liveUsable = Boolean(
+      range && root && isRangeValid(range, root) && !range.collapsed
+    );
+    const fallback = lastValidRange.value;
+    if (!liveUsable && fallback && root && isRangeValid(fallback, root)) {
+      // lastValidRange holds the real last in-editor caret/selection — use it
+      // even when collapsed, since the live collapsed selection here is the
+      // focus artifact (e.g. collapsed to offset 0), not the user's caret.
+      range = fallback.cloneRange();
+    }
+
     savedRange.value = range;
     // Also update last valid range if we got a good selection
     if (range) {
@@ -388,8 +408,12 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
     pauseTracking();
 
     try {
-      // Ensure editor has focus first (synchronous in contenteditable)
-      ensureEditorFocus(root);
+      // Ensure editor has focus first (synchronous in contenteditable). When
+      // focus was OUTSIDE the editor (e.g. a modal input), calling focus()
+      // collapses the live selection to a spurious caret at offset 0 — so that
+      // "active" selection is a focus artifact, and a remembered range reflects
+      // the user's real intent and must win.
+      const focusChanged = ensureEditorFocus(root);
 
       // Check if there's currently an active selection in the editor
       const currentSelection = globalThis.getSelection();
@@ -397,14 +421,18 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
         root,
         currentSelection
       );
+      const saved = savedRange.value;
+      const hasSavedRange = saved !== null && isRangeValid(saved, root);
 
-      // Priority 1: Use active selection
-      if (hasActiveSelection) {
+      // Priority 1: Use active selection — unless focus was just pulled into the
+      // editor and we have a remembered range (then the active selection is only
+      // the focus-collapse artifact, so restore the remembered range instead).
+      if (hasActiveSelection && !(focusChanged && hasSavedRange)) {
         executeAction(root, action);
       }
       // Priority 2: Restore saved range
-      else if (savedRange.value && isRangeValid(savedRange.value, root)) {
-        restoreSelection(savedRange.value);
+      else if (hasSavedRange && saved) {
+        restoreSelection(saved);
         executeAction(root, action);
       }
       // Priority 3 & 4: Smart fallback

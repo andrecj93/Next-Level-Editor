@@ -1,4 +1,4 @@
-import { type Ref } from "vue";
+import { ref, type Ref } from "vue";
 import {
   addTableRow,
   addTableColumn,
@@ -132,12 +132,21 @@ export function useTableActions(options: TableActionsOptions) {
     onUpdate();
   };
 
+  // The table/cell the properties modal is acting on, captured at open time.
+  // Focusing a modal input moves the document selection out of the cell, which
+  // the global selectionchange handler treats as "no table selected" and nulls
+  // currentTable/currentCell — so Apply must NOT read those live refs.
+  const pendingTable = ref<HTMLTableElement | null>(null);
+  const pendingCell = ref<HTMLTableCellElement | null>(null);
+
   /**
    * Open cell properties modal
    */
   const handleCellProperties = () => {
     if (!currentCell.value) return;
 
+    pendingCell.value = currentCell.value;
+    pendingTable.value = currentTable.value;
     initialCellProps.value = getCellProperties(currentCell.value);
     tablePropertiesMode.value = "cell";
     showTablePropertiesModal.value = true;
@@ -149,6 +158,8 @@ export function useTableActions(options: TableActionsOptions) {
   const handleTableProperties = () => {
     if (!currentTable.value) return;
 
+    pendingTable.value = currentTable.value;
+    pendingCell.value = currentCell.value;
     initialTableProps.value = getTableProperties(currentTable.value);
     tablePropertiesMode.value = "table";
     openTablePropertiesModal();
@@ -175,14 +186,21 @@ export function useTableActions(options: TableActionsOptions) {
       borderCollapse?: boolean;
     };
   }) => {
-    if (data.cellProps && currentCell.value) {
-      applyCellProperties(currentCell.value, data.cellProps);
+    // Apply against the captured target, falling back to the live ref, so a
+    // modal focus-steal that nulled currentCell/currentTable can't no-op Apply.
+    const cell = pendingCell.value ?? currentCell.value;
+    const table = pendingTable.value ?? currentTable.value;
+
+    if (data.cellProps && cell) {
+      applyCellProperties(cell, data.cellProps);
     }
 
-    if (data.tableProps && currentTable.value) {
-      applyTableProperties(currentTable.value, data.tableProps);
+    if (data.tableProps && table) {
+      applyTableProperties(table, data.tableProps);
     }
 
+    pendingCell.value = null;
+    pendingTable.value = null;
     onUpdate();
   };
 

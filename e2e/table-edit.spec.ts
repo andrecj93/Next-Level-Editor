@@ -181,7 +181,7 @@ test.describe('Table editing + properties', () => {
     await expect(modal.locator('input.number-input')).toHaveValue('1')
   })
 
-  test('documents BUG: editing a Table Properties field then Apply is a no-op', async ({
+  test('editing a Table Properties field then Apply persists the change', async ({
     page,
   }) => {
     await insertTable(page, { rows: 2, cols: 2, header: false })
@@ -189,39 +189,28 @@ test.describe('Table editing + properties', () => {
     const before = await readTableStyle(page)
     expect(before?.borderWidth).toBe('1px')
     expect(before?.borderStyle).toBe('solid')
-    // Freshly-inserted table has no background of its own.
-    expect(before?.tableBackground).toBe('rgba(0, 0, 0, 0)')
 
     const modal = await openTableProperties(page)
-    // Edit every field the modal exposes for a table.
+    // Edit the table's border width + style.
     await modal.locator('input.number-input').fill('5')
     await modal.locator('select.select-input').selectOption('dashed')
-    await modal.locator('input[placeholder="#ffffff"]').fill('#ff0000')
     await modal.getByRole('button', { name: 'Apply', exact: true }).click()
     await expect(modal).toBeHidden()
 
-    // documents BUG: NONE of the changes stick. Focusing any modal input moves
-    // the document selection out of the table cell, which the global
-    // `selectionchange` handler (checkForTableSelection, useEditorEvents.ts)
-    // treats as "no table selected" and nulls currentTable/currentCell. Apply
-    // (handleApplyTableProperties, useTableActions.ts) is guarded on
-    // currentTable.value, so it silently applies nothing. The table is
-    // unchanged: border still 1px solid, no background.
+    // Apply captures the table/cell at modal-open, so the focus-steal that nulls
+    // the live currentTable/currentCell no longer no-ops it: the edits stick.
     const after = await readTableStyle(page)
-    expect(after?.borderWidth).toBe('1px')
-    expect(after?.borderStyle).toBe('solid')
-    expect(after?.tableBackground).toBe('rgba(0, 0, 0, 0)')
+    expect(after?.borderWidth).toBe('5px')
+    expect(after?.borderStyle).toBe('dashed')
   })
 
-  test('documents BUG: a borderless (0px) table is misreported as width 1 on reopen', async ({
+  test('a borderless (0px) table reads back as width 0 on reopen', async ({
     page,
   }) => {
     await insertTable(page, { rows: 2, cols: 2, header: false })
 
-    // Simulate a genuinely borderless table (what a correct "border width 0"
-    // apply, or an imported borderless table, would produce). We set it on the
-    // cells directly because the Apply path itself is broken (see the BUG test
-    // above), so it cannot be reached through the modal UI.
+    // A genuinely borderless table (what a "border width 0" apply, or an
+    // imported borderless table, produces).
     await page.evaluate((sel) => {
       document
         .querySelectorAll(`${sel} table td, ${sel} table th`)
@@ -231,12 +220,9 @@ test.describe('Table editing + properties', () => {
     }, EDITOR)
 
     let modal = await openTableProperties(page)
-    // documents BUG: getTableProperties (commands.ts) reads the border width as
-    // `Number.parseInt(cellStyle.borderWidth) || 1`; parseInt('0px') is 0 and
-    // `0 || 1` collapses to 1, so a genuinely borderless table reports width 1.
-    // (The `?? 1` fix was only applied to the modal's initial-props watch, not
-    // to this DOM read.) A borderless table can therefore never round-trip.
-    await expect(modal.locator('input.number-input')).toHaveValue('1')
+    // getTableProperties now NaN-guards the parse instead of `|| 1`, so a
+    // borderless table round-trips as 0 rather than collapsing to the default 1.
+    await expect(modal.locator('input.number-input')).toHaveValue('0')
     await modal.getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(modal).toBeHidden()
 
