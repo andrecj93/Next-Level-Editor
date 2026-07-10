@@ -486,7 +486,7 @@ describe("useFindReplace — branch/edge coverage", () => {
       span.textContent = "target";
       editorElement.appendChild(span);
 
-      const findSpy = vi.fn((..._args: unknown[]) => true);
+      const findSpy = vi.fn(() => true);
       (globalThis as Record<string, unknown>).find = findSpy;
       globalThis.getSelection = vi.fn(
         () =>
@@ -498,11 +498,13 @@ describe("useFindReplace — branch/edge coverage", () => {
 
       const { handleFind } = make();
       handleFind({ findText: "target", direction: "previous" });
-      // 3rd positional arg (aBackwards) is true for "previous".
-      expect(findSpy.mock.calls[0][2]).toBe(true);
+      // 3rd positional arg (aBackwards) is true for "previous". window.find is
+      // called with positional args the vi.fn() doesn't type, so widen to read
+      // the 3rd element.
+      expect((findSpy.mock.calls[0] as unknown[])[2]).toBe(true);
 
       handleFind({ findText: "target", direction: "next" });
-      expect(findSpy.mock.calls[1][2]).toBe(false);
+      expect((findSpy.mock.calls[1] as unknown[])[2]).toBe(false);
     });
   });
 });
