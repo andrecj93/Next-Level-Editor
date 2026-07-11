@@ -826,6 +826,17 @@
   }
 }
 
+/* Drag-to-resize is a pointer affordance: on touch-primary devices the editor
+   is viewport-sized and a tiny corner grip has no precise drag target, so hide
+   it (matching how mobile editors don't offer manual window resizing). The
+   full-width toggle stays — it still matters on tablets/landscape wider than
+   the reading measure. */
+@media (hover: none) and (pointer: coarse) {
+  .nle-resize-grip {
+    display: none;
+  }
+}
+
 /* Fullscreen Toggle Button Styling — "on" is accent ink, like every other
    active state in the masthead (no fills, no hover growth). */
 .toolbar-btn-modern.fullscreen-toggle[aria-pressed="true"] {
