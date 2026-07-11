@@ -47,8 +47,12 @@ test.describe("Table Insertion", () => {
     const insertTableBtn = page.locator('button:has-text("Insert Table")');
     await insertTableBtn.click();
 
-    // Toast notification should appear
-    const toast = page.getByText(/Table.*inserted/i);
+    // Toast notification should appear. Scope to the toast element: the same
+    // message is now ALSO mirrored into the sr-only aria-live region for screen
+    // readers, so a bare getByText would match two nodes (strict-mode error).
+    const toast = page.locator(".toast-notification", {
+      hasText: /Table.*inserted/i,
+    });
     await expect(toast).toBeVisible({ timeout: 2000 });
 
     // Table should be present in editor
