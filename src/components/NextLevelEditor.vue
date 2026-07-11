@@ -125,6 +125,7 @@
       @paste="onPaste"
       @blur="onBlur"
       @focus="onFocus"
+      @mousedown="onEditorMousedown"
       @mouseup="onMouseUp"
       @contextmenu="handleContextMenu"
       @code-input="onCodeInput"
@@ -554,6 +555,10 @@ import {
   applyFontSize,
 } from "../utils/commands";
 import { smoothScrollIntoView } from "../utils/scroll";
+import {
+  checklistItemForCheckboxClick,
+  toggleChecklistItem,
+} from "../utils/checklist";
 import { clampMenuToViewport } from "../utils/menuPosition";
 import { getCaretDocumentProgress } from "../utils/caretProgress";
 import {
@@ -1225,6 +1230,7 @@ const {
   handleInsertPageBreak,
   handleInsertTOC,
   handleInsertHR,
+  handleInsertChecklist,
   handleInsertTable,
   handleInsertCodeBlock,
 } = useInsertActions({
@@ -1521,6 +1527,9 @@ function handleMobileAction(actionId: string) {
     case "blockquote":
       handleBlockAction("blockquote");
       break;
+    case "checklist":
+      handleInsertChecklist();
+      break;
     case "paragraph":
       handleBlockAction("p");
       break;
@@ -1661,6 +1670,19 @@ const onFocus = () => {
 const onMouseUp = () => {
   unsuppressFloatingToolbar();
   onMouseUpBase();
+};
+
+// Clicking a checklist item's checkbox gutter toggles its checked state. Handled
+// on mousedown so preventDefault stops the caret from jumping into the gutter;
+// the toggle mutates data-checked in place and captures a history snapshot so it
+// persists (undoable) and round-trips through the sanitizer.
+const onEditorMousedown = (event: MouseEvent) => {
+  if (props.readonly) return;
+  const li = checklistItemForCheckboxClick(event.target, event.clientX);
+  if (!li) return;
+  event.preventDefault();
+  toggleChecklistItem(li);
+  captureSnapshot();
 };
 
 // Wrap onInput to include variable detection and wrapping

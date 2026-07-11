@@ -80,6 +80,15 @@ const PAGE_BREAK_CLASS = "page-break";
 // this the semantic wrapper (and its styling + update/detection hooks) would be
 // stripped on round-trip. The nav is preserved; its children sanitize normally.
 const TOC_CLASS = "table-of-contents";
+// Checklist block (utils/useSmartAutocomplete + the toolbar): a
+// `<ul class="checklist">` whose `<li data-checked="true|false">` carry the
+// toggle state. `class` isn't allowed on ul, nor `data-checked` on li, so the
+// generic path would strip both and degrade the checklist to a plain bullet
+// list. The special-case preserves the class and canonicalises each item's
+// checked state (only a literal "true" survives as checked); item text is
+// sanitized normally. No live <input> is ever introduced — the checkbox is a
+// pure CSS ::before keyed on data-checked, so there is no new script surface.
+const CHECKLIST_CLASS = "checklist";
 const EMBED_TYPES = new Set(["image", "video", "embed", "file"]);
 const EMBED_ALIGNMENTS = new Set(["left", "center", "right"]);
 
@@ -277,6 +286,13 @@ export function useHtmlSanitizer() {
             }
             // Highlights wrap real content — always sanitize the children.
             sanitizeTree(element);
+          } else if (
+            element.tagName === "UL" &&
+            element.classList.contains(CHECKLIST_CLASS)
+          ) {
+            // Checklist: keep the class, canonicalise each item's checked state,
+            // and sanitize item text — but never trust the raw attributes.
+            sanitizeChecklist(element);
           } else if (ALLOWED_TAGS.has(element.tagName)) {
             sanitizeAttributes(element);
             sanitizeTree(element);
@@ -358,6 +374,55 @@ export function useHtmlSanitizer() {
       element.setAttribute("contenteditable", "false");
       element.innerHTML =
         '<span class="page-break-label">Page Break</span><hr class="page-break-line" />';
+    };
+
+    /**
+     * Normalize a checklist block: force the ul back to exactly
+     * class="checklist" (dropping every other/spoofed attribute), then for each
+     * direct <li> child strip its attributes, re-stamp a canonical
+     * data-checked ("true" only when the raw value is literally "true",
+     * case-insensitively; everything else — missing, "yes", etc. — becomes
+     * "false"), and sanitize the item's text/inline content. Loose text nodes
+     * directly under the ul are wrapped into unchecked items; any non-<li>
+     * element child is dropped (the checklist grammar is ul > li only).
+     */
+    const sanitizeChecklist = (ul: HTMLElement) => {
+      for (const attribute of Array.from(ul.attributes)) {
+        ul.removeAttribute(attribute.name);
+      }
+      ul.setAttribute("class", CHECKLIST_CLASS);
+
+      let child: ChildNode | null = ul.firstChild;
+      while (child) {
+        const next = child.nextSibling;
+        if (
+          child.nodeType === Node.ELEMENT_NODE &&
+          (child as HTMLElement).tagName === "LI"
+        ) {
+          const li = child as HTMLElement;
+          const checked =
+            (li.getAttribute("data-checked") ?? "").trim().toLowerCase() ===
+            "true"
+              ? "true"
+              : "false";
+          for (const attribute of Array.from(li.attributes)) {
+            li.removeAttribute(attribute.name);
+          }
+          li.setAttribute("data-checked", checked);
+          sanitizeTree(li);
+        } else if (
+          child.nodeType === Node.TEXT_NODE &&
+          (child.textContent ?? "").trim()
+        ) {
+          const li = workingDocument.createElement("li");
+          li.setAttribute("data-checked", "false");
+          li.textContent = (child.textContent ?? "").trim();
+          ul.replaceChild(li, child);
+        } else {
+          child.remove();
+        }
+        child = next;
+      }
     };
 
     /**

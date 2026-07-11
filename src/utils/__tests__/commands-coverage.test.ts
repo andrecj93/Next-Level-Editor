@@ -4,6 +4,7 @@ import {
   applyTextAlignment,
   insertHorizontalRule,
   insertTable,
+  insertChecklist,
   searchAndReplace,
 } from '../commands'
 
@@ -243,6 +244,54 @@ describe('Additional Commands Coverage', () => {
       
       // Selection should be after the HR
       expect(newRange.collapsed).toBe(true)
+    })
+  })
+
+  describe('insertChecklist', () => {
+    const placeCaret = (node: Node, offset: number) => {
+      const range = document.createRange()
+      range.setStart(node, offset)
+      range.collapse(true)
+      const sel = window.getSelection()!
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
+
+    it('inserts a sanitizer-safe unchecked checklist item at block level', () => {
+      root.innerHTML = '<p>Line</p>'
+      placeCaret(root.querySelector('p')!.firstChild!, 4)
+
+      insertChecklist(root)
+
+      const li = root.querySelector('ul.checklist > li')
+      expect(li).not.toBeNull()
+      expect(li!.getAttribute('data-checked')).toBe('false')
+      // Never nested inside a <p> (invalid HTML that corrupts on round-trip).
+      expect(root.querySelector('p ul')).toBeNull()
+    })
+
+    it('wraps selected text into the checklist item', () => {
+      root.innerHTML = '<p>buy milk</p>'
+      const text = root.querySelector('p')!.firstChild!
+      const range = document.createRange()
+      range.setStart(text, 0)
+      range.setEnd(text, 8)
+      const sel = window.getSelection()!
+      sel.removeAllRanges()
+      sel.addRange(range)
+
+      insertChecklist(root)
+
+      const li = root.querySelector('ul.checklist > li')
+      expect(li).not.toBeNull()
+      expect(li!.textContent).toBe('buy milk')
+    })
+
+    it('does nothing without a selection', () => {
+      root.innerHTML = '<p>x</p>'
+      window.getSelection()!.removeAllRanges()
+      insertChecklist(root)
+      expect(root.querySelector('ul.checklist')).toBeNull()
     })
   })
 

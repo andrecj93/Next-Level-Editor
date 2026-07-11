@@ -406,15 +406,24 @@ export function useSmartAutocomplete(
       replacement: (m) => `<ol><li>${m[1]}</li></ol>`,
       description: "Numbered list",
     },
-    // NOTE: the "[] " / "[x] " checklist shortcuts were removed. They emitted
-    // `<ul class="checklist"><li><input type="checkbox">…`, but INPUT is not in
-    // the sanitizer allowlist (and widening it is security-sensitive), so the
-    // checkbox and the `checklist` class were silently stripped on the next
-    // v-model round-trip — the box vanished on reload, leaving a plain bullet.
-    // Restore these once a real, sanitizer-safe checklist block (with toggle
-    // persistence) exists; a live checkbox that doesn't survive save is worse
-    // than no shortcut. (Mirrors the mobile toolbar, which omits checklist for
-    // the same reason.)
+    // Checklist. The item is a plain <li data-checked="true|false"> — NO live
+    // <input> — so the sanitizer preserves it (see useHtmlSanitizer's checklist
+    // special-case) and it survives the v-model round-trip. The checkbox is a
+    // CSS ::before keyed on data-checked; clicking it toggles the attribute.
+    {
+      trigger: "[] ",
+      pattern: /^\[\]\s(.+)$/,
+      replacement: (m) =>
+        `<ul class="checklist"><li data-checked="false">${m[1]}</li></ul>`,
+      description: "Checklist",
+    },
+    {
+      trigger: "[x] ",
+      pattern: /^\[x\]\s(.+)$/i,
+      replacement: (m) =>
+        `<ul class="checklist"><li data-checked="true">${m[1]}</li></ul>`,
+      description: "Checked checklist",
+    },
 
     // Inline formatting
     {

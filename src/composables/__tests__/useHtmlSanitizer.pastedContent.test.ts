@@ -288,4 +288,77 @@ describe("useHtmlSanitizer - pasted content fidelity", () => {
       expect(result).not.toContain("steal");
     });
   });
+
+  // Checklist blocks (utils/useSmartAutocomplete + toolbar) round-trip as
+  // <ul class="checklist"><li data-checked="true|false">…</li></ul>. Before the
+  // sanitizer special-case, the `checklist` class and `data-checked` were both
+  // stripped (ul allows only style, li only style), so a checklist degraded to
+  // a plain bullet list on the first v-model persist.
+  describe("Checklist round-trips", () => {
+    it("preserves the checklist class and each item's checked state", () => {
+      const html =
+        '<ul class="checklist"><li data-checked="true">Done</li>' +
+        '<li data-checked="false">Todo</li></ul>';
+      const result = sanitizer.sanitizeHtml(html);
+      expect(result).toContain('class="checklist"');
+      expect(result).toContain('data-checked="true"');
+      expect(result).toContain('data-checked="false"');
+      expect(result).toContain("Done");
+      expect(result).toContain("Todo");
+      // Idempotent: a second pass produces identical output.
+      expect(sanitizer.sanitizeHtml(result)).toBe(result);
+    });
+
+    it("keeps inline formatting inside a checklist item", () => {
+      const html =
+        '<ul class="checklist"><li data-checked="false">buy <strong>milk</strong></li></ul>';
+      const result = sanitizer.sanitizeHtml(html);
+      expect(result).toContain('class="checklist"');
+      expect(result).toContain("<strong>milk</strong>");
+    });
+
+    it("canonicalises a missing or invalid data-checked to false", () => {
+      const html =
+        '<ul class="checklist"><li>no attr</li>' +
+        '<li data-checked="yes">bad value</li>' +
+        '<li data-checked="TRUE">upper</li></ul>';
+      const result = sanitizer.sanitizeHtml(html);
+      // The two invalid/absent ones become false; only a literal "true" survives
+      // as checked (case-insensitively).
+      expect(result).toContain('class="checklist"');
+      expect((result.match(/data-checked="false"/g) || []).length).toBe(2);
+      expect((result.match(/data-checked="true"/g) || []).length).toBe(1);
+      expect(result).not.toContain('data-checked="yes"');
+    });
+
+    it("strips event handlers/scripts but keeps the checklist structure", () => {
+      const html =
+        '<ul class="checklist" onclick="evil()"><li data-checked="true" onmouseover="x()">' +
+        'a<script>alert(1)</script></li></ul>';
+      const result = sanitizer.sanitizeHtml(html);
+      expect(result).toContain('class="checklist"');
+      expect(result).toContain('data-checked="true"');
+      expect(result).not.toContain("onclick");
+      expect(result).not.toContain("onmouseover");
+      expect(result).not.toContain("script");
+      expect(result).not.toContain("alert");
+    });
+
+    it("reduces a spoofed extra class on the checklist ul to just 'checklist'", () => {
+      const html =
+        '<ul class="checklist danger" data-x="y"><li data-checked="false">a</li></ul>';
+      const result = sanitizer.sanitizeHtml(html);
+      expect(result).toContain('class="checklist"');
+      expect(result).not.toContain("danger");
+      expect(result).not.toContain("data-x");
+    });
+
+    it("still strips class from a normal (non-checklist) bullet list", () => {
+      const result = sanitizer.sanitizeHtml(
+        '<ul class="fancy"><li>plain</li></ul>'
+      );
+      expect(result).not.toContain('class="fancy"');
+      expect(result).toContain("<li>plain</li>");
+    });
+  });
 });

@@ -517,10 +517,12 @@ const blockActions = [
     icon: "1.",
     onClick: () => executeAction("numbered-list"),
   },
-  // NOTE: "checklist" is intentionally not offered — the editor has no
-  // checklist command yet, so the button was a silent no-op. Restore it here
-  // (and wire a case in NextLevelEditor's handleMobileAction) once a checklist
-  // block actually exists.
+  {
+    id: "checklist",
+    label: "Checklist",
+    icon: "☑",
+    onClick: () => executeAction("checklist"),
+  },
   {
     id: "blockquote",
     label: "Quote",

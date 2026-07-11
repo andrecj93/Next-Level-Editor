@@ -195,6 +195,43 @@ describe("useSmartAutocomplete - markdown shortcuts (live typing)", () => {
       expect(div.querySelector("blockquote")!.textContent).toBe("quoted");
     });
 
+    it("converts '[] ' into an unchecked, sanitizer-safe checklist item", () => {
+      const { detectMarkdown } = useSmartAutocomplete(
+        createParagraphEditor("").editorRef
+      );
+      const result = detectMarkdown("[] Buy milk");
+      expect(result).not.toBeNull();
+      // No live <input>: a data-checked <li> the sanitizer preserves.
+      expect(result!.replacement).toBe(
+        '<ul class="checklist"><li data-checked="false">Buy milk</li></ul>'
+      );
+    });
+
+    it("converts '[x] ' (any case) into a checked checklist item", () => {
+      const { detectMarkdown } = useSmartAutocomplete(
+        createParagraphEditor("").editorRef
+      );
+      expect(detectMarkdown("[x] Done")!.replacement).toBe(
+        '<ul class="checklist"><li data-checked="true">Done</li></ul>'
+      );
+      expect(detectMarkdown("[X] Done")!.replacement).toBe(
+        '<ul class="checklist"><li data-checked="true">Done</li></ul>'
+      );
+    });
+
+    it("inserts a checklist as a paragraph sibling, not nested in the <p>", () => {
+      const { div, editorRef } = createParagraphEditor("[] task");
+      const { handleInput } = useSmartAutocomplete(editorRef);
+
+      handleInput();
+
+      expect(div.querySelector("p ul")).toBeNull();
+      const li = div.querySelector("ul.checklist > li");
+      expect(li).not.toBeNull();
+      expect(li!.getAttribute("data-checked")).toBe("false");
+      expect(li!.textContent).toBe("task");
+    });
+
     it("round-trips through innerHTML without the browser splitting paragraphs", () => {
       const { div, editorRef } = createParagraphEditor("> quoted");
       const { handleInput } = useSmartAutocomplete(editorRef);

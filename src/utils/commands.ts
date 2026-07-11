@@ -501,6 +501,46 @@ export function insertHorizontalRule() {
 }
 
 /**
+ * Insert a checklist block at the caret. Any selected text becomes the first
+ * item's label; otherwise an empty item is created. Like insertHorizontalRule,
+ * the caret's paragraph/heading is split so the <ul> lands at block level and
+ * never nests inside a <p> (which would corrupt on the next round-trip). The
+ * item is `<li data-checked="false">` — no live <input> — so the sanitizer
+ * preserves it and clicking its checkbox gutter toggles the state.
+ * @param root - The editor root, used to split the caret's block.
+ */
+export function insertChecklist(root: HTMLElement) {
+  const selection = globalThis.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  const selectedText = range.toString();
+
+  const ul = document.createElement("ul");
+  ul.className = "checklist";
+  const li = document.createElement("li");
+  li.setAttribute("data-checked", "false");
+  if (selectedText) {
+    li.textContent = selectedText;
+  } else {
+    li.appendChild(document.createElement("br"));
+  }
+  ul.appendChild(li);
+
+  range.deleteContents();
+
+  const tail = splitBlockAtCaret(range, root);
+  if (tail?.parentNode) {
+    tail.parentNode.insertBefore(ul, tail);
+  } else {
+    range.insertNode(ul);
+  }
+
+  // Park the caret at the end of the item's label so typing continues in it.
+  placeCaretInside(li, false);
+}
+
+/**
  * Check if cursor is inside a list and exit list context if needed
  * @returns The range to use for insertion (either original or adjusted)
  */

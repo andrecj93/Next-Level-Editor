@@ -3,6 +3,7 @@ import { insertLink as insertLinkUtil } from "../utils/formatting";
 import {
   insertHorizontalRule,
   insertTable as insertTableUtil,
+  insertChecklist as insertChecklistUtil,
 } from "../utils/commands";
 import {
   insertPageBreak,
@@ -376,6 +377,17 @@ export function useInsertActions(options: InsertActionsOptions) {
   };
 
   /**
+   * Insert a checklist block (any selection becomes the first item's label).
+   */
+  const handleInsertChecklist = () => {
+    performWithSelection((root) => {
+      escapeCodeBlockAtCaret(root);
+      insertChecklistUtil(root);
+      captureSnapshot();
+    });
+  };
+
+  /**
    * Insert table with specified dimensions
    */
   const handleInsertTable = (data: {
@@ -524,6 +536,7 @@ export function useInsertActions(options: InsertActionsOptions) {
     handleInsertPageBreak,
     handleInsertTOC,
     handleInsertHR,
+    handleInsertChecklist,
     handleInsertTable,
     handleInsertCodeBlock,
   };

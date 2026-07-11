@@ -336,9 +336,6 @@ describe("MobileToolbar", () => {
       const labels = w
         .findAll("#panel-blocks .block-button")
         .map((b) => b.attributes("aria-label"));
-      // "Convert to Checklist" is intentionally absent: the editor has no
-      // checklist command yet, so the button was a silent no-op (see the
-      // NOTE in MobileToolbar.vue's block actions).
       expect(labels).toEqual([
         "Convert to Paragraph",
         "Convert to Heading 1",
@@ -346,6 +343,7 @@ describe("MobileToolbar", () => {
         "Convert to Heading 3",
         "Convert to Bullet List",
         "Convert to Numbered List",
+        "Convert to Checklist",
         "Convert to Quote",
         "Convert to Code Block",
       ]);
@@ -365,6 +363,7 @@ describe("MobileToolbar", () => {
         ["h3"],
         ["bullet-list"],
         ["numbered-list"],
+        ["checklist"],
         ["blockquote"],
         ["code-block"],
       ]);

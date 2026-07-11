@@ -18,6 +18,7 @@
         @paste="$emit('paste', $event)"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
+        @mousedown="$emit('mousedown', $event)"
         @mouseup="$emit('mouseup', $event)"
         @contextmenu="$emit('contextmenu', $event)"
       />
@@ -51,6 +52,7 @@
         @paste="$emit('paste', $event)"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
+        @mousedown="$emit('mousedown', $event)"
         @mouseup="$emit('mouseup', $event)"
         @contextmenu="$emit('contextmenu', $event)"
       />
@@ -118,6 +120,7 @@
           @paste="$emit('paste', $event)"
           @blur="$emit('blur', $event)"
           @focus="$emit('focus', $event)"
+          @mousedown="$emit('mousedown', $event)"
           @mouseup="$emit('mouseup', $event)"
           @contextmenu="$emit('contextmenu', $event)"
         />
@@ -163,6 +166,7 @@ defineEmits<{
   input: [event: Event];
   blur: [event: FocusEvent];
   focus: [event: FocusEvent];
+  mousedown: [event: MouseEvent];
   mouseup: [event: MouseEvent];
   contextmenu: [event: MouseEvent];
   paste: [event: ClipboardEvent];
