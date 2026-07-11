@@ -13,7 +13,7 @@ export default defineConfig(({ command }) => ({
 
   // Transpilation target for broader browser support
   build: {
-    target: "es2015", // Support Safari 10+, iOS 10+
+    target: "es2015", // Syntax floor; runtime target is Safari/iOS >= 12 (.browserslistrc). `globalThis` (Safari 12.1+) is polyfilled for the 12.0-12.1 sliver in src/index.ts.
     cssTarget: "chrome61", // Flexbox gap fallback
 
     lib: {

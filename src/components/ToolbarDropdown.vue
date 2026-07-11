@@ -30,6 +30,7 @@
         ref="menuRef"
         class="dropdown-menu"
         :style="menuStyle"
+        :aria-label="label"
       >
         <div
           v-for="(item, index) in items"

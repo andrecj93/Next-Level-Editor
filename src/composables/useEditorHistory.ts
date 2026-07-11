@@ -12,6 +12,14 @@ export interface HistoryEntry {
  * Composable for managing editor history (undo/redo)
  * Provides a robust undo/redo system with previews
  */
+/**
+ * Upper bound on retained undo snapshots. Each entry holds a full HTML copy of
+ * the document, and captureSnapshot fires on every input event, so without a cap
+ * a long editing session grows memory roughly O(edits × document size). 200
+ * keeps a generous undo depth while bounding the footprint.
+ */
+const MAX_HISTORY_ENTRIES = 200;
+
 export function useEditorHistory() {
   const history = ref<HistoryEntry[]>([]);
   const historyIndex = ref(-1);
@@ -51,6 +59,13 @@ export function useEditorHistory() {
       timestamp: Date.now(),
     };
     history.value.push(entry);
+
+    // Bound memory: drop the oldest snapshots once past the cap. historyIndex is
+    // pinned to the newest entry here, so trimming from the front keeps it valid.
+    if (history.value.length > MAX_HISTORY_ENTRIES) {
+      history.value.splice(0, history.value.length - MAX_HISTORY_ENTRIES);
+    }
+
     historyIndex.value = history.value.length - 1;
   };
 

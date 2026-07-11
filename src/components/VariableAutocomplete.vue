@@ -156,6 +156,12 @@ const selectVariable = (variable: Variable) => {
 const handleEditorKeydown = (e: KeyboardEvent): boolean => {
   if (!props.isOpen || filteredVariables.value.length === 0) return false;
 
+  // During IME composition (CJK/accented input, predictive keyboards) Enter/Tab
+  // commit the current candidate and must reach the IME untouched. This carve-out
+  // runs before useKeyboardShortcuts' own guard (onEditorKeydown calls us first),
+  // so replicate it here — otherwise the candidate-commit key inserts a variable.
+  if (e.isComposing || e.keyCode === 229) return false;
+
   switch (e.key) {
     case "ArrowDown":
       e.preventDefault();

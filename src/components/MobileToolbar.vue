@@ -726,10 +726,17 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
   padding: 8px 12px;
 }
 
+/* Filled accent pill: an explicit background keeps the label at >=4.5:1 (WCAG
+   AA) regardless of theme — a light accent-on-surface pill fails AA in both
+   light (~3.7:1) and dark (~4.0:1). White on primary-600 is ~5.2:1. */
 .toolbar-tab.tab-active {
-  background: var(--tab-active-bg, #ffffff);
-  color: var(--primary-color, #4a90e2);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: var(--color-primary-600, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+.toolbar-tab.tab-active .tab-label {
+  font-weight: 600;
 }
 
 .tab-icon {

@@ -3,12 +3,16 @@
     <transition name="context-menu">
       <div
         v-if="show"
+        ref="menuRef"
         class="context-menu"
         :class="theme"
         :style="{
           top: `${position.top}px`,
           left: `${position.left}px`,
         }"
+        role="menu"
+        aria-label="Context menu"
+        tabindex="-1"
         @click.stop
         @contextmenu.prevent
       >
@@ -19,10 +23,12 @@
           <div
             v-if="item.divider"
             class="context-menu-divider"
+            role="separator"
           />
           <button
             v-else
             class="context-menu-item"
+            role="menuitem"
             :disabled="item.disabled"
             @click="handleItemClick(item)"
           >
@@ -42,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch, onBeforeUnmount } from "vue";
+import { ref, watch, nextTick, onBeforeUnmount } from "vue";
 import type { ContextMenuItem } from "../types/contextMenu";
 
 interface Props {
@@ -58,6 +64,25 @@ const props = withDefaults(defineProps<Props>(), {
   theme: "theme-light",
 });
 const emit = defineEmits<Emits>();
+
+const menuRef = ref<HTMLElement | null>(null);
+
+// Focusable (enabled) menu items, in DOM order.
+const getMenuItems = (): HTMLButtonElement[] =>
+  menuRef.value
+    ? Array.from(
+        menuRef.value.querySelectorAll<HTMLButtonElement>(
+          ".context-menu-item:not([disabled])"
+        )
+      )
+    : [];
+
+const focusItemAt = (index: number) => {
+  const items = getMenuItems();
+  if (items.length === 0) return;
+  const wrapped = (index + items.length) % items.length;
+  items[wrapped].focus();
+};
 
 const handleItemClick = (item: ContextMenuItem) => {
   if (item.disabled) return;
@@ -88,8 +113,39 @@ const handleDismiss = () => {
 // menu container keeps this scoped to the menu; a keydown anywhere in the
 // document while the menu is open should still dismiss it.
 const handleKeydown = (event: KeyboardEvent) => {
-  if (props.show && event.key === "Escape") {
-    emit("close");
+  if (!props.show) return;
+
+  switch (event.key) {
+    case "Escape":
+      emit("close");
+      break;
+    // Roving focus through the menu, per the WAI-ARIA menu keyboard contract.
+    case "ArrowDown": {
+      event.preventDefault();
+      const items = getMenuItems();
+      const current = items.indexOf(
+        document.activeElement as HTMLButtonElement
+      );
+      focusItemAt(current + 1);
+      break;
+    }
+    case "ArrowUp": {
+      event.preventDefault();
+      const items = getMenuItems();
+      const current = items.indexOf(
+        document.activeElement as HTMLButtonElement
+      );
+      focusItemAt(current === -1 ? -1 : current - 1);
+      break;
+    }
+    case "Home":
+      event.preventDefault();
+      focusItemAt(0);
+      break;
+    case "End":
+      event.preventDefault();
+      focusItemAt(-1);
+      break;
   }
 };
 
@@ -116,6 +172,8 @@ watch(
       setTimeout(() => {
         addDismissListeners();
       }, 0);
+      // Move focus into the menu so keyboard/screen-reader users can operate it.
+      nextTick(() => focusItemAt(0));
     } else {
       removeDismissListeners();
     }

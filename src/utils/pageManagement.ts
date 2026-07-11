@@ -135,6 +135,13 @@ export function generateTableOfContents(editor: HTMLElement): TocItem[] {
  * @param tocItems - Array of TOC items
  * @returns HTML string for the TOC
  */
+const escapeTocText = (text: string): string =>
+  text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
 export function generateTocHtml(tocItems: TocItem[]): string {
   if (tocItems.length === 0) {
     return "<p><em>No headings found in the document.</em></p>";
@@ -144,7 +151,12 @@ export function generateTocHtml(tocItems: TocItem[]): string {
 
   tocItems.forEach((item) => {
     const indent = (item.level - 1) * TOC_INDENT_PX;
-    html += `<li style="margin-left: ${indent}px;"><a href="#${item.id}">${item.text}</a></li>`;
+    // Heading text/ids are raw user content and this HTML is inserted via
+    // innerHTML (not through the sanitizer), so escape to avoid broken or
+    // injected markup from headings like "Q&A <notes>".
+    html += `<li style="margin-left: ${indent}px;"><a href="#${escapeTocText(
+      item.id
+    )}">${escapeTocText(item.text)}</a></li>`;
   });
 
   html += "</ul></nav>";

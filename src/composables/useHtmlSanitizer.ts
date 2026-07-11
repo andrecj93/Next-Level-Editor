@@ -97,6 +97,14 @@ const SAFE_EMBED_IFRAME_PATTERN =
 const VARIABLE_PILL_CLASS = "editor-variable";
 const VARIABLE_NAME_PATTERN = /^[\w.-]{1,64}$/;
 
+// Comment-highlight spans (<span class="comment-highlight" data-thread-id="…">)
+// are another special-cased span: their class + thread-id anchoring attributes
+// are preserved (rebuilt from a validated thread id) instead of stripped by the
+// generic span path, so comment anchors survive the v-model/persist round-trip.
+const COMMENT_HIGHLIGHT_CLASS = "comment-highlight";
+const COMMENT_HIGHLIGHT_RESOLVED_CLASS = "comment-highlight-resolved";
+const THREAD_ID_PATTERN = /^[\w-]{1,64}$/;
+
 const ELEMENT_ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
   a: new Set(["href", "rel", "target", "title"]),
   img: new Set(["alt", "src", "title", "width", "height", "style"]),
@@ -184,7 +192,10 @@ export function useHtmlSanitizer() {
   const sanitizeHtml = (input: string | null = ""): string => {
     const value = input ?? "";
     if (!value.trim()) return "";
-    if (globalThis.window === undefined || document === undefined) return value;
+    // No DOM (SSR / Node): we cannot sanitize, so never echo raw untrusted HTML
+    // through — return empty. The editor is browser-only and re-applies the real
+    // content on client mount, so this only affects a server pre-render.
+    if (globalThis.window === undefined || document === undefined) return "";
 
     const workingDocument =
       document.implementation.createHTMLDocument("sanitizer");
@@ -255,6 +266,17 @@ export function useHtmlSanitizer() {
               sanitizeAttributes(element);
               sanitizeTree(element);
             }
+          } else if (
+            element.tagName === "SPAN" &&
+            (element.getAttribute("class") ?? "")
+              .split(/\s+/)
+              .includes(COMMENT_HIGHLIGHT_CLASS)
+          ) {
+            if (!sanitizeCommentHighlight(element)) {
+              sanitizeAttributes(element);
+            }
+            // Highlights wrap real content — always sanitize the children.
+            sanitizeTree(element);
           } else if (ALLOWED_TAGS.has(element.tagName)) {
             sanitizeAttributes(element);
             sanitizeTree(element);
@@ -366,6 +388,37 @@ export function useHtmlSanitizer() {
       if (value !== null) element.setAttribute("data-value", value);
       if (title !== null) element.setAttribute("title", title);
       element.textContent = `{{ ${name} }}`;
+      return true;
+    };
+
+    /**
+     * Preserve a comment-highlight span's anchoring: validate the thread id,
+     * rebuild the class + data-thread-id/data-comment-thread from it, and drop
+     * everything else. Returns false when there is no valid thread id (then the
+     * generic span path strips the markup). Children are sanitized by the caller.
+     */
+    const sanitizeCommentHighlight = (element: HTMLElement): boolean => {
+      const threadId =
+        element.getAttribute("data-thread-id") ??
+        element.getAttribute("data-comment-thread") ??
+        "";
+      if (!THREAD_ID_PATTERN.test(threadId)) return false;
+
+      const resolved = (element.getAttribute("class") ?? "")
+        .split(/\s+/)
+        .includes(COMMENT_HIGHLIGHT_RESOLVED_CLASS);
+
+      for (const attribute of Array.from(element.attributes)) {
+        element.removeAttribute(attribute.name);
+      }
+      element.setAttribute(
+        "class",
+        resolved
+          ? `${COMMENT_HIGHLIGHT_CLASS} ${COMMENT_HIGHLIGHT_RESOLVED_CLASS}`
+          : COMMENT_HIGHLIGHT_CLASS
+      );
+      element.setAttribute("data-thread-id", threadId);
+      element.setAttribute("data-comment-thread", threadId);
       return true;
     };
 

@@ -1,6 +1,17 @@
 import { App } from "vue";
 import NextLevelEditor from "./components/NextLevelEditor.vue";
 
+// `globalThis` is referenced throughout the editor but only exists in
+// Safari/iOS 12.1+, while the build's browserslist targets Safari/iOS >= 12.
+// Close that 12.0-12.1 sliver from the library entry so the bare `globalThis`
+// identifier resolves everywhere (guarded typeof never throws on the missing
+// global; the editor is browser-only, so `window` is always present here).
+// ES module imports are hoisted, so this still runs before any editor code that
+// reads globalThis at call time.
+if (typeof globalThis === "undefined" && typeof window !== "undefined") {
+  (window as unknown as { globalThis: unknown }).globalThis = window;
+}
+
 // Export utility functions
 export {
   formatHtml,

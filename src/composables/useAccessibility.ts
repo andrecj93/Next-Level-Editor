@@ -69,6 +69,7 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
   const focusTrapActive = ref(false);
   const focusTrapElement = ref<HTMLElement | null>(null);
   const focusReturnElement = ref<HTMLElement | null>(null);
+  let focusTrapCleanup: (() => void) | null = null;
 
   // Keyboard navigation state
   const navigationMode = ref<"read" | "edit">("edit");
@@ -338,16 +339,21 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
       }
     };
 
+    // Tear down any previous trap's listeners before installing new ones.
+    focusTrapCleanup?.();
+
     document.addEventListener("keydown", handleTabKey);
     if (!allowOutsideClick) {
       document.addEventListener("mousedown", handleOutsideClick, true);
     }
 
-    // Return cleanup function
-    return () => {
+    // Return cleanup function (also invoked by releaseFocusTrap).
+    focusTrapCleanup = () => {
       document.removeEventListener("keydown", handleTabKey);
       document.removeEventListener("mousedown", handleOutsideClick, true);
+      focusTrapCleanup = null;
     };
+    return focusTrapCleanup;
   };
 
   /**
@@ -356,6 +362,9 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
   const releaseFocusTrap = () => {
     focusTrapActive.value = false;
     focusTrapElement.value = null;
+
+    // Remove the global keydown/mousedown listeners the trap installed.
+    focusTrapCleanup?.();
 
     // Return focus to original element
     if (focusReturnElement.value) {
