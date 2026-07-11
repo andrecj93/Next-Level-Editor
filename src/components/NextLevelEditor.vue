@@ -5,9 +5,13 @@
       'next-level-editor',
       themeClass,
       themePresetClass,
-      { fullscreen: isFullScreen },
+      {
+        fullscreen: isFullScreen,
+        'is-full-width': isFullWidth,
+        'is-resizing': isResizing,
+      },
     ]"
-    :style="editorStyles"
+    :style="[editorStyles, isFullScreen ? {} : resizeStyles]"
     :data-toolbar-position="
       effectiveToolbarPosition !== 'top' && !isPillMode
         ? effectiveToolbarPosition
@@ -136,7 +140,33 @@
       :id="footerLandmarkId"
       :word-count="wordCount"
       :character-count="characterCount"
+      :full-width="isFullWidth"
+      @toggle-full-width="toggleFullWidth"
     />
+
+    <!-- Corner resize grip: drag (or focus + arrow keys) to size the editor so
+         more text is visible. Hidden in fullscreen (fixed inset) and pill mode
+         (no docked chrome). Double-click resets to the authored size. -->
+    <button
+      v-if="!isFullScreen && !isPillMode"
+      class="nle-resize-grip"
+      type="button"
+      aria-label="Resize editor (drag, or use arrow keys)"
+      title="Drag to resize · double-click to reset"
+      @pointerdown="onResizeGripPointerdown"
+      @keydown="onResizeGripKeydown"
+      @dblclick="resetEditorSize"
+    >
+      <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+        <path
+          d="M11 5 5 11M11 9l-2 2"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linecap="round"
+          fill="none"
+        />
+      </svg>
+    </button>
 
     <!-- Floating Toolbar -->
     <!-- Selection toolbar (bubble over selected text) — never in readonly,
@@ -561,6 +591,7 @@ import { useExportActions } from "../composables/useExportActions";
 import { useCommandPaletteCommands } from "../composables/useCommandPaletteCommands";
 import { useFindReplace } from "../composables/useFindReplace";
 import { useEditorComputed } from "../composables/useEditorComputed";
+import { useEditorResize } from "../composables/useEditorResize";
 import { useSpellCheck } from "../composables/useSpellCheck";
 import { useTemplateManager } from "../composables/useTemplateManager";
 import { useEditorEvents } from "../composables/useEditorEvents";
@@ -966,6 +997,28 @@ const { themeClass, editorStyles, wordCount, characterCount } =
     captureSnapshot,
     triggerAutoSave,
   });
+
+// Corner resize grip: lets the user drag/arrow the editor larger to see more
+// text. Its size overrides the width/height props once the user interacts.
+const {
+  resizeStyles,
+  isResizing,
+  beginResize,
+  onHandleKeydown: onResizeHandleKeydown,
+  resetSize: resetEditorSize,
+} = useEditorResize();
+const onResizeGripPointerdown = (event: PointerEvent) =>
+  beginResize(event, rootEl.value);
+const onResizeGripKeydown = (event: KeyboardEvent) =>
+  onResizeHandleKeydown(event, rootEl.value);
+
+// Content width: default is the readable centered column (~820px measure, as in
+// Google Docs / Notion / Medium). "Full width" expands it to fill the editor —
+// the Notion-style escape hatch for users who want to use all the space.
+const isFullWidth = ref(false);
+const toggleFullWidth = () => {
+  isFullWidth.value = !isFullWidth.value;
+};
 
 // Command Palette
 const { showCommandPalette, closeCommandPalette, addToRecent } =
