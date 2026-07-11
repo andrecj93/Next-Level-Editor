@@ -29,7 +29,6 @@
         v-if="isOpen"
         class="dropdown-menu"
         :style="menuStyle"
-        role="menu"
         :aria-label="label"
       >
         <div
@@ -39,12 +38,10 @@
           <div
             v-if="item.divider"
             class="dropdown-divider"
-            role="separator"
           />
           <button
             v-else
             class="dropdown-item"
-            role="menuitem"
             :class="{ active: item.isActive?.() }"
             :aria-label="item.label"
             @mousedown.prevent
