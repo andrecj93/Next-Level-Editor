@@ -18,6 +18,19 @@ describe("useEditorHistory timeline navigation", () => {
     expect(h.history.value[0].timestamp).toBeGreaterThan(0);
   });
 
+  it("caps retained snapshots so memory stays bounded", () => {
+    const h = useEditorHistory();
+    for (let i = 0; i < 500; i++) {
+      h.captureSnapshot(`<p>edit ${i}</p>`);
+    }
+    // Bounded to the cap, index pinned to the newest, newest content retained.
+    expect(h.history.value.length).toBe(200);
+    expect(h.historyIndex.value).toBe(199);
+    expect(h.history.value.at(-1)!.html).toBe("<p>edit 499</p>");
+    // The oldest snapshots were dropped from the front.
+    expect(h.history.value[0].html).toBe("<p>edit 300</p>");
+  });
+
   it("goToIndex jumps directly to an entry and applies its html", async () => {
     const h = useEditorHistory();
     seed(h);

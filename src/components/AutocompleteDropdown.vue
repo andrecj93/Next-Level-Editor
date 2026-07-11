@@ -7,9 +7,11 @@
     :style="dropdownStyle"
     role="listbox"
     :aria-label="ariaLabel"
+    :aria-activedescendant="`autocomplete-option-${selectedIndex}`"
   >
     <div
       v-for="(suggestion, index) in suggestions"
+      :id="`autocomplete-option-${index}`"
       :key="`${suggestion.type}-${index}`"
       class="suggestion-item"
       :class="{ selected: index === selectedIndex }"
