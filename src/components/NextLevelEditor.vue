@@ -319,6 +319,14 @@
       @execute-command="handleCommandExecute"
     />
 
+    <!-- Keyboard shortcuts help (registry-backed). Shows only the shortcuts
+         actually wired to editor actions (the registry auto-disables the rest). -->
+    <ShortcutHelpModal
+      :is-open="showShortcutHelpModal"
+      :registry="advancedKeyboard.registry"
+      @close="closeShortcutHelpModal"
+    />
+
     <!-- Writing Stats Panel (opt-in feature) -->
     <WritingStatsPanel
       v-if="showWritingStats && writingAssistant && showWritingStatsPanel"
@@ -456,7 +464,7 @@
         :style="{
           bottom: `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
         }"
-        role="dialog"
+        role="region"
         aria-label="Template variables"
       >
         <div class="variables-panel-header">
@@ -579,6 +587,7 @@ import { useAutoSave } from "../composables/useAutoSave";
 import { useSmartToolbar } from "../composables/useSmartToolbar";
 import { useEditorContent } from "../composables/useEditorContent";
 import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
+import { useAdvancedKeyboardShortcuts } from "../composables/useAdvancedKeyboardShortcuts";
 import { useAccessibility } from "../composables/useAccessibility";
 import { useEditorSetup } from "../composables/useEditorSetup";
 import { useToolbarItems } from "../composables/useToolbarItems";
@@ -611,6 +620,7 @@ import MobileToolbar from "./MobileToolbar.vue";
 import HistoryTimeline from "./HistoryTimeline.vue";
 import ContextMenu from "./ContextMenu.vue";
 import ModalsContainer from "./ModalsContainer.vue";
+import ShortcutHelpModal from "./ShortcutHelpModal.vue";
 import EditorToolbar from "./EditorToolbar.vue";
 import EditorPanels from "./EditorPanels.vue";
 import EditorFooter from "./EditorFooter.vue";
@@ -954,8 +964,8 @@ const {
   isApplyingHistory,
   applySanitizedContent,
   captureAndEmit: captureSnapshot,
-  undo,
-  redo,
+  undo: undoBase,
+  redo: redoBase,
   jumpToHistory,
   clearHistory,
   sanitizeHtml,
@@ -965,6 +975,17 @@ const {
   onUpdate: (value) => emit("update:modelValue", value),
   triggerAutoSave,
 });
+
+// Announce undo/redo to screen readers, whatever the trigger (toolbar button,
+// Ctrl+Z/Y, command palette, or an advanced shortcut) — they all call these.
+const undo = () => {
+  undoBase();
+  announce("Undone");
+};
+const redo = () => {
+  redoBase();
+  announce("Redone");
+};
 
 // History Timeline adapters: map the live undo/redo history (the single source
 // of truth) onto the HistoryTimeline component's entry shape. [#14]
@@ -1065,6 +1086,8 @@ const {
   showTableDesigner,
   showTablePropertiesModal,
   showShortcutHelpModal,
+  openShortcutHelpModal,
+  closeShortcutHelpModal,
   openLinkModal,
   closeLinkModal,
   openImageUploadModal,
@@ -1139,9 +1162,15 @@ const {
   performWithSelection
 );
 
+// Active state detection using composable (declared before the formatting
+// handlers so the inline-format announce wrapper below can read the post-toggle
+// state; useActiveStates only depends on editorContent).
+const { isInlineActionActive, isBlockActionActive, isListActionActive } =
+  useActiveStates(editorContent);
+
 // Formatting Handlers - Using useFormattingHandlers composable
 const {
-  handleInlineAction,
+  handleInlineAction: handleInlineActionBase,
   handleBlockAction,
   handleListAction,
   handleTextColor,
@@ -1158,6 +1187,29 @@ const {
   textColor,
   backgroundColor,
 });
+
+// Human-readable labels for the inline formats that carry a toggle state worth
+// announcing to screen readers.
+const INLINE_FORMAT_LABELS: Record<string, string> = {
+  strong: "Bold",
+  em: "Italic",
+  u: "Underline",
+  s: "Strikethrough",
+  code: "Code",
+  sup: "Superscript",
+  sub: "Subscript",
+};
+
+// Announce inline-format toggles to screen readers, whatever the trigger
+// (toolbar, Ctrl+B, mobile bar, advanced shortcut) — all route through this.
+// Reads the post-toggle active state so the message reflects the new state.
+const handleInlineAction = (tag: string) => {
+  handleInlineActionBase(tag);
+  const label = INLINE_FORMAT_LABELS[tag];
+  if (label) {
+    announce(`${label} ${isInlineActionActive(tag) ? "on" : "off"}`);
+  }
+};
 
 // Context menu composable - needs to be after handleInlineAction, insertLink, insertImage are available
 // Will be initialized after those dependencies are defined
@@ -1312,10 +1364,6 @@ const {
 
 // Floating toolbar management - Now using composable
 
-// Active state detection using composable
-const { isInlineActionActive, isBlockActionActive, isListActionActive } =
-  useActiveStates(editorContent);
-
 // Floating toolbar management using composable
 const {
   showFloatingToolbar,
@@ -1388,6 +1436,9 @@ const {
   toggleHistoryTimeline: () => {
     showHistoryTimeline.value = !showHistoryTimeline.value;
   },
+  // Adds the Tools > Keyboard Shortcuts item (the item only renders when this
+  // handler is provided). Opens the registry-backed help modal.
+  openShortcutHelpModal,
 });
 
 // Command Palette Commands using composable
@@ -1836,13 +1887,67 @@ const { handleKeydown } = useKeyboardShortcuts({
   handleSlashMenuKeydown,
 });
 
+// Advanced keyboard shortcuts (registry-driven, customizable, discoverable via
+// the Tools > Keyboard Shortcuts help). Only shortcuts wired to a real editor
+// action below are enabled; every other entry in the ~80-shortcut registry is
+// auto-disabled, so it neither fires nor appears in the help modal, and native
+// keys (Ctrl+C/X/V, browser shortcuts) are never intercepted. The overlapping
+// essentials (bold/italic/underline, H1–H3, undo/redo, link, find) are wired
+// here too so the help lists them, but at runtime useKeyboardShortcuts handles
+// them first and the defaultPrevented guard below skips the registry — no
+// double-fire.
+const advancedKeyboard = useAdvancedKeyboardShortcuts(editorContent, {
+  bold: () => handleInlineAction("strong"),
+  italic: () => handleInlineAction("em"),
+  underline: () => handleInlineAction("u"),
+  strikethrough: () => handleInlineAction("s"),
+  code: () => handleInlineAction("code"),
+  superscript: () => handleInlineAction("sup"),
+  subscript: () => handleInlineAction("sub"),
+  paragraph: () => handleBlockAction("p"),
+  heading1: () => handleBlockAction("h1"),
+  heading2: () => handleBlockAction("h2"),
+  heading3: () => handleBlockAction("h3"),
+  heading4: () => handleBlockAction("h4"),
+  heading5: () => handleBlockAction("h5"),
+  heading6: () => handleBlockAction("h6"),
+  blockquote: () => handleBlockAction("blockquote"),
+  codeBlock: () => openCodeBlockModal(),
+  bulletList: () => handleListAction("ul"),
+  numberedList: () => handleListAction("ol"),
+  checkList: () => handleInsertChecklist(),
+  alignLeft: () => handleTextAlignment("left"),
+  alignCenter: () => handleTextAlignment("center"),
+  alignRight: () => handleTextAlignment("right"),
+  alignJustify: () => handleTextAlignment("justify"),
+  insertLink: () => insertLink(),
+  insertImage: () => insertImage(),
+  insertTable: () => openTableModal(),
+  insertHorizontalRule: () => handleInsertHR(),
+  insertEmoji: () => toggleEmojiPicker(),
+  insertCodeBlock: () => openCodeBlockModal(),
+  undo: () => undo(),
+  redo: () => redo(),
+  find: () => openFindReplaceModal(),
+  replace: () => openFindReplaceModal(),
+  toggleFullscreen: () => toggleFullScreen(),
+  togglePreview: () => {
+    viewMode.value = viewMode.value === "preview" ? "editor" : "preview";
+  },
+  openShortcutHelp: () => openShortcutHelpModal(),
+});
+
 // Editor keydown: the variable autocomplete (when open) claims
 // Arrow/Enter/Tab/Escape first — the same priority carve-out the slash menu
 // has inside useKeyboardShortcuts — so Enter inserts the highlighted variable
-// instead of a new paragraph.
+// instead of a new paragraph. useKeyboardShortcuts runs next; only if it did
+// NOT consume the event do we offer it to the advanced registry, so the two
+// systems never double-handle a key.
 function onEditorKeydown(event: KeyboardEvent) {
   if (variableAutocompleteRef.value?.handleEditorKeydown(event)) return;
   handleKeydown(event);
+  if (event.defaultPrevented) return;
+  advancedKeyboard.handleKeydown(event);
 }
 
 // Comments handlers

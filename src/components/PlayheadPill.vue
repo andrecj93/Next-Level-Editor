@@ -177,7 +177,7 @@
                       :key="c"
                       type="button"
                       class="colors-swatch"
-                      :class="{ active: sameColor(textColor, c) }"
+                      :class="{ active: sameColor(selectionTextColor, c) }"
                       :style="{ background: c }"
                       :aria-label="`Text color ${c}`"
                       :title="c"
@@ -203,7 +203,7 @@
                       :key="c"
                       type="button"
                       class="colors-swatch"
-                      :class="{ active: sameColor(backgroundColor, c) }"
+                      :class="{ active: sameColor(selectionHighlightColor, c) }"
                       :style="{ background: c }"
                       :aria-label="`Highlight ${c}`"
                       :title="c"
@@ -313,6 +313,7 @@ import {
 } from "vue";
 import type { ToolbarAction } from "../types/toolbar";
 import { EDGE_MARGIN } from "../utils/floatingToolbarPosition";
+import { sameColor, isTransparentColor } from "../utils/color";
 import type {
   PlayheadState,
   PlayheadAnchorRect,
@@ -667,11 +668,60 @@ const hasColors = computed(
     (props.highlightColorPresets?.length ?? 0) > 0
 );
 
-const sameColor = (a?: string, b?: string): boolean =>
-  !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+// Active swatch tracking. The textColor/backgroundColor props only carry the
+// last CUSTOM-picked value, so — like EditorToolbar — the active swatch derives
+// from the LIVE selection instead: while the colors menu is open we read the
+// computed color/highlight at the selection anchor and mark the matching preset
+// (hex-vs-rgb tolerant via utils/color). Reading props here left the ring stuck
+// on the last applied color as the caret moved.
+const selectionTextColor = ref("");
+const selectionHighlightColor = ref("");
 
-const noHighlightActive = computed(
-  () => !props.backgroundColor || sameColor(props.backgroundColor, "transparent")
+const EDITABLE_SELECTOR =
+  '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]';
+
+const readSelectionColors = () => {
+  const selection = window.getSelection?.();
+  const node = selection?.anchorNode ?? null;
+  const start: Element | null =
+    node instanceof Element ? node : node?.parentElement ?? null;
+  const editableRoot = start?.closest(EDITABLE_SELECTOR) ?? null;
+  if (!start || !editableRoot) {
+    selectionTextColor.value = "";
+    selectionHighlightColor.value = "";
+    return;
+  }
+  selectionTextColor.value = window.getComputedStyle(start).color || "";
+  // background-color doesn't inherit — walk up to the first non-transparent
+  // ancestor, stopping before the editable root (its surface isn't a highlight).
+  let highlight = "";
+  let el: Element | null = start;
+  while (el && el !== editableRoot) {
+    const bg = window.getComputedStyle(el).backgroundColor;
+    if (bg && !isTransparentColor(bg)) {
+      highlight = bg;
+      break;
+    }
+    el = el.parentElement;
+  }
+  selectionHighlightColor.value = highlight;
+};
+
+// Track the selection only while the colors menu is open (the swatches don't
+// render otherwise).
+watch(
+  () => openMenu.value === "colors",
+  (open) => {
+    document.removeEventListener("selectionchange", readSelectionColors);
+    if (open) {
+      readSelectionColors();
+      document.addEventListener("selectionchange", readSelectionColors);
+    }
+  }
+);
+
+const noHighlightActive = computed(() =>
+  isTransparentColor(selectionHighlightColor.value)
 );
 
 const pickTextColor = (color: string) => {
@@ -831,6 +881,7 @@ onBeforeUnmount(() => {
   pillResizeObserver?.disconnect();
   document.removeEventListener("keydown", handleKeydown, true);
   document.removeEventListener("click", handleClickOutside);
+  document.removeEventListener("selectionchange", readSelectionColors);
 });
 </script>
 

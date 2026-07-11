@@ -831,13 +831,24 @@ describe("PlayheadPill", () => {
       ).toBe("true");
     });
 
-    it("marks the applied colors active (case-insensitive)", async () => {
-      const { w } = mountPill({
-        ...colorProps,
-        textColor: "#FF0000",
-        backgroundColor: "#FFFF00",
-      });
+    it("marks the swatch matching the LIVE selection color active (hex vs rgb tolerant)", async () => {
+      // Active state derives from the actual selection, not the last-applied
+      // prop: build a colored selection, then open the menu.
+      const root = document.createElement("div");
+      root.setAttribute("contenteditable", "true");
+      root.innerHTML =
+        '<span style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0)">x</span>';
+      document.body.appendChild(root);
+      const span = root.querySelector("span")!;
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      const sel = window.getSelection()!;
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      const { w } = mountPill(colorProps);
       await w.get('[aria-label="Colors"]').trigger("click");
+
       expect(
         w.get('[aria-label="Text color #ff0000"]').classes()
       ).toContain("active");
@@ -847,6 +858,8 @@ describe("PlayheadPill", () => {
       expect(w.get('[aria-label="No highlight"]').classes()).not.toContain(
         "active"
       );
+
+      document.body.removeChild(root);
     });
 
     it("marks 'no highlight' active when no background color is applied", async () => {

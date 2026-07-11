@@ -76,14 +76,8 @@
       <!-- Footer -->
       <div class="modal-footer">
         <p class="footer-hint">
-          Press <kbd>Ctrl</kbd> + <kbd>/</kbd> anytime to open this help
+          Press <kbd>Ctrl</kbd> + <kbd>/</kbd> in the editor to open this help
         </p>
-        <button
-          class="customize-button"
-          @click="openCustomization"
-        >
-          ⚙️ Customize Shortcuts
-        </button>
       </div>
     </div>
   </div>
@@ -100,7 +94,7 @@ interface Props {
   >;
 }
 
-type Emits = (e: "close" | "customize") => void;
+type Emits = (e: "close") => void;
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
@@ -120,17 +114,12 @@ useModalDialog({
 // Get categories and shortcuts
 const categories = computed(() => props.registry.getAllCategories());
 
-// Filter categories that have visible shortcuts matching search
-const filteredCategories = computed(() => {
-  if (!searchQuery.value) {
-    return categories.value;
-  }
-
-  return categories.value.filter((cat) => {
-    const shortcuts = getCategoryShortcuts(cat.id);
-    return shortcuts.length > 0;
-  });
-});
+// Only show categories that have at least one enabled shortcut matching the
+// current search — a category whose shortcuts are all disabled (unimplemented)
+// must not render as an empty section.
+const filteredCategories = computed(() =>
+  categories.value.filter((cat) => getCategoryShortcuts(cat.id).length > 0)
+);
 
 // Get shortcuts for a category (enabled only, filtered by search)
 const getCategoryShortcuts = (categoryId: string) => {
@@ -164,11 +153,6 @@ const formatKey = (key: string): string => {
 // Close modal
 const close = () => {
   emit("close");
-};
-
-// Open customization
-const openCustomization = () => {
-  emit("customize");
 };
 </script>
 

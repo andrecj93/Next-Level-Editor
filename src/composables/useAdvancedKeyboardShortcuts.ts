@@ -182,17 +182,24 @@ export function useAdvancedKeyboardShortcuts(
   };
 
   /**
-   * Create action wrapper that prevents default and executes action
+   * Create action wrapper that prevents default and executes action. The
+   * returned handler is tagged with `hasFn` so shortcuts wired to a real editor
+   * action can be told apart from the ones left unimplemented (Partial actions)
+   * — the latter are DISABLED after registration so they neither fire (native
+   * behaviour, e.g. Ctrl+C, is preserved) nor appear in the help modal, which
+   * only ever shows shortcuts that actually work.
    */
   const createAction = (fn?: () => void) => {
-    return (event: KeyboardEvent) => {
+    const handler = ((event: KeyboardEvent): boolean => {
       if (fn) {
         event.preventDefault();
         fn();
         return true;
       }
       return false;
-    };
+    }) as ((event: KeyboardEvent) => boolean) & { hasFn: boolean };
+    handler.hasFn = Boolean(fn);
+    return handler;
   };
 
   /**
@@ -819,6 +826,19 @@ export function useAdvancedKeyboardShortcuts(
   // Initialize
   registerCategories();
   registerShortcuts();
+
+  // Disable every shortcut with no backing editor action. These stay out of the
+  // active key handler (so the browser's native behaviour is untouched) and out
+  // of the help modal (which filters on `enabled`), so the system only ever
+  // advertises shortcuts that genuinely fire.
+  for (const shortcut of registry.getAllShortcuts()) {
+    const action = shortcut.action as ((event: KeyboardEvent) => boolean) & {
+      hasFn?: boolean;
+    };
+    if (!action.hasFn) {
+      registry.disableShortcut(shortcut.id);
+    }
+  }
 
   return {
     handleKeydown,
