@@ -746,18 +746,53 @@ describe('Formatting Tests', () => {
       expect(root.textContent).toBe('aabbcc')
     })
 
-    it('reinserts the fragment in place when the styled parent keeps text', () => {
-      // Selecting only part of a styled run leaves residual text in the parent,
-      // so the extracted fragment is reinserted at the range position rather
-      // than hoisted above the (now-empty) parent.
+    it('unstyles a prefix slice of a styled run', () => {
+      // Selecting "He" in <strong>Hello</strong> and toggling bold off must
+      // actually unbold "He", leaving He<strong>llo</strong>.
       root.innerHTML = '<p><strong>Hello</strong></p>'
       const text = root.querySelector('strong')!.firstChild!
       selectRange(text, 0, text, 2)
 
       applyInlineStyle(root, 'strong')
 
-      // The overall text is preserved through the round-trip.
       expect(root.textContent).toBe('Hello')
+      expect(root.querySelectorAll('strong').length).toBe(1)
+      expect(root.querySelector('strong')!.textContent).toBe('llo')
+    })
+
+    it('unstyles a suffix slice of a styled run', () => {
+      root.innerHTML = '<p><strong>Hello</strong></p>'
+      const text = root.querySelector('strong')!.firstChild!
+      selectRange(text, 2, text, 5)
+
+      applyInlineStyle(root, 'strong')
+
+      expect(root.querySelector('strong')!.textContent).toBe('He')
+      expect(root.textContent).toBe('Hello')
+    })
+
+    it('splits a styled run when unstyling an interior slice', () => {
+      root.innerHTML = '<p><strong>Hello</strong></p>'
+      const text = root.querySelector('strong')!.firstChild!
+      selectRange(text, 1, text, 4)
+
+      applyInlineStyle(root, 'strong')
+
+      const strongs = [...root.querySelectorAll('strong')].map(s => s.textContent)
+      expect(strongs).toEqual(['H', 'o'])
+      expect(root.textContent).toBe('Hello')
+    })
+
+    it('preserves attributes on the surviving slices when unstyling a link', () => {
+      root.innerHTML = '<p><a href="https://x.test">Hello</a></p>'
+      const text = root.querySelector('a')!.firstChild!
+      selectRange(text, 0, text, 2)
+
+      applyInlineStyle(root, 'a')
+
+      const link = root.querySelector('a')!
+      expect(link.textContent).toBe('llo')
+      expect(link.getAttribute('href')).toBe('https://x.test')
     })
   })
 

@@ -250,42 +250,88 @@ const unwrapMatchingElements = (
   toUnwrap.forEach((node) => unwrapElement(node));
 };
 
-const insertFragmentAtPosition = (
-  fragment: DocumentFragment,
-  styledParent: HTMLElement | null
-): void => {
-  if (styledParent?.parentNode && !styledParent.textContent) {
-    const parent = styledParent.parentNode;
-    const nextSibling = styledParent.nextSibling;
-    styledParent.remove();
+// Split a single styled element around the selected range so only the selected
+// slice loses the styling, e.g. removing bold from "He" in <strong>Hello</strong>
+// yields He<strong>llo</strong>. The leading/trailing slices are re-wrapped in a
+// shallow clone of the original element so their attributes (href, style, …) are
+// preserved. Handles prefix, suffix, interior, and whole-run selections.
+const splitStyledParentAroundRange = (
+  range: Range,
+  styledParent: HTMLElement,
+  tagName: string
+) => {
+  const parent = styledParent.parentNode;
+  if (!parent) return;
 
-    const tempRange = document.createRange();
-    if (nextSibling) {
-      tempRange.setStartBefore(nextSibling);
-    } else {
-      tempRange.selectNodeContents(parent);
-      tempRange.collapse(false);
-    }
-    tempRange.insertNode(fragment);
+  // Extract the trailing slice first: removing later content keeps the earlier
+  // (leading) offsets valid for the second extraction.
+  const afterRange = document.createRange();
+  afterRange.setStart(range.endContainer, range.endOffset);
+  afterRange.setEnd(styledParent, styledParent.childNodes.length);
+  const afterFragment = afterRange.extractContents();
+
+  const beforeRange = document.createRange();
+  beforeRange.setStart(styledParent, 0);
+  beforeRange.setEnd(range.startContainer, range.startOffset);
+  const beforeFragment = beforeRange.extractContents();
+
+  unwrapMatchingElements(beforeFragment, tagName);
+  unwrapMatchingElements(afterFragment, tagName);
+
+  const makeSlice = (fragment: DocumentFragment): HTMLElement | null => {
+    if (!fragment.firstChild) return null;
+    const wrapper = styledParent.cloneNode(false) as HTMLElement;
+    wrapper.appendChild(fragment);
+    // Extracting a zero-length range at a text boundary yields an empty text
+    // node; drop the slice unless it carries real text or an element (img/br).
+    if (!wrapper.textContent && !wrapper.firstElementChild) return null;
+    return wrapper;
+  };
+  const beforeSlice = makeSlice(beforeFragment);
+  const afterSlice = makeSlice(afterFragment);
+
+  // The remaining (selected) middle content is unstyled; flatten any nested
+  // same-tag descendants so nothing keeps the styling.
+  const middleFragment = document.createDocumentFragment();
+  while (styledParent.firstChild) {
+    middleFragment.appendChild(styledParent.firstChild);
+  }
+  unwrapMatchingElements(middleFragment, tagName);
+  const middleNodes = collectFragmentNodes(middleFragment);
+
+  const output = document.createDocumentFragment();
+  if (beforeSlice) output.appendChild(beforeSlice);
+  output.appendChild(middleFragment);
+  if (afterSlice) output.appendChild(afterSlice);
+  parent.replaceChild(output, styledParent);
+
+  const selection = getSelection();
+  if (selection && middleNodes.length > 0) {
+    const newRange = document.createRange();
+    newRange.setStartBefore(middleNodes[0]);
+    newRange.setEndAfter(middleNodes.at(-1)!);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
   }
 };
 
 const removeInlineStyleFromRange = (range: Range, tagName: string) => {
   const styledParent = findStyledParent(range.commonAncestorContainer, tagName);
-  const fragment = range.extractContents();
 
-  unwrapMatchingElements(fragment, tagName);
-  const nodes = collectFragmentNodes(fragment);
-
-  const insertedAtParent =
-    styledParent?.parentNode && !styledParent.textContent;
-  if (insertedAtParent) {
-    insertFragmentAtPosition(fragment, styledParent);
-  } else {
-    range.insertNode(fragment);
+  // Common case: the whole selection lives inside one styled element. Split it
+  // so the selected slice is genuinely unstyled (prefix/suffix/interior/whole).
+  if (styledParent && styledParent.parentNode) {
+    splitStyledParentAroundRange(range, styledParent, tagName);
+    return;
   }
 
-  // Re-select the inserted content
+  // Fallback for a selection spanning multiple sibling styled runs: strip the
+  // tag from the extracted fragment and reinsert it in place.
+  const fragment = range.extractContents();
+  unwrapMatchingElements(fragment, tagName);
+  const nodes = collectFragmentNodes(fragment);
+  range.insertNode(fragment);
+
   const selection = getSelection();
   if (selection && nodes.length > 0) {
     const newRange = document.createRange();
