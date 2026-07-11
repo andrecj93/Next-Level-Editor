@@ -146,8 +146,8 @@ const active = ref("install");
 const props = [
   { name: "modelValue", type: "string", def: "''", desc: "The editor's HTML content (v-model)." },
   { name: "placeholder", type: "string", def: "'…'", desc: "Placeholder shown when empty." },
-  { name: "width", type: "string", def: "'100%'", desc: "Editor width (any CSS length)." },
-  { name: "height", type: "string", def: "'600px'", desc: "Editor height (any CSS length)." },
+  { name: "width", type: "string", def: "undefined", desc: "Editor width (any CSS length). Unset fills the parent (100%)." },
+  { name: "height", type: "string", def: "undefined", desc: "Editor height (any CSS length). Unset fills the parent (100%) — give the wrapper a height." },
   { name: "themePreset", type: "string", def: "'default'", desc: "Whole-editor theme: default | classic | minimal | midnight | warm." },
   { name: "toolbarLayout", type: "string", def: "'comfortable'", desc: "Toolbar density: comfortable (labelled) | compact (mini bar + expand toggle). Below 640px the toolbar auto-compacts to the mini bar regardless." },
   { name: "adaptiveChrome", type: "string", def: "'letterbox'", desc: "While you write: letterbox (toolbar dissolves into an ambient band with block format, position filament, save pulse and word count) | recede (fades to a whisper) | off. Pointer, Escape or toolbar focus bring it back instantly. Desktop-only; honors reduced motion." },

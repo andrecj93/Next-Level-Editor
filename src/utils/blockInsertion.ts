@@ -55,6 +55,39 @@ export const placeCaretInside = (target: Node, atStart: boolean) => {
 };
 
 /**
+ * If the caret sits inside a code block (<pre>/<code>), move it to just after
+ * the outermost such container so a follow-up block insert lands as a sibling.
+ *
+ * Code containers are not in SPLITTABLE_BLOCKS (splitting a code block in two
+ * would be destructive), so without this every `range.insertNode` path would
+ * nest tables/HRs/embeds INSIDE the code element — invalid HTML that parsers
+ * silently restructure on the next serialize/re-parse round-trip.
+ */
+export const escapeCodeBlockAtCaret = (root: HTMLElement): void => {
+  const selection = globalThis.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const start = selection.getRangeAt(0).startContainer;
+  if (!root.contains(start)) return;
+
+  let el: HTMLElement | null =
+    start.nodeType === Node.ELEMENT_NODE
+      ? (start as HTMLElement)
+      : start.parentElement;
+  let container: HTMLElement | null = null;
+  while (el && el !== root) {
+    if (el.tagName === "PRE" || el.tagName === "CODE") container = el;
+    el = el.parentElement;
+  }
+  if (!container) return;
+
+  const range = document.createRange();
+  range.setStartAfter(container);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+};
+
+/**
  * Split the caret's paragraph/heading in two so a block-level node can be
  * inserted BETWEEN the halves instead of nested inside the block.
  *

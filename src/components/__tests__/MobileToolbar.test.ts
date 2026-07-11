@@ -289,11 +289,17 @@ describe("MobileToolbar", () => {
       await w.findAll(".toolbar-tab")[1].trigger("click"); // Insert
       expect(isHidden(w, "#panel-insert")).toBe(false);
 
+      // Full parity with the desktop Insert menu (Code Block lives in Blocks).
       const buttons = w.findAll("#panel-insert .toolbar-button-large");
       expect(buttons.map((b) => b.attributes("aria-label"))).toEqual([
-        "Image",
-        "Table",
         "Link",
+        "Image",
+        "File Manager",
+        "Video",
+        "Table",
+        "Divider",
+        "Page Break",
+        "Contents",
         "Emoji",
       ]);
 
@@ -301,9 +307,14 @@ describe("MobileToolbar", () => {
         await btn.trigger("click");
       }
       expect(w.emitted("action")).toEqual([
-        ["image"],
-        ["table"],
         ["link"],
+        ["image"],
+        ["file-manager"],
+        ["video"],
+        ["table"],
+        ["hr"],
+        ["page-break"],
+        ["toc"],
         ["emoji"],
       ]);
       w.unmount();

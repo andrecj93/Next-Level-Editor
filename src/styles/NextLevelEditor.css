@@ -1155,6 +1155,42 @@
   color: var(--toolbar-accent);
   flex: none;
 }
+
+/* MINI-ROW TRIMS — the collapsed row is nowrap, so on very narrow containers
+   the lowest-priority essentials yield progressively. This guarantees the two
+   affordances that unlock everything else — the Insert menu and the expand
+   toggle — are never pushed off the bar (they were clipped at 320px). The
+   trimmed buttons stay one tap away behind the expand toggle; the expanded
+   state (.is-compact:not(.is-mini)) wraps and shows everything, so these
+   rules are scoped to .is-mini only. */
+@container nle-toolbar (max-width: 430px) {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern.is-mini
+    button[aria-label="Strikethrough"] {
+    display: none;
+  }
+}
+@container nle-toolbar (max-width: 390px) {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern.is-mini
+    button[aria-label="Numbered List"] {
+    display: none;
+  }
+}
+@container nle-toolbar (max-width: 358px) {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern.is-mini
+    button[aria-label="Underline"] {
+    display: none;
+  }
+}
+@container nle-toolbar (max-width: 326px) {
+  :where(.nle-toolbar-shell:not([data-position="left"]))
+    .editor-toolbar-modern.is-mini
+    button[aria-label="Bullet List"] {
+    display: none;
+  }
+}
 .toolbar-expand-toggle svg {
   transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }

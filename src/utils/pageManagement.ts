@@ -4,6 +4,7 @@
  */
 
 import { smoothScrollIntoView } from "./scroll";
+import { splitBlockAtCaret } from "./blockInsertion";
 
 // Constants
 const MAX_HEADING_ID_LENGTH = 50;
@@ -12,8 +13,15 @@ const TOC_INDENT_PX = 20;
 /**
  * Inserts a page break at the current cursor position
  * @param selection - The browser selection object
+ * @param root - The editor root; when given, a caret inside a paragraph or
+ *   heading splits that block first so the page break lands BETWEEN blocks
+ *   (a <div> nested inside a <p> is invalid HTML that parsers restructure on
+ *   the next serialize/re-parse round-trip).
  */
-export function insertPageBreak(selection: Selection | null): void {
+export function insertPageBreak(
+  selection: Selection | null,
+  root?: HTMLElement | null
+): void {
   if (!selection || selection.rangeCount === 0) {
     return;
   }
@@ -46,6 +54,11 @@ export function insertPageBreak(selection: Selection | null): void {
   }
 
   range.deleteContents();
+
+  // Split the caret's paragraph/heading so the break inserts at block level.
+  if (root && splitBlockAtCaret(range, root)) {
+    range = selection.getRangeAt(0);
+  }
 
   // Create page break element
   const pageBreak = document.createElement("div");
@@ -156,12 +169,29 @@ export function insertTableOfContents(
     div.innerHTML = tocHtml;
     editor.insertBefore(div.firstChild as Node, editor.firstChild);
   } else {
-    const range = selection.getRangeAt(0);
+    let range = selection.getRangeAt(0);
     range.deleteContents();
+
+    // Split the caret's paragraph/heading so the <nav> lands at block level —
+    // nested inside a <p> it is invalid HTML that parsers restructure on the
+    // next serialize/re-parse round-trip.
+    if (splitBlockAtCaret(range, editor)) {
+      range = selection.getRangeAt(0);
+    }
 
     const div = document.createElement("div");
     div.innerHTML = tocHtml;
-    range.insertNode(div.firstChild as Node);
+    const toc = div.firstChild as Node;
+    range.insertNode(toc);
+
+    // Leave a collapsed caret after the TOC. `insertNode` leaves the range
+    // spanning the inserted node, which read as "everything is selected" and
+    // popped the floating formatting bubble uninvited.
+    const after = document.createRange();
+    after.setStartAfter(toc);
+    after.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(after);
   }
 }
 

@@ -26,8 +26,15 @@ export function useFindReplace(options: FindReplaceOptions) {
 
   /**
    * Search and replace text in HTML content.
-   * @param replaceAll - when false, only the first match is replaced (single
-   *   "Replace"); when true, every match is replaced ("Replace All").
+   *
+   * The match runs over TEXT NODES only, never the raw HTML string: a naive
+   * `html.replace(regex, …)` matches inside tag names, attributes, class names
+   * and URLs (replacing "a"→"X" turns `<a href>` into `<X href>`), and any
+   * replacement containing `<`/`&` injects live markup. Assigning to
+   * `textContent` also escapes the replacement, so the result is inert.
+   *
+   * @param replaceAll - when false, only the first match in the whole document
+   *   is replaced (single "Replace"); when true, every match ("Replace All").
    */
   const searchAndReplace = (
     html: string,
@@ -38,15 +45,46 @@ export function useFindReplace(options: FindReplaceOptions) {
   ): string => {
     if (!findText) return html;
 
-    let flags = "";
-    if (replaceAll) flags += "g";
+    // Always global: single-replace is bounded by the `done` flag below so it
+    // stops at the first match ACROSS the tree, not the first per text node.
+    let flags = "g";
     if (!options.caseSensitive) flags += "i";
-
     const regex = new RegExp(buildPattern(findText, options.wholeWord), flags);
 
-    // Use a function replacement so `$`-sequences (e.g. "$&", "$1") inside
-    // replaceText are inserted literally instead of being interpreted.
-    return html.replace(regex, () => replaceText);
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+
+    let done = false;
+    const walk = (node: Node): void => {
+      if (done && !replaceAll) return;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent ?? "";
+        if (!text) return;
+        if (replaceAll) {
+          // Function replacement so `$`-sequences ("$&", "$1") in replaceText
+          // are inserted literally instead of being interpreted.
+          node.textContent = text.replace(regex, () => replaceText);
+        } else {
+          regex.lastIndex = 0;
+          const match = regex.exec(text);
+          if (match) {
+            node.textContent =
+              text.slice(0, match.index) +
+              replaceText +
+              text.slice(match.index + match[0].length);
+            done = true;
+          }
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        for (const child of Array.from(node.childNodes)) {
+          walk(child);
+          if (done && !replaceAll) break;
+        }
+      }
+    };
+
+    walk(temp);
+    return temp.innerHTML;
   };
 
   // Tracks the currently-applied temporary find highlight so a second Find on

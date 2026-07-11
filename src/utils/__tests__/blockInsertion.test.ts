@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { insertHorizontalRule } from "../commands";
-import { splitBlockAtCaret } from "../blockInsertion";
+import { splitBlockAtCaret, escapeCodeBlockAtCaret } from "../blockInsertion";
 
 /**
  * Block-level inserts must land BETWEEN paragraphs, never nested inside one:
@@ -82,6 +82,65 @@ describe("blockInsertion", () => {
 
       expect(root.querySelectorAll("hr").length).toBe(1);
       expect(root.querySelector("p hr")).toBeNull();
+    });
+  });
+
+  describe("escapeCodeBlockAtCaret", () => {
+    it("moves the caret out of a <pre><code> so block inserts land as siblings", () => {
+      root.innerHTML = "<p>before</p><pre><code>const x = 1;</code></pre><p>after</p>";
+      const codeText = root.querySelector("code")!.firstChild!;
+      caretIn(codeText, 5);
+
+      escapeCodeBlockAtCaret(root);
+      insertHorizontalRule();
+
+      // The <hr> must never nest inside the code block…
+      expect(root.querySelector("pre hr, code hr")).toBeNull();
+      // …and the code content stays intact.
+      expect(root.querySelector("code")!.textContent).toBe("const x = 1;");
+      const children = [...root.children].map((el) => el.tagName);
+      expect(children).toEqual(["P", "PRE", "HR", "P"]);
+    });
+
+    it("escapes an inline <code> as well", () => {
+      root.innerHTML = "<p>uses <code>foo()</code> here</p>";
+      const codeText = root.querySelector("code")!.firstChild!;
+      caretIn(codeText, 2);
+
+      escapeCodeBlockAtCaret(root);
+
+      const sel = window.getSelection()!;
+      const container = sel.getRangeAt(0).startContainer;
+      expect(
+        container.nodeType === Node.ELEMENT_NODE &&
+          (container as HTMLElement).closest("code")
+      ).toBeFalsy();
+    });
+
+    it("leaves the selection alone when the caret is not in a code block", () => {
+      root.innerHTML = "<p>plain text</p>";
+      const text = root.querySelector("p")!.firstChild!;
+      caretIn(text, 3);
+
+      escapeCodeBlockAtCaret(root);
+
+      const range = window.getSelection()!.getRangeAt(0);
+      expect(range.startContainer).toBe(text);
+      expect(range.startOffset).toBe(3);
+    });
+
+    it("does nothing when the selection is outside the root", () => {
+      root.innerHTML = "<pre><code>x</code></pre>";
+      const outside = document.createElement("p");
+      outside.textContent = "elsewhere";
+      document.body.appendChild(outside);
+      caretIn(outside.firstChild!, 2);
+
+      escapeCodeBlockAtCaret(root);
+
+      const range = window.getSelection()!.getRangeAt(0);
+      expect(range.startContainer).toBe(outside.firstChild);
+      document.body.removeChild(outside);
     });
   });
 });

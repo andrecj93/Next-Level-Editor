@@ -350,6 +350,15 @@ const currentTab = computed(
   () => tabs.find((t) => t.id === activeTab.value) || tabs[0]
 );
 
+// Shared stroke icon factory — same visual language as the desktop toolbar
+// (24px stroke icons), replacing the old emoji glyphs that clashed with the
+// design system and rendered inconsistently across platforms.
+const svgIcon = (paths: string, size = 24): string =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+
+const ICON_LINK =
+  '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>';
+
 // Format actions (bold, italic, etc.)
 const formatActions = [
   {
@@ -390,36 +399,82 @@ const formatActions = [
   {
     id: "link",
     label: "Link",
-    icon: "🔗",
+    icon: svgIcon(ICON_LINK, 18),
     onClick: () => executeAction("link"),
     isActive: () => false,
   },
 ];
 
-// Insert actions (image, table, etc.)
+// Insert actions — full parity with the desktop Insert menu (minus Code Block,
+// which lives in the Blocks tab). Every id has a matching case in
+// NextLevelEditor's handleMobileAction; never add a button without one.
 const insertActions = [
+  {
+    id: "link",
+    label: "Link",
+    icon: svgIcon(ICON_LINK),
+    onClick: () => executeAction("link"),
+  },
   {
     id: "image",
     label: "Image",
-    icon: "🖼️",
+    icon: svgIcon(
+      '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>'
+    ),
     onClick: () => executeAction("image"),
+  },
+  {
+    id: "file-manager",
+    label: "File Manager",
+    icon: svgIcon(
+      '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>'
+    ),
+    onClick: () => executeAction("file-manager"),
+  },
+  {
+    id: "video",
+    label: "Video",
+    icon: svgIcon(
+      '<path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>'
+    ),
+    onClick: () => executeAction("video"),
   },
   {
     id: "table",
     label: "Table",
-    icon: "📊",
+    icon: svgIcon(
+      '<path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/>'
+    ),
     onClick: () => executeAction("table"),
   },
   {
-    id: "link",
-    label: "Link",
-    icon: "🔗",
-    onClick: () => executeAction("link"),
+    id: "hr",
+    label: "Divider",
+    icon: svgIcon('<path d="M5 12h14"/>'),
+    onClick: () => executeAction("hr"),
+  },
+  {
+    id: "page-break",
+    label: "Page Break",
+    icon: svgIcon(
+      '<line x1="3" x2="21" y1="12" y2="12"/><polyline points="8 8 12 4 16 8"/><polyline points="16 16 12 20 8 16"/>'
+    ),
+    onClick: () => executeAction("page-break"),
+  },
+  {
+    id: "toc",
+    label: "Contents",
+    icon: svgIcon(
+      '<path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/><path d="M3 10v6c0 1.1.9 2 2 2h3"/>'
+    ),
+    onClick: () => executeAction("toc"),
   },
   {
     id: "emoji",
     label: "Emoji",
-    icon: "😀",
+    icon: svgIcon(
+      '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>'
+    ),
     onClick: () => executeAction("emoji"),
   },
 ];
@@ -485,19 +540,19 @@ const moreActions = [
   {
     id: "undo",
     label: "Undo",
-    icon: "↶",
+    icon: svgIcon('<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>'),
     onClick: () => executeAction("undo"),
   },
   {
     id: "redo",
     label: "Redo",
-    icon: "↷",
+    icon: svgIcon('<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>'),
     onClick: () => executeAction("redo"),
   },
   {
     id: "find",
     label: "Find & Replace",
-    icon: "🔍",
+    icon: svgIcon('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>'),
     onClick: () => executeAction("find"),
   },
   // NOTE: "shortcuts" (Keyboard Shortcuts), "export" and "settings" are
@@ -756,6 +811,16 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
 
 .button-icon {
   font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary, #1f2937);
+}
+
+.button-icon :deep(svg),
+.more-icon :deep(svg) {
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .button-label {
@@ -877,6 +942,35 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .mobile-toolbar {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Reduced-motion: this bar is teleported to <body>, so it escapes the
+   editor-scoped prefers-reduced-motion guards in NextLevelEditor.css. Zero out
+   the collapse/expand slide, the button press scaling and the haptic pulse for
+   users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-toolbar,
+  .toolbar-toggle,
+  .toolbar-close,
+  .toolbar-tab,
+  .toolbar-button,
+  .toolbar-button-large,
+  .block-button,
+  .more-button {
+    transition: none !important;
+  }
+
+  .toolbar-toggle:active,
+  .toolbar-close:active,
+  .toolbar-button:active,
+  .toolbar-button-large:active,
+  .block-button:active {
+    transform: none !important;
+  }
+
+  .haptic-pulse {
+    animation: none !important;
   }
 }
 </style>

@@ -32,7 +32,7 @@
           : `${action.tooltip} (not available for current selection)`
       "
       :aria-label="action.label"
-      :aria-pressed="action.isActive?.() || false"
+      :aria-pressed="action.isActive ? action.isActive() : undefined"
       :disabled="!visible || action.isDisabled?.()"
       @mousedown.prevent="$emit('remember-selection')"
       @click="visible && !action.isDisabled?.() ? action.onClick() : null"

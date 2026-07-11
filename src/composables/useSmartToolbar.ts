@@ -63,17 +63,20 @@ export interface SmartToolbarState {
  * Default toolbar configurations for different contexts
  */
 const contextConfigs: Record<ContentContext, ToolbarConfig> = {
+  // An empty document keeps the full formatting palette enabled: collapsed-
+  // caret formatting (click Bold, then type bold) is standard editor behavior,
+  // so greying the toolbar out on first run just reads as broken chrome.
   empty: {
     format: true,
-    textFormatting: false,
-    alignment: false,
-    lists: false,
+    textFormatting: true,
+    alignment: true,
+    lists: true,
     insert: true,
-    colors: false,
-    link: false,
+    colors: true,
+    link: true,
     tools: true,
     view: true,
-    export: false,
+    export: true,
   },
   text: {
     format: true,
@@ -93,7 +96,11 @@ const contextConfigs: Record<ContentContext, ToolbarConfig> = {
     alignment: true,
     // Lists are enabled so a heading can be converted into a list (#18)
     lists: true,
-    insert: false,
+    // Insert stays available in every context — inserting a table/image/HR
+    // while the caret sits in a heading is a completely normal action, and a
+    // toolbar section that flickers between enabled/disabled as the caret
+    // moves reads as broken chrome.
+    insert: true,
     colors: true,
     link: true,
     tools: true,
@@ -113,12 +120,15 @@ const contextConfigs: Record<ContentContext, ToolbarConfig> = {
     view: true,
     export: true,
   },
+  // A link always lives inside a block (paragraph/heading/list item), so
+  // block-level operations on that container — format, alignment, lists,
+  // inserts — remain perfectly valid while the caret is on the link.
   link: {
-    format: false,
+    format: true,
     textFormatting: true,
-    alignment: false,
-    lists: false,
-    insert: false,
+    alignment: true,
+    lists: true,
+    insert: true,
     colors: true,
     link: true,
     tools: true,
@@ -144,17 +154,21 @@ const contextConfigs: Record<ContentContext, ToolbarConfig> = {
     lists: false,
     insert: true,
     colors: true,
-    link: false,
+    // Links inside table cells are ordinary rich-text content.
+    link: true,
     tools: true,
     view: true,
     export: true,
   },
+  // Code blocks intentionally reject inline styling (bold/colors/links) to
+  // keep their content plain, but block-level insertion stays available —
+  // the insert utilities place new blocks after the <pre>, never inside it.
   code: {
     format: false,
     textFormatting: false,
     alignment: false,
     lists: false,
-    insert: false,
+    insert: true,
     colors: false,
     link: false,
     tools: true,

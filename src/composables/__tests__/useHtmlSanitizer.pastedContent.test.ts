@@ -226,4 +226,66 @@ describe("useHtmlSanitizer - pasted content fidelity", () => {
       expect(result).not.toContain("param");
     });
   });
+
+  // Insert outputs that MUST survive a v-model round-trip. Before these fixes
+  // the page break was unwrapped to a bare span+hr and the TOC nav was
+  // stripped, so a consumer persisting the emitted HTML silently lost both.
+  describe("Insert-output round-trips", () => {
+    it("preserves a page break and regenerates its known-safe structure", () => {
+      const html =
+        '<p>a</p><div class="page-break" contenteditable="false"><span class="page-break-label">Page Break</span><hr class="page-break-line"></div><p>b</p>';
+      const result = sanitizer.sanitizeHtml(html);
+      expect(result).toContain('class="page-break"');
+      expect(result).toContain('contenteditable="false"');
+      expect(result).toContain('class="page-break-label"');
+      expect(result).toContain('class="page-break-line"');
+      // Idempotent: a second pass produces the same output.
+      expect(sanitizer.sanitizeHtml(result)).toBe(result);
+    });
+
+    it("rebuilds a page break from a tampered one (drops injected attributes)", () => {
+      const html =
+        '<div class="page-break" onclick="alert(1)" data-x="y"><span class="page-break-label">Page Break</span><hr class="page-break-line"></div>';
+      const result = sanitizer.sanitizeHtml(html);
+      expect(result).toContain('class="page-break"');
+      expect(result).not.toContain("onclick");
+      expect(result).not.toContain("data-x");
+    });
+
+    it("preserves the table-of-contents nav wrapper and its links", () => {
+      const html =
+        '<nav class="table-of-contents"><h2>Table of Contents</h2><ul>' +
+        '<li style="margin-left: 0px;"><a href="#h0">Intro</a></li>' +
+        '<li style="margin-left: 20px;"><a href="#h1">Details</a></li></ul></nav>';
+      const result = sanitizer.sanitizeHtml(html);
+      expect(result).toContain('class="table-of-contents"');
+      expect(result).toContain("<nav");
+      expect(result).toContain('href="#h0"');
+      expect(result).toContain('href="#h1"');
+      // Indentation (margin-left) is preserved for nested headings.
+      expect(result).toContain("margin-left: 20px");
+    });
+
+    it("still unwraps a plain nav (no toc class) and drops scripts inside a toc nav", () => {
+      const plain = sanitizer.sanitizeHtml("<nav><p>Menu</p></nav>");
+      expect(plain).not.toContain("<nav");
+      expect(plain).toContain("<p>Menu</p>");
+
+      const evil = sanitizer.sanitizeHtml(
+        '<nav class="table-of-contents"><script>alert(1)</script><ul><li><a href="#x">X</a></li></ul></nav>'
+      );
+      expect(evil).toContain('class="table-of-contents"');
+      expect(evil).not.toContain("script");
+      expect(evil).not.toContain("alert");
+    });
+
+    it("strips a spoofed toc nav attribute but keeps the wrapper", () => {
+      const html =
+        '<nav class="table-of-contents" onmouseover="steal()"><ul><li><a href="#x">X</a></li></ul></nav>';
+      const result = sanitizer.sanitizeHtml(html);
+      expect(result).toContain('class="table-of-contents"');
+      expect(result).not.toContain("onmouseover");
+      expect(result).not.toContain("steal");
+    });
+  });
 });

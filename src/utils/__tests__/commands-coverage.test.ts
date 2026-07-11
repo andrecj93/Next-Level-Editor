@@ -313,6 +313,42 @@ describe('Additional Commands Coverage', () => {
       expect(table!.style.width).toBe('100%')
       expect(table!.style.borderCollapse).toBe('collapse')
     })
+
+    it('splits the caret paragraph so the table is never nested in a <p>', () => {
+      root.innerHTML = '<p>HelloWorld</p>'
+      const textNode = root.querySelector('p')!.firstChild!
+      const range = document.createRange()
+      range.setStart(textNode, 5) // caret between "Hello" and "World"
+      range.collapse(true)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      insertTable(root, 2, 2, false)
+
+      // A <table> inside a <p> is invalid HTML that the parser foster-parents
+      // out on the next round-trip, reordering the paragraph.
+      expect(root.querySelector('p table')).toBeNull()
+      // The paragraph is split around the table, in document order.
+      const tags = [...root.children].map((el) => el.tagName)
+      expect(tags).toEqual(['P', 'TABLE', 'P'])
+      expect(root.children[0].textContent).toBe('Hello')
+      expect(root.children[2].textContent).toBe('World')
+    })
+
+    it('clamps a huge row count instead of building thousands of cells', () => {
+      root.innerHTML = '<p>x</p>'
+      const range = document.createRange()
+      range.selectNodeContents(root.querySelector('p')!)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      insertTable(root, 9999, 3, false)
+
+      const rows = root.querySelectorAll('tr')
+      expect(rows.length).toBe(50) // clamped to the 1–50 bound
+    })
   })
 
   describe('searchAndReplace', () => {

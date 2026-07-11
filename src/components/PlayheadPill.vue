@@ -89,7 +89,8 @@
                     type="button"
                     class="dropdown-item"
                     role="menuitem"
-                    :class="{ active: item.isActive?.() }"
+                    :class="{ active: item.isActive?.(), disabled: isItemDisabled(item) }"
+                    :disabled="isItemDisabled(item)"
                     :aria-label="item.label"
                     @mousedown.prevent
                     @click="handleItemClick(item)"
@@ -250,7 +251,8 @@
                     type="button"
                     class="dropdown-item"
                     role="menuitem"
-                    :class="{ active: item.isActive?.() }"
+                    :class="{ active: item.isActive?.(), disabled: isItemDisabled(item) }"
+                    :disabled="isItemDisabled(item)"
                     :aria-label="item.label"
                     @mousedown.prevent
                     @click="handleItemClick(item)"
@@ -647,7 +649,12 @@ const toggleMenu = (id: MenuId) => {
   openMenu.value = openMenu.value === id ? null : id;
 };
 
+/** An item is disabled via a static `disabled` flag or an `isDisabled()` predicate. */
+const isItemDisabled = (item: PlayheadMenuItem): boolean =>
+  Boolean(item.disabled || item.isDisabled?.());
+
 const handleItemClick = (item: PlayheadMenuItem) => {
+  if (isItemDisabled(item)) return;
   item.onClick?.();
   openMenu.value = null;
 };
@@ -1141,8 +1148,13 @@ onBeforeUnmount(() => {
     var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
-.dropdown-item:hover {
+.dropdown-item:hover:not(.disabled) {
   background: var(--toolbar-hover, #f5f5f5);
+}
+
+.dropdown-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .dropdown-item.active {

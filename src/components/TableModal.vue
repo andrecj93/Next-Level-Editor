@@ -74,7 +74,7 @@
                   v-for="i in totalCells"
                   :key="i"
                   class="preview-cell"
-                  :class="{ header: includeHeader && i <= cols }"
+                  :class="{ header: includeHeader && i <= (safeCols ?? 0) }"
                 />
               </div>
             </div>
@@ -89,6 +89,7 @@
             </button>
             <button
               class="btn btn-primary"
+              :disabled="!isValid"
               @click="insertTable"
             >
               Insert Table
@@ -133,10 +134,29 @@ useModalDialog({
   initialFocus: () => rowsInput.value,
 })
 
-const totalCells = computed(() => rows.value * cols.value)
+// Clamp to the input bounds so an empty field (NaN from v-model.number) or a
+// large value can never build a runaway preview grid (v-for over totalCells)
+// or emit degenerate dimensions. Returns null when the field isn't a usable
+// number, which also disables Insert.
+const MAX_ROWS = 20
+const MAX_COLS = 10
+const clampDim = (value: number | string, max: number): number | null => {
+  // A cleared number input is the empty string, and Number('') is 0 (not NaN),
+  // so guard the blank/whitespace case explicitly before coercing.
+  if (typeof value === 'string' && value.trim() === '') return null
+  const n = Math.floor(Number(value))
+  if (!Number.isFinite(n)) return null
+  return Math.min(max, Math.max(1, n))
+}
+
+const safeRows = computed(() => clampDim(rows.value, MAX_ROWS))
+const safeCols = computed(() => clampDim(cols.value, MAX_COLS))
+const isValid = computed(() => safeRows.value !== null && safeCols.value !== null)
+
+const totalCells = computed(() => (safeRows.value ?? 0) * (safeCols.value ?? 0))
 
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${cols.value}, 1fr)`
+  gridTemplateColumns: `repeat(${safeCols.value ?? 1}, 1fr)`
 }))
 
 const close = () => {
@@ -148,9 +168,10 @@ const handleOverlayClick = () => {
 }
 
 const insertTable = () => {
+  if (!isValid.value) return
   emit('insert', {
-    rows: rows.value,
-    cols: cols.value,
+    rows: safeRows.value as number,
+    cols: safeCols.value as number,
     includeHeader: includeHeader.value
   })
   close()

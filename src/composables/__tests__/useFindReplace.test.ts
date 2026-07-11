@@ -191,7 +191,10 @@ describe("useFindReplace", () => {
         wholeWord: false,
       });
 
-      expect(result).toBe("<p>$&$1bar</p>");
+      // "$&"/"$1" stay literal (not the match / a capture group). The "&" is
+      // HTML-escaped because the replacement is inserted as literal text — it
+      // re-parses back to "$&$1bar" in the DOM, and markup can't be injected.
+      expect(result).toBe("<p>$&amp;$1bar</p>");
     });
 
     it("should replace only the first match when replaceAll is false", () => {
@@ -209,6 +212,28 @@ describe("useFindReplace", () => {
       );
 
       expect(result).toBe("<p>bar foo foo</p>");
+    });
+
+    it("replaces only visible text, never tag names / attributes / URLs", () => {
+      const { searchAndReplace } = useFindReplace({
+        editorContent: ref(editorElement),
+        captureSnapshot: mockCaptureSnapshot,
+      });
+
+      // "a" appears in the <a> tag name, the href attribute and the class.
+      // A raw innerHTML replace would corrupt all of them; the text-node walk
+      // only touches the visible link text.
+      const result = searchAndReplace(
+        '<p>See <a href="https://a.example/path" class="lnk">a link</a> now</p>',
+        "a",
+        "X",
+        { caseSensitive: false, wholeWord: false },
+        true
+      );
+
+      expect(result).toBe(
+        '<p>See <a href="https://a.example/path" class="lnk">X link</a> now</p>'
+      );
     });
   });
 
