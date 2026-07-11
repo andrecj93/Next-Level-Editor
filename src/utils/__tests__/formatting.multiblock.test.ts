@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { toggleBlock, toggleList } from '../formatting'
+import { toggleBlock, toggleList, applyInlineStyle } from '../formatting'
 
 /**
  * Focused coverage for multi-block heading/paragraph conversion, multi-block
@@ -274,6 +274,64 @@ describe('Formatting multi-block behaviour', () => {
         'Alpha',
         'Beta',
       ])
+    })
+  })
+
+  describe('applyInlineStyle across block boundaries', () => {
+    const selectRange = (
+      sn: Node,
+      so: number,
+      en: Node,
+      eo: number
+    ) => {
+      const selection = window.getSelection()!
+      const range = document.createRange()
+      range.setStart(sn, so)
+      range.setEnd(en, eo)
+      selection.removeAllRanges()
+      selection.addRange(range)
+    }
+
+    it('wraps each block slice separately instead of nesting a block in <strong>', () => {
+      root.innerHTML = '<p>Hello</p><p>World</p>'
+      const ps = root.querySelectorAll('p')
+      selectRange(ps[0].firstChild!, 2, ps[1].firstChild!, 2)
+
+      applyInlineStyle(root, 'strong')
+
+      expect(root.innerHTML).toBe(
+        '<p>He<strong>llo</strong></p><p><strong>Wo</strong>rld</p>'
+      )
+      // No inline element ever wraps a block element (invalid DOM).
+      expect(
+        root.querySelector('strong p, strong div, strong h1, strong h2')
+      ).toBeNull()
+      expect(root.textContent).toBe('HelloWorld')
+    })
+
+    it('fully wraps a middle block spanned end-to-end', () => {
+      root.innerHTML = '<p>aa</p><p>bb</p><p>cc</p>'
+      const ps = root.querySelectorAll('p')
+      selectRange(ps[0].firstChild!, 1, ps[2].firstChild!, 1)
+
+      applyInlineStyle(root, 'strong')
+
+      expect(root.innerHTML).toBe(
+        '<p>a<strong>a</strong></p><p><strong>bb</strong></p><p><strong>c</strong>c</p>'
+      )
+    })
+
+    it('carries attributes onto every block slice for a link across blocks', () => {
+      root.innerHTML = '<p>Hello</p><p>World</p>'
+      const ps = root.querySelectorAll('p')
+      selectRange(ps[0].firstChild!, 0, ps[1].firstChild!, 5)
+
+      applyInlineStyle(root, 'a', { href: 'https://x.test' })
+
+      const links = root.querySelectorAll('a')
+      expect(links.length).toBe(2)
+      links.forEach((a) => expect(a.getAttribute('href')).toBe('https://x.test'))
+      expect(root.querySelector('a p, a div')).toBeNull()
     })
   })
 })

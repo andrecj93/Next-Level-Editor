@@ -351,7 +351,7 @@ describe("useComments", () => {
       expect(comments.activeThreadId.value).toBe(thread.id);
     });
 
-    it("falls back to extractContents when surroundContents throws (crossing boundaries)", () => {
+    it("highlights each block separately when the selection crosses block boundaries", () => {
       const editor = makeEditor("<p>first</p><p>second</p>");
       const editorElement = ref<HTMLElement | undefined>(editor);
       const comments = useComments({ editorElement });
@@ -370,11 +370,20 @@ describe("useComments", () => {
       const thread = comments.addThread("cross")!;
 
       expect(thread).not.toBeNull();
-      const highlight = editor.querySelector<HTMLElement>(".comment-highlight");
-      expect(highlight).not.toBeNull();
-      // The extracted contents were moved inside the span
-      expect(highlight?.textContent).toContain("first");
-      expect(highlight?.textContent).toContain("second");
+      // Paragraph structure is preserved: one highlight span per block, both
+      // sharing the thread id — NOT one merged span that destroys the blocks.
+      const highlights = editor.querySelectorAll<HTMLElement>(
+        ".comment-highlight"
+      );
+      expect(highlights.length).toBe(2);
+      expect(editor.querySelectorAll("p").length).toBe(2);
+      expect(highlights[0].textContent).toBe("first");
+      expect(highlights[1].textContent).toBe("second");
+      highlights.forEach((h) =>
+        expect(h.getAttribute("data-thread-id")).toBe(thread.id)
+      );
+      // No highlight span wraps a block element.
+      expect(editor.querySelector(".comment-highlight p")).toBeNull();
     });
   });
 
@@ -873,7 +882,37 @@ describe("useComments", () => {
       ).toBe(true);
     });
 
-    it("warns and leaves no highlight when the range cannot be restored", () => {
+    it("re-links to a live highlight span instead of the stale serialized range", () => {
+      const editor = makeEditor("<p>Hello world</p>");
+      const editorElement = ref<HTMLElement | undefined>(editor);
+      const comments = useComments({ editorElement });
+
+      selectTextInEditor(editor, 6, 11); // "world"
+      comments.captureSelection();
+      const thread = comments.addThread("note")!;
+      expect(editor.querySelector(".comment-highlight")?.textContent).toBe(
+        "world"
+      );
+
+      // Corrupt the serialized range: if restore re-anchored from it the
+      // highlight would drift or be dropped. The live span must win instead.
+      thread.rangeData.startOffset = 999;
+      thread.rangeData.startContainerPath = [99];
+      thread.rangeData.endContainerPath = [99];
+
+      comments.restoreThreads();
+
+      const highlights = editor.querySelectorAll<HTMLElement>(
+        ".comment-highlight"
+      );
+      expect(highlights.length).toBe(1);
+      expect(highlights[0].textContent).toBe("world");
+      // The re-linked span is clickable (listener re-bound after the rebuild).
+      highlights[0].click();
+      expect(comments.activeThreadId.value).toBe(thread.id);
+    });
+
+    it("warns when no live span exists and the range cannot be restored", () => {
       const editor = makeEditor("<p>Hello wonderful world</p>");
       const editorElement = ref<HTMLElement | undefined>(editor);
       const comments = useComments({ editorElement });
@@ -881,6 +920,13 @@ describe("useComments", () => {
       selectTextInEditor(editor, 0, 5);
       comments.captureSelection();
       const thread = comments.addThread("root")!;
+
+      // Simulate the highlight span being lost (content replaced with no
+      // surviving comment-highlight) so there is nothing live to re-link to.
+      editor.querySelectorAll<HTMLElement>(".comment-highlight").forEach((el) => {
+        while (el.firstChild) el.parentNode!.insertBefore(el.firstChild, el);
+        el.remove();
+      });
 
       // Corrupt the stored path so getNodeFromPath returns null.
       thread.rangeData.startContainerPath = [99];

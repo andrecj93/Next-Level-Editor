@@ -12,11 +12,13 @@ test.beforeEach(() => {
 // Copy / paste sanitization — real-browser coverage for the HTML sanitizer
 // (src/composables/useHtmlSanitizer.ts) exercised through the REAL paste path.
 //
-// The editor has no custom `paste` handler: a native Ctrl+V lets Chromium insert
-// the clipboard HTML into the contenteditable, then the `input` event runs
-// sanitizeHtml over the result and emits the cleaned HTML as the v-model. The
-// Playground's Output → "Source" tab renders that emitted v-model verbatim, so
-// it is the definitive view of what the app hands back to a host application.
+// The editor has a `paste` handler (NextLevelEditor.onPaste): a native Ctrl+V is
+// intercepted, the clipboard's rich HTML is run through sanitizeHtml, and only
+// the cleaned markup is inserted into the contenteditable — so the LIVE editing
+// surface is sanitized, not just the emitted v-model. The subsequent `input`
+// event re-sanitizes and emits the model. The Playground's Output → "Source" tab
+// renders that emitted v-model verbatim, the definitive view of what the app
+// hands back to a host application.
 //
 // These tests dispatch a genuine clipboard paste (Clipboard API write + Ctrl+V)
 // and, for adversarial probing that Chromium's own paste-sanitizer would
@@ -218,15 +220,11 @@ test.describe('Copy/paste sanitization — real clipboard paste', () => {
     await expect(editor.locator('b')).toHaveCount(0)
   })
 
-  // documents BUG: a pasted arbitrary-origin <iframe> is stripped from the
-  // saved v-model but NOT from the live contenteditable surface. Root cause:
-  // on paste, onInput -> captureAndEmit (src/composables/useEditorContent.ts)
-  // sanitizes only the EMITTED model and never re-applies the sanitized HTML
-  // back to editorContent.innerHTML, so anything Chromium's native paste keeps
-  // (iframes, forms, …) that the app's allowlist would reject stays live in the
-  // editor. The persisted/exported content is clean, but the editing surface
-  // embeds the third-party frame. Assertions below pin the ACTUAL behaviour.
-  test('pasted arbitrary <iframe> survives in the editor DOM but is stripped from the model', async ({
+  // The app-level paste handler (onPaste) sanitizes the clipboard HTML BEFORE
+  // it reaches the contenteditable, so a pasted arbitrary-origin <iframe> the
+  // allowlist rejects never lands in the live editing surface (not just the
+  // emitted model).
+  test('pasted arbitrary <iframe> is stripped from both the editor DOM and the model', async ({
     page,
   }) => {
     await clearEditor(page)
@@ -239,23 +237,18 @@ test.describe('Copy/paste sanitization — real clipboard paste', () => {
     const editor = page.locator('.editor-content')
     await expect(editor).toContainText('after frame')
 
-    // BUG: the arbitrary iframe is present in the live editor surface.
-    await expect(editor.locator('iframe')).toHaveCount(1)
-    await expect(editor.locator('iframe')).toHaveAttribute(
-      'src',
-      /example\.com\/evil/
-    )
+    // The arbitrary iframe is absent from the LIVE editing surface.
+    await expect(editor.locator('iframe')).toHaveCount(0)
 
-    // The saved model, however, correctly drops the disallowed iframe.
+    // ...and absent from the saved model.
     await openSource(page)
     await expect(modelSource(page)).not.toContainText('<iframe')
     await expect(modelSource(page)).toContainText('after frame')
   })
 
-  // documents BUG: same root cause as the iframe case — pasted <form> controls
-  // (input/button) remain live in the contenteditable although the emitted
-  // v-model strips the whole form subtree.
-  test('pasted <form> controls survive in the editor DOM but are stripped from the model', async ({
+  // Same guarantee for pasted <form> controls: sanitized out of the live surface
+  // before insertion, not merely stripped from the emitted model.
+  test('pasted <form> controls are stripped from both the editor DOM and the model', async ({
     page,
   }) => {
     await clearEditor(page)
@@ -269,11 +262,11 @@ test.describe('Copy/paste sanitization — real clipboard paste', () => {
     const editor = page.locator('.editor-content')
     await expect(editor).toContainText('after form')
 
-    // BUG: interactive form controls are live in the editing surface.
-    await expect(editor.locator('form')).toHaveCount(1)
-    await expect(editor.locator('input[name="cc"]')).toHaveCount(1)
+    // Interactive form controls never enter the editing surface.
+    await expect(editor.locator('form')).toHaveCount(0)
+    await expect(editor.locator('input[name="cc"]')).toHaveCount(0)
 
-    // The emitted model strips the form entirely.
+    // ...and the emitted model strips the form entirely too.
     await openSource(page)
     await expect(modelSource(page)).not.toContainText('<form')
     await expect(modelSource(page)).not.toContainText('<input')

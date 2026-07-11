@@ -234,49 +234,162 @@ export function useComments(options: UseCommentsOptions = {}) {
   /**
    * Create highlight element for commented text
    */
-  function createHighlight(
-    range: Range,
-    threadId: string,
-    isResolved: boolean
-  ): HTMLElement {
+  const HIGHLIGHT_BLOCK_TAGS = new Set([
+    "P",
+    "DIV",
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "H5",
+    "H6",
+    "LI",
+    "BLOCKQUOTE",
+    "PRE",
+  ]);
+
+  /** Build a fresh comment-highlight span (class + anchoring data + click). */
+  function makeHighlightSpan(threadId: string, isResolved: boolean): HTMLElement {
     const span = document.createElement("span");
     span.className = isResolved
       ? "comment-highlight comment-highlight-resolved"
       : "comment-highlight";
     span.dataset.threadId = threadId;
     span.dataset.commentThread = threadId;
-
-    // Wrap range contents
-    try {
-      range.surroundContents(span);
-    } catch {
-      // If surroundContents fails (crossing boundaries), use extractContents
-      const contents = range.extractContents();
-      span.appendChild(contents);
-      range.insertNode(span);
-    }
-
-    // Add click handler
     span.addEventListener("click", (e) => {
       e.stopPropagation();
       setActiveThread(threadId);
     });
-
     return span;
+  }
+
+  /** Every live highlight span belonging to a thread (a cross-block comment
+   *  produces one span per block, all sharing the thread id). */
+  function getThreadSpans(threadId: string): HTMLElement[] {
+    const editor = editorElement?.value;
+    if (!editor) return [];
+    return Array.from(
+      editor.querySelectorAll<HTMLElement>(
+        `.comment-highlight[data-thread-id="${threadId}"]`
+      )
+    );
+  }
+
+  /** Unwrap every live highlight span of a thread (handles cross-block spans). */
+  function removeThreadHighlights(threadId: string, fallback?: HTMLElement): void {
+    const spans = getThreadSpans(threadId);
+    if (spans.length === 0 && fallback) {
+      removeHighlightInternal(fallback);
+      return;
+    }
+    spans.forEach((span) => removeHighlightInternal(span));
+  }
+
+  /** Outermost block elements a range intersects, in document order. */
+  function collectHighlightBlocks(range: Range): HTMLElement[] {
+    const editor = editorElement?.value;
+    if (!editor) return [];
+    const blocks: HTMLElement[] = [];
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_ELEMENT, {
+      acceptNode: (node) => {
+        const el = node as HTMLElement;
+        if (!HIGHLIGHT_BLOCK_TAGS.has(el.tagName)) return NodeFilter.FILTER_SKIP;
+        return range.intersectsNode(el)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_SKIP;
+      },
+    });
+    let current: Node | null = walker.nextNode();
+    while (current) {
+      const el = current as HTMLElement;
+      // Keep the leaf-most intersected block (skip wrappers that contain
+      // another intersected block).
+      current = walker.nextNode();
+      const hasIntersectedChild =
+        current !== null && el.contains(current as Node);
+      if (!hasIntersectedChild) blocks.push(el);
+    }
+    return blocks;
+  }
+
+  function createHighlight(
+    range: Range,
+    threadId: string,
+    isResolved: boolean
+  ): HTMLElement {
+    const span = makeHighlightSpan(threadId, isResolved);
+
+    // Fast path: a same-block selection wraps cleanly in one span.
+    try {
+      range.surroundContents(span);
+      return span;
+    } catch {
+      // Fall through to the cross-boundary handling below.
+    }
+
+    const blocks = collectHighlightBlocks(range);
+    if (blocks.length <= 1) {
+      // Boundary quirk within a single block (e.g. partial-node endpoints):
+      // extracting + reinserting is safe and keeps everything in one span.
+      const contents = range.extractContents();
+      span.appendChild(contents);
+      range.insertNode(span);
+      return span;
+    }
+
+    // Cross-block selection: wrap each block's slice in its own span sharing the
+    // thread id, so the paragraph structure is preserved instead of being merged
+    // into a single inline span. Build every sub-range up front (blocks are
+    // disjoint subtrees, so mutating one never invalidates another).
+    const subRanges = blocks.map((block) => {
+      const sub = document.createRange();
+      if (block.contains(range.startContainer)) {
+        sub.setStart(range.startContainer, range.startOffset);
+      } else {
+        sub.setStart(block, 0);
+      }
+      if (block.contains(range.endContainer)) {
+        sub.setEnd(range.endContainer, range.endOffset);
+      } else {
+        sub.setEnd(block, block.childNodes.length);
+      }
+      return sub;
+    });
+
+    const spans: HTMLElement[] = [];
+    subRanges.forEach((sub, index) => {
+      if (sub.collapsed) return;
+      const blockSpan = index === 0 ? span : makeHighlightSpan(threadId, isResolved);
+      try {
+        sub.surroundContents(blockSpan);
+      } catch {
+        const contents = sub.extractContents();
+        blockSpan.appendChild(contents);
+        sub.insertNode(blockSpan);
+      }
+      spans.push(blockSpan);
+    });
+
+    // Return the first span as the thread's primary anchor (scroll/focus).
+    return spans[0] ?? span;
   }
 
   /**
    * Update highlight style based on thread status
    */
   function updateHighlight(threadId: string, isResolved: boolean): void {
+    // Toggle every span of the thread (cross-block comments have more than one),
+    // falling back to the stored primary element if none are found live.
+    const spans = getThreadSpans(threadId);
     const thread = threads.value.find((t) => t.id === threadId);
-    if (!thread?.highlightElement) return;
-
-    if (isResolved) {
-      thread.highlightElement.classList.add("comment-highlight-resolved");
-    } else {
-      thread.highlightElement.classList.remove("comment-highlight-resolved");
-    }
+    const targets = spans.length
+      ? spans
+      : thread?.highlightElement
+        ? [thread.highlightElement]
+        : [];
+    targets.forEach((el) => {
+      el.classList.toggle("comment-highlight-resolved", isResolved);
+    });
   }
 
   /**
@@ -481,10 +594,8 @@ export function useComments(options: UseCommentsOptions = {}) {
 
     const thread = threads.value[index];
 
-    // Remove highlight
-    if (thread.highlightElement) {
-      removeHighlightInternal(thread.highlightElement);
-    }
+    // Remove highlight (all spans for cross-block comments)
+    removeThreadHighlights(thread.id, thread.highlightElement);
 
     threads.value.splice(index, 1);
 
@@ -579,22 +690,40 @@ export function useComments(options: UseCommentsOptions = {}) {
    * Restore threads after content update
    */
   function restoreThreads(): void {
-    if (!editorElement?.value) return;
+    const editor = editorElement?.value;
+    if (!editor) return;
 
     threads.value.forEach((thread) => {
-      // Remove old highlight if exists
+      const isResolved = thread.status === "resolved";
+
+      // Prefer highlight spans still live in the DOM (preserved through the
+      // sanitizer round-trip): re-link + re-bind them so the anchor follows its
+      // text through edits instead of drifting from a stale serialized range.
+      // innerHTML rebuilds drop event listeners, so re-decorate a fresh span.
+      const existing = getThreadSpans(thread.id);
+      if (existing.length > 0) {
+        const rebound = existing.map((span) => {
+          span.classList.toggle("comment-highlight-resolved", isResolved);
+          const clone = span.cloneNode(true) as HTMLElement;
+          clone.addEventListener("click", (e) => {
+            e.stopPropagation();
+            setActiveThread(thread.id);
+          });
+          span.replaceWith(clone);
+          return clone;
+        });
+        thread.highlightElement = rebound[0];
+        return;
+      }
+
+      // No live span (older content / imported threads): fall back to the
+      // serialized range, clearing any stale reference first.
       if (thread.highlightElement) {
         removeHighlightInternal(thread.highlightElement);
       }
-
-      // Try to restore range
-      const range = deserializeRange(thread.rangeData, editorElement.value!);
+      const range = deserializeRange(thread.rangeData, editor);
       if (range) {
-        thread.highlightElement = createHighlight(
-          range,
-          thread.id,
-          thread.status === "resolved"
-        );
+        thread.highlightElement = createHighlight(range, thread.id, isResolved);
       } else {
         console.warn("Failed to restore thread range:", thread.id);
       }
@@ -649,9 +778,7 @@ export function useComments(options: UseCommentsOptions = {}) {
    */
   function clearAllThreads(): void {
     threads.value.forEach((thread) => {
-      if (thread.highlightElement) {
-        removeHighlightInternal(thread.highlightElement);
-      }
+      removeThreadHighlights(thread.id, thread.highlightElement);
     });
 
     threads.value = [];

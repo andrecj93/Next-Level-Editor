@@ -122,6 +122,7 @@
       :html-content="htmlContent"
       :split-right-mode="splitRightMode"
       @input="onInput"
+      @paste="onPaste"
       @blur="onBlur"
       @focus="onFocus"
       @mouseup="onMouseUp"
@@ -949,6 +950,7 @@ const {
   redo,
   jumpToHistory,
   clearHistory,
+  sanitizeHtml,
 } = useEditorContent({
   editorContent,
   modelValue: toRef(props, "modelValue"),
@@ -1636,6 +1638,25 @@ const onMouseUp = () => {
 };
 
 // Wrap onInput to include variable detection and wrapping
+// Paste: the browser drops the clipboard's raw HTML straight into the
+// contenteditable, and sanitizeHtml would otherwise only clean the string we
+// EMIT — never the live editing surface. Intercept rich-HTML pastes, run them
+// through the same allowlist sanitizer, and insert the cleaned markup so no
+// untrusted element (event handlers, exotic tags, mso cruft) ever lands in the
+// editor. Plain-text pastes carry no markup, so the browser default is fine.
+const onPaste = (event: ClipboardEvent) => {
+  if (props.readonly) return;
+  const clipboard = event.clipboardData;
+  if (!clipboard) return;
+  const html = clipboard.getData("text/html");
+  if (!html) return;
+
+  event.preventDefault();
+  const clean = sanitizeHtml(html);
+  document.execCommand("insertHTML", false, clean);
+  // execCommand fires `input`, which runs the capture/emit + re-sanitize pass.
+};
+
 const onInput = (event?: Event) => {
   // IME guard: while a composition is live the browser fires input events
   // (inputType "insertCompositionText"); running the mutating passes below

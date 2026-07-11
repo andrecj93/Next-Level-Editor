@@ -42,4 +42,30 @@ describe("useEditorContent undo/redo reactive sync", () => {
     expect(htmlContent.value).toBe("<p>two</p>");
     expect(codeContent.value).toBe("<p>two</p>");
   });
+
+  it("can undo the first edit back to an initially-empty document", () => {
+    // Replicates the mount sequence (useEditorSetup.onMounted): the empty
+    // baseline is captured via captureAndEmit(false) BEFORE any typing, so the
+    // first edit is undoable back to empty.
+    const editorRef = ref<HTMLDivElement | null>(editor);
+    const modelValue = ref("");
+    const onUpdate = vi.fn();
+    const { applySanitizedContent, captureAndEmit, undo, htmlContent } =
+      useEditorContent({ editorContent: editorRef, modelValue, onUpdate });
+
+    // Mount baseline for an empty document.
+    applySanitizedContent("");
+    captureAndEmit(false);
+    expect(editor.innerHTML).toBe("");
+
+    // User types the first content.
+    editor.innerHTML = "<p>Hello</p>";
+    captureAndEmit();
+    expect(editor.innerHTML).toBe("<p>Hello</p>");
+
+    // Undo must return to the empty baseline, not stay on the first edit.
+    undo();
+    expect(editor.innerHTML).toBe("");
+    expect(htmlContent.value).toBe("");
+  });
 });

@@ -15,6 +15,7 @@
         :placeholder="placeholder"
         @input="$emit('input', $event)"
         @compositionend="$emit('input', $event)"
+        @paste="$emit('paste', $event)"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
         @mouseup="$emit('mouseup', $event)"
@@ -47,6 +48,7 @@
         style="display: none"
         @input="$emit('input', $event)"
         @compositionend="$emit('input', $event)"
+        @paste="$emit('paste', $event)"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
         @mouseup="$emit('mouseup', $event)"
@@ -113,6 +115,7 @@
           :placeholder="placeholder"
           @input="$emit('split-editor-input', $event)"
           @compositionend="$emit('split-editor-input', $event)"
+          @paste="$emit('paste', $event)"
           @blur="$emit('blur', $event)"
           @focus="$emit('focus', $event)"
           @mouseup="$emit('mouseup', $event)"
@@ -162,6 +165,7 @@ defineEmits<{
   focus: [event: FocusEvent];
   mouseup: [event: MouseEvent];
   contextmenu: [event: MouseEvent];
+  paste: [event: ClipboardEvent];
   "code-input": [event: Event];
   "code-blur": [event: FocusEvent];
   "split-right-mode-change": [mode: "preview" | "editor"];
