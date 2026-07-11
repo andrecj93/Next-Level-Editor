@@ -27,6 +27,7 @@
             type="url"
             placeholder="https://example.com/image.jpg"
             @input="handleUrlChange"
+            @keyup.enter="previewUrl && insertImage()"
           />
         </div>
 

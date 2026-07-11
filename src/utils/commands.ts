@@ -545,13 +545,19 @@ function exitListContextIfNeeded(selection: Selection): Range | null {
  * @param includeHeader - Whether to include a header row
  */
 export function insertTable(
-  _root: HTMLElement,
+  root: HTMLElement,
   rows: number,
   cols: number,
   includeHeader: boolean
 ) {
   const selection = globalThis.getSelection();
   if (!selection || selection.rangeCount === 0) return;
+
+  // Clamp defensively: the modal's min/max are advisory, an empty field
+  // arrives as NaN, and a large value builds thousands of cells synchronously
+  // and can freeze the page. Bound to a sane 1–50 in each dimension.
+  const safeCols = Math.min(50, Math.max(1, Math.floor(cols) || 1));
+  const safeRows = Math.min(50, Math.max(1, Math.floor(rows) || 1));
 
   // Exit list context if we're inside a list
   const range = exitListContextIfNeeded(selection);
@@ -568,7 +574,7 @@ export function insertTable(
     const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
 
-    for (let j = 0; j < cols; j++) {
+    for (let j = 0; j < safeCols; j++) {
       const th = document.createElement("th");
       th.style.border = "1px solid #d1d5db";
       th.style.padding = "8px 12px";
@@ -584,14 +590,16 @@ export function insertTable(
     table.appendChild(thead);
   }
 
-  // Create body rows
+  // Create body rows. Keep at least one body row even when a header eats the
+  // whole (already clamped) row budget, so a 1-row "with header" table still
+  // has an editable cell.
   const tbody = document.createElement("tbody");
-  const totalRows = includeHeader ? rows - 1 : rows;
+  const totalRows = includeHeader ? Math.max(1, safeRows - 1) : safeRows;
 
   for (let i = 0; i < totalRows; i++) {
     const tr = document.createElement("tr");
 
-    for (let j = 0; j < cols; j++) {
+    for (let j = 0; j < safeCols; j++) {
       const td = document.createElement("td");
       td.style.border = "1px solid #d1d5db";
       td.style.padding = "8px 12px";
@@ -605,7 +613,17 @@ export function insertTable(
   table.appendChild(tbody);
 
   range.deleteContents();
-  range.insertNode(table);
+
+  // Split the caret's paragraph/heading so the table lands BETWEEN blocks. A
+  // caret mid-paragraph would otherwise nest the table as `<p>…<table>…</p>`,
+  // which the HTML parser foster-parents out on the next sanitize round-trip,
+  // reordering the paragraph (mirrors insertHorizontalRule).
+  const tail = splitBlockAtCaret(range, root);
+  if (tail?.parentNode) {
+    tail.parentNode.insertBefore(table, tail);
+  } else {
+    range.insertNode(table);
+  }
 
   // Move cursor after table
   const newRange = document.createRange();

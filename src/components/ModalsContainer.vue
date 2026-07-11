@@ -275,6 +275,8 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  /* Match every other dialog overlay (10050) so the picker clears the
+     fullscreen mobile toolbar (10001) instead of rendering beneath it. */
+  z-index: 10050;
 }
 </style>

@@ -9,6 +9,7 @@ import {
   insertTableOfContents,
 } from "../utils/pageManagement";
 import { smoothScrollIntoView } from "../utils/scroll";
+import { escapeCodeBlockAtCaret } from "../utils/blockInsertion";
 import {
   insertEmbeddedResizable,
   type EmbeddedContentOptions,
@@ -81,7 +82,9 @@ export function useInsertActions(options: InsertActionsOptions) {
     if (!editorContent.value) return;
 
     performWithSelection(
-      () => {
+      (root) => {
+        // Block-level embed: never nest inside a code block
+        escapeCodeBlockAtCaret(root);
         // Insert image wrapped in embedded resizable container
         const options: EmbeddedContentOptions = {
           type: "image",
@@ -122,7 +125,9 @@ export function useInsertActions(options: InsertActionsOptions) {
    */
   const handleInsertEmbed = (html: string) => {
     if (!editorContent.value) return;
-    performWithSelection(() => {
+    performWithSelection((root) => {
+      // Block-level embed: never nest inside a code block
+      escapeCodeBlockAtCaret(root);
       // Insert video/embed wrapped in embedded resizable container
       const options: EmbeddedContentOptions = {
         type: "embed",
@@ -149,7 +154,8 @@ export function useInsertActions(options: InsertActionsOptions) {
     if (file.type.startsWith("image/")) {
       // Insert image wrapped in embedded resizable container
       performWithSelection(
-        () => {
+        (root) => {
+          escapeCodeBlockAtCaret(root);
           const options: EmbeddedContentOptions = {
             type: "image",
             src: file.url,
@@ -183,7 +189,8 @@ export function useInsertActions(options: InsertActionsOptions) {
     } else if (file.type.startsWith("video/")) {
       // Insert video wrapped in embedded resizable container
       performWithSelection(
-        () => {
+        (root) => {
+          escapeCodeBlockAtCaret(root);
           const options: EmbeddedContentOptions = {
             type: "video",
             src: file.url,
@@ -217,7 +224,8 @@ export function useInsertActions(options: InsertActionsOptions) {
     } else {
       // Insert as downloadable file wrapped in embedded resizable container
       performWithSelection(
-        () => {
+        (root) => {
+          escapeCodeBlockAtCaret(root);
           const options: EmbeddedContentOptions = {
             type: "file",
             src: file.url,
@@ -329,9 +337,11 @@ export function useInsertActions(options: InsertActionsOptions) {
     // otherwise append the page break at the end of the editor content.
     if (!isSelectionInEditor(root, selection)) {
       selection = collapseSelectionToEditorEnd(root);
+    } else {
+      escapeCodeBlockAtCaret(root);
     }
 
-    insertPageBreak(selection);
+    insertPageBreak(selection, root);
     captureSnapshot();
   };
 
@@ -347,6 +357,8 @@ export function useInsertActions(options: InsertActionsOptions) {
     // of the editor content when the selection is outside/absent.
     if (!isSelectionInEditor(root, selection)) {
       selection = collapseSelectionToEditorEnd(root);
+    } else {
+      escapeCodeBlockAtCaret(root);
     }
 
     insertTableOfContents(root, selection);
@@ -357,7 +369,10 @@ export function useInsertActions(options: InsertActionsOptions) {
    * Insert horizontal rule
    */
   const handleInsertHR = () => {
-    performWithSelection(() => insertHorizontalRule());
+    performWithSelection((root) => {
+      escapeCodeBlockAtCaret(root);
+      insertHorizontalRule();
+    });
   };
 
   /**
@@ -372,6 +387,7 @@ export function useInsertActions(options: InsertActionsOptions) {
 
     performWithSelection(
       (root) => {
+        escapeCodeBlockAtCaret(root);
         insertTableUtil(root, data.rows, data.cols, data.includeHeader);
         captureSnapshot();
 
@@ -446,7 +462,8 @@ export function useInsertActions(options: InsertActionsOptions) {
     if (!editorContent.value) return;
 
     performWithSelection(
-      () => {
+      (root) => {
+        escapeCodeBlockAtCaret(root);
         const selection = globalThis.getSelection();
         if (!selection || selection.rangeCount === 0) return;
 

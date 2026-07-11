@@ -223,36 +223,32 @@ describe("TableModal", () => {
 
   // ----- Real-behaviour edges / documented gaps -------------------------------
 
-  describe("no clamping of out-of-range input (documents real behaviour)", () => {
-    it("lets a row value above max=20 flow straight into the preview and payload", async () => {
-      // The min/max attributes are advisory only — nothing in insertTable()
-      // clamps the value, so an out-of-range number is accepted verbatim.
+  describe("clamps out-of-range input", () => {
+    it("clamps a row value above max=20 in both the preview and the payload", async () => {
+      // A runaway value must not render thousands of preview cells or emit a
+      // degenerate size — it is clamped to the 1–20 range.
       const w = mountModal();
       await w.get("#table-rows").setValue("25");
-      expect((w.vm as any).rows).toBe(25);
-      expect(cellCount(w)).toBe(25 * 3);
+      expect(cellCount(w)).toBe(20 * 3);
 
       await w.get(".btn-primary").trigger("click");
-      expect(w.emitted("insert")![0][0]).toMatchObject({ rows: 25, cols: 3 });
+      expect(w.emitted("insert")![0][0]).toMatchObject({ rows: 20, cols: 3 });
       w.unmount();
     });
 
-    it("accepts a zero/blank column count, producing an empty preview and a 0-col payload", async () => {
-      // Clearing a number input yields '' which `.number` keeps as ''. totalCells
-      // becomes '' * rows === 0, so no cells render. insertTable() still fires
-      // with the empty value — there is no validation guard.
+    it("disables Insert and emits nothing for a blank column count", async () => {
+      // Clearing a number input yields '' (NaN via .number). The value is not
+      // usable, so the preview stays empty, Insert is disabled, and clicking
+      // emits nothing rather than a 0-column table.
       const w = mountModal();
       await w.get("#table-cols").setValue("");
       expect(cellCount(w)).toBe(0);
 
-      await w.get(".btn-primary").trigger("click");
-      const payload = w.emitted("insert")![0][0] as {
-        rows: number;
-        cols: unknown;
-      };
-      expect(payload.rows).toBe(3);
-      // cols is the un-coerced empty value — the modal offered no lower bound.
-      expect(payload.cols === "" || payload.cols === 0).toBe(true);
+      const insertBtn = w.get(".btn-primary");
+      expect((insertBtn.element as HTMLButtonElement).disabled).toBe(true);
+
+      await insertBtn.trigger("click");
+      expect(w.emitted("insert")).toBeUndefined();
       w.unmount();
     });
   });

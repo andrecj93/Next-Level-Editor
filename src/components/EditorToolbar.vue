@@ -75,6 +75,24 @@
         :items="miniListActions"
         @remember-selection="$emit('remember-selection')"
       />
+
+      <!-- Insert Dropdown — an essential, so it stays visible even in the
+           collapsed mini bar (inserting links/images/tables is a top-3 action;
+           hiding it behind the expand toggle made it look like the feature
+           didn't exist on small screens). The mini row trims lower-priority
+           buttons at very narrow container widths instead (see the
+           mini-trim container queries in NextLevelEditor.css). -->
+      <ToolbarSection
+        type="dropdown"
+        class="insert-dropdown"
+        :visible="isToolbarSectionVisible('insert')"
+        label="Insert"
+        preserve-label
+        icon="<svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><path d=&quot;M5 12h14&quot;/><path d=&quot;M12 5v14&quot;/></svg>"
+        tooltip="Insert content"
+        :items="insertDropdownItems"
+        @remember-selection="$emit('remember-selection')"
+      />
     </div>
 
     <!-- Non-essential families. The wrapper is layout-inert (display:
@@ -91,30 +109,29 @@
       role="group"
       aria-label="Insert and styling"
     >
-      <!-- Insert Dropdown -->
-      <ToolbarSection
-        type="dropdown"
-        :visible="isToolbarSectionVisible('insert')"
-        label="Insert"
-        icon="<svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><path d=&quot;M5 12h14&quot;/><path d=&quot;M12 5v14&quot;/></svg>"
-        tooltip="Insert content"
-        :items="insertDropdownItems"
-        @remember-selection="$emit('remember-selection')"
-      />
-
-      <div class="toolbar-divider" />
-
       <!-- Colors Dropdown -->
-      <div class="toolbar-dropdown">
+      <div
+        class="toolbar-dropdown"
+        :class="{ 'colors-section-disabled': !isToolbarSectionVisible('colors') }"
+      >
         <button
           class="dropdown-trigger"
           :class="{ open: showColorsDropdown }"
-          data-tooltip="Text & background colors"
+          :data-tooltip="
+            isToolbarSectionVisible('colors')
+              ? 'Text & background colors'
+              : 'Text & background colors (not available for current selection)'
+          "
           aria-label="Colors menu"
           aria-haspopup="true"
           :aria-expanded="showColorsDropdown"
+          :disabled="!isToolbarSectionVisible('colors')"
           @mousedown.prevent="$emit('remember-selection')"
-          @click.stop="$emit('toggle-colors-dropdown')"
+          @click.stop="
+            isToolbarSectionVisible('colors')
+              ? $emit('toggle-colors-dropdown')
+              : null
+          "
         >
           <span class="dropdown-icon"
             ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3s6 5.5 6 10a6 6 0 0 1-12 0c0-4.5 6-10 6-10Z" /><path d="M5 21h14" /></svg></span>
@@ -124,7 +141,9 @@
         <transition name="dropdown-fade">
           <div
             v-if="showColorsDropdown"
+            ref="colorsMenuRef"
             class="dropdown-menu colors-menu"
+            :style="colorsMenuLeft !== 0 ? { left: `${colorsMenuLeft}px` } : {}"
             role="menu"
             @click.stop
           >
@@ -787,6 +806,30 @@ const highlightColorPresets = [
 const selectionTextColor = ref("");
 const selectionHighlightColor = ref("");
 
+// Viewport clamping for the hand-rolled Colors menu. Unlike the other
+// dropdowns it does not go through ToolbarDropdown (its content is custom
+// swatch sections, not a flat item list), so it needs its own copy of the
+// clamp: left-aligned to the trigger, the ~244px menu overflowed the right
+// edge at mid widths (~600–800px). Measured on open, applied via `left`.
+const colorsMenuRef = ref<HTMLElement | null>(null);
+const colorsMenuLeft = ref(0);
+
+const clampColorsMenu = () => {
+  const menu = colorsMenuRef.value;
+  if (!menu) return;
+  const margin = 8;
+  colorsMenuLeft.value = 0;
+  const r = menu.getBoundingClientRect();
+  let shift = 0;
+  if (r.right > window.innerWidth - margin) {
+    shift = window.innerWidth - margin - r.right;
+  }
+  if (r.left + shift < margin) {
+    shift = margin - r.left;
+  }
+  colorsMenuLeft.value = Math.round(shift);
+};
+
 const EDITABLE_SELECTOR =
   '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]';
 
@@ -835,6 +878,9 @@ watch(
     if (open) {
       readSelectionColors();
       document.addEventListener("selectionchange", readSelectionColors);
+      nextTick(clampColorsMenu);
+    } else {
+      colorsMenuLeft.value = 0;
     }
   },
   { immediate: true }
@@ -899,3 +945,14 @@ const sameColor = (a: string | undefined, b: string): boolean => {
   return !!parsed && parsed !== "transparent" && parsed === parseColor(b);
 };
 </script>
+
+<style scoped>
+/* The Colors dropdown is hand-rolled (not a ToolbarSection), so it needs its
+   own disabled treatment to match the other sections when the smart toolbar
+   marks `colors` unavailable (code/image contexts). Mirrors
+   ToolbarSection's .toolbar-section-disabled. */
+.colors-section-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+</style>

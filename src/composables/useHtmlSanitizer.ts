@@ -68,6 +68,18 @@ const UNWRAP_TAGS = new Set([
 // rather than trusted. The transient corner resize handles must never persist.
 const EMBED_CONTAINER_CLASS = "embedded-resizable-container";
 const RESIZE_HANDLE_CLASS = "embed-resize-handle";
+
+// Page break (utils/pageManagement.ts) — a fixed, content-free presentational
+// block: `<div class="page-break" contenteditable="false">` with a label span
+// and a rule. Without a special case it would hit the generic DIV-unwrap path
+// and be destroyed on every v-model round-trip, silently losing page breaks
+// from persisted documents. Rebuilt from scratch (never trust attributes).
+const PAGE_BREAK_CLASS = "page-break";
+// Table of contents (utils/pageManagement.ts) — `<nav class="table-of-contents">`
+// wrapping generated heading links. NAV is otherwise in UNWRAP_TAGS, so without
+// this the semantic wrapper (and its styling + update/detection hooks) would be
+// stripped on round-trip. The nav is preserved; its children sanitize normally.
+const TOC_CLASS = "table-of-contents";
 const EMBED_TYPES = new Set(["image", "video", "embed", "file"]);
 const EMBED_ALIGNMENTS = new Set(["left", "center", "right"]);
 
@@ -142,6 +154,9 @@ const STYLE_ALLOWED_PROPERTIES = new Set([
   "height",
   "object-fit",
   "display",
+  // Table-of-contents list items indent nested headings via margin-left; a
+  // plain length value is layout-only and carries no script surface.
+  "margin-left",
 ]);
 const UNSAFE_STYLE_VALUE_PATTERN = /url\(|expression\(|javascript:|[<>]/i;
 
@@ -206,6 +221,10 @@ export function useHtmlSanitizer() {
                 unwrapElement(element);
                 continue;
               }
+            } else if (element.classList.contains(PAGE_BREAK_CLASS)) {
+              // Fixed, content-free block: regenerate its known-safe structure
+              // from scratch so a persisted page break survives round-trips.
+              rebuildPageBreak(element);
             } else {
               // Unwrapping splices the children in BEFORE the saved `next`;
               // resume iteration from the first spliced child so they are
@@ -223,6 +242,18 @@ export function useHtmlSanitizer() {
             // Iframes are only allowed from the embed-host allowlist; an
             // iframe without a safe src is useless and gets removed whole.
             element.remove();
+          } else if (
+            element.tagName === "NAV" &&
+            element.classList.contains(TOC_CLASS)
+          ) {
+            // Table of contents wrapper: keep the nav, force the known class,
+            // drop every other (untrusted) attribute, and sanitize its
+            // generated heading links normally.
+            for (const attribute of Array.from(element.attributes)) {
+              element.removeAttribute(attribute.name);
+            }
+            element.setAttribute("class", TOC_CLASS);
+            sanitizeTree(element);
           } else if (
             element.tagName === "SPAN" &&
             (element.getAttribute("class") ?? "").trim() ===
@@ -312,6 +343,21 @@ export function useHtmlSanitizer() {
       element.setAttribute("contenteditable", "false");
       element.setAttribute("tabindex", "0");
       return true;
+    };
+
+    /**
+     * Rebuild a page-break block from scratch. The element carries no user
+     * content — only a fixed label and rule — so every attribute is dropped
+     * and the known-safe structure is regenerated deterministically.
+     */
+    const rebuildPageBreak = (element: HTMLElement) => {
+      for (const attribute of Array.from(element.attributes)) {
+        element.removeAttribute(attribute.name);
+      }
+      element.setAttribute("class", PAGE_BREAK_CLASS);
+      element.setAttribute("contenteditable", "false");
+      element.innerHTML =
+        '<span class="page-break-label">Page Break</span><hr class="page-break-line" />';
     };
 
     /**
@@ -485,9 +531,11 @@ export function useHtmlSanitizer() {
 
     const convertDivsToParagraphs = (root: HTMLElement) => {
       const divs = Array.from(root.querySelectorAll("div")).filter(
-        // Embedded-media wrappers are the one legitimate div in content; they
-        // were already normalized by sanitizeEmbedContainer above.
-        (div) => !div.classList.contains(EMBED_CONTAINER_CLASS)
+        // Embedded-media wrappers and page breaks are the legitimate divs in
+        // content; both were already normalized in sanitizeTree above.
+        (div) =>
+          !div.classList.contains(EMBED_CONTAINER_CLASS) &&
+          !div.classList.contains(PAGE_BREAK_CLASS)
       );
       for (const div of divs) {
         const paragraph = workingDocument.createElement("p");

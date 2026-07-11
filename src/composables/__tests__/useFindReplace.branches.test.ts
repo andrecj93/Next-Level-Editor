@@ -193,7 +193,7 @@ describe("useFindReplace — branch/edge coverage", () => {
       expect(result).toBe("<p>a$`b$'c</p>");
     });
 
-    it("keeps a bare $ and $<name> literal", () => {
+    it("keeps a bare $ literal and HTML-escapes markup in the replacement", () => {
       const { searchAndReplace } = make();
       const result = searchAndReplace(
         "<p>foo</p>",
@@ -201,7 +201,11 @@ describe("useFindReplace — branch/edge coverage", () => {
         "$ price $<n>",
         opts(false, false)
       );
-      expect(result).toBe("<p>$ price $<n></p>");
+      // The replacement is inserted as literal TEXT (via a text node), so the
+      // "$" stays literal AND the angle brackets are HTML-escaped — a
+      // replacement can no longer inject markup into the document (the whole
+      // point of walking text nodes instead of string-replacing innerHTML).
+      expect(result).toBe("<p>$ price $&lt;n&gt;</p>");
     });
   });
 

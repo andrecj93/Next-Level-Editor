@@ -27,6 +27,7 @@
     <transition name="dropdown-fade">
       <div
         v-if="isOpen"
+        ref="menuRef"
         class="dropdown-menu"
         :style="menuStyle"
         :aria-label="label"
@@ -42,10 +43,11 @@
           <button
             v-else
             class="dropdown-item"
-            :class="{ active: item.isActive?.() }"
+            :class="{ active: item.isActive?.(), disabled: isItemDisabled(item) }"
+            :disabled="isItemDisabled(item)"
             :aria-label="item.label"
             @mousedown.prevent
-            @click="handleItemClick(item)"
+            @click="!isItemDisabled(item) && handleItemClick(item)"
           >
             <span
               v-if="item.icon"
@@ -67,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 
 interface DropdownItem {
   id?: string;
@@ -77,6 +79,13 @@ interface DropdownItem {
   onClick?: () => void;
   isActive?: () => boolean;
   divider?: boolean;
+  /**
+   * Disabled state, honored two ways: a static/getter boolean (`disabled`, as
+   * on Tools > Paste Format) or a lazily-evaluated predicate (`isDisabled()`).
+   * A disabled item is dimmed, non-focusable and its onClick never fires.
+   */
+  disabled?: boolean;
+  isDisabled?: () => boolean;
 }
 
 interface Props {
@@ -111,11 +120,45 @@ const emit = defineEmits<{
 }>();
 
 const dropdownRef = ref<HTMLElement | null>(null);
+const menuRef = ref<HTMLElement | null>(null);
 const isOpen = ref(false);
+
+// Viewport clamping — the menu is left-aligned to its trigger, so triggers
+// near the right edge of a narrow viewport would push the 200px menu
+// off-screen. Measured on open (after the v-if renders) and applied via
+// `left` (not transform: the enter transition animates transform).
+const menuLeft = ref(0);
+
+const clampMenu = () => {
+  const menu = menuRef.value;
+  if (!menu) return;
+  const margin = 8;
+  // Measure at the natural position first (no inline `left`, so the
+  // position-variant CSS decides the anchor).
+  menuLeft.value = 0;
+  const r = menu.getBoundingClientRect();
+  let shift = 0;
+  if (r.right > window.innerWidth - margin) {
+    shift = window.innerWidth - margin - r.right;
+  }
+  if (r.left + shift < margin) {
+    shift = margin - r.left;
+  }
+  menuLeft.value = Math.round(shift);
+};
+
+watch(isOpen, (open) => {
+  if (open) nextTick(clampMenu);
+  else menuLeft.value = 0;
+});
 
 const hasActiveItem = computed(() => {
   return props.items.some((item) => item.isActive?.());
 });
+
+/** An item is disabled via a static `disabled` flag or an `isDisabled()` predicate. */
+const isItemDisabled = (item: DropdownItem): boolean =>
+  Boolean(item.disabled || item.isDisabled?.());
 
 const displayLabel = computed(() => {
   if (props.preserveLabel) return props.label;
@@ -124,9 +167,13 @@ const displayLabel = computed(() => {
 });
 
 const menuStyle = computed(() => {
-  return {
-    minWidth: "200px",
-  };
+  const style: Record<string, string> = { minWidth: "200px" };
+  // Only override `left` when the clamp actually needs to shift the menu.
+  // Emitting `left: 0` unconditionally would defeat the position-variant CSS
+  // (the left-rail right-flyout at `left: calc(100% + 4px)` and the Export
+  // right-anchor at `right: 0`), pinning those menus to the wrong edge.
+  if (menuLeft.value !== 0) style.left = `${menuLeft.value}px`;
+  return style;
 });
 
 const toggle = () => {
@@ -321,8 +368,13 @@ watch(
     var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
-.dropdown-item:hover {
+.dropdown-item:hover:not(.disabled) {
   background: var(--toolbar-hover, #f5f5f5);
+}
+
+.dropdown-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .dropdown-item.active {

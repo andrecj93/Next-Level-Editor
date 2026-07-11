@@ -28,8 +28,13 @@ test.describe("Compact toolbar layout", () => {
     const miniHeight = (await toolbar.boundingBox())!.height;
     expect(miniHeight).toBeLessThan(comfyHeight);
     await expect(page.getByRole("button", { name: "Format" }).first()).toBeVisible();
+    // Insert is an essential: it stays visible even in the collapsed mini row
+    // (inserting links/images/tables is a top-3 action — hiding it behind the
+    // expand toggle made the feature look absent on phones). Colours/Size/Tools
+    // etc. are what fold away instead.
     const insert = page.getByRole("button", { name: "Insert" }).first();
-    await expect(insert).toBeHidden();
+    await expect(insert).toBeVisible();
+    await expect(page.getByRole("button", { name: "Colors menu" }).first()).toBeHidden();
 
     // Mini has no labels, so its icon tooltips are essential — the bar must
     // NOT become an overflow context, or the drop-down tooltips get clipped.

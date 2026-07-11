@@ -75,4 +75,8 @@ export interface PlayheadMenuItem {
   onClick?: () => void;
   isActive?: () => boolean;
   divider?: boolean;
+  /** Disabled state — a static/getter boolean or a lazy predicate. A disabled
+   * item is dimmed and its onClick never fires (e.g. Undo/Redo at bounds). */
+  disabled?: boolean;
+  isDisabled?: () => boolean;
 }

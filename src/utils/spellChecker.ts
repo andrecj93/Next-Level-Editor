@@ -96,16 +96,40 @@ export function autoCorrectCommonMisspellings(editor: HTMLElement): number {
   const text = editor.textContent || ''
   const words = text.split(/\s+/)
 
-  words.forEach((word) => {
+  // Build the set of corrections to apply, keyed by the misspelled word.
+  const fixes = new Map<string, string>()
+  for (const word of words) {
     const cleanWord = word.replace(/[^\w]/g, '')
+    if (!cleanWord || fixes.has(cleanWord.toLowerCase())) continue
     const suggestion = getSuggestion(cleanWord)
+    if (suggestion) fixes.set(cleanWord.toLowerCase(), suggestion)
+  }
+  if (fixes.size === 0) return 0
 
-    if (suggestion) {
-      const regex = new RegExp(`\\b${cleanWord}\\b`, 'gi')
-      editor.innerHTML = editor.innerHTML.replace(regex, suggestion)
-      corrections++
+  // Apply inside TEXT NODES only. A previous `editor.innerHTML.replace(...)`
+  // matched inside tag names, attributes and URLs (e.g. a misspelling that
+  // also appears in a class or href), corrupting the markup.
+  const applyToTextNode = (node: Text) => {
+    const original = node.textContent ?? ''
+    const replaced = original.replace(/\b[\w']+\b/g, (token) => {
+      const fix = fixes.get(token.toLowerCase())
+      if (fix && fix.toLowerCase() !== token.toLowerCase()) {
+        corrections++
+        return fix
+      }
+      return token
+    })
+    if (replaced !== original) node.textContent = replaced
+  }
+
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      applyToTextNode(node as Text)
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      for (const child of Array.from(node.childNodes)) walk(child)
     }
-  })
+  }
+  walk(editor)
 
   return corrections
 }

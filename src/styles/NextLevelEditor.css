@@ -1209,11 +1209,25 @@
    here because the essentials fit, which also lets the button tooltips escape.
    ============================================================ */
 .editor-toolbar-modern.is-compact.is-mini {
-  flex-wrap: nowrap;
+  /* Wrap rather than nowrap: the mini row now carries Insert as an essential,
+     which on a narrow container (phones, ~340px) would push the rightmost
+     controls — Insert and the expand toggle — off-screen if kept on one line.
+     Wrapping keeps EVERY essential visible and tappable (formatting buttons
+     included, which the e2e core-editing specs click) instead of hiding them
+     or clipping them. overflow stays visible so dropdown tooltips escape. On a
+     roomy container everything still fits one line, so nothing wraps there. */
+  flex-wrap: wrap;
   overflow: visible;
 }
 .editor-toolbar-modern.is-compact.is-mini .toolbar-expand-toggle {
   margin-left: auto;
+}
+/* Let the essentials group itself wrap in the mini state — otherwise the group
+   is a single nowrap flex item and its last member (Insert) is pushed past the
+   right edge on the very narrowest containers (~320px), even though the bar
+   wraps. Wrapping the group keeps every essential on-screen down to 320px. */
+.editor-toolbar-modern.is-compact.is-mini .toolbar-section-group {
+  flex-wrap: wrap;
 }
 
 /* EXPANDED (compact + open) — the "show me everything" state the user opted

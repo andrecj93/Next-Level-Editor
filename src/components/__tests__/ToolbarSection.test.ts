@@ -96,7 +96,7 @@ describe("ToolbarSection", () => {
       w.unmount();
     });
 
-    it("defaults aria-pressed to 'false' and stays clickable when isActive/isDisabled are omitted", async () => {
+    it("omits aria-pressed for a non-toggle action and stays clickable when isActive/isDisabled are omitted", async () => {
       const onClick = vi.fn();
       // No isActive, no isDisabled -> exercises the `?.()` optional-call branches.
       const items = [
@@ -105,7 +105,9 @@ describe("ToolbarSection", () => {
       const w = mount(ToolbarSection, { props: { type: "buttons", items } });
 
       const btn = w.get(".toolbar-btn-modern");
-      expect(btn.attributes("aria-pressed")).toBe("false");
+      // A pure action (no isActive) is NOT a toggle: emitting aria-pressed
+      // would make screen readers announce it as an unpressed toggle button.
+      expect(btn.attributes("aria-pressed")).toBeUndefined();
       expect(btn.classes()).not.toContain("disabled");
       expect((btn.element as HTMLButtonElement).disabled).toBe(false);
 

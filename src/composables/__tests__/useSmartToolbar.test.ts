@@ -221,11 +221,13 @@ describe('useSmartToolbar', () => {
       mockEditor.innerHTML = ''
       updateContext(mockEditor)
       
+      // Empty documents keep the full palette enabled: collapsed-caret
+      // formatting (click Bold, then type) must work on first run.
       expect(config.value.format).toBe(true)
-      expect(config.value.textFormatting).toBe(false)
-      expect(config.value.alignment).toBe(false)
+      expect(config.value.textFormatting).toBe(true)
+      expect(config.value.alignment).toBe(true)
       expect(config.value.insert).toBe(true)
-      expect(config.value.export).toBe(false)
+      expect(config.value.export).toBe(true)
     })
 
     it('should return correct config for text context', () => {
@@ -264,7 +266,9 @@ describe('useSmartToolbar', () => {
       expect(config.value.textFormatting).toBe(true)
       // Lists must be enabled so a heading can be converted into a list (#18)
       expect(config.value.lists).toBe(true)
-      expect(config.value.insert).toBe(false)
+      // Insert stays available in every context — inserting a block while the
+      // caret is in a heading is a normal action.
+      expect(config.value.insert).toBe(true)
     })
 
     it('should enable alignment inside list context (#8)', () => {
@@ -315,6 +319,9 @@ describe('useSmartToolbar', () => {
       expect(config.value.textFormatting).toBe(false)
       expect(config.value.colors).toBe(false)
       expect(config.value.link).toBe(false)
+      // Block-level inserts escape the <pre> (escapeCodeBlockAtCaret), so the
+      // Insert menu stays available even inside code blocks.
+      expect(config.value.insert).toBe(true)
     })
   })
 

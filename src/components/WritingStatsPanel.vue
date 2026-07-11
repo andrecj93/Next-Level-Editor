@@ -9,13 +9,25 @@
         <span class="stats-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" x2="18" y1="20" y2="10" /><line x1="12" x2="12" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="14" /></svg></span>
         Writing Statistics
       </h3>
-      <button
-        class="collapse-btn"
-        :aria-label="isCollapsed ? 'Expand panel' : 'Collapse panel'"
-        @click="isCollapsed = !isCollapsed"
-      >
-        {{ isCollapsed ? "▶" : "▼" }}
-      </button>
+      <div class="stats-header-actions">
+        <button
+          class="collapse-btn"
+          :aria-label="isCollapsed ? 'Expand panel' : 'Collapse panel'"
+          @click="isCollapsed = !isCollapsed"
+        >
+          {{ isCollapsed ? "▶" : "▼" }}
+        </button>
+        <!-- Close is essential on mobile: the panel reflows to a bottom sheet
+             that covers its own toggle FAB, so without this (and Escape) it
+             would be an undismissable trap. -->
+        <button
+          class="close-btn"
+          aria-label="Close writing statistics"
+          @click="emit('close')"
+        >
+          ✕
+        </button>
+      </div>
     </div>
 
     <!-- Content (hidden when collapsed) -->
@@ -420,6 +432,8 @@ interface Props {
 
 const props = defineProps<Props>();
 
+const emit = defineEmits<{ close: [] }>();
+
 const isCollapsed = ref(false);
 
 /**
@@ -554,7 +568,14 @@ const getSEOClass = (score: number): string => {
   color: var(--toolbar-accent, #3b82f6);
 }
 
-.collapse-btn {
+.stats-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.collapse-btn,
+.close-btn {
   background: transparent;
   border: none;
   color: var(--color-text-secondary, #6b7280);
@@ -569,7 +590,12 @@ const getSEOClass = (score: number): string => {
   transition: background 0.2s, color 0.2s;
 }
 
-.collapse-btn:hover {
+.close-btn {
+  font-size: 14px;
+}
+
+.collapse-btn:hover,
+.close-btn:hover {
   background: var(--color-surface-overlay, #f3f4f6);
   color: var(--color-text, #111827);
 }

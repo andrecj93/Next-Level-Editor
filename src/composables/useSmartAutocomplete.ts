@@ -406,20 +406,15 @@ export function useSmartAutocomplete(
       replacement: (m) => `<ol><li>${m[1]}</li></ol>`,
       description: "Numbered list",
     },
-    {
-      trigger: "[] ",
-      pattern: /^\[\]\s(.+)$/,
-      replacement: (m) =>
-        `<ul class="checklist"><li><input type="checkbox">${m[1]}</li></ul>`,
-      description: "Checklist",
-    },
-    {
-      trigger: "[x] ",
-      pattern: /^\[x\]\s(.+)$/i,
-      replacement: (m) =>
-        `<ul class="checklist"><li><input type="checkbox" checked>${m[1]}</li></ul>`,
-      description: "Checked checklist",
-    },
+    // NOTE: the "[] " / "[x] " checklist shortcuts were removed. They emitted
+    // `<ul class="checklist"><li><input type="checkbox">…`, but INPUT is not in
+    // the sanitizer allowlist (and widening it is security-sensitive), so the
+    // checkbox and the `checklist` class were silently stripped on the next
+    // v-model round-trip — the box vanished on reload, leaving a plain bullet.
+    // Restore these once a real, sanitizer-safe checklist block (with toggle
+    // persistence) exists; a live checkbox that doesn't survive save is worse
+    // than no shortcut. (Mirrors the mobile toolbar, which omits checklist for
+    // the same reason.)
 
     // Inline formatting
     {

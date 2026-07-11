@@ -515,7 +515,10 @@ function getInitials(name: string): string {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  /* Dialog overlays sit at 10050 — above the fullscreen mobile toolbar
+     (z-index 10001), so on a phone the bottom bar can't paint over this
+     modal's Cancel / Add-Comment actions. */
+  z-index: 10050;
   padding: 20px;
 }
 
@@ -923,7 +926,7 @@ function getInitials(name: string): string {
   --hover-bg: #374151;
 }
 
-.theme-dark .comment-selected-text-content {
+.theme-dark .selected-text-content {
   background: linear-gradient(
     135deg,
     rgba(59, 130, 246, 0.1) 0%,

@@ -850,8 +850,11 @@ const rememberSelectionFromToolbar = () => {
 // Theme and UI state using composable
 const { theme, toggleTheme: toggleThemeComposable } = useTheme();
 
-// Accessibility (WCAG AAA)
-useAccessibility();
+// Accessibility (WCAG AAA). Capture announce() — it writes to the shared
+// aria-live queue that the rendered <AriaLiveRegion> reads, so calling it here
+// speaks feedback to screen readers. Previously the return was discarded and
+// no editor action produced any spoken feedback. [a11y]
+const { announce } = useAccessibility();
 
 // Writing Assistant (opt-in feature) - local state for toggle
 const showWritingStatsPanel = ref(false);
@@ -1096,6 +1099,14 @@ const {
   toggleFullScreen,
 } = useEditorUIState({ duration: 3000 });
 
+// A visible toast is also user-facing feedback that screen-reader users must
+// hear. `notify` fires both so every "Table inserted", "Copied", etc. is
+// spoken. Passed to the composables below in place of the bare toast fn.
+const notify = (message: string, type?: "success" | "error") => {
+  showToastNotification(message, type);
+  announce(message, { priority: type === "error" ? "assertive" : "polite" });
+};
+
 // Table state
 const currentTable = ref<HTMLTableElement | null>(null);
 const currentCell = ref<HTMLTableCellElement | null>(null);
@@ -1220,7 +1231,7 @@ const {
   editorContent,
   performWithSelection,
   captureSnapshot,
-  showToast: showToastNotification,
+  showToast: notify,
   openLinkModal,
   openImageUploadModal,
   closeImageUploadModal,
@@ -1267,7 +1278,7 @@ const {
   editorContent,
   htmlContent,
   codeContent,
-  showToast: showToastNotification,
+  showToast: notify,
   updateCodeContent: (content: string) => {
     codeContent.value = content;
     // Run the same sync flow as typing in the code editor (onCodeInput):
@@ -1536,6 +1547,21 @@ function handleMobileAction(actionId: string) {
     case "code-block":
       openCodeBlockModal();
       break;
+    case "file-manager":
+      openFileManagerModal();
+      break;
+    case "video":
+      openEmbedModal();
+      break;
+    case "hr":
+      handleInsertHR();
+      break;
+    case "page-break":
+      handleInsertPageBreak();
+      break;
+    case "toc":
+      handleInsertTOC();
+      break;
     case "emoji":
       toggleEmojiPicker();
       break;
@@ -1596,7 +1622,7 @@ const {
   openCodeBlockModal,
   handleInsertHR,
   performWithSelection,
-  showToast: showToastNotification,
+  showToast: notify,
 });
 
 // Context menu - Now using composable
@@ -2015,6 +2041,14 @@ function closeTopMostOverlay(): boolean {
   }
   if (showVariablesPanel.value) {
     showVariablesPanel.value = false;
+    return true;
+  }
+  // The writing-stats panel becomes a bottom sheet on mobile that can cover its
+  // own toggle FAB, so Escape must be able to dismiss it (it also has an
+  // explicit close button). The comments sidebar is intentionally NOT here:
+  // it hosts reply inputs, and closing it on Escape mid-reply would be hostile.
+  if (showWritingStatsPanel.value) {
+    showWritingStatsPanel.value = false;
     return true;
   }
   if (showEmojiPicker.value) {
