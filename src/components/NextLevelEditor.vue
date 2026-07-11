@@ -5,9 +5,13 @@
       'next-level-editor',
       themeClass,
       themePresetClass,
-      { fullscreen: isFullScreen },
+      {
+        fullscreen: isFullScreen,
+        'is-full-width': isFullWidth,
+        'is-resizing': isResizing,
+      },
     ]"
-    :style="editorStyles"
+    :style="[editorStyles, isFullScreen ? {} : resizeStyles]"
     :data-toolbar-position="
       effectiveToolbarPosition !== 'top' && !isPillMode
         ? effectiveToolbarPosition
@@ -118,6 +122,7 @@
       :html-content="htmlContent"
       :split-right-mode="splitRightMode"
       @input="onInput"
+      @paste="onPaste"
       @blur="onBlur"
       @focus="onFocus"
       @mouseup="onMouseUp"
@@ -136,7 +141,33 @@
       :id="footerLandmarkId"
       :word-count="wordCount"
       :character-count="characterCount"
+      :full-width="isFullWidth"
+      @toggle-full-width="toggleFullWidth"
     />
+
+    <!-- Corner resize grip: drag (or focus + arrow keys) to size the editor so
+         more text is visible. Hidden in fullscreen (fixed inset) and pill mode
+         (no docked chrome). Double-click resets to the authored size. -->
+    <button
+      v-if="!isFullScreen && !isPillMode"
+      class="nle-resize-grip"
+      type="button"
+      aria-label="Resize editor (drag, or use arrow keys)"
+      title="Drag to resize · double-click to reset"
+      @pointerdown="onResizeGripPointerdown"
+      @keydown="onResizeGripKeydown"
+      @dblclick="resetEditorSize"
+    >
+      <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+        <path
+          d="M11 5 5 11M11 9l-2 2"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linecap="round"
+          fill="none"
+        />
+      </svg>
+    </button>
 
     <!-- Floating Toolbar -->
     <!-- Selection toolbar (bubble over selected text) — never in readonly,
@@ -561,6 +592,7 @@ import { useExportActions } from "../composables/useExportActions";
 import { useCommandPaletteCommands } from "../composables/useCommandPaletteCommands";
 import { useFindReplace } from "../composables/useFindReplace";
 import { useEditorComputed } from "../composables/useEditorComputed";
+import { useEditorResize } from "../composables/useEditorResize";
 import { useSpellCheck } from "../composables/useSpellCheck";
 import { useTemplateManager } from "../composables/useTemplateManager";
 import { useEditorEvents } from "../composables/useEditorEvents";
@@ -918,6 +950,7 @@ const {
   redo,
   jumpToHistory,
   clearHistory,
+  sanitizeHtml,
 } = useEditorContent({
   editorContent,
   modelValue: toRef(props, "modelValue"),
@@ -966,6 +999,28 @@ const { themeClass, editorStyles, wordCount, characterCount } =
     captureSnapshot,
     triggerAutoSave,
   });
+
+// Corner resize grip: lets the user drag/arrow the editor larger to see more
+// text. Its size overrides the width/height props once the user interacts.
+const {
+  resizeStyles,
+  isResizing,
+  beginResize,
+  onHandleKeydown: onResizeHandleKeydown,
+  resetSize: resetEditorSize,
+} = useEditorResize();
+const onResizeGripPointerdown = (event: PointerEvent) =>
+  beginResize(event, rootEl.value);
+const onResizeGripKeydown = (event: KeyboardEvent) =>
+  onResizeHandleKeydown(event, rootEl.value);
+
+// Content width: default is the readable centered column (~820px measure, as in
+// Google Docs / Notion / Medium). "Full width" expands it to fill the editor —
+// the Notion-style escape hatch for users who want to use all the space.
+const isFullWidth = ref(false);
+const toggleFullWidth = () => {
+  isFullWidth.value = !isFullWidth.value;
+};
 
 // Command Palette
 const { showCommandPalette, closeCommandPalette, addToRecent } =
@@ -1583,6 +1638,25 @@ const onMouseUp = () => {
 };
 
 // Wrap onInput to include variable detection and wrapping
+// Paste: the browser drops the clipboard's raw HTML straight into the
+// contenteditable, and sanitizeHtml would otherwise only clean the string we
+// EMIT — never the live editing surface. Intercept rich-HTML pastes, run them
+// through the same allowlist sanitizer, and insert the cleaned markup so no
+// untrusted element (event handlers, exotic tags, mso cruft) ever lands in the
+// editor. Plain-text pastes carry no markup, so the browser default is fine.
+const onPaste = (event: ClipboardEvent) => {
+  if (props.readonly) return;
+  const clipboard = event.clipboardData;
+  if (!clipboard) return;
+  const html = clipboard.getData("text/html");
+  if (!html) return;
+
+  event.preventDefault();
+  const clean = sanitizeHtml(html);
+  document.execCommand("insertHTML", false, clean);
+  // execCommand fires `input`, which runs the capture/emit + re-sanitize pass.
+};
+
 const onInput = (event?: Event) => {
   // IME guard: while a composition is live the browser fires input events
   // (inputType "insertCompositionText"); running the mutating passes below

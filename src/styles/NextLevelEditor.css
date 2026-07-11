@@ -764,6 +764,79 @@
   flex: 1;
 }
 
+/* Full-width content: opt out of the centered reading measure and fill the
+   editor (the Notion-style "full width" escape hatch). */
+.next-level-editor.is-full-width .editor-content,
+.next-level-editor.is-full-width .preview-content-wrapper {
+  max-width: none;
+}
+
+/* Corner resize grip — drag (or focus + arrow keys) to size the editor. Quiet
+   by default, in keeping with the rest of the chrome; it firms up on
+   hover/focus. Inset from the rounded corner so overflow:hidden doesn't clip
+   it. */
+.nle-resize-grip {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #6b7280);
+  opacity: 0.45;
+  cursor: nwse-resize;
+  touch-action: none;
+  z-index: 6;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.nle-resize-grip svg {
+  width: 12px;
+  height: 12px;
+}
+
+.nle-resize-grip:hover,
+.nle-resize-grip:focus-visible {
+  opacity: 1;
+  color: var(--primary-color, var(--color-primary, #3b82f6));
+}
+
+.nle-resize-grip:focus-visible {
+  outline: 2px solid var(--focus-color, var(--color-primary, #3b82f6));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* While dragging, keep the pointer as the resize cursor everywhere and stop
+   text selection from fighting the drag. */
+.next-level-editor.is-resizing,
+.next-level-editor.is-resizing * {
+  cursor: nwse-resize !important;
+  user-select: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nle-resize-grip {
+    transition: none;
+  }
+}
+
+/* Drag-to-resize is a pointer affordance: on touch-primary devices the editor
+   is viewport-sized and a tiny corner grip has no precise drag target, so hide
+   it (matching how mobile editors don't offer manual window resizing). The
+   full-width toggle stays — it still matters on tablets/landscape wider than
+   the reading measure. */
+@media (hover: none) and (pointer: coarse) {
+  .nle-resize-grip {
+    display: none;
+  }
+}
+
 /* Fullscreen Toggle Button Styling — "on" is accent ink, like every other
    active state in the masthead (no fills, no hover growth). */
 .toolbar-btn-modern.fullscreen-toggle[aria-pressed="true"] {

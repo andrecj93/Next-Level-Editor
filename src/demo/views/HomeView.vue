@@ -405,7 +405,7 @@ const features: { icon: IconName; title: string; desc: string }[] = [
   { icon: "palette", title: "Beautiful theming", desc: "A token-based design system with first-class light and dark modes out of the box." },
   { icon: "mobile", title: "Mobile ready", desc: "A dedicated touch toolbar, responsive layout and comfortable 44px targets." },
   { icon: "puzzle", title: "Plugin system", desc: "Register toolbar buttons, commands and slash commands through a clean plugin API." },
-  { icon: "shield", title: "Safe by default", desc: "Every paste and import is sanitised through explicit allowlists and DOMPurify." },
+  { icon: "shield", title: "Safe by default", desc: "Every paste and import is sanitised through explicit tag/attribute allowlists before it reaches the document." },
   { icon: "access", title: "Accessible", desc: "Keyboard-navigable, screen-reader friendly, with visible focus everywhere." },
 ];
 

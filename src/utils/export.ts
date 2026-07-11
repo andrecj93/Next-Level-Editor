@@ -170,7 +170,17 @@ export function htmlToMarkdown(html: string): string {
           return `##### ${children}\n\n`
         case 'h6':
           return `###### ${children}\n\n`
+        // contenteditable/execCommand commonly emits one <div> per visual line;
+        // treat these block wrappers like paragraphs so their line breaks
+        // survive instead of the lines being concatenated.
         case 'p':
+        case 'div':
+        case 'section':
+        case 'article':
+        case 'header':
+        case 'footer':
+        case 'main':
+        case 'aside':
           return `${children}\n\n`
         case 'strong':
         case 'b':
@@ -320,7 +330,8 @@ export function htmlToMarkdown(html: string): string {
     return ''
   }
 
-  return convert(temp).trim()
+  // Collapse the runs of blank lines that nested block wrappers can produce.
+  return convert(temp).replace(/\n{3,}/g, '\n\n').trim()
 }
 
 /**
@@ -355,8 +366,21 @@ export function downloadFile(content: string | Blob, filename: string, mimeType:
 export function exportAsHtml(html: string, filename: string = 'document.html', prettify: boolean = true) {
   const BODY_INDENT = '  ' // 2 spaces to match formatHtml default
   const bodyContent = prettify ? formatHtml(html) : html
-  const formattedBody = prettify 
-    ? bodyContent.split('\n').map(line => line ? `${BODY_INDENT}${line}` : '').join('\n') 
+  // Whitespace inside <pre> is significant, so never indent its continuation
+  // lines — only the opening <pre> tag line itself gets the body indent.
+  let insidePre = false
+  const formattedBody = prettify
+    ? bodyContent
+        .split('\n')
+        .map(line => {
+          const out = line && !insidePre ? `${BODY_INDENT}${line}` : line
+          const opensPre = /<pre[\s>]/.test(line)
+          const closesPre = /<\/pre>/.test(line)
+          if (opensPre && !closesPre) insidePre = true
+          else if (closesPre) insidePre = false
+          return out
+        })
+        .join('\n')
     : bodyContent
   
   const fullHtml = `<!DOCTYPE html>

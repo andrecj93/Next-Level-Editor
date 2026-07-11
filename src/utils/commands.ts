@@ -375,33 +375,89 @@ export function applyBackgroundColor(_root: HTMLElement, color: string) {
   }
 }
 
-/**
- * Get contrast color (black or white) based on background luminance
- */
-function getContrastColor(bgColor: string): string {
-  // Convert hex to RGB
+const hslToRgb = (h: number, s: number, l: number): [number, number, number] => {
+  const sat = s / 100;
+  const lig = l / 100;
+  const c = (1 - Math.abs(2 * lig - 1)) * sat;
+  const hp = ((h % 360) + 360) % 360 / 60;
+  const x = c * (1 - Math.abs((hp % 2) - 1));
+  const m = lig - c / 2;
   let r = 0,
     g = 0,
     b = 0;
+  if (hp < 1) [r, g, b] = [c, x, 0];
+  else if (hp < 2) [r, g, b] = [x, c, 0];
+  else if (hp < 3) [r, g, b] = [0, c, x];
+  else if (hp < 4) [r, g, b] = [0, x, c];
+  else if (hp < 5) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  return [
+    Math.round((r + m) * 255),
+    Math.round((g + m) * 255),
+    Math.round((b + m) * 255),
+  ];
+};
 
-  if (bgColor.startsWith("#")) {
-    const hex = bgColor.replace("#", "");
-    r = parseInt(hex.substr(0, 2), 16);
-    g = parseInt(hex.substr(2, 2), 16);
-    b = parseInt(hex.substr(4, 2), 16);
-  } else if (bgColor.startsWith("rgb")) {
-    const matches = bgColor.match(/\d+/g);
-    if (matches && matches.length >= 3) {
-      r = parseInt(matches[0]);
-      g = parseInt(matches[1]);
-      b = parseInt(matches[2]);
+/**
+ * Resolve any CSS color (hex 3/6-digit, rgb(a), hsl(a), or named) to RGB.
+ * Returns null when the value cannot be resolved.
+ */
+function parseColorToRgb(color: string): [number, number, number] | null {
+  const value = color.trim().toLowerCase();
+
+  if (value.startsWith("#")) {
+    let hex = value.slice(1);
+    if (hex.length === 3 || hex.length === 4) {
+      hex = hex
+        .split("")
+        .map((ch) => ch + ch)
+        .join("");
     }
+    if (hex.length >= 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      if (![r, g, b].some(Number.isNaN)) return [r, g, b];
+    }
+    return null;
   }
 
-  // Calculate luminance
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  if (value.startsWith("rgb")) {
+    const m = value.match(/[\d.]+/g);
+    if (m && m.length >= 3) return [+m[0], +m[1], +m[2]];
+    return null;
+  }
 
-  // Return black for light backgrounds, white for dark backgrounds
+  if (value.startsWith("hsl")) {
+    const m = value.match(/[\d.]+/g);
+    if (m && m.length >= 3) return hslToRgb(+m[0], +m[1], +m[2]);
+    return null;
+  }
+
+  // Named colors (e.g. "yellow", "rebeccapurple"): let the browser resolve them.
+  if (typeof document !== "undefined") {
+    const probe = document.createElement("span");
+    probe.style.color = color;
+    document.body.appendChild(probe);
+    const computed = getComputedStyle(probe).color;
+    probe.remove();
+    const m = computed.match(/[\d.]+/g);
+    if (m && m.length >= 3) return [+m[0], +m[1], +m[2]];
+  }
+
+  return null;
+}
+
+/**
+ * Get contrast color (black or white) based on background luminance.
+ * Falls back to black (readable on the light backgrounds a highlight picker
+ * typically produces) when the color cannot be parsed.
+ */
+function getContrastColor(bgColor: string): string {
+  const rgb = parseColorToRgb(bgColor);
+  if (!rgb) return "#000000";
+  const [r, g, b] = rgb;
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return luminance > 0.5 ? "#000000" : "#ffffff";
 }
 
