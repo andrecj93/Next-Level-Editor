@@ -1,0 +1,235 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  release:
+    types: [created]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run tests
+        run: npm test -- --run
+        
+      - name: Generate coverage report
+        run: npm run test:coverage -- --run
+        continue-on-error: true
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/coverage-final.json
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run ESLint
+        run: npm run lint
+        
+      - name: Type check
+        run: npx vue-tsc --noEmit
+
+  e2e:
+    # Run each Playwright project in its OWN job so the two browsers don't share
+    # one long-lived dev server. Previously both ran serially in a single job:
+    # once the suite grew, the ~20min run left the dev server slow by the time
+    # the webkit (mobile-safari) project ran, tripping spurious click timeouts.
+    # Parallel per-browser jobs keep each run short with a fresh server.
+    name: E2E Tests (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    # Both projects gate. Desktop-toolbar specs (Colors/Export/Font Size/View
+    # Modes/Image/Table/File Manager), which webkit on the GitHub runner
+    # intermittently hangs, are now scoped to chromium only (like responsive.spec),
+    # so the mobile-safari project runs a fast, stable, mobile-relevant subset.
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, mobile-safari]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        # Install both browsers in every matrix job: the global-setup (and any
+        # shared launch) uses chromium regardless of the project under test, so
+        # installing only the project's engine breaks the mobile-safari job with
+        # "Executable doesn't exist" for chromium.
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Run E2E tests
+        run: npm run test:e2e -- --project=${{ matrix.project }}
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: playwright-report/
+          retention-days: 7
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build library
+        run: npm run build
+        
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  deploy-demo:
+    name: Deploy Demo to GitHub Pages
+    runs-on: ubuntu-latest
+    # e2e is a REQUIRED gate here, not just a parallel signal. It used to need
+    # only [build] (which needs [test, lint]), so a fully red end-to-end suite
+    # could not stop the public site from shipping.
+    needs: [build, e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build demo
+        run: npm run build:demo
+        env:
+          NODE_ENV: production
+          
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'dist-demo'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  publish:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+    # Same gate as the demo: nothing reaches the public registry without the
+    # end-to-end suite passing.
+    needs: [build, e2e]
+    if: github.event_name == 'release'
+    permissions:
+      contents: read
+      # package.json sets publishConfig.provenance, and npm can only mint a
+      # provenance attestation from the workflow's OIDC token. Without this
+      # permission `npm publish` fails outright — the very first release would
+      # have died here.
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build library
+        run: npm run build
+        
+      - name: Publish to NPM
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

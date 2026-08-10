@@ -1,0 +1,65 @@
+/* ============================================================
+   THEME: Midnight — Premium Dark
+   Midnight is a dark-first, premium theme built around one confident jewel hue: electric azure (#4f9dff dark / #1667d6 light) — a cool, refined blue-cyan that glows against deep navy without tipping into purple gradient AI-slop.
+
+   A whole-editor theme is nothing but design-token overrides —
+   no component code. Applied by <NextLevelEditor theme-preset="midnight" />,
+   which puts .nle-theme-midnight on the editor root. It composes with the
+   light/dark toggle (.theme-dark), so each theme ships BOTH modes.
+   To add a theme: copy _TEMPLATE.css, rename, retint, and @import it
+   from NextLevelEditor.css.
+   ============================================================ */
+
+/* Light mode.
+   Two selector forms on purpose: the bare .nle-theme-midnight reaches
+   teleported modal overlays (they carry the preset class on a <body>-level
+   root with no .next-level-editor around it); the qualified form keeps the
+   specificity needed to beat the base token blocks in NextLevelEditor.css,
+   which come AFTER these @imports in the bundle. */
+.nle-theme-midnight,
+.next-level-editor.nle-theme-midnight {
+  --editor-bg: #ffffff;
+  --editor-border: #d4dbe8;
+  --toolbar-bg: #eef2f8;
+  --toolbar-text: #26324a;
+  --toolbar-accent: #1667d6;
+  /* Accent-as-text / hero-fill split (see NextLevelEditor.css). The azure is
+     deep enough for both: text 4.74:1 on #eef2f8; white on fill 5.32:1
+     (hover 4.70:1). */
+  --toolbar-accent-ink: #1667d6;
+  --toolbar-accent-strong: #1667d6;
+  --toolbar-accent-contrast: #ffffff;
+  --toolbar-hover: rgba(22,103,214,0.11);
+  --content-color: #1a2233;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: #f4f7fc;
+  --color-border: #dde3ee;
+  --color-divider: #e3e8f1;
+  --color-text: #1a2233;
+  --color-text-secondary: #5b6883;
+}
+
+/* Dark mode */
+.nle-theme-midnight.theme-dark,
+.next-level-editor.nle-theme-midnight.theme-dark {
+  --editor-bg: #0b1120;
+  --editor-border: #1c2740;
+  --toolbar-bg: #0a0f1c;
+  --toolbar-text: #cdd8ea;
+  --toolbar-accent: #4f9dff;
+  /* The glowing azure stays the hero fill; ink flips dark: 6.81:1 on
+     #4f9dff. Accent as text: 6.92:1 on #0a0f1c. */
+  --toolbar-accent-ink: #4f9dff;
+  --toolbar-accent-strong: #4f9dff;
+  --toolbar-accent-contrast: #0b1120;
+  --toolbar-hover: rgba(79,157,255,0.22);
+  --content-color: #e6edf7;
+  --color-surface: #131a2b;
+  --color-surface-raised: #1c2740;
+  --color-surface-overlay: #26324a;
+  --color-border: #26324a;
+  --color-divider: #212c45;
+  --color-text: #eef3fb;
+  --color-text-secondary: #9fb0cc;
+}

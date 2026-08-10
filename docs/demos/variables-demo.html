@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Variables System Demo - Next Level Editor</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        padding: 20px;
+        background: #f5f7fa;
+      }
+
+      .demo-container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        margin-bottom: 10px;
+        color: #1f2937;
+      }
+
+      .description {
+        margin-bottom: 30px;
+        color: #6b7280;
+        line-height: 1.6;
+      }
+
+      .instructions {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .instructions h2 {
+        font-size: 18px;
+        margin-bottom: 15px;
+        color: #1f2937;
+      }
+
+      .instructions ul {
+        list-style-position: inside;
+        color: #4b5563;
+      }
+
+      .instructions li {
+        margin-bottom: 8px;
+        line-height: 1.5;
+      }
+
+      .instructions code {
+        background: #f3f4f6;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        color: #1e40af;
+      }
+
+      .variable-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      .variable-info h3 {
+        margin-bottom: 10px;
+      }
+
+      .variable-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+      }
+
+      .variable-item {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        backdrop-filter: blur(10px);
+      }
+
+      .editor-wrapper {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      #app {
+        min-height: 600px;
+      }
+
+      .sample-templates {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .sample-templates h2 {
+        font-size: 18px;
+        margin-bottom: 15px;
+        color: #1f2937;
+      }
+
+      .template-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .template-btn {
+        padding: 10px 20px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+
+      .template-btn:hover {
+        background: #2563eb;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <h1>🔤 Variables System Demo</h1>
+      <p class="description">
+        Sistema de variáveis tipo <code>{{ variableName }}</code> com destaque
+        visual e autocomplete inteligente, similar ao CKEditor.
+      </p>
+
+      <div class="variable-info">
+        <h3>📋 Variáveis Disponíveis</h3>
+        <p style="margin-bottom: 15px; opacity: 0.9">
+          Digite <code>{{</code> no editor para ativar o autocomplete de
+          variáveis
+        </p>
+        <div class="variable-grid">
+          <div class="variable-item">{{ user.name }}</div>
+          <div class="variable-item">{{ user.email }}</div>
+          <div class="variable-item">{{ date.today }}</div>
+          <div class="variable-item">{{ date.now }}</div>
+          <div class="variable-item">{{ doc.title }}</div>
+          <div class="variable-item">{{ company.name }}</div>
+        </div>
+      </div>
+
+      <div class="instructions">
+        <h2>📖 Como Usar</h2>
+        <ul>
+          <li>
+            Digite <code>{{</code> no editor para abrir o autocomplete de
+            variáveis
+          </li>
+          <li>
+            Use <code>↑</code> e <code>↓</code> para navegar pelas variáveis
+          </li>
+          <li>
+            Pressione <code>Enter</code> ou <code>Tab</code> para inserir a
+            variável selecionada
+          </li>
+          <li>Pressione <code>Esc</code> para fechar o autocomplete</li>
+          <li>
+            As variáveis aparecem com estilo visual destacado (pill/badge)
+          </li>
+          <li>Passe o mouse sobre uma variável para ver sua descrição</li>
+          <li>Use os templates de exemplo abaixo para testar</li>
+        </ul>
+      </div>
+
+      <div class="editor-wrapper">
+        <div id="app"></div>
+      </div>
+
+      <div class="sample-templates">
+        <h2>📝 Templates de Exemplo</h2>
+        <div class="template-buttons">
+          <button class="template-btn" onclick="loadTemplate('email')">
+            📧 Email Template
+          </button>
+          <button class="template-btn" onclick="loadTemplate('invoice')">
+            🧾 Invoice Template
+          </button>
+          <button class="template-btn" onclick="loadTemplate('letter')">
+            ✉️ Letter Template
+          </button>
+          <button class="template-btn" onclick="loadTemplate('report')">
+            📊 Report Template
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import {
+        createApp,
+        ref,
+      } from "https://unpkg.com/vue@3/dist/vue.esm-browser.js";
+      import NextLevelEditor from "./dist/next-level-editor.mjs";
+
+      const templates = {
+        email: `<h2>Email to Client</h2>
+<p>Hi there,</p>
+<p>This email is from {{ user.name }} ({{ user.email }}) regarding {{ doc.title }}.</p>
+<p>Today's date: {{ date.today }}</p>
+<p>Best regards,<br>{{ company.name }}</p>`,
+
+        invoice: `<h1>Invoice</h1>
+<p><strong>Company:</strong> {{ company.name }}</p>
+<p><strong>Address:</strong> {{ company.address }}</p>
+<p><strong>Phone:</strong> {{ company.phone }}</p>
+<hr>
+<p><strong>Bill To:</strong> {{ user.name }}</p>
+<p><strong>Email:</strong> {{ user.email }}</p>
+<p><strong>Date:</strong> {{ date.today }}</p>
+<p><strong>Invoice #:</strong> {{ doc.version }}</p>`,
+
+        letter: `<p>{{ date.today }}</p>
+<p>Dear Recipient,</p>
+<p>This letter is written by {{ user.firstName }} {{ user.lastName }} on behalf of {{ company.name }}.</p>
+<p>Document: {{ doc.title }}<br>
+Version: {{ doc.version }}<br>
+Author: {{ doc.author }}</p>
+<p>Sincerely,<br>{{ user.name }}</p>`,
+
+        report: `<h1>{{ doc.title }}</h1>
+<p><strong>Report Date:</strong> {{ date.today }}</p>
+<p><strong>Time Generated:</strong> {{ date.now }}</p>
+<p><strong>Year:</strong> {{ date.year }}</p>
+<p><strong>Month:</strong> {{ date.month }}</p>
+<hr>
+<p><strong>Prepared by:</strong> {{ user.name }}</p>
+<p><strong>Company:</strong> {{ company.name }}</p>
+<p><strong>Version:</strong> {{ doc.version }}</p>`,
+      };
+
+      window.loadTemplate = (templateName) => {
+        content.value = templates[templateName] || "";
+      };
+
+      const content = ref(`<h1>Welcome to Variables System! 🎉</h1>
+<p>Try typing <strong>{{</strong> to see the autocomplete in action.</p>
+<h2>Example Document</h2>
+<p>Hello, my name is {{ user.name }} and my email is {{ user.email }}.</p>
+<p>Today is {{ date.today }} and the current time is {{ date.now }}.</p>
+<p>This document ({{ doc.title }}) was created by {{ doc.author }}.</p>
+<p>It's currently {{ date.month }} {{ date.year }}.</p>
+<h3>Company Information</h3>
+<p>Company: {{ company.name }}<br>
+Address: {{ company.address }}<br>
+Phone: {{ company.phone }}</p>`);
+
+      createApp({
+        components: { NextLevelEditor },
+        setup() {
+          return { content };
+        },
+        template: `
+        <NextLevelEditor 
+          v-model="content" 
+          :enable-variables="true"
+          placeholder="Start typing... Try {{ to insert variables"
+          height="600px"
+        />
+      `,
+      }).mount("#app");
+    </script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+# src/composables/useHtmlSanitizer.ts writes its URL control-character class
+# (stripUrlControlChars — the defence against "java\nscript:" URLs) with LITERAL
+# control bytes instead of escapes. One of them is a NUL, which trips git's
+# binary heuristic, so every diff of the most security-critical file in the
+# repo rendered as "Binary files differ" — a change to the sanitizer could pass
+# review unseen. Force a textual diff for source files.
+*.ts diff
+*.tsx diff
+*.vue diff
+*.js diff
+*.mjs diff

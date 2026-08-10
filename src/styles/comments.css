@@ -1,0 +1,84 @@
+/**
+ * Comments System Styles
+ *
+ * GLOBAL styling for comment artifacts that live in injected content rather
+ * than in a Vue component: the inline comment highlights in the editor body,
+ * and the rendered @mention pill inside displayed comment text.
+ *
+ * The comment SIDEBAR, THREAD CARD, REPLY FORM and MENTION DROPDOWN each own
+ * their styling via scoped <style> blocks in CommentsSidebar.vue /
+ * CommentThreadCard.vue / CommentReplyForm.vue / CommentModal.vue. A large
+ * legacy `.comments-*` / `.comment-thread-*` / `.comment-input-*` / `.mention-*`
+ * block used to live here as a stale duplicate — many of its selectors targeted
+ * class names the components no longer render, and the ones that still matched
+ * LEAKED (e.g. a non-scoped `display: flex; justify-content: space-between` on
+ * `.comments-sidebar-header` forced its two stacked children side-by-side,
+ * pushing `.comments-tabs` off-screen and inflating page scroll-width on mobile).
+ * That block has been removed; the scoped component styles are the single source
+ * of truth for comment chrome.
+ */
+
+/* Comment Highlights (spans marking commented text in the editor body) */
+.comment-highlight {
+  background-color: rgba(255, 213, 79, 0.3);
+  border-bottom: 2px solid #ffd54f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.comment-highlight:hover {
+  background-color: rgba(255, 213, 79, 0.5);
+  border-bottom-color: #ffb300;
+}
+
+.comment-highlight.comment-highlight-resolved {
+  background-color: rgba(76, 175, 80, 0.15);
+  border-bottom: 2px solid #4caf50;
+  opacity: 0.7;
+}
+
+.comment-highlight.comment-highlight-resolved:hover {
+  background-color: rgba(76, 175, 80, 0.25);
+  opacity: 1;
+}
+
+.comment-highlight.active {
+  background-color: rgba(255, 213, 79, 0.6);
+  border-bottom-color: #ff9800;
+  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.3);
+}
+
+/* Dark mode adjustments — keyed to the editor's own theme class (.theme-dark)
+   rather than the OS-level prefers-color-scheme, so highlights match the theme
+   the editor toggle is set to. */
+.theme-dark .comment-highlight {
+  background-color: rgba(255, 213, 79, 0.2);
+  border-bottom-color: #ffb300;
+}
+
+.theme-dark .comment-highlight:hover {
+  background-color: rgba(255, 213, 79, 0.3);
+}
+
+.theme-dark .comment-highlight.comment-highlight-resolved {
+  background-color: rgba(76, 175, 80, 0.1);
+  border-bottom-color: #66bb6a;
+}
+
+.theme-dark .comment-highlight.comment-highlight-resolved:hover {
+  background-color: rgba(76, 175, 80, 0.2);
+}
+
+/* Rendered @mention pill inside displayed comment text (injected HTML). Kept
+   global as a base; CommentThreadCard also refines it via :deep(.comment-mention). */
+.comment-mention {
+  color: var(--primary-color);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.comment-mention:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,209 @@
+/**
+ * Cross-browser clipboard utilities
+ * Provides fallbacks for Safari iOS and Firefox compatibility
+ */
+
+/**
+ * Copy text to clipboard with fallback
+ * Works in all browsers including Safari iOS and Firefox
+ *
+ * @param text - Text to copy
+ * @returns Promise<boolean> - Success status
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  // Try modern Clipboard API first
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (error) {
+      console.warn("Clipboard API failed, trying fallback:", error);
+    }
+  }
+
+  // Fallback: Create temporary textarea (works in all browsers)
+  return copyWithTextarea(text);
+}
+
+/**
+ * Copy HTML content to clipboard
+ * Uses ClipboardItem API when available (Chrome, Edge)
+ * Falls back to text-only copy for other browsers
+ *
+ * @param html - HTML string to copy
+ * @param plainText - Plain text fallback
+ * @returns Promise<boolean> - Success status
+ */
+export async function copyHtmlToClipboard(
+  html: string,
+  plainText: string
+): Promise<boolean> {
+  // Try ClipboardItem API for HTML (Chrome, Edge only)
+  if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+    try {
+      const blob = new Blob([html], { type: "text/html" });
+      const textBlob = new Blob([plainText], { type: "text/plain" });
+
+      const item = new ClipboardItem({
+        "text/html": blob,
+        "text/plain": textBlob,
+      });
+
+      await navigator.clipboard.write([item]);
+      return true;
+    } catch (error) {
+      console.warn("HTML clipboard failed, trying text fallback:", error);
+    }
+  }
+
+  // Fallback: Copy as plain text
+  return copyToClipboard(plainText);
+}
+
+/**
+ * Paste text from clipboard (event-based - RECOMMENDED)
+ *
+ * Usage:
+ * element.addEventListener('paste', async (e) => {
+ *   e.preventDefault();
+ *   const text = await pasteFromClipboard(e);
+ *   if (text) insertTextAtCursor(text);
+ * });
+ *
+ * @param event - Paste event
+ * @returns string | null - Pasted text or null
+ */
+export async function pasteFromClipboard(
+  event: ClipboardEvent
+): Promise<string | null> {
+  // Best method: Use event.clipboardData (works everywhere)
+  if (event.clipboardData) {
+    const text = event.clipboardData.getData("text/plain");
+    if (text) return text;
+  }
+
+  // This should never happen, but handle gracefully
+  console.warn("No clipboard data in paste event");
+  return null;
+}
+
+/**
+ * Request clipboard read permission (required for programmatic paste)
+ * Only works in Chrome/Edge. Firefox/Safari require paste event.
+ *
+ * @returns Promise<string | null> - Clipboard text or null
+ */
+export async function readClipboard(): Promise<string | null> {
+  // Only works in Chrome/Edge when user grants permission
+  if (navigator.clipboard?.readText) {
+    try {
+      const text = await navigator.clipboard.readText();
+      return text;
+    } catch (error) {
+      console.warn("Clipboard read denied or not supported:", error);
+    }
+  }
+
+  // Not supported or denied
+  return null;
+}
+
+/**
+ * Check if clipboard API is available
+ * @returns boolean - True if Clipboard API is supported
+ */
+export function isClipboardApiSupported(): boolean {
+  return Boolean(navigator.clipboard?.writeText);
+}
+
+/**
+ * Check if clipboard read is available (Chrome/Edge only)
+ * @returns boolean - True if readText is supported
+ */
+export function isClipboardReadSupported(): boolean {
+  return Boolean(navigator.clipboard?.readText);
+}
+
+// ============================================================================
+// Internal Helpers
+// ============================================================================
+
+/**
+ * Copy text using textarea fallback (works in all browsers)
+ * Supports even old Safari iOS and Firefox
+ *
+ * @param text - Text to copy
+ * @returns boolean - Success status
+ */
+function copyWithTextarea(text: string): boolean {
+  const textarea = document.createElement("textarea");
+
+  // Styling to make it invisible but still focusable
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  textarea.setAttribute("readonly", "");
+
+  document.body.appendChild(textarea);
+
+  // iOS requires contentEditable
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isIOS) {
+    textarea.contentEditable = "true";
+    textarea.readOnly = false;
+
+    const range = document.createRange();
+    range.selectNodeContents(textarea);
+
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    textarea.setSelectionRange(0, text.length);
+  } else {
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+  }
+
+  let success = false;
+  try {
+    // execCommand still works for copy (not for other commands)
+    success = document.execCommand("copy");
+  } catch (error) {
+    console.error("Copy fallback failed:", error);
+  }
+
+  textarea.remove();
+  return success;
+}
+
+/**
+ * Check if we're in a secure context (required for Clipboard API)
+ * @returns boolean - True if HTTPS or localhost
+ */
+export function isSecureContext(): boolean {
+  return (
+    window.isSecureContext ||
+    location.protocol === "https:" ||
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1"
+  );
+}
+
+/**
+ * Get clipboard support status for debugging
+ * @returns Object with support details
+ */
+export function getClipboardSupport() {
+  return {
+    writeText: Boolean(navigator.clipboard?.writeText),
+    readText: Boolean(navigator.clipboard?.readText),
+    write: Boolean(navigator.clipboard?.write),
+    read: Boolean(navigator.clipboard?.read),
+    secureContext: isSecureContext(),
+    userAgent: navigator.userAgent,
+  };
+}

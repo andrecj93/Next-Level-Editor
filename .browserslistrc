@@ -1,0 +1,27 @@
+# Browsers que suportamos no Next-Level Editor
+# Última atualização: 2025-11-12
+
+# Browsers modernos (últimas 2 versões)
+last 2 Chrome versions
+last 2 Firefox versions
+last 2 Safari versions
+last 2 Edge versions
+
+# Mobile (iOS e Android)
+iOS >= 12
+Safari >= 12
+ChromeAndroid >= 90
+FirefoxAndroid >= 90
+
+# Tablets
+iPad >= 12
+
+# Remover browsers mortos
+not dead
+
+# Market share mínimo
+> 0.2%
+
+# Evitar browsers muito antigos
+not IE 11
+not op_mini all

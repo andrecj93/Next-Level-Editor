@@ -1,0 +1,106 @@
+{
+  "name": "next-level-editor",
+  "version": "1.0.0",
+  "description": "A beautiful and feature-rich WYSIWYG editor for Vue.js",
+  "author": "André Jordão <andre.cjordao@gmail.com>",
+  "license": "MIT",
+  "main": "./dist/next-level-editor.umd.js",
+  "module": "./dist/next-level-editor.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/next-level-editor.mjs",
+      "require": "./dist/next-level-editor.umd.js",
+      "default": "./dist/next-level-editor.mjs"
+    },
+    "./style.css": "./dist/next-level-editor.css",
+    "./dist/next-level-editor.css": "./dist/next-level-editor.css",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && vue-tsc -p tsconfig.build.json",
+    "build:demo": "vite build --config vite.demo.config.ts",
+    "preview": "vite preview",
+    "lint": "eslint . --fix",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "prepublishOnly": "vue-tsc --noEmit && npm run build"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "wysiwyg",
+    "editor",
+    "rich-text",
+    "contenteditable",
+    "text-editor",
+    "ckeditor",
+    "tinymce",
+    "quill"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrecj93/Next-Level-Editor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/andrecj93/Next-Level-Editor/issues"
+  },
+  "homepage": "https://andrecj93.github.io/Next-Level-Editor/",
+  "peerDependencies": {
+    "vue": "^3.3.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.56.1",
+    "@types/jsdom": "^27.0.0",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^20.10.0",
+    "@types/prismjs": "^1.26.5",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/coverage-v8": "^4.0.6",
+    "@vitest/ui": "^4.0.6",
+    "@vue/eslint-config-typescript": "^14.6.0",
+    "@vue/test-utils": "^2.4.6",
+    "autoprefixer": "^10.4.22",
+    "axe-core": "^4.12.1",
+    "eslint": "^9.39.2",
+    "eslint-plugin-vue": "^9.18.0",
+    "happy-dom": "^20.0.10",
+    "jsdom": "^27.1.0",
+    "markdown-it": "^14.1.1",
+    "postcss": "^8.5.6",
+    "prismjs": "^1.30.0",
+    "typescript": "^5.3.0",
+    "vite": "^7.1.12",
+    "vitest": "^4.0.6",
+    "vue": "^3.3.8",
+    "vue-tsc": "^2.1.10"
+  },
+  "dependencies": {
+    "@cyhnkckali/vue3-color-picker": "^2.1.5",
+    "dompurify": "^3.3.0",
+    "html-docx-js-typescript": "^0.1.5",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.1.0"
+  }
+}

@@ -1,0 +1,552 @@
+/**
+ * Focus Indicators & Keyboard Navigation Styles
+ * 
+ * WCAG AAA Compliance for focus visibility
+ * - Minimum contrast ratio: 3:1 (for focus indicators)
+ * - Minimum size: 2px outline or equivalent
+ * - Always visible on keyboard focus
+ * 
+ * Features:
+ * - Professional focus styles
+ * - Skip links for keyboard navigation
+ * - Focus-within states
+ * - High contrast mode support
+ * - Reduced motion preferences
+ */
+
+/* ============================================
+   CSS Custom Properties (Design Tokens)
+   ============================================ */
+
+:root {
+  /* Focus colors */
+  --focus-color: #4a90e2;
+  --focus-color-error: #ef4444;
+  --focus-color-success: #10b981;
+  --focus-color-warning: #f59e0b;
+
+  /* Focus indicator sizing */
+  --focus-width: 3px;
+  --focus-offset: 2px;
+  --focus-radius: 4px;
+
+  /* High contrast adjustments */
+  --focus-color-high-contrast: #000000;
+  --focus-bg-high-contrast: #ffff00;
+}
+
+/* Inside the editor, the generic focus ring follows the ACTIVE theme accent
+   instead of the hardcoded blue: #4a90e2 fails the 3:1 indicator minimum on
+   the warm (2.83:1 on #f4ede0) and midnight (2.93:1 on #eef2f8) light
+   toolbars, and visibly mismatches the accent rings the masthead buttons
+   already use. var() must be resolved on an element that actually carries
+   --toolbar-accent, so this is declared on the editor root (and on the bare
+   .nle-theme-* roots the theme files also target, which reach teleported
+   overlays) — a :root declaration would resolve against :root, where the
+   accent is out of scope, and lock in the fallback. Every preset accent
+   clears 3:1 on its own toolbar/editor surfaces (worst: default light
+   #3b82f6 on #f8f9fb = 3.49:1). */
+.next-level-editor,
+[class*="nle-theme-"] {
+  --focus-color: var(--toolbar-accent, #4a90e2);
+}
+
+/* Dark mode adjustments — keyed to the editor's own theme class (.theme-dark
+   on the .next-level-editor root), not the OS prefers-color-scheme setting.
+   Custom properties set here inherit to every element inside the dark editor.
+   Follows the dark accent of the active preset; #60a5fa is the fallback for
+   .theme-dark surfaces where --toolbar-accent is out of scope. */
+.theme-dark {
+  --focus-color: var(--toolbar-accent, #60a5fa);
+  --focus-color-high-contrast: #ffffff;
+  --focus-bg-high-contrast: #000000;
+}
+
+/* ============================================
+   Default Focus Styles (Enhanced)
+   ============================================ */
+
+/**
+ * Remove default browser outline and apply custom styles
+ */
+.next-level-editor *:focus {
+  outline: none;
+}
+
+/**
+ * Custom focus indicator for keyboard users
+ * Only shows when focused via keyboard (not mouse/touch)
+ */
+.next-level-editor *:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--focus-radius);
+  transition: outline 0.15s ease-in-out;
+}
+
+/* Remove focus for mouse/touch users (but keep for keyboard) */
+.next-level-editor *:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================
+   Enhanced Focus for Interactive Elements
+   ============================================ */
+
+/**
+ * Buttons
+ */
+.next-level-editor button:focus-visible,
+.next-level-editor [role="button"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.2);
+}
+
+.next-level-editor button:focus-visible:active {
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+}
+
+/**
+ * Links
+ */
+.next-level-editor a:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+/**
+ * Form Controls
+ */
+.next-level-editor input:focus-visible,
+.next-level-editor textarea:focus-visible,
+.next-level-editor select:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: 0;
+  border-color: var(--focus-color);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+
+.next-level-editor input[aria-invalid="true"]:focus-visible,
+.next-level-editor textarea[aria-invalid="true"]:focus-visible,
+.next-level-editor select[aria-invalid="true"]:focus-visible {
+  outline-color: var(--focus-color-error);
+  border-color: var(--focus-color-error);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/**
+ * Checkboxes and Radio Buttons
+ */
+.next-level-editor input[type="checkbox"]:focus-visible,
+.next-level-editor input[type="radio"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.2);
+}
+
+/**
+ * Contenteditable (Editor)
+ */
+.next-level-editor [contenteditable="true"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: -1px;
+  box-shadow: inset 0 0 0 1px var(--focus-color);
+}
+
+/**
+ * Custom Controls (sliders, color pickers, etc.)
+ */
+.next-level-editor input[type="range"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: 3px;
+}
+
+.next-level-editor input[type="color"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.2);
+}
+
+/* ============================================
+   Focus Within (Parent Container Focus)
+   ============================================ */
+
+/**
+ * Highlight parent containers when child has focus
+ * Useful for custom form controls and complex widgets
+ */
+.next-level-editor .focus-within-highlight:focus-within {
+  outline: 2px solid rgba(74, 144, 226, 0.3);
+  outline-offset: 2px;
+  background-color: rgba(74, 144, 226, 0.05);
+}
+
+/**
+ * Toolbar focus indication
+ */
+.next-level-editor .toolbar:focus-within {
+  background-color: rgba(74, 144, 226, 0.05);
+  border-color: var(--focus-color);
+}
+
+/**
+ * Dialog/Modal focus management
+ */
+.next-level-editor .modal:focus-within,
+.next-level-editor .dialog:focus-within {
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+/* ============================================
+   Skip Links
+   ============================================ */
+
+/**
+ * Skip to main content link
+ * Hidden by default, visible on focus
+ */
+/* The three skip links all sat at the same off-screen coordinates, so each
+   one obscured the next: axe measured only 7px of unobstructed width per
+   link and reported a WCAG 2.2 target-size (2.5.8) failure. Stacking the
+   hidden state in normal flow inside an off-screen container means every link
+   keeps its own full box, and the focused one still slides to the top-left
+   corner exactly as before. #R32-2 */
+.next-level-editor .skip-links {
+  position: absolute;
+  top: -200px;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 10000;
+}
+
+.next-level-editor .skip-link {
+  position: relative;
+  top: auto;
+  left: 0;
+  background: var(--focus-color);
+  color: white;
+  padding: 12px 24px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 16px;
+  z-index: 10000;
+  border-radius: 0 0 4px 0;
+  transition: top 0.2s ease-in-out;
+}
+
+/* Lift the whole (off-screen) group into view when any link inside it takes
+   focus, so the focused link lands at the top-left corner as before. */
+.next-level-editor .skip-links:focus-within {
+  top: 0;
+}
+
+.next-level-editor .skip-link:focus {
+  outline: 3px solid white;
+  outline-offset: -3px;
+}
+
+/* Only the focused link should be visible once the group is lifted — the
+   others stay in the flow (keeping their own target box) but out of sight. */
+.next-level-editor .skip-links:focus-within a:not(:focus) {
+  visibility: hidden;
+  position: absolute;
+}
+
+/**
+ * Multiple skip links.
+ *
+ * This block used to absolutely position EVERY link at the same `top: -40px;
+ * left: 0`, so the three of them sat exactly on top of one another. axe
+ * measured 7px of unobstructed width per link and reported a WCAG 2.2
+ * target-size (2.5.8) failure. They now stack in normal flow inside the
+ * off-screen container (see the .skip-links rule above), so each keeps its own
+ * full box, and `:focus-within` lifts the group into view — which also drops
+ * the per-child nth-child offsets this needed before. #R32-2
+ */
+.next-level-editor .skip-links a {
+  position: relative;
+  top: auto;
+  left: 0;
+  background: var(--focus-color);
+  color: white;
+  padding: 8px 16px;
+  text-decoration: none;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.next-level-editor .skip-links a:focus {
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+/* ============================================
+   Keyboard Navigation Indicators
+   ============================================ */
+
+/**
+ * Show visual indicator when using keyboard navigation
+ */
+body.using-keyboard .next-level-editor *:focus-visible {
+  outline-width: 3px;
+  outline-offset: 3px;
+}
+
+/**
+ * Subtle indicator for navigation items
+ */
+.next-level-editor [role="navigation"] a:focus-visible,
+.next-level-editor [role="menu"] [role="menuitem"]:focus-visible {
+  background-color: rgba(74, 144, 226, 0.1);
+  outline: 2px solid var(--focus-color);
+  outline-offset: -2px;
+}
+
+/**
+ * Tab navigation
+ */
+.next-level-editor [role="tablist"] [role="tab"]:focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: -3px;
+  z-index: 1;
+}
+
+/**
+ * List navigation
+ */
+.next-level-editor [role="listbox"] [role="option"]:focus-visible,
+.next-level-editor [role="menu"] [role="menuitem"]:focus-visible,
+.next-level-editor [role="tree"] [role="treeitem"]:focus-visible {
+  background-color: rgba(74, 144, 226, 0.15);
+  outline: 2px solid var(--focus-color);
+  outline-offset: -2px;
+}
+
+/* ============================================
+   High Contrast Mode
+   ============================================ */
+
+/**
+ * Windows High Contrast Mode
+ */
+@media (prefers-contrast: more) {
+  .next-level-editor *:focus-visible {
+    outline: 4px solid var(--focus-color-high-contrast);
+    outline-offset: 3px;
+    background-color: var(--focus-bg-high-contrast);
+  }
+
+  .next-level-editor button:focus-visible,
+  .next-level-editor [role="button"]:focus-visible {
+    outline: 4px solid var(--focus-color-high-contrast);
+    box-shadow: none;
+  }
+
+  .next-level-editor a:focus-visible {
+    outline: 4px solid var(--focus-color-high-contrast);
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+  }
+
+  .next-level-editor input:focus-visible,
+  .next-level-editor textarea:focus-visible,
+  .next-level-editor select:focus-visible {
+    outline: 4px solid var(--focus-color-high-contrast);
+    border: 3px solid var(--focus-color-high-contrast);
+  }
+}
+
+/**
+ * Forced Colors Mode (Windows High Contrast)
+ */
+@media (forced-colors: active) {
+  .next-level-editor *:focus-visible {
+    outline: 3px solid CanvasText;
+    outline-offset: 2px;
+  }
+
+  .next-level-editor button:focus-visible,
+  .next-level-editor [role="button"]:focus-visible {
+    outline: 3px solid Highlight;
+  }
+
+  .next-level-editor a:focus-visible {
+    outline: 3px solid LinkText;
+  }
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+
+/**
+ * Disable focus transitions for users who prefer reduced motion
+ */
+@media (prefers-reduced-motion: reduce) {
+  .next-level-editor *:focus-visible {
+    transition: none;
+  }
+
+  .next-level-editor .skip-link {
+    transition: none;
+  }
+
+  .next-level-editor button:focus-visible,
+  .next-level-editor [role="button"]:focus-visible {
+    transition: none;
+  }
+}
+
+/* ============================================
+   Focus Trap Indicator
+   ============================================ */
+
+/**
+ * Visual indicator when focus is trapped (modals, dialogs)
+ */
+.next-level-editor .focus-trap-active {
+  position: relative;
+}
+
+.next-level-editor .focus-trap-active::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 2px dashed var(--focus-color);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: focus-trap-pulse 2s ease-in-out infinite;
+}
+
+@keyframes focus-trap-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .next-level-editor .focus-trap-active::before {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+/* ============================================
+   Screen Reader Utilities
+   ============================================ */
+
+/**
+ * Screen reader only content (sr-only)
+ * Content is visually hidden but accessible to screen readers
+ */
+.next-level-editor .sr-only,
+.next-level-editor .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/**
+ * Make sr-only content visible when focused
+ * Useful for skip links and focus indicators
+ */
+.next-level-editor .sr-only-focusable:focus,
+.next-level-editor .sr-only-focusable:active {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background: var(--focus-color);
+  color: white;
+  outline: 3px solid white;
+  outline-offset: -3px;
+  z-index: 10000;
+}
+
+/* ============================================
+   Keyboard Navigation Hints
+   ============================================ */
+
+/**
+ * Show keyboard shortcut hints on hover (for sighted keyboard users)
+ */
+[data-keyboard-shortcut]:hover::after {
+  content: attr(data-keyboard-shortcut);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  font-size: 12px;
+  white-space: nowrap;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1000;
+  margin-bottom: 8px;
+}
+
+[data-keyboard-shortcut]:hover::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
+  margin-bottom: 4px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-keyboard-shortcut]:hover::after,
+  [data-keyboard-shortcut]:hover::before {
+    transition: none;
+  }
+}
+
+/* ============================================
+   Focus Management Debug Mode
+   ============================================ */
+
+/**
+ * Debug mode to visualize all focusable elements
+ * Add class to body: <body class="debug-focus">
+ */
+body.debug-focus .next-level-editor a,
+body.debug-focus .next-level-editor button,
+body.debug-focus .next-level-editor input,
+body.debug-focus .next-level-editor textarea,
+body.debug-focus .next-level-editor select,
+body.debug-focus .next-level-editor [tabindex]:not([tabindex="-1"]),
+body.debug-focus .next-level-editor [contenteditable="true"] {
+  outline: 2px dashed orange !important;
+  outline-offset: 2px !important;
+}
+
+body.debug-focus .next-level-editor *:focus-visible {
+  outline: 4px solid red !important;
+  outline-offset: 3px !important;
+}
