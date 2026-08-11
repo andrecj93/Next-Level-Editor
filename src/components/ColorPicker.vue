@@ -198,13 +198,18 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  z-index: 100;
+  /* Same layer as the ToolbarDropdown menus — at 100 this popup lost to
+     sibling dropdowns (z-index 10000) and painted underneath them. */
+  z-index: 10000;
   background: var(--editor-bg, white);
   border: 1px solid var(--editor-border, #d8dde6);
   border-radius: var(--radius-lg, 10px);
   box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
   padding: 12px;
   min-width: 280px;
+  /* Scroll internally when the editor/viewport can't fit the whole panel. */
+  max-height: min(420px, calc(100vh - 120px));
+  overflow-y: auto;
 }
 
 .color-picker-label {

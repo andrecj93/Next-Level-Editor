@@ -136,14 +136,30 @@ const isOpen = ref(false);
 // off-screen. Measured on open (after the v-if renders) and applied via
 // `left` (not transform: the enter transition animates transform).
 const menuLeft = ref(0);
+// Vertical budget. The menu lives inside `.next-level-editor`, which is
+// overflow:hidden with an author-set height — anything past the editor's
+// bottom edge is clipped away and unreachable (the static 400px cap rarely
+// fires: the largest menus are ~380px). The real limit is therefore
+// min(viewport bottom, editor bottom); the budget is applied as an inline
+// max-height so `overflow-y: auto` produces a scrollbar for EVERY menu that
+// doesn't fit, and the menu flips above the trigger when the space there is
+// meaningfully larger.
+const menuMaxHeight = ref<number | null>(null);
+const openUp = ref(false);
+/** Menus tighter than this flip up / trade sides instead of squeezing. */
+const MIN_MENU_BUDGET = 120;
 
-const clampMenu = () => {
-  const menu = menuRef.value;
-  if (!menu) return;
-  const margin = 8;
-  // Measure at the natural position first (no inline `left`, so the
-  // position-variant CSS decides the anchor).
+const clampMenu = async () => {
+  // Reset to the natural anchor first so measurements aren't polluted by a
+  // previous clamp (re-entry happens on window resize/scroll while open).
   menuLeft.value = 0;
+  menuMaxHeight.value = null;
+  openUp.value = false;
+  await nextTick();
+  const menu = menuRef.value;
+  const trigger = triggerRef.value;
+  if (!menu || !trigger || !isOpen.value) return;
+  const margin = 8;
   const r = menu.getBoundingClientRect();
   let shift = 0;
   if (r.right > window.innerWidth - margin) {
@@ -153,12 +169,54 @@ const clampMenu = () => {
     shift = margin - r.left;
   }
   menuLeft.value = Math.round(shift);
+
+  // Vertical: measure from the trigger (stable), not the menu (its enter
+  // transition animates translateY, skewing rect.top by a few px).
+  const t = trigger.getBoundingClientRect();
+  const editorRect = dropdownRef.value
+    ?.closest(".next-level-editor")
+    ?.getBoundingClientRect();
+  const bottomLimit = Math.min(
+    window.innerHeight,
+    editorRect ? editorRect.bottom : Infinity
+  );
+  const topLimit = Math.max(0, editorRect ? editorRect.top : 0);
+  const naturalHeight = menu.scrollHeight;
+  const spaceBelow = bottomLimit - (t.bottom + 4) - margin;
+  const spaceAbove = t.top - 4 - topLimit - margin;
+  const flip =
+    spaceBelow < Math.min(naturalHeight, MIN_MENU_BUDGET) &&
+    spaceAbove > spaceBelow;
+  openUp.value = flip;
+  const budget = flip ? spaceAbove : spaceBelow;
+  menuMaxHeight.value = Math.max(MIN_MENU_BUDGET, Math.floor(budget));
 };
 
 watch(isOpen, (open) => {
-  if (open) nextTick(clampMenu);
-  else menuLeft.value = 0;
+  if (open) clampMenu();
+  else {
+    menuLeft.value = 0;
+    menuMaxHeight.value = null;
+    openUp.value = false;
+  }
 });
+
+// Re-clamp while open: scrolling the page moves the editor (and its clip box)
+// relative to the viewport, and resizing changes both limits. Scrolls that
+// originate INSIDE the menu (its own overflow-y) must not re-clamp — that
+// would reset the very scroll position the user is dragging.
+let reclampQueued = false;
+const reclampIfOpen = (event?: Event) => {
+  if (!isOpen.value) return;
+  const target = event?.target;
+  if (target instanceof Node && menuRef.value?.contains(target)) return;
+  if (reclampQueued) return;
+  reclampQueued = true;
+  requestAnimationFrame(() => {
+    reclampQueued = false;
+    if (isOpen.value) clampMenu();
+  });
+};
 
 const hasActiveItem = computed(() => {
   return props.items.some((item) => item.isActive?.());
@@ -181,6 +239,13 @@ const menuStyle = computed(() => {
   // (the left-rail right-flyout at `left: calc(100% + 4px)` and the Export
   // right-anchor at `right: 0`), pinning those menus to the wrong edge.
   if (menuLeft.value !== 0) style.left = `${menuLeft.value}px`;
+  if (menuMaxHeight.value !== null) {
+    style.maxHeight = `${Math.min(400, menuMaxHeight.value)}px`;
+  }
+  if (openUp.value) {
+    style.top = "auto";
+    style.bottom = "calc(100% + 4px)";
+  }
   return style;
 });
 
@@ -234,6 +299,9 @@ const focusItemAt = (index: number) => {
   // Wrap at both ends, so the menu is a loop rather than a dead end.
   const wrapped = (index + items.length) % items.length;
   items[wrapped].focus();
+  // The menu scrolls internally when clamped — keep the focused item visible
+  // (focus() alone doesn't reliably scroll partially-visible items).
+  items[wrapped].scrollIntoView({ block: "nearest" });
 };
 
 /** Open (if needed) and land on the first or last item. */
@@ -329,11 +397,15 @@ onMounted(() => {
   // Capture phase so an open dropdown wins over the editor's document-level
   // bubble-phase Escape handler.
   document.addEventListener("keydown", handleKeydown, true);
+  window.addEventListener("resize", reclampIfOpen, { passive: true });
+  window.addEventListener("scroll", reclampIfOpen, { passive: true, capture: true });
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener("pointerdown", handleClickOutside, true);
   document.removeEventListener("keydown", handleKeydown, true);
+  window.removeEventListener("resize", reclampIfOpen);
+  window.removeEventListener("scroll", reclampIfOpen, true);
 });
 
 watch(

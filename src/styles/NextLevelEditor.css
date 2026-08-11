@@ -953,10 +953,13 @@
 }
 
 /* Auto-save Indicator — a quiet frosted status chip. Bottom-LEFT so it never
-   collides with the FAB stack on the bottom-right. */
+   collides with the FAB stack on the bottom-right. Reserves the mobile
+   toolbar / bottom dock clearance like the FABs do — pinned at a bare 20px it
+   sat invisibly BEHIND the fixed mobile bottom sheet. */
 .auto-save-indicator {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(20px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px));
+  bottom: calc(20px + max(var(--nle-mobile-toolbar-clearance, 0px), env(safe-area-inset-bottom, 0px)) + var(--nle-bottom-dock-clearance, 0px));
   left: 20px;
   padding: 7px 13px;
   background: var(--color-surface-raised);
@@ -2162,9 +2165,15 @@
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  z-index: 1000;
+  /* Same layer as ToolbarDropdown's scoped menus — the Colors menu uses this
+     rule directly and at 1000 it painted underneath sibling menus (10000). */
+  z-index: 10000;
   padding: 8px;
   min-width: 200px;
+  /* Menus that don't fit the editor's clip box scroll internally instead of
+     losing their bottom items. Component-level clamps refine this inline. */
+  max-height: min(400px, calc(100vh - 120px));
+  overflow-y: auto;
 }
 
 .dropdown-menu.colors-menu {

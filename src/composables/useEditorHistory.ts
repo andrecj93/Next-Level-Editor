@@ -12,7 +12,13 @@ export type HistoryCoalesceKey = "typing" | "deleting";
 export interface HistoryEntry {
   id: string;
   html: string;
-  preview: string;
+  /**
+   * Human-readable excerpt for the history timeline. Computed LAZILY on first
+   * read (it requires a full HTML parse of the snapshot) — captureSnapshot
+   * runs on every keystroke and eagerly building the preview there cost a
+   * whole-document parse per keypress to feed a panel that is usually closed.
+   */
+  readonly preview: string;
   /** Capture time (epoch ms) — shown by the history timeline. */
   timestamp: number;
   /**
@@ -72,6 +78,34 @@ export function useEditorHistory() {
   };
 
   /**
+   * Create a history entry whose `preview` is computed on first access (and
+   * recomputed if burst-coalescing rewrites `html`), instead of eagerly on
+   * every keystroke.
+   */
+  const makeEntry = (
+    id: string,
+    html: string,
+    timestamp: number,
+    selection: CaretOffsets | null
+  ): HistoryEntry => {
+    let cached: string | null = null;
+    let cachedFor: string | null = null;
+    return {
+      id,
+      html,
+      timestamp,
+      selection,
+      get preview(): string {
+        if (cachedFor !== this.html) {
+          cached = buildPreview(this.html);
+          cachedFor = this.html;
+        }
+        return cached as string;
+      },
+    };
+  };
+
+  /**
    * Capture a snapshot of current content
    */
   const captureSnapshot = (
@@ -81,7 +115,6 @@ export function useEditorHistory() {
   ): void => {
     if (isApplyingHistory.value) return;
 
-    const preview = buildPreview(html);
     const current = history.value[historyIndex.value];
 
     if (current?.html === html) {
@@ -107,20 +140,18 @@ export function useEditorHistory() {
       now - (current.burstStart ?? current.timestamp) < COALESCE_BURST_MS
     ) {
       current.html = html;
-      current.preview = preview;
       current.selection = selection ?? null;
       current.lastInputAt = now;
       return;
     }
 
     history.value = history.value.slice(0, historyIndex.value + 1);
-    const entry: HistoryEntry = {
-      id: `${now}-${Math.random().toString(16).slice(2)}`,
+    const entry = makeEntry(
+      `${now}-${Math.random().toString(16).slice(2)}`,
       html,
-      preview,
-      timestamp: now,
-      selection: selection ?? null,
-    };
+      now,
+      selection ?? null
+    );
     if (coalesceKey) {
       entry.coalesceKey = coalesceKey;
       entry.burstStart = now;

@@ -174,12 +174,23 @@
   }
 
   
-  /* Toolbar buttons (the editor toolbar is .editor-toolbar-modern; 44px, not
-     48px, so the compact/mini row still fits on narrow phones — the denser
-     .is-compact / @container min-widths in NextLevelEditor.css intentionally
-     out-specify this floor) */
-  .editor-toolbar-modern .toolbar-btn-modern,
-  .editor-toolbar-modern .dropdown-trigger {
+  /* Toolbar buttons (the editor toolbar is .editor-toolbar-modern). The
+     compact/mini rules in NextLevelEditor.css
+     (.editor-toolbar-modern.is-compact .toolbar-btn-modern { min-width: 32px },
+     and the :where() container-query equivalents) out-specified a plain floor,
+     and compact IS the default phone layout — so on real touch devices the
+     primary toolbar shipped ~32px-wide targets, well under the 44px WCAG
+     2.5.5 floor this file claims to enforce. The repeated class is deliberate:
+     it lifts specificity to (0,4,0) so the floor beats every compact sizing
+     rule, but ONLY inside this coarse-pointer media block — desktop compact
+     keeps its dense 32px layout. The toolbar flex-wraps, so bigger targets
+     wrap instead of overflowing. */
+  .editor-toolbar-modern.editor-toolbar-modern.editor-toolbar-modern
+    .toolbar-btn-modern,
+  .editor-toolbar-modern.editor-toolbar-modern.editor-toolbar-modern
+    .dropdown-trigger,
+  .editor-toolbar-modern.editor-toolbar-modern.editor-toolbar-modern
+    .view-mode-btn {
     min-width: 44px;
     min-height: 44px;
   }

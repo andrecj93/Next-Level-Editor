@@ -67,7 +67,17 @@ export function useEditorContent(options: UseEditorContentOptions) {
       onUpdate(sanitized);
     }
     if (editorContent.value && editorContent.value.innerHTML !== sanitized) {
+      // Replacing innerHTML destroys the live selection and drops the caret to
+      // the top of the document. When the selection is inside this editor (the
+      // user is typing and the host echoed a transformed modelValue back),
+      // preserve it across the rewrite — the same mechanism undo/redo uses.
+      // getCaretOffsets returns null when the selection is elsewhere, making
+      // the restore a no-op for external/idle updates.
+      const caret = getCaretOffsets(editorContent.value);
       editorContent.value.innerHTML = sanitized;
+      if (caret) {
+        setCaretOffsets(editorContent.value, caret);
+      }
     }
     htmlContent.value = sanitized;
     reinitEmbeds();
@@ -80,6 +90,14 @@ export function useEditorContent(options: UseEditorContentOptions) {
    *   inputType); same-kind captures within the burst window merge into one
    *   undo step. Omitted for everything that must be its own undo boundary.
    */
+  // Raw→sanitized memo of the last emit. The htmlContent autosave watcher
+  // below fires with the RAW innerHTML right after captureAndEmit armed the
+  // debounce with the SANITIZED string; the raw call used to win the debounce,
+  // so a controlled host saw modelValue shape-shift to unsanitized browser
+  // markup (<div>/<font>) two seconds after every typing pause. The memo lets
+  // the watcher reuse the sanitized form without a second full-document pass.
+  let lastEmit: { raw: string; sanitized: string } | null = null;
+
   const captureAndEmit = (
     emitUpdate = true,
     coalesceKey?: HistoryCoalesceKey
@@ -95,6 +113,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
 
     if (emitUpdate) {
       const sanitized = sanitizeHtml(html);
+      lastEmit = { raw: html, sanitized };
       onUpdate(sanitized);
 
       // Trigger auto-save after updating
@@ -240,11 +259,18 @@ export function useEditorContent(options: UseEditorContentOptions) {
   // The immediate call above has returned; every later run is post-setup.
   preMountSync = false;
 
-  // Watch for content changes and trigger auto-save
+  // Watch for content changes and trigger auto-save. Autosave must always be
+  // armed with the SANITIZED serialization — this watcher fires with raw
+  // innerHTML strings (htmlContent mirrors the DOM), and the raw string used
+  // to win the debounce over captureAndEmit's sanitized call.
   if (triggerAutoSave) {
     watch(htmlContent, (newContent) => {
       if (newContent && !isApplyingHistory.value) {
-        triggerAutoSave(newContent);
+        const sanitized =
+          lastEmit && lastEmit.raw === newContent
+            ? lastEmit.sanitized
+            : sanitizeHtml(newContent);
+        triggerAutoSave(sanitized);
       }
     });
   }

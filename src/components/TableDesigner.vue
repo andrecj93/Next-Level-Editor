@@ -178,6 +178,11 @@ const position = computed(() => ({
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   padding: 8px;
   min-width: 200px;
+  /* The ~420px control stack can exceed a short editor's overflow:hidden box
+     (the clamp in useContextMenu collapses to the top edge then) — scroll
+     internally instead of losing the bottom buttons. */
+  max-height: min(420px, calc(100vh - 96px));
+  overflow-y: auto;
 }
 
 .designer-controls {

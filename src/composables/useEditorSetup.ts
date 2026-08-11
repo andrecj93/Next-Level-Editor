@@ -85,6 +85,17 @@ export function useEditorSetup(options: UseEditorSetupOptions) {
   );
 
   onMounted(() => {
+    // Native editing paths (execCommand insertions, any Enter the browser
+    // handles itself) emit <div> blocks by default while the editor's own
+    // paths emit <p> — leaving the document structurally inconsistent
+    // depending on which code path produced each block. Align the browser
+    // with the editor's block element. Best-effort: deprecated API, some
+    // engines throw or ignore it.
+    try {
+      document.execCommand("defaultParagraphSeparator", false, "p");
+    } catch {
+      /* unsupported — sanitizer still normalizes div -> p */
+    }
     if (editorContent.value) {
       ranSurfaceInit = true;
       applySanitizedContent(modelValue);

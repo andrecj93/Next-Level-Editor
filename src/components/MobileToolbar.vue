@@ -12,7 +12,7 @@
           'is-fullscreen': isFullscreen,
         },
       ]"
-      :style="{ bottom: `${keyboardInset}px` }"
+      :style="toolbarStyle"
     >
     <!-- Toolbar Header -->
     <div class="toolbar-header">
@@ -219,6 +219,15 @@ interface Props {
    * single editor, wrong as soon as there are two.
    */
   editorRoot?: HTMLElement | null;
+  /**
+   * Feature-panel entry points for the More tab. On phones the fixed FAB
+   * column is hidden while this bar is up (the circles sat on top of the text
+   * column and swallowed taps), so these are the mobile route into those
+   * panels. Each flag mirrors the host's feature gating for the matching FAB.
+   */
+  showCommentsAction?: boolean;
+  showStatsAction?: boolean;
+  showVariablesAction?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -227,6 +236,9 @@ const props = withDefaults(defineProps<Props>(), {
   enableHaptics: true,
   isActive: undefined,
   editorRoot: null,
+  showCommentsAction: false,
+  showStatsAction: false,
+  showVariablesAction: false,
 });
 
 // Emits
@@ -289,9 +301,15 @@ const updateClearance = () => {
   document.documentElement.style.setProperty(CLEARANCE_PROP, `${clearance}px`);
 };
 
+// The element carrying the transitionend listener, so hide/unmount can remove
+// it — it was previously re-added on every show and never removed.
+let clearanceListenerEl: HTMLElement | null = null;
+
 const clearClearance = () => {
   clearanceObserver?.disconnect();
   clearanceObserver = null;
+  clearanceListenerEl?.removeEventListener("transitionend", updateClearance);
+  clearanceListenerEl = null;
   // The showToolbar watcher is immediate, so this runs at setup — during SSR
   // there is no document. Nothing to clear on the server.
   if (typeof document === "undefined") return;
@@ -323,7 +341,12 @@ watch(
         clearanceObserver = new ResizeObserver(updateClearance);
         clearanceObserver.observe(el);
       }
+      clearanceListenerEl?.removeEventListener(
+        "transitionend",
+        updateClearance
+      );
       el.addEventListener("transitionend", updateClearance);
+      clearanceListenerEl = el;
     });
   },
   { immediate: true }
@@ -340,6 +363,12 @@ watch(
 // visual viewport. Falls back to 0 (plain bottom:0) where the API is absent.
 // ---------------------------------------------------------------------------
 const keyboardInset = ref(0);
+// Visual viewport height while the keyboard is up. The bar's CSS max-height
+// (60vh) is measured against the LAYOUT viewport, which iOS does not shrink
+// for the keyboard — an expanded sheet lifted by keyboardInset could exceed
+// the visible area and push its own top off-screen. Used to cap the sheet to
+// a fraction of what is actually visible.
+const visualHeight = ref(0);
 let visualViewportTarget: VisualViewport | null = null;
 
 const updateKeyboardInset = () => {
@@ -347,13 +376,32 @@ const updateKeyboardInset = () => {
     typeof window !== "undefined" ? window.visualViewport ?? null : null;
   if (!vv) {
     keyboardInset.value = 0;
+    visualHeight.value = 0;
     return;
   }
   keyboardInset.value = Math.max(
     0,
     Math.round(window.innerHeight - vv.height - vv.offsetTop)
   );
+  visualHeight.value = Math.round(vv.height);
 };
+
+// The keyboard lifts the bar via inline `bottom` — a move the ResizeObserver
+// cannot see (no size change) and transitionend never reports (`bottom` is not
+// transitioned). Re-publish the clearance so everything that reserves space
+// above the bar (editor bottom padding, panels) tracks it while the keyboard
+// is up, instead of under-reserving by exactly the keyboard height.
+watch(keyboardInset, () => {
+  if (showToolbar.value) nextTick(updateClearance);
+});
+
+const toolbarStyle = computed(() => {
+  const style: Record<string, string> = { bottom: `${keyboardInset.value}px` };
+  if (keyboardInset.value > 0 && visualHeight.value > 0) {
+    style.maxHeight = `${Math.round(visualHeight.value * 0.6)}px`;
+  }
+  return style;
+});
 
 // Because the toolbar teleports to <body>, it escapes the editor's
 // `.theme-dark` AND `.fullscreen` scopes. Mirror both editor-root classes
@@ -651,30 +699,63 @@ const blockActions = [
 ];
 
 // More actions (settings, export, etc.)
-const moreActions = [
-  {
-    id: "undo",
-    label: "Undo",
-    icon: svgIcon('<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>'),
-    onClick: () => executeAction("undo"),
-  },
-  {
-    id: "redo",
-    label: "Redo",
-    icon: svgIcon('<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>'),
-    onClick: () => executeAction("redo"),
-  },
-  {
-    id: "find",
-    label: "Find & Replace",
-    icon: svgIcon('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>'),
-    onClick: () => executeAction("find"),
-  },
+const moreActions = computed(() => {
+  const actions = [
+    {
+      id: "undo",
+      label: "Undo",
+      icon: svgIcon('<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>'),
+      onClick: () => executeAction("undo"),
+    },
+    {
+      id: "redo",
+      label: "Redo",
+      icon: svgIcon('<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>'),
+      onClick: () => executeAction("redo"),
+    },
+    {
+      id: "find",
+      label: "Find & Replace",
+      icon: svgIcon('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>'),
+      onClick: () => executeAction("find"),
+    },
+  ];
+  // Feature-panel entry points: the mobile replacement for the FAB column,
+  // which is hidden while this bar is up. Same icons as the FABs they replace.
+  if (props.showCommentsAction) {
+    actions.push({
+      id: "comments",
+      label: "Comments",
+      icon: svgIcon(
+        '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
+      ),
+      onClick: () => executeAction("comments"),
+    });
+  }
+  if (props.showStatsAction) {
+    actions.push({
+      id: "writing-stats",
+      label: "Writing Stats",
+      icon: svgIcon('<path d="M3 3v18h18M7 16l4-6 4 4 4-7"/>'),
+      onClick: () => executeAction("writing-stats"),
+    });
+  }
+  if (props.showVariablesAction) {
+    actions.push({
+      id: "variables",
+      label: "Variables",
+      icon: svgIcon(
+        '<path d="M9 4C7.5 4 7 5 7 6.5V9c0 1.5-1 2.3-2.2 2.6v.8C6 12.7 7 13.5 7 15v2.5C7 19 7.5 20 9 20M15 4c1.5 0 2 1 2 2.5V9c0 1.5 1 2.3 2.2 2.6v.8C18 12.7 17 13.5 17 15v2.5c0 1.5-.5 2.5-2 2.5"/>'
+      ),
+      onClick: () => executeAction("variables"),
+    });
+  }
   // NOTE: "shortcuts" (Keyboard Shortcuts), "export" and "settings" are
   // intentionally not offered — NextLevelEditor's handleMobileAction has no
   // handler for them yet, so the buttons (one even badged "New") silently did
   // nothing. Restore them here once mobile-friendly handlers exist.
-];
+  return actions;
+});
 
 // Methods
 const toggleCollapse = () => {
@@ -1064,6 +1145,9 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .mobile-toolbar {
     padding-bottom: env(safe-area-inset-bottom);
+    /* Landscape phones: keep buttons clear of the rounded corners/notch. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 

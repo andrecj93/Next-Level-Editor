@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- viewport-fit=cover exposes env(safe-area-inset-*) for the fixed mobile
+         chrome; interactive-widget=resizes-content makes Android/Chrome shrink
+         the layout viewport for the soft keyboard instead of overlaying it. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 
     <title>Next Level Editor — the rich text editor for Vue 3</title>
     <meta name="description" content="Next Level Editor — a professional-grade WYSIWYG rich-text editor for Vue 3. Slash commands, tables, comments, variables, export and full theming." />

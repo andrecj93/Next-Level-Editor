@@ -238,10 +238,19 @@
          focus/last-interaction ownership: only the instance the user is
          working in shows a toolbar, so multi-editor pages never stack N
          identical fixed bars. -->
+    <!-- Only for view modes with a live WYSIWYG surface: in code/preview the
+         bar's format actions would silently edit the hidden surface. -->
     <MobileToolbar
-      :visible="mobileToolbarVisible && !readonly"
+      :visible="
+        mobileToolbarVisible &&
+        !readonly &&
+        (viewMode === 'editor' || viewMode === 'split')
+      "
       :is-active="mobileIsActive"
       :editor-root="rootEl"
+      :show-comments-action="!!(enableComments && comments)"
+      :show-stats-action="!!(showWritingStats && writingAssistant)"
+      :show-variables-action="!!(enableVariables && variablesComposable)"
       @action="handleMobileAction"
       @close="mobileToolbarClosed = true"
     />
@@ -434,10 +443,19 @@
     />
 
     <!-- Comments Toggle FAB (opt-in feature). `ownsFixedChrome` gates the whole
-         fixed column: see useFloatingChromeOwner. #R23-30 -->
+         fixed column: see useFloatingChromeOwner. #R23-30
+         `!mobileBarOnScreen` hides the column while the mobile bottom bar is
+         up: on a phone the circles overlapped the text column and swallowed
+         taps — the bar's More tab carries the same entry points instead. -->
     <Transition name="fab-fade">
       <button
-        v-if="enableComments && !showCommentsSidebar && comments && ownsFixedChrome"
+        v-if="
+          enableComments &&
+          !showCommentsSidebar &&
+          comments &&
+          ownsFixedChrome &&
+          !mobileBarOnScreen
+        "
         class="comments-toggle-fab"
         aria-label="Open comments"
         title="Open comments"
@@ -464,7 +482,12 @@
     <!-- Writing Stats Toggle FAB (opt-in feature) -->
     <Transition name="fab-fade">
       <button
-        v-if="showWritingStats && writingAssistant && ownsFixedChrome"
+        v-if="
+          showWritingStats &&
+          writingAssistant &&
+          ownsFixedChrome &&
+          !mobileBarOnScreen
+        "
         class="writing-stats-toggle-fab"
         :aria-label="
           showWritingStatsPanel
@@ -494,7 +517,13 @@
     <!-- Variables Toggle FAB (opt-in feature) -->
     <Transition name="fab-fade">
       <button
-        v-if="enableVariables && variablesComposable && !readonly && ownsFixedChrome"
+        v-if="
+          enableVariables &&
+          variablesComposable &&
+          !readonly &&
+          ownsFixedChrome &&
+          !mobileBarOnScreen
+        "
         class="variables-toggle-fab"
         :style="{
           bottom: `calc(${variablesFabBottom}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
@@ -1231,13 +1260,8 @@ const { themeClass, editorStyles, wordCount, characterCount } =
     theme,
     width: toRef(props, "width"),
     height: toRef(props, "height"),
-    modelValue: toRef(props, "modelValue"),
     editorContent,
     htmlContent,
-    isApplyingHistory,
-    applySanitizedContent,
-    captureSnapshot,
-    triggerAutoSave,
   });
 
 // Corner resize grip: lets the user drag/arrow the editor larger to see more
@@ -2046,6 +2070,18 @@ function handleMobileAction(actionId: string) {
     case "redo":
       redo();
       break;
+    // Feature-panel entry points (More tab). On phones the FAB column is
+    // hidden while the bottom bar is up — these are the mobile route into the
+    // same panels.
+    case "comments":
+      showCommentsSidebar.value = !showCommentsSidebar.value;
+      break;
+    case "writing-stats":
+      showWritingStatsPanel.value = !showWritingStatsPanel.value;
+      break;
+    case "variables":
+      showVariablesPanel.value = !showVariablesPanel.value;
+      break;
     default:
       // Every button MobileToolbar ships is wired above. checklist / export /
       // settings / shortcuts were removed from the toolbar until they get
@@ -2458,6 +2494,50 @@ const onDrop = (event: DragEvent) => {
   document.execCommand("insertHTML", false, clean);
 };
 
+/**
+ * Scroll the editing surface so the caret stays clear of the fixed mobile
+ * bottom bar (and the soft keyboard it rides above). `.editor-content` is its
+ * own scroll container, so the correction is a local scrollTop nudge — never a
+ * page scroll. No-op on desktop (no bar on screen) and when the selection is
+ * not a collapsed caret inside this editor.
+ */
+const ensureCaretAboveMobileChrome = () => {
+  if (!mobileBarOnScreen.value) return;
+  const surface = editorContent.value;
+  if (!surface) return;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
+  if (!sel.anchorNode || !surface.contains(sel.anchorNode)) return;
+
+  const range = sel.getRangeAt(0);
+  let rect = range.getBoundingClientRect();
+  if (rect.height === 0 && rect.width === 0) {
+    // A collapsed range in an empty block reports a zero rect — fall back to
+    // the block element's box.
+    const container = range.startContainer;
+    const el =
+      container instanceof Element ? container : container.parentElement;
+    if (!el) return;
+    rect = el.getBoundingClientRect();
+  }
+
+  // Visible floor = the lower of the visual viewport bottom (keyboard) and
+  // the bar's top edge (published clearance is measured from the layout
+  // viewport bottom and includes the keyboard lift).
+  const vv = window.visualViewport;
+  const viewBottom = vv ? vv.height + vv.offsetTop : window.innerHeight;
+  const clearance =
+    Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue(
+        "--nle-mobile-toolbar-clearance"
+      )
+    ) || 0;
+  const limit = Math.min(viewBottom, window.innerHeight - clearance) - 12;
+  if (rect.bottom > limit) {
+    surface.scrollTop += rect.bottom - limit;
+  }
+};
+
 const onInput = (event?: Event) => {
   // IME guard: while a composition is live the browser fires input events
   // (inputType "insertCompositionText"); running the mutating passes below
@@ -2495,6 +2575,12 @@ const onInput = (event?: Event) => {
   // coalescing in history (typing/deleting runs merge into one undo step).
   onInputBase(event);
 
+  // Keep the caret visible above the fixed mobile bottom bar. The browser's
+  // native caret-scrolling targets the viewport bottom, which on mobile is
+  // behind the fixed sheet — typing near the end of the document put the
+  // caret underneath the toolbar with nothing scrolling it clear.
+  ensureCaretAboveMobileChrome();
+
   // Detect variable syntax for autocomplete
   if (props.enableVariables) {
     detectVariableSyntax();
@@ -2503,8 +2589,12 @@ const onInput = (event?: Event) => {
   // Update writing statistics. Use the debounced, lightweight content updater —
   // the stats panel is driven by lazy computeds, so a full analyze() pass on
   // every keystroke was wasted work (and ran even with the panel closed).
+  // htmlContent was just refreshed by onInputBase from the same DOM — reuse it
+  // instead of paying a second full innerHTML serialization per keystroke.
   if (writingAssistant && editorContent.value) {
-    writingAssistant.scheduleContentUpdate(editorContent.value.innerHTML);
+    writingAssistant.scheduleContentUpdate(
+      htmlContent.value || editorContent.value.innerHTML
+    );
   }
 };
 
@@ -3683,9 +3773,14 @@ onUnmounted(() => {
    keyed on actual toolbar state — not a viewport guess — and the FABs never
    cover (or get covered by) the bar despite their higher z-index. */
 
-/* Comments = the primary action: accent icon + a quiet accent ring. */
+/* Comments = the primary action: accent icon + a quiet accent ring.
+   The max() form (kept as a second declaration so engines without CSS max()
+   fall back to the plain one) respects the iPhone home-indicator strip when
+   the mobile bar is hidden: the published clearance already includes the
+   safe area while the bar is up, so max() avoids double-counting it. */
 .comments-toggle-fab {
   bottom: calc(28px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px));
+  bottom: calc(28px + max(var(--nle-mobile-toolbar-clearance, 0px), env(safe-area-inset-bottom, 0px)) + var(--nle-bottom-dock-clearance, 0px));
   width: 56px;
   height: 56px;
   color: var(--toolbar-accent);
@@ -3695,6 +3790,7 @@ onUnmounted(() => {
 /* Stats = secondary: a calm neutral icon until hovered. */
 .writing-stats-toggle-fab {
   bottom: calc(96px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px));
+  bottom: calc(96px + max(var(--nle-mobile-toolbar-clearance, 0px), env(safe-area-inset-bottom, 0px)) + var(--nle-bottom-dock-clearance, 0px));
   width: 52px;
   height: 52px;
   color: var(--color-text-secondary);
@@ -3903,13 +3999,29 @@ onUnmounted(() => {
   }
 }
 
-/* Responsive */
+/* Responsive: on phones the whole column hugs the edge with ONE right offset
+   and an even vertical rhythm — the old override moved only the comments FAB,
+   leaving the two above it 8px off-axis. (While the mobile bottom bar is on
+   screen the column is hidden entirely; these apply when it is dismissed or
+   on narrow non-touch windows.) */
 @media (max-width: 768px) {
+  .comments-toggle-fab,
+  .writing-stats-toggle-fab,
+  .variables-toggle-fab {
+    right: 20px;
+  }
+
   .comments-toggle-fab {
     bottom: calc(20px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px));
-    right: 20px;
+    bottom: calc(20px + max(var(--nle-mobile-toolbar-clearance, 0px), env(safe-area-inset-bottom, 0px)) + var(--nle-bottom-dock-clearance, 0px));
     width: 56px;
     height: 56px;
+  }
+
+  /* 20px base + 56px comments FAB + 12px gap. */
+  .writing-stats-toggle-fab {
+    bottom: calc(88px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px));
+    bottom: calc(88px + max(var(--nle-mobile-toolbar-clearance, 0px), env(safe-area-inset-bottom, 0px)) + var(--nle-bottom-dock-clearance, 0px));
   }
 }
 

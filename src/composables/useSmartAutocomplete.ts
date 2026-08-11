@@ -649,6 +649,24 @@ export function useSmartAutocomplete(
   /** Fractions are ambiguous with dates ("1/24") and versions, so they only
    *  convert once a boundary is typed AFTER a standalone fraction. */
   const AMBIGUOUS_FRACTIONS = new Set(["1/2", "1/4", "3/4"]);
+  /**
+   * Symbols that only convert at the START of a token (preceded by whitespace
+   * or nothing). Unrestricted, they hijacked ordinary prose and code-ish text
+   * mid-token — "f(c)" became "f©", "5<=6" became "5⇐6", "a->b" became "a→b" —
+   * which is exactly the "the editor changes what I typed" surprise. "--" and
+   * "..." stay unrestricted: converting them inside a word ("word--word") is
+   * the long-standing em-dash/ellipsis behavior users expect.
+   */
+  const TOKEN_START_ONLY = new Set([
+    "->",
+    "<-",
+    "=>",
+    "<=",
+    "(c)",
+    "(r)",
+    "(tm)",
+    "+-",
+  ]);
   const escapeRegExp = (s: string): string =>
     s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -678,6 +696,10 @@ export function useSmartAutocomplete(
           };
         }
       } else if (text.endsWith(pattern)) {
+        if (TOKEN_START_ONLY.has(pattern)) {
+          const before = text[text.length - pattern.length - 1];
+          if (before !== undefined && !/\s/.test(before)) continue;
+        }
         return {
           type: "smartPunctuation",
           original: pattern,

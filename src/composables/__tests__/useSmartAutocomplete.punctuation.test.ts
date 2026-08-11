@@ -58,4 +58,39 @@ describe("detectSmartPunctuation", () => {
     expect(detectSmartPunctuation("1/24 ")).toBeNull(); // even with boundary
     expect(detectSmartPunctuation("241/2 ")).toBeNull(); // preceded by a digit
   });
+
+  it("does NOT convert token-start symbols mid-token (arrows, ©-family, ±)", () => {
+    // These hijacked ordinary prose/code-ish text when unrestricted.
+    expect(detectSmartPunctuation("f(c)")).toBeNull(); // function call
+    expect(detectSmartPunctuation("5<=")).toBeNull(); // comparison
+    expect(detectSmartPunctuation("a->")).toBeNull(); // property access
+    expect(detectSmartPunctuation("x=>")).toBeNull(); // arrow-fn-ish
+    expect(detectSmartPunctuation("3+-")).toBeNull(); // arithmetic-ish
+  });
+
+  it("still converts token-start symbols at a token boundary", () => {
+    expect(detectSmartPunctuation("go -> ".trimEnd())).toMatchObject({
+      original: "->",
+      replacement: "→",
+    });
+    expect(detectSmartPunctuation("see <=")).toMatchObject({
+      original: "<=",
+      replacement: "⇐",
+    });
+    expect(detectSmartPunctuation("(tm)")).toMatchObject({
+      original: "(tm)",
+      replacement: "™",
+    });
+  });
+
+  it("keeps '--' and '...' unrestricted (classic em-dash/ellipsis behavior)", () => {
+    expect(detectSmartPunctuation("word--")).toMatchObject({
+      original: "--",
+      replacement: "—",
+    });
+    expect(detectSmartPunctuation("wait...")).toMatchObject({
+      original: "...",
+      replacement: "…",
+    });
+  });
 });

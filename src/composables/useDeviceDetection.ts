@@ -66,8 +66,12 @@ export function useDeviceDetection() {
   // Touch capabilities
   const touchCapabilities = ref<TouchCapabilities>(readTouchCapabilities());
 
-  // Hover support
-  const supportsHover = computed(() => mq("(hover: hover)"));
+  // Hover support. Held in a ref refreshed by updateTouchCapabilities — as a
+  // computed over the bare matchMedia read it had zero reactive dependencies,
+  // so Vue cached the first value forever and dock/undock on hybrid devices
+  // never re-evaluated isTouchOnly/deviceType.
+  const hoverCapable = ref(mq("(hover: hover)"));
+  const supportsHover = computed(() => hoverCapable.value);
 
   // Pointer type
   const pointerType = computed(() => {
@@ -249,9 +253,12 @@ export function useDeviceDetection() {
   /**
    * Handle orientation change
    */
+  let orientationTimer: ReturnType<typeof setTimeout> | null = null;
   const handleOrientationChange = () => {
     // Delay to get accurate dimensions after rotation
-    setTimeout(() => {
+    if (orientationTimer) clearTimeout(orientationTimer);
+    orientationTimer = setTimeout(() => {
+      orientationTimer = null;
       handleResize();
     }, 100);
   };
@@ -260,6 +267,7 @@ export function useDeviceDetection() {
    * Check for touch capability changes (rare, but possible on hybrid devices)
    */
   const updateTouchCapabilities = () => {
+    hoverCapable.value = mq("(hover: hover)");
     touchCapabilities.value = {
       hasTouch: readTouchCapabilities().hasTouch,
       hasMouse: mq("(hover: hover) and (pointer: fine)"),
@@ -297,6 +305,10 @@ export function useDeviceDetection() {
   onUnmounted(() => {
     window.removeEventListener("resize", handleResize);
     window.removeEventListener("orientationchange", handleOrientationChange);
+    if (orientationTimer) {
+      clearTimeout(orientationTimer);
+      orientationTimer = null;
+    }
   });
 
   return {

@@ -7,8 +7,8 @@
         class="context-menu nle-chrome"
         :class="theme"
         :style="{
-          top: `${position.top}px`,
-          left: `${position.left}px`,
+          top: `${(adjustedPosition || position).top}px`,
+          left: `${(adjustedPosition || position).left}px`,
         }"
         role="menu"
         aria-label="Context menu"
@@ -67,6 +67,34 @@ const emit = defineEmits<Emits>();
 
 const menuRef = ref<HTMLElement | null>(null);
 
+// The caller clamps the requested position with an ESTIMATED menu height, but
+// the full menu (13 items + dividers, ~500px) can far exceed the estimate —
+// items past the viewport bottom were unreachable (position: fixed never
+// scrolls with the page). Re-clamp with the MEASURED size after render; the
+// CSS max-height + overflow-y then let the menu scroll internally when it is
+// taller than the viewport.
+const adjustedPosition = ref<{ top: number; left: number } | null>(null);
+
+const clampMeasured = () => {
+  const el = menuRef.value;
+  if (!el) return;
+  const margin = 8;
+  // scrollHeight/offsetWidth: the enter transition animates scale(0.95), so
+  // getBoundingClientRect() under-measures during the animation.
+  const height = Math.min(el.scrollHeight, window.innerHeight - 2 * margin);
+  const width = el.offsetWidth;
+  adjustedPosition.value = {
+    top: Math.min(
+      Math.max(props.position.top, margin),
+      Math.max(margin, window.innerHeight - height - margin)
+    ),
+    left: Math.min(
+      Math.max(props.position.left, margin),
+      Math.max(margin, window.innerWidth - width - margin)
+    ),
+  };
+};
+
 // Focusable (enabled) menu items, in DOM order.
 const getMenuItems = (): HTMLButtonElement[] =>
   menuRef.value
@@ -82,6 +110,9 @@ const focusItemAt = (index: number) => {
   if (items.length === 0) return;
   const wrapped = (index + items.length) % items.length;
   items[wrapped].focus();
+  // The menu scrolls internally when taller than the viewport — keep the
+  // focused item in view while roving.
+  items[wrapped].scrollIntoView({ block: "nearest" });
 };
 
 const handleItemClick = (item: ContextMenuItem) => {
@@ -212,11 +243,16 @@ watch(
       setTimeout(() => {
         addDismissListeners();
       }, 0);
-      // Move focus into the menu so keyboard/screen-reader users can operate it.
-      nextTick(() => focusItemAt(0));
+      // Re-clamp with the real size, then move focus into the menu so
+      // keyboard/screen-reader users can operate it.
+      nextTick(() => {
+        clampMeasured();
+        focusItemAt(0);
+      });
     } else {
       removeDismissListeners();
       restoreFocus();
+      adjustedPosition.value = null;
     }
   }
 );
@@ -240,6 +276,10 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-lg);
   padding: 4px;
   z-index: 10000;
+  /* Menus taller than the viewport scroll internally instead of running off
+     the bottom edge (position: fixed never scrolls with the page). */
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 

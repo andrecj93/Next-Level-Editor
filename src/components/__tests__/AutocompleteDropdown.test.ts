@@ -144,11 +144,13 @@ describe("AutocompleteDropdown.vue", () => {
   });
 
   describe("positioning style", () => {
-    it("defaults to cursor 0,0 (top offset 20px, left 0px)", () => {
+    it("defaults to cursor 0,0 clamped to the viewport margin", () => {
       mountDropdown();
       const style = wrapper!.find(".autocomplete-dropdown").attributes("style") ?? "";
       expect(style).toContain("top: 20px");
-      expect(style).toContain("left: 0px");
+      // x=0 is clamped to the 8px viewport margin so the fixed dropdown never
+      // renders flush against (or beyond) the screen edge.
+      expect(style).toContain("left: 8px");
     });
 
     it("offsets 20px below the cursor and aligns to cursor x", () => {

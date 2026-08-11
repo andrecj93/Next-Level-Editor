@@ -1,40 +1,27 @@
-import { computed, watch, nextTick, type Ref, type ComputedRef } from "vue";
+import { computed, type Ref, type ComputedRef } from "vue";
 import { getWordCount, getCharacterCount } from "../utils/commands";
-import { useHtmlSanitizer } from "./useHtmlSanitizer";
 
 interface EditorComputedOptions {
   theme: Ref<"light" | "dark">;
   /** Reactive so changing the width/height prop re-styles the editor live. */
   width: Ref<string | undefined>;
   height: Ref<string | undefined>;
-  modelValue: Ref<string>;
   editorContent: Ref<HTMLElement | null>;
   htmlContent: Ref<string>;
-  isApplyingHistory: Ref<boolean>;
-  applySanitizedContent: (content: string) => void;
-  captureSnapshot: (addToHistory?: boolean) => void;
-  triggerAutoSave: (content: string) => void;
 }
 
 /**
- * Composable for editor computed properties and watchers
+ * Composable for editor computed properties
  * Manages derived state like theme class, editor styles, word count, etc.
+ *
+ * This composable used to also register a modelValue watcher and an autosave
+ * watcher — both exact duplicates of the ones in useEditorContent, which meant
+ * every keystroke paid for four full-document sanitize passes instead of two
+ * and every external modelValue change was applied twice. The single source of
+ * truth for content synchronization is useEditorContent.
  */
 export function useEditorComputed(options: EditorComputedOptions) {
-  const {
-    theme,
-    width,
-    height,
-    modelValue,
-    editorContent,
-    htmlContent,
-    isApplyingHistory,
-    applySanitizedContent,
-    captureSnapshot,
-    triggerAutoSave,
-  } = options;
-
-  const { sanitizeHtml } = useHtmlSanitizer();
+  const { theme, width, height, editorContent, htmlContent } = options;
 
   /**
    * Computed theme class for styling
@@ -72,44 +59,6 @@ export function useEditorComputed(options: EditorComputedOptions) {
     const content = htmlContent.value || editorContent.value?.innerHTML || "";
     return getCharacterCount(content);
   });
-
-  /**
-   * Watch modelValue changes and update editor content
-   */
-  watch(
-    modelValue,
-    (newValue) => {
-      if (!editorContent.value) return;
-      if (isApplyingHistory.value) return;
-
-      // Compare sanitized versions to avoid unnecessary innerHTML updates that destroy cursor position
-      const currentSanitized = sanitizeHtml(editorContent.value.innerHTML);
-      const newSanitized = sanitizeHtml(newValue);
-
-      if (currentSanitized !== newSanitized) {
-        isApplyingHistory.value = true;
-        applySanitizedContent(newValue);
-        htmlContent.value = newValue; // Update stored HTML
-        nextTick(() => {
-          isApplyingHistory.value = false;
-          captureSnapshot(false);
-        });
-      }
-    },
-    { immediate: true }
-  );
-
-  /**
-   * Watch for content changes and trigger auto-save
-   */
-  watch(
-    () => editorContent.value?.innerHTML,
-    (newContent) => {
-      if (newContent && !isApplyingHistory.value) {
-        triggerAutoSave(newContent);
-      }
-    }
-  );
 
   return {
     themeClass,

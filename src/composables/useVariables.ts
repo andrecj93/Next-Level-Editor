@@ -390,6 +390,12 @@ export function useVariables(options: UseVariablesOptions = {}) {
   const wrapVariablesInContent = (editor: HTMLElement | null) => {
     if (!editor) return;
 
+    // Cheap gate before the O(document) TreeWalker + per-node closest() pass
+    // (which runs on every keystroke): no "{{" anywhere means there is nothing
+    // to wrap — a pill's own label text also contains "{{", so documents with
+    // existing pills still take the full pass.
+    if (!editor.textContent?.includes("{{")) return;
+
     const selection = globalThis.getSelection?.() ?? null;
     const caretRange =
       selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;

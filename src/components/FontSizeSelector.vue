@@ -154,13 +154,19 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  z-index: 100;
+  /* Same layer as the ToolbarDropdown menus — at 100 this popup lost to
+     sibling dropdowns (z-index 10000) and painted underneath them. */
+  z-index: 10000;
   min-width: 180px;
   background: white;
   border: 1px solid var(--editor-border, #d8dde6);
   border-radius: var(--radius-lg, 10px);
   box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
-  overflow: hidden;
+  /* Scroll when there's not enough room below — `overflow: hidden` made the
+     clipped part of the list unreachable. The rounded corners are preserved
+     by the border-radius + auto scrolling. */
+  max-height: min(400px, calc(100vh - 120px));
+  overflow-y: auto;
 }
 
 .dropdown-header {

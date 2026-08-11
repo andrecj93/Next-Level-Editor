@@ -45,6 +45,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import type { AutocompleteType } from "../composables/useSmartAutocomplete";
 import { smoothScrollIntoView } from "../utils/scroll";
 import { nextInstanceToken } from "../utils/instanceToken";
+import { clampMenuToViewport } from "../utils/menuPosition";
 
 /**
  * Autocomplete suggestion
@@ -106,13 +107,21 @@ const activeOptionId = computed(() =>
 
 defineExpose({ listboxId, activeOptionId });
 
-// Dropdown positioning
+// Dropdown positioning. The raw caret point can sit near the viewport edges —
+// unclamped, a position: fixed dropdown below the fold is unreachable (it
+// never scrolls with the page) — so run it through the shared viewport clamp.
 const dropdownStyle = computed(() => {
   if (!props.cursorPosition) return {};
 
+  const clamped = clampMenuToViewport(
+    props.cursorPosition.y + 20,
+    props.cursorPosition.x,
+    { estimatedWidth: 320, estimatedHeight: 320 }
+  );
   return {
-    top: `${props.cursorPosition.y + 20}px`,
-    left: `${props.cursorPosition.x}px`,
+    top: `${clamped.top}px`,
+    left: `${clamped.left}px`,
+    maxHeight: `${Math.min(320, clamped.maxHeight)}px`,
   };
 });
 
