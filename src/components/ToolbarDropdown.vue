@@ -501,7 +501,7 @@ watch(
 
 .dropdown-item.active {
   background: var(--toolbar-hover, #e8f0fe);
-  color: var(--toolbar-accent, #4285f4);
+  color: var(--toolbar-accent-ink, var(--toolbar-accent, #4285f4));
   font-weight: 500;
 }
 

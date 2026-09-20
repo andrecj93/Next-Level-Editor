@@ -55,9 +55,9 @@
   --toolbar-bg: #1a1611;
   --toolbar-text: #ece3d4;
   --toolbar-accent: #e0895a;
-  /* The apricot glow stays the hero fill; ink flips to the theme's espresso:
-     6.36:1 on #e0895a. Accent as text: 6.77:1 on #1a1611. */
-  --toolbar-accent-ink: #e0895a;
+  /* Keep the filled accent, but give small text enough contrast on raised,
+     hovered and selected surfaces as well as the toolbar background. */
+  --toolbar-accent-ink: #f0b48c;
   --toolbar-accent-strong: #e0895a;
   --toolbar-accent-contrast: #211c16;
   --toolbar-hover: rgba(224,137,90,0.20);

@@ -260,14 +260,30 @@ test('source, preview, mixed scripts and structured content preserve the documen
 test('light and dark interfaces remain accessible with reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await editorFor(page).fill('A quiet opening paragraph.');
+  const scan = async (scope?: string) => {
+    await settle(page);
+    let audit = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']);
+    if (scope) audit = audit.include(scope);
+    const results = await audit.analyze();
+    expect(results.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => ({ target: n.target, summary: n.failureSummary })) }))).toEqual([]);
+  };
   for (const dark of [false, true]) {
     if (dark) {
       await toolbarFor(page).getByRole('button', { name: 'View', exact: true }).click();
       await page.getByRole('menuitem', { name: 'Dark appearance', exact: true }).click();
     }
-    await settle(page);
-    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
-    expect(results.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => ({ target: n.target, summary: n.failureSummary })) }))).toEqual([]);
+    const viewMenu = page.getByRole('menu', { name: 'View', exact: true });
+    await expect(viewMenu).not.toBeVisible();
+    await scan();
+    const prompt = page.getByRole('button', { name: /Another prompt/ });
+    if (await prompt.isVisible()) {
+      await prompt.hover();
+      await scan('.writing-prompt');
+    }
+    await toolbarFor(page).getByRole('button', { name: 'View', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Editor view', exact: true }).hover();
+    await scan('.dropdown-menu');
+    await viewMenu.press('Escape');
     await noHorizontalOverflow(page);
   }
 });
@@ -338,6 +354,7 @@ test('site navigation stays reachable above the editor and preserves the draft',
   const editor = editorFor(page);
   const sentence = 'The story stays with me when I leave the page.';
   await editor.fill(sentence);
+  await noHorizontalOverflow(page);
   const toggle = page.getByRole('button', { name: 'Toggle menu', exact: true });
   if (await toggle.isVisible()) {
     await activate(toggle, hasTouch);

@@ -2,8 +2,9 @@
 
 This pass extends the [writing experience review](WRITING_EXPERIENCE_2026-09-20.md)
 with repeatable device workflows and manual reading of the same five-chapter,
-1,615-word manuscript. Changes are local; no deployment or package publication
-was performed.
+1,615-word manuscript. The implementation is proposed in
+[draft PR #131](https://github.com/andrecj93/Next-Level-Editor/pull/131).
+No deployment or package publication was performed.
 
 ## Repairs from actual use
 
@@ -36,11 +37,20 @@ was performed.
   Split view now waits for composition to finish before recording history or
   autosaving, so Undo removes a committed word without restoring partial
   Japanese candidates.
+- The site's open navigation is layered above editor controls, with labels
+  aligned to the active-page marker. The normal header remains below fullscreen
+  editing, and modal dialogs remain above the navigation.
+- Narrow headers let the site name shrink while retaining full-size navigation
+  controls. Linux font metrics had pushed the menu button to 322 pixels in a
+  320-pixel viewport. The layout now reserves space for those controls.
+- Warm dark accent text uses a lighter ink on hovered companion buttons and
+  selected menu items. The reported 4.08–4.11:1 pairs now exceed 6:1. Tests
+  explicitly hover both surfaces and retain the WCAG AA contrast assertions.
 
 ## Repeatable coverage
 
 `npm run test:devices` uses `playwright.devices.config.ts`. Every configured
-profile runs the same nine scenarios without project-specific skips:
+profile runs the same ten scenarios without project-specific skips:
 
 1. Type, format a heading, revise an exact passage, undo, save, and recover.
 2. Preserve a selection through formatting, insert a link, search, and download HTML.
@@ -53,6 +63,8 @@ profile runs the same nine scenarios without project-specific skips:
 9. Apply bold/italic/underline through touch or desktop controls, undo the last
    mark, insert a link over the selection, and edit its destination without
    losing text or inline formatting.
+10. Open the site navigation, reach Docs, return through browser history with
+    the draft intact, and dismiss the menu from the keyboard with focus restored.
 
 | Profile group | CSS viewport coverage |
 | --- | --- |
@@ -62,7 +74,7 @@ profile runs the same nine scenarios without project-specific skips:
 | Phones | Small 320×568; iPhone 390×664; Android 360×740; large 430×780 |
 | Landscape phones | 750×342 and 740×360 |
 | Constrained windows | 640×384, 320×256, and 390×360 |
-| Firefox | 1366×768 configured; local launch blocked before page navigation |
+| Firefox | 1366×768; nine writing scenarios passed on Ubuntu in the first CI run |
 
 These are emulated browser profiles. The narrow windows exercise the CSS sizes
 associated with [WCAG reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html),
@@ -80,11 +92,15 @@ unverified locally; no test was marked passed or skipped to hide that condition.
 
 The new CI device job installs all three engines on Ubuntu, retains reports and
 screenshots, and gates demo deployment and npm publication. This workflow was
-edited locally; a remote CI run has not been claimed.
+executed in [run 35543402546](https://github.com/andrecj93/Next-Level-Editor/actions/runs/35543402546).
+Firefox passed all nine scenarios at that revision. The run also exposed mobile
+navigation layering and a 322-pixel document in the 320-pixel constrained profile.
+The navigation repair passes all 17 locally runnable profiles. The PR's checks
+and local run log track the subsequent Linux reflow diagnosis and verification.
 
 ## Verification evidence
 
-The final clean device run passed **153 of 153 checks across 17 runnable
+The local device run before the Ubuntu follow-up passed **153 of 153 checks across 17 runnable
 profiles**, with zero retries, exclusions, failures, or uncaught page errors.
 The configured Firefox profile remains blocked at browser launch on this host.
 
@@ -115,6 +131,12 @@ defaults to `~/.codex` when unset.
   Recorded after the library build finished. Earlier failed runs are retained, including
   stale README bundle figures and a check that raced the concurrent build.
 - `interaction-unit-final.log`: 88 focused interaction tests passed.
+- `navigation-device-verified.log`: the added navigation scenario passed on all
+  17 locally runnable profiles, with zero retries. The complete configured gate
+  now contains 180 cases (ten scenarios across 18 profiles).
+- `ubuntu-devices-first/`: first Linux report, 155 passed and seven constrained
+  reflow failures; includes the nine successful Firefox cases. This failed run
+  is retained as evidence and is not described as a successful complete gate.
 - `interaction-typecheck-release.log`, `interaction-lint-release.log`, and `interaction-build-release.log`:
   type checking, lint, and library build passed. Every device run also builds
   and serves the production demo.
@@ -133,5 +155,5 @@ defaults to `~/.codex` when unset.
 
 The results establish the exercised workflows, not universal perfection.
 Physical iOS/Android keyboards, assistive technology sessions, low-end hardware
-performance, older browser versions, and the blocked Firefox runtime remain
+performance, older browser versions, and the blocked Windows Firefox runtime remain
 outside the verified claim.

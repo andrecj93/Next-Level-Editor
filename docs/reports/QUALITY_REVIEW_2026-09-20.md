@@ -57,7 +57,7 @@ The initial full browser run exposed five failures and one flaky case. The final
 
 ## Evidence and reproducibility
 
-Run ID: `20260920T024210Z`. Baseline: `main` at `8b17650`. Changes remain local and uncommitted.
+Run ID: `20260920T024210Z`. Baseline: `main` at `8b17650`. Changes were local and uncommitted at this checkpoint; the [device review](DEVICE_QUALITY_2026-09-20.md) records the subsequent draft PR and browser qualification.
 
 Persistent evidence directory:
 

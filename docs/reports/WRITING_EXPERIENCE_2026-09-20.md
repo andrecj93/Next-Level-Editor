@@ -53,4 +53,4 @@ Persistent run directory:
 
 Earlier failed runs are retained. They include the mobile layout regression, initial integration failures, and a Windows command-line quoting failure; the successful verification commands and exit codes are recorded separately. The demo build retains its existing large-chunk warning.
 
-Browser developer tools expose sanitized `[NextLevelEditor]` writing-suggestion applied/refreshed/failure events and existing save diagnostics. They contain the operation kind or reason, never the manuscript text. The completed story remains in the local preview's browser draft. Changes are local and uncommitted.
+Browser developer tools expose sanitized `[NextLevelEditor]` writing-suggestion applied/refreshed/failure events and existing save diagnostics. They contain the operation kind or reason, never the manuscript text. The completed story remains in the local preview's browser draft. At this checkpoint, changes were local and uncommitted; the [device review](DEVICE_QUALITY_2026-09-20.md) records the subsequent draft PR and browser qualification.
