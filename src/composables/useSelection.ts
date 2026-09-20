@@ -3,7 +3,7 @@ import {
   saveSelection as saveSelectionUtil,
   restoreSelection,
 } from "../utils/formatting";
-import { smoothScrollIntoView } from "../utils/scroll";
+import { keepSelectionVisible } from "../utils/caretVisibility";
 
 export function useSelection(editorContent: Ref<HTMLElement | null>) {
   const savedRange = ref<Range | null>(null);
@@ -343,36 +343,8 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
    * Word/CKEditor behavior: auto-scroll to keep cursor visible
    */
   const ensureCursorVisible = () => {
-    const selection = globalThis.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
     try {
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-
-      // Check if cursor is outside viewport
-      const isOutside =
-        rect.top < 0 ||
-        rect.bottom > window.innerHeight ||
-        rect.left < 0 ||
-        rect.right > window.innerWidth;
-
-      if (isOutside) {
-        // Create a temporary element at cursor position for scrolling
-        const tempElement = document.createElement("span");
-        tempElement.style.position = "absolute";
-        range.insertNode(tempElement);
-
-        // Scroll to element with smooth behavior (cross-browser compatible)
-        smoothScrollIntoView(tempElement, {
-          behavior: "smooth",
-          block: "nearest",
-          inline: "nearest",
-        });
-
-        // Remove temporary element
-        tempElement.remove();
-      }
+      keepSelectionVisible(editorContent.value);
     } catch (error) {
       // Silently fail if something goes wrong
       console.debug("Could not ensure cursor visibility", error);

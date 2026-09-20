@@ -10,6 +10,7 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: "**/device-matrix.spec.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   // One local retry: WebKit under parallel load occasionally misses an

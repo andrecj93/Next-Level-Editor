@@ -1,4 +1,4 @@
-import { type Ref, nextTick } from "vue";
+import { type Ref, nextTick, ref } from "vue";
 import { insertLink as insertLinkUtil } from "../utils/formatting";
 import {
   insertHorizontalRule,
@@ -55,11 +55,34 @@ export function useInsertActions(options: InsertActionsOptions) {
     closeEmojiPicker,
   } = options;
 
+  const linkContext = ref({ url: "", text: "", selectionText: "", editing: false });
+
   /**
    * Open the styled link modal (remembers the current selection).
    */
   const insertLink = () => {
+    linkContext.value = { url: "", text: "", selectionText: "", editing: false };
+    performWithSelection((root) => {
+      const selection = root.ownerDocument.getSelection();
+      if (!selection?.rangeCount) return;
+      const range = selection.getRangeAt(0);
+      if (!root.contains(range.commonAncestorContainer)) return;
+      const container = range.commonAncestorContainer;
+      const element = container instanceof Element ? container : container.parentElement;
+      const anchor = element?.closest('a');
+      const link = anchor && root.contains(anchor) ? anchor : null;
+      linkContext.value = {
+        url: link?.getAttribute('href') ?? "",
+        text: range.collapsed ? link?.textContent ?? "" : range.toString(),
+        selectionText: range.collapsed ? "" : range.toString(),
+        editing: Boolean(link),
+      };
+    });
     openLinkModal();
+    console.debug('[NextLevelEditor] Link dialog opened', {
+      editing: linkContext.value.editing,
+      hasSelection: Boolean(linkContext.value.selectionText),
+    });
   };
 
   /**
@@ -70,7 +93,10 @@ export function useInsertActions(options: InsertActionsOptions) {
     if (!url) return;
     performWithSelection(
       (root) => insertLinkUtil(root, url, text),
-      captureSnapshot
+      () => {
+        captureSnapshot();
+        console.debug('[NextLevelEditor] Link command applied');
+      }
     );
   };
 
@@ -558,6 +584,7 @@ export function useInsertActions(options: InsertActionsOptions) {
   };
 
   return {
+    linkContext,
     insertLink,
     handleInsertLink,
     insertImage,

@@ -1,6 +1,12 @@
 <template>
   <div class="editor-footer">
+    <div v-if="writingMode" class="writing-footer-actions">
+      <button type="button" class="width-toggle" :aria-expanded="companionOpen" @click="$emit('toggle-companion')">Writing companion</button>
+      <button v-if="enableComments" type="button" class="width-toggle" :aria-expanded="commentsOpen" @click="$emit('open-comments')">Comments</button>
+      <button v-if="enableVariables" type="button" class="width-toggle" :aria-expanded="variablesOpen" @click="$emit('open-variables')">Variables</button>
+    </div>
     <button
+      v-else
       class="width-toggle"
       type="button"
       :aria-pressed="fullWidth"
@@ -35,8 +41,9 @@
     </button>
 
     <div class="footer-counts">
-      <span class="word-count">{{ wordCount }} words</span>
-      <span class="char-count">{{ characterCount }} characters</span>
+      <slot />
+      <span class="word-count">{{ wordCount.toLocaleString() }} {{ wordCount === 1 ? 'word' : 'words' }}</span>
+      <span class="char-count">{{ characterCount.toLocaleString() }} {{ characterCount === 1 ? 'character' : 'characters' }}</span>
     </div>
   </div>
 </template>
@@ -46,14 +53,26 @@ defineProps<{
   wordCount: number;
   characterCount: number;
   fullWidth?: boolean;
+  writingMode?: boolean;
+  companionOpen?: boolean;
+  enableComments?: boolean;
+  enableVariables?: boolean;
+  commentsOpen?: boolean;
+  variablesOpen?: boolean;
 }>();
 
 defineEmits<{
   (e: "toggle-full-width"): void;
+  (e: "toggle-companion"): void;
+  (e: "open-comments"): void;
+  (e: "open-variables"): void;
 }>();
 </script>
 
 <style scoped>
+.writing-footer-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.writing-footer-actions button { min-height: 30px; }
+@media (max-width: 640px) { .writing-footer-actions { gap: 2px; } .char-count { display: none; } .writing-footer-actions button { font-size: 11px; } }
 .editor-footer {
   /* Extra right padding clears the corner resize grip that overlays this
      corner (positioned by the editor root), so the character count never

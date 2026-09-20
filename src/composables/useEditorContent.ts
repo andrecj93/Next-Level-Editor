@@ -16,6 +16,8 @@ interface UseEditorContentOptions {
   modelValue: Ref<string>;
   onUpdate: (value: string) => void;
   triggerAutoSave?: (content: string) => void;
+  /** Cancel saves for the previous document when the host replaces its model. */
+  onExternalUpdate?: () => void;
   /**
    * Called after the editor's innerHTML has been replaced wholesale, for
    * subsystems that bind listeners to live nodes and must re-attach them.
@@ -215,6 +217,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
         // A LATER surface-less update (Preview receiving a host modelValue):
         // shielded — receiving an update is not an edit, and the autosave
         // watcher must not save (and re-emit) it back. #R26-2
+        if (htmlContent.value !== sanitizeHtml(newValue)) options.onExternalUpdate?.();
         isApplyingHistory.value = true;
         htmlContent.value = sanitizeHtml(newValue);
         nextTick(() => {
@@ -227,6 +230,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
       const newSanitized = sanitizeHtml(newValue);
 
       if (currentSanitized !== newSanitized) {
+        options.onExternalUpdate?.();
         isApplyingHistory.value = true;
         applySanitizedContent(newValue);
         nextTick(() => {

@@ -977,6 +977,33 @@ const convertBlock = (
   return convertBlockTo(block, newTag);
 };
 
+/** Browsers initially type directly into an empty contenteditable. Format the
+ * whole inline paragraph, including its marks, instead of inserting an empty
+ * heading at the caret. Stop at line breaks and neighbouring block elements. */
+const wrapLooseParagraph = (root: HTMLElement, range: Range, tag: string): HTMLElement | null => {
+  let anchor: Node | null = range.startContainer;
+  if (anchor === root) {
+    anchor = root.childNodes[range.startOffset] ?? root.childNodes[range.startOffset - 1] ?? null;
+  }
+  while (anchor?.parentNode && anchor.parentNode !== root) anchor = anchor.parentNode;
+  const inline = (node: Node | null): node is Node => Boolean(node &&
+    (node.nodeType === Node.TEXT_NODE || (isElement(node) &&
+      !BLOCK_OR_CELL_TAGS.has(node.tagName.toLowerCase()) &&
+      !['br', 'hr', 'table', 'ul', 'ol', 'figure'].includes(node.tagName.toLowerCase()))));
+  if (!inline(anchor) || anchor.parentNode !== root) return null;
+  let first = anchor;
+  let last = anchor;
+  while (inline(first.previousSibling)) first = first.previousSibling;
+  while (inline(last.nextSibling)) last = last.nextSibling;
+  const paragraph = document.createRange();
+  paragraph.setStartBefore(first);
+  paragraph.setEndAfter(last);
+  const wrapper = document.createElement(tag);
+  const caret = wrapRangeWithElement(paragraph, wrapper);
+  caret.collapse(false);
+  return wrapper;
+};
+
 export const toggleBlock = (
   root: HTMLElement,
   tagName: string,
@@ -1014,6 +1041,7 @@ export const toggleBlock = (
 
   const block = getBlockAncestor(range.startContainer, root);
   if (!block) {
+    if (wrapLooseParagraph(root, range, tagName)) return;
     wrapSelection(root, tagName);
     return;
   }

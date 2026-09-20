@@ -2,6 +2,7 @@
   <transition name="command-menu">
     <div
       v-if="show"
+      ref="menuEl"
       class="command-menu"
       :style="{
         top: `${position.top}px`,
@@ -47,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch, nextTick } from "vue";
+import { ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import type { SlashCommandOption } from "../composables/useSlashCommands";
 
 // Re-export for backward compatibility
@@ -89,21 +90,42 @@ const props = withDefaults(defineProps<Props>(), {
   selectedIndex: 0,
 });
 
-// Keep the keyboard-highlighted item scrolled into view within the menu.
+const menuEl = ref<HTMLElement | null>(null);
+// Scroll only this menu's list. scrollIntoView also scrolls host containers,
+// moving the document away from the caret, especially in mobile WebKit.
 watch(
   () => props.selectedIndex,
   () => {
     if (!props.show) return;
     nextTick(() => {
-      const el = document.querySelector(".command-menu li.selected");
-      el?.scrollIntoView({ block: "nearest" });
+      const list = menuEl.value?.querySelector("ul");
+      const el = list?.querySelector<HTMLElement>("li.selected");
+      if (!list || !el) return;
+      const row = el.getBoundingClientRect();
+      const viewport = list.getBoundingClientRect();
+      if (row.top < viewport.top) list.scrollTop += row.top - viewport.top;
+      else if (row.bottom > viewport.bottom) list.scrollTop += row.bottom - viewport.bottom;
     });
   }
 );
 
-defineEmits<{
+const emit = defineEmits<{
   select: [option: SlashCommandOption];
+  dismiss: [];
 }>();
+
+const dismissOnLayoutChange = (event: Event) => {
+  if (!props.show || (event.target instanceof Node && menuEl.value?.contains(event.target))) return;
+  emit("dismiss");
+};
+onMounted(() => {
+  document.addEventListener("scroll", dismissOnLayoutChange, true);
+  window.addEventListener("resize", dismissOnLayoutChange);
+});
+onUnmounted(() => {
+  document.removeEventListener("scroll", dismissOnLayoutChange, true);
+  window.removeEventListener("resize", dismissOnLayoutChange);
+});
 </script>
 
 <style scoped>

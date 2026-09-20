@@ -207,27 +207,13 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
       const rect = getCaretRect(range);
       const clamped = clampMenuPosition(rect.bottom + 8, rect.left);
 
-      // The menu is position:absolute inside the editor container (its
-      // offsetParent, `.next-level-editor` is position:relative), so the
-      // viewport-clamped coordinates must be converted into that container's
-      // space. Adding window.scrollY here instead produced document-absolute
-      // coordinates that re-added the editor's own page offset, dumping the
-      // menu below the fold on any page where the editor isn't at the top.
-      const startNode = range.startContainer;
-      const startElement =
-        startNode.nodeType === Node.ELEMENT_NODE
-          ? (startNode as HTMLElement)
-          : startNode.parentElement;
-      const containerRect = startElement
-        ?.closest<HTMLElement>(".next-level-editor")
-        ?.getBoundingClientRect();
-
+      // Teleported to body with fixed positioning: viewport coordinates avoid
+      // clipping when a small screen forces the menu above the editor shell.
       resetFilter();
       showCommandMenu.value = true;
       commandMenuPosition.value = {
-        top: clamped.top - (containerRect ? containerRect.top : -window.scrollY),
-        left:
-          clamped.left - (containerRect ? containerRect.left : -window.scrollX),
+        top: clamped.top,
+        left: clamped.left,
         maxHeight: clamped.maxHeight,
       };
     });

@@ -42,7 +42,9 @@ export async function switchViewMode(
   if (await inline.isVisible().catch(() => false)) {
     await inline.click();
   } else {
-    await page.getByRole("button", { name: "More" }).first().click();
+    const viewMenu = page.getByRole('button', { name: 'View', exact: true });
+    if (await viewMenu.isVisible()) await viewMenu.click();
+    else await page.getByRole("button", { name: "More", exact: true }).first().click();
     await page
       .locator(".dropdown-menu")
       .getByRole("menuitem", { name: `${mode} view` })

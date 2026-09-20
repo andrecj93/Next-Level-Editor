@@ -3,7 +3,7 @@ import { ensureToolbarExpanded } from './helpers/toolbar'
 
 test.describe('Next Level Editor - Basic Functionality', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -37,7 +37,7 @@ test.describe('Next Level Editor - Basic Functionality', () => {
 
 test.describe('Next Level Editor - Formatting', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -125,7 +125,7 @@ test.describe('Next Level Editor - Formatting', () => {
 
 test.describe('Next Level Editor - Headings', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -171,7 +171,7 @@ test.describe('Next Level Editor - Headings', () => {
 
 test.describe('Next Level Editor - Lists', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -215,7 +215,7 @@ test.describe('Next Level Editor - Lists', () => {
 
 test.describe('Next Level Editor - Undo/Redo', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
     // Undo/redo buttons live behind the expand toggle in the auto-mini bar.
     await ensureToolbarExpanded(page)
@@ -262,7 +262,7 @@ test.describe('Next Level Editor - Undo/Redo', () => {
 
 test.describe('Next Level Editor - Context Menu', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -295,7 +295,7 @@ test.describe('Next Level Editor - Context Menu', () => {
 
 test.describe('Next Level Editor - Floating Toolbar', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -328,7 +328,7 @@ test.describe('Next Level Editor - Theme Toggle', () => {
   test.beforeEach(async ({ page }) => {
     // Desktop toolbar button; webkit on the GitHub runner hangs this click.
     test.skip(test.info().project.name === 'mobile-safari', 'desktop toolbar flow')
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
     // The theme toggle lives behind the expand toggle in the auto-mini bar.
     await ensureToolbarExpanded(page)
@@ -355,7 +355,7 @@ test.describe('Next Level Editor - Font Size', () => {
   test.beforeEach(async ({ page }) => {
     // Desktop toolbar dropdown; webkit on the GitHub runner hangs this click.
     test.skip(test.info().project.name === 'mobile-safari', 'desktop toolbar flow')
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
     // The Size dropdown lives behind the expand toggle in the auto-mini bar.
     await ensureToolbarExpanded(page)
@@ -387,7 +387,7 @@ test.describe('Next Level Editor - Font Size', () => {
 
 test.describe('Next Level Editor - Enter Key', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
   })
 

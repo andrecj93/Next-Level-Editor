@@ -13,7 +13,7 @@ test.beforeEach(() => {
 
 test.describe("Color Picker", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/?empty=true");
+    await page.goto("/?writingMode=false&empty=true");
     await page.waitForSelector(".editor-content");
     // Colors lives behind the expand toggle in the auto-mini phone toolbar.
     await ensureToolbarExpanded(page);

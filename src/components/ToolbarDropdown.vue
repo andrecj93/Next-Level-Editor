@@ -10,6 +10,7 @@
       class="dropdown-trigger"
       :class="{ active: hasActiveItem }"
       :data-tooltip="tooltip"
+      :title="tooltip"
       :aria-label="label"
       :aria-expanded="isOpen"
       aria-haspopup="menu"
@@ -27,13 +28,14 @@
       <span class="dropdown-arrow">▼</span>
     </button>
 
-    <transition name="dropdown-fade">
+    <transition name="dropdown-fade" @after-enter="clampMenu">
       <div
         v-if="isOpen"
         ref="menuRef"
         class="dropdown-menu"
         :style="menuStyle"
         role="menu"
+        tabindex="0"
         :aria-label="label"
         @keydown="onMenuKeydown"
       >
@@ -131,33 +133,35 @@ const menuRef = ref<HTMLElement | null>(null);
 const triggerRef = ref<HTMLButtonElement | null>(null);
 const isOpen = ref(false);
 
-// Viewport clamping — the menu is left-aligned to its trigger, so triggers
-// near the right edge of a narrow viewport would push the 200px menu
-// off-screen. Measured on open (after the v-if renders) and applied via
-// `left` (not transform: the enter transition animates transform).
-const menuLeft = ref(0);
+// Keep the CSS anchor (including bottom/left toolbar variants) and translate
+// only the overflowing edges. `translate` composes with the entry animation.
+const menuShift = ref({ x: 0, y: 0 });
+const menuMaxHeight = ref(400);
 
-const clampMenu = () => {
+const clampMenu = async () => {
   const menu = menuRef.value;
-  if (!menu) return;
+  if (!menu || !isOpen.value) return;
   const margin = 8;
-  // Measure at the natural position first (no inline `left`, so the
-  // position-variant CSS decides the anchor).
-  menuLeft.value = 0;
+  const viewport = window.visualViewport;
+  const left = (viewport?.offsetLeft ?? 0) + margin;
+  const top = (viewport?.offsetTop ?? 0) + margin;
+  const right = left + (viewport?.width ?? window.innerWidth) - margin * 2;
+  const bottom = top + (viewport?.height ?? window.innerHeight) - margin * 2;
+  menuMaxHeight.value = Math.min(400, bottom - top);
+  await nextTick();
+  if (menu !== menuRef.value || !isOpen.value) return;
   const r = menu.getBoundingClientRect();
-  let shift = 0;
-  if (r.right > window.innerWidth - margin) {
-    shift = window.innerWidth - margin - r.right;
-  }
-  if (r.left + shift < margin) {
-    shift = margin - r.left;
-  }
-  menuLeft.value = Math.round(shift);
+  const naturalLeft = r.left - menuShift.value.x;
+  const naturalTop = r.top - menuShift.value.y;
+  menuShift.value = {
+    x: Math.max(left - naturalLeft, Math.min(0, right - naturalLeft - r.width)),
+    y: Math.max(top - naturalTop, Math.min(0, bottom - naturalTop - r.height)),
+  };
 };
 
 watch(isOpen, (open) => {
   if (open) nextTick(clampMenu);
-  else menuLeft.value = 0;
+  else menuShift.value = { x: 0, y: 0 };
 });
 
 const hasActiveItem = computed(() => {
@@ -175,13 +179,11 @@ const displayLabel = computed(() => {
 });
 
 const menuStyle = computed(() => {
-  const style: Record<string, string> = { minWidth: "200px" };
-  // Only override `left` when the clamp actually needs to shift the menu.
-  // Emitting `left: 0` unconditionally would defeat the position-variant CSS
-  // (the left-rail right-flyout at `left: calc(100% + 4px)` and the Export
-  // right-anchor at `right: 0`), pinning those menus to the wrong edge.
-  if (menuLeft.value !== 0) style.left = `${menuLeft.value}px`;
-  return style;
+  return {
+    minWidth: "200px",
+    maxHeight: `${menuMaxHeight.value}px`,
+    translate: `${menuShift.value.x}px ${menuShift.value.y}px`,
+  };
 });
 
 const toggle = () => {
@@ -329,11 +331,19 @@ onMounted(() => {
   // Capture phase so an open dropdown wins over the editor's document-level
   // bubble-phase Escape handler.
   document.addEventListener("keydown", handleKeydown, true);
+  window.addEventListener("resize", clampMenu);
+  window.addEventListener("scroll", clampMenu, true);
+  window.visualViewport?.addEventListener("resize", clampMenu);
+  window.visualViewport?.addEventListener("scroll", clampMenu);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener("pointerdown", handleClickOutside, true);
   document.removeEventListener("keydown", handleKeydown, true);
+  window.removeEventListener("resize", clampMenu);
+  window.removeEventListener("scroll", clampMenu, true);
+  window.visualViewport?.removeEventListener("resize", clampMenu);
+  window.visualViewport?.removeEventListener("scroll", clampMenu);
 });
 
 watch(

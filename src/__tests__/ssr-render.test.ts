@@ -40,4 +40,15 @@ describe("NextLevelEditor renders on the server without a browser environment", 
     const html = await renderToString(app);
     expect(html.length).toBeGreaterThan(0);
   });
+
+  it("renders the writing workspace without scheduling browser-only analysis", async () => {
+    const app = createSSRApp(NextLevelEditor, {
+      modelValue: "<h1>A manuscript</h1><p>The the story begins.</p>",
+      writingMode: true,
+    });
+    const html = await renderToString(app);
+    expect(html).toContain("is-writing-workspace");
+    expect(html).toContain("Writing companion");
+    expect(html).not.toContain('class="writing-companion"');
+  });
 });

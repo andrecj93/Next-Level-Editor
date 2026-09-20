@@ -6,7 +6,7 @@
         <span class="brand-name">Next&nbsp;Level<span class="brand-name-accent">Editor</span></span>
       </button>
 
-      <nav class="nav-links" :class="{ open: menuOpen }" aria-label="Primary">
+      <nav id="site-navigation" class="nav-links" :class="{ open: menuOpen }" aria-label="Primary" @keydown.esc="closeMenu">
         <button
           v-for="item in links"
           :key="item.id"
@@ -38,7 +38,7 @@
           <Icon :name="dark ? 'sun' : 'moon'" :size="19" />
         </button>
         <button class="btn btn-primary btn-sm try-btn" @click="go('playground')">Try it live</button>
-        <button class="icon-btn menu-toggle" aria-label="Toggle menu" @click="menuOpen = !menuOpen">
+        <button ref="menuButton" class="icon-btn menu-toggle" aria-label="Toggle menu" :aria-expanded="menuOpen" aria-controls="site-navigation" @click="menuOpen = !menuOpen" @keydown.esc="closeMenu">
           <Icon :name="menuOpen ? 'close' : 'menu'" :size="21" />
         </button>
       </div>
@@ -61,6 +61,11 @@ const links = [
 
 const scrolled = ref(false);
 const menuOpen = ref(false);
+const menuButton = ref<HTMLButtonElement | null>(null);
+const closeMenu = () => {
+  menuOpen.value = false;
+  menuButton.value?.focus();
+};
 const onScroll = () => {
   scrolled.value = window.scrollY > 8;
 };

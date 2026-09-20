@@ -142,7 +142,14 @@ function htmlToPlainText(html: string): string {
   if (typeof document !== "undefined") {
     const temp = document.createElement("div");
     temp.innerHTML = html;
-    return temp.innerText || temp.textContent || "";
+    // Detached elements do not get layout-aware innerText. Insert explicit
+    // boundaries without splitting words around inline marks such as <em>.
+    temp.querySelectorAll('script, style, .table-of-contents, .page-break').forEach(node => node.remove());
+    temp.querySelectorAll('p,div,li,h1,h2,h3,h4,h5,h6,tr,td,th,blockquote,pre,br').forEach(node => {
+      node.before(document.createTextNode(' '));
+      node.after(document.createTextNode(' '));
+    });
+    return (temp.textContent || '').replace(/\s+/g, ' ').trim();
   }
   // SSR fallback: turn block-closing tags and <br> into spaces so words across
   // block boundaries don't fuse, strip the rest, then decode the few entities a

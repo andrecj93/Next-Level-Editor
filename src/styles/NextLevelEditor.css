@@ -244,15 +244,23 @@
   z-index: 21;
 }
 
+:where(.command-menu) {
+  --toolbar-text: var(--color-text);
+  --toolbar-hover: var(--color-surface-overlay);
+  --toolbar-accent: var(--color-primary);
+}
+
 .command-menu {
-  position: absolute;
+  position: fixed;
   width: 280px;
-  background: var(--editor-bg);
-  border: 1px solid var(--editor-border);
+  max-width: calc(100vw - 16px);
+  background: var(--editor-bg, var(--color-surface));
+  border: 1px solid var(--editor-border, var(--color-border));
+  font-family: var(--font-sans);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  z-index: 50;
+  z-index: 10002;
   /* Height is capped inline by the position clamp; lay out header + list so
      the list scrolls internally instead of overflowing under fixed bars. */
   display: flex;
@@ -802,7 +810,6 @@
   background: var(--toolbar-bg);
   font-size: 12px;
   color: var(--toolbar-text);
-  opacity: 0.7;
 }
 
 .word-count,
@@ -1004,6 +1011,48 @@
 /* A failed auto-save must read unmistakably as a problem, not success. #r20-2 */
 .auto-save-indicator .save-error {
   color: var(--color-danger, #dc2626);
+}
+
+.next-level-editor.theme-dark,
+.nle-chrome.theme-dark {
+  color-scheme: dark;
+}
+
+/* Resolve legacy aliases on the actual themed surface, including portals.
+   Inheriting a :root alias freezes its var() to the default palette. */
+.next-level-editor,
+.nle-chrome {
+  --text-color: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-secondary);
+  --background-color: var(--editor-bg, var(--color-surface));
+  --background-alt: var(--color-surface-overlay);
+  --secondary-bg: var(--color-surface-overlay);
+  --border-color: var(--color-border);
+  --primary-color: var(--color-primary);
+  --primary-hover: var(--color-primary-hover);
+  --hover-bg: var(--color-surface-overlay);
+}
+
+.next-level-editor.theme-light,
+.nle-chrome.theme-light {
+  color-scheme: light;
+}
+
+.auto-save-indicator .save-retry {
+  border: 1px solid currentColor;
+  border-radius: var(--radius-md, 6px);
+  padding: 5px 10px;
+  min-height: 32px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.auto-save-indicator .save-retry:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }
 
 .auto-save-indicator svg {

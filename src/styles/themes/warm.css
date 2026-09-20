@@ -41,6 +41,10 @@
      toolbar cream): 4.91:1 on --toolbar-bg #f4ede0, 5.35:1 on --color-surface
      #fbf7ef — the resting toolbar labels are 13-14px text and need 4.5:1. */
   --color-text-secondary: #6f6556;
+  --color-background: #f4ede0;
+  --color-primary: #a8461f;
+  --color-primary-hover: #8f3918;
+  --color-primary-dark: #8f3918;
 }
 
 /* Dark mode */
@@ -65,4 +69,10 @@
   --color-divider: #3a3225;
   --color-text: #f2ebdd;
   --color-text-secondary: #b9ab97;
+  --color-background: #1a1611;
+  /* Filled dialog actions retain white text; use a deep warm fill instead
+     of the lighter accent used for text and toolbar controls. */
+  --color-primary: #a8461f;
+  --color-primary-hover: #913b1a;
+  --color-primary-dark: #913b1a;
 }

@@ -288,7 +288,7 @@ describe("useAutoSave", () => {
 
       expect(autoSave.hasConflict.value).toBe(false);
       expect(autoSave.conflictInfo.value).toBeNull();
-      expect(mockCallback).toHaveBeenCalledWith("local changes", 2);
+      expect(mockCallback).toHaveBeenCalledWith("local changes", 3);
     });
 
     it("should resolve conflict by accepting server version", async () => {

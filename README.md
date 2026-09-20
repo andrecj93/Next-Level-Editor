@@ -8,15 +8,15 @@
 
 **The rich-text editor for Vue 3 that writes back.**
 
-Slash commands, live comments, template variables, four themes, and export to
-PDF / Word / Markdown / HTML — in one `v-model`.
+A manuscript workspace, optional writing notes, chapter navigation, comments,
+template variables, and PDF / Word / Markdown / HTML export — in one `v-model`.
 
 [**Live demo →**](https://andrecj93.github.io/Next-Level-Editor/) &nbsp;·&nbsp;
 [Playground](https://andrecj93.github.io/Next-Level-Editor/#playground) &nbsp;·&nbsp;
 [Docs](https://andrecj93.github.io/Next-Level-Editor/#docs)
 
 [![CI/CD](https://github.com/andrecj93/Next-Level-Editor/actions/workflows/ci.yml/badge.svg)](https://github.com/andrecj93/Next-Level-Editor/actions/workflows/ci.yml)
-[![Playwright Tests](https://img.shields.io/badge/Playwright-218%20tests-45ba4b?logo=playwright)](https://github.com/andrecj93/Next-Level-Editor/actions/workflows/ci.yml)
+[![Playwright Tests](https://img.shields.io/badge/Playwright-browser%20checks-45ba4b?logo=playwright)](https://github.com/andrecj93/Next-Level-Editor/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/next-level-editor.svg)](https://www.npmjs.com/package/next-level-editor)
 [![WCAG 2.2 AA](https://img.shields.io/badge/WCAG_2.2_AA-0_violations-45ba4b)](#why-this-one)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -43,7 +43,7 @@ const content = ref('<p>Hello World!</p>')
 </script>
 
 <template>
-  <NextLevelEditor v-model="content" />
+  <NextLevelEditor v-model="content" writing-mode />
 </template>
 ```
 
@@ -58,24 +58,26 @@ on every keystroke, paste and import.
 
 ## Why this one
 
-**It writes back.** Type `/` for 14+ commands, `{{` for template variables,
-and get live readability scoring, passive-voice detection and SEO analysis as
-you write — the editor has an opinion about your prose, not just your markup.
+**It writes back.** Pause while writing and find optional notes beside the exact
+passages they refer to. Repeated words, wordy phrases, and long sentences get
+small, explainable suggestions. Apply a change, undo it, or keep your wording.
+These English prose checks run on your device; they do not generate text or call
+an AI service. The chapter outline helps you find your way through longer work.
 
 **It exports what you actually see.** PDF, Word, Markdown and HTML round-trip
 your tables, checklists, page breaks, code blocks and embeds. Videos that no
 static format can render degrade to a labelled link instead of vanishing —
 because silently losing content is worse than admitting the format's limits.
 
-**You only download what you use.** The core is **201 KB gzipped**. Syntax
+**You only download what you use.** Syntax
 highlighting, the colour picker and both exporters are separate chunks your
 bundler fetches the first time someone opens them — a page that never opens a
 code block never pays for Prism.
 
-**It is genuinely accessible.** axe-core scans WCAG 2.2 A/AA across 14
-application states — dialogs open, menus open, mobile, 320px reflow — with
-**zero violations**, enforced on every CI build. Full keyboard operability,
-live-region announcements, skip links, 44×44px targets.
+**Accessibility is checked.** axe-core scans WCAG 2.2 A/AA in covered application
+states, including dialogs, menus, mobile layouts, and 320px reflow. The suite
+also exercises keyboard navigation, live announcements, skip links, and focus
+restoration. Automated checks supplement manual keyboard and visual review.
 
 **The HTML it eats cannot bite you.** The sanitizer is an explicit allowlist,
 adversarially audited in real Chromium against the classic and modern XSS/mXSS
@@ -84,8 +86,8 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,612 unit tests
-across 351 files, 218 end-to-end tests on Chromium and mobile Safari. Both
+**It is tested like something you'd put in production.** 4,658 unit tests
+across 358 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
 ---
@@ -183,7 +185,7 @@ readable — click any section to open it.
 - **Command Palette** - Quick access to all commands with keyboard-driven interface
 - **Slash Commands** - Type `/` to access 14+ quick actions
 - **Find & Replace** - Full-featured search with case-sensitive and whole-word options (Ctrl+F)
-- **Auto-Save** - 2-second debounced auto-save with visual status indicator
+- **Auto-Save** - 2-second debounce, ordered saves, pending/error status and retry. Supply `saveHandler` for persistence; without it, the indicator reports a `v-model` update. The playground saves a local draft in your browser.
 - **Export** - Download as HTML, Markdown, PDF, or Word document with one click
 - **Format HTML** - Pretty-print HTML code with proper indentation
 - **View HTML Code** - Modal to view and edit formatted HTML source
@@ -208,8 +210,8 @@ readable — click any section to open it.
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **4,612 Unit Tests** - Across 351 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches)
-- **218 E2E Tests** - Playwright across Chromium and mobile Safari, both gating the release
+- **4,646 Unit Tests** - Across 357 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches)
+- **239 Passing E2E Checks** - Playwright across Chromium and mobile Safari, both gating the release
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
 - **Keyboard & screen readers** - Full keyboard operability, ARIA live regions, skip links, focus management, and 44×44px touch targets
@@ -266,22 +268,24 @@ certified one. What is implemented:
 
 ### 📦 Bundle Size
 
-Measured from the actual `npm run build` output. The heavy parts are split
+Measured from `npm run build` on 2026-09-20, with sizes divided by 1,024. The ES core includes the entry module and its implementation chunk. The heavy parts are split
 into chunks your bundler only fetches when the feature is first used, so what
 you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 843.7 KB | **201.7 KB** | On import |
-| **CSS** | 243.5 KB | **38.8 KB** | On import |
-| Syntax highlighting (Prism + 22 languages) | 88.1 KB | 25.7 KB | First code block |
-| Colour picker | 66.8 KB | 15.0 KB | First colour popup |
-| Word export | 410.4 KB | 106.2 KB | First `.docx` export |
-| PDF export | 865.8 KB | 214.8 KB | First PDF export |
-| **UMD** | 1,618.0 KB | 480.2 KB | On import (no splitting) |
+| **Core (ES)** | 868.3 KB | **208.9 KB** | On import |
+| **CSS** | 250.4 KB | **40.4 KB** | On import |
+| Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
+| Colour picker | 65.2 KB | 14.6 KB | First colour popup |
+| Word export | 165.1 KB | 39.7 KB | First `.docx` export |
+| PDF export (html2canvas + jsPDF) | 803.1 KB | 196.3 KB | First PDF export |
+| **UMD** | 1,615.7 KB | 479.6 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **240.5 KB gzipped** for JS + CSS, and nothing more.
+exports pays **249.3 KB gzipped** for the library's JS + CSS. Vue is an external
+peer dependency and is not included in these figures. The build also emits
+optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 
 The UMD build cannot code-split by definition — prefer the ES build (Vite,
 webpack, Rollup, and every modern bundler pick it automatically) unless you
@@ -353,6 +357,16 @@ Additional projects — Desktop Firefox, Desktop WebKit and Mobile Chrome (Pixel
 <summary><b>🚀 Quick start recipes — sizing, global registration, advanced features, several editors</b></summary>
 
 ### Basic Usage
+
+For a long-form writing workspace, add `writing-mode`:
+
+```vue
+<NextLevelEditor v-model="manuscript" writing-mode theme-preset="warm" height="80vh" />
+```
+
+This gives the manuscript a readable column, a small formatting toolbar, a chapter outline, and writing notes beside the page. Notes identify repeated words, a few wordy phrases, and long sentences; each quotes the passage and lets the writer jump to it, accept an available edit, or keep their wording. Edits are undoable. These are private, on-device English checks and optional writing prompts, not an AI generation service. Press **Alt+F10** to reach the toolbar and **Escape** to return to the manuscript.
+
+The playground opens in this workspace and saves its draft to the current browser. **Configure → Writing workspace** switches to the library's other toolbar layouts.
 
 ```vue
 <template>
@@ -587,11 +601,12 @@ to its own instance.
 | `width`            | `string`  | `undefined`         | Custom width for the editor (e.g., '800px', '100%', '50rem') |
 | `height`           | `string`  | `undefined`         | Custom height for the editor (e.g., '500px', '80vh', '30em') |
 | `themePreset`      | `string`  | `'default'`         | Whole-editor theme: `default` \| `classic` \| `minimal` \| `midnight` \| `warm` |
+| `writingMode`      | `boolean` | `false`             | Manuscript typography, a focused toolbar, chapter outline and private writing notes. Uses a stable top toolbar and a small mobile formatting dock; takes precedence over toolbar layout, position, mode and adaptive chrome |
 | `toolbarLayout`    | `string`  | `'comfortable'`     | Toolbar density: `comfortable` (labelled) \| `compact` (mini bar + expand toggle). Below 640px the toolbar auto-compacts to the mini bar regardless |
 | `adaptiveChrome`   | `string`  | `'off'`             | What the toolbar does while you write: `off` (default — a rock-solid static bar that never moves or reshuffles) \| `letterbox` (buttons dissolve into an ambient band — block format, position filament, save pulse, word count) \| `recede` (toolbar fades to a whisper). For `letterbox`/`recede`, returns instantly on pointer/Escape/toolbar focus; desktop-only; honors reduced motion |
 | `toolbarPosition`  | `string`  | `'top'`             | Where the toolbar lives: `top` \| `left` (slim margin rail) \| `bottom` (dock, menus open upward) \| `zen` (no persistent toolbar — the ambient band is the only chrome; intent peeks the full bar). All fall back to `top` below 640px |
 | `toolbarMode`      | `string`  | `'bar'`             | The toolbar's form: `bar` (docked masthead) \| `pill` (Playhead — one floating glass capsule that contracts while you write, expands on intent and travels to your selection to become the formatting bubble). Falls back to `bar` below 640px |
-| `saveHandler`      | `function`| `undefined`         | `(html) => boolean \| Promise<boolean>` — makes the auto-save "Saved" signal assert real persistence; resolve `false`/throw to surface a failed save. Without it the signal means "content emitted to v-model" |
+| `saveHandler`      | `function`| `undefined`         | `(html) => boolean \| Promise<boolean>` — ordered, debounced persistence. Resolve `false`/throw to show an error and Retry. Pending changes guard page exit. Without a handler the indicator says "Updated", meaning content emitted to `v-model`. |
 | `readonly`         | `boolean` | `false`             | Viewer mode — content shown & selectable, not editable; toolbars hidden |
 | `showToolbar`      | `boolean` | `true`              | Show the main toolbar; set `false` for a headless editor     |
 | `defaultViewMode`  | `string`  | `'editor'`          | Initial view: `editor` \| `code` \| `split` \| `preview`     |
@@ -768,7 +783,7 @@ The editor uses CSS custom properties (variables) for easy theming and customiza
 The project maintains high quality standards with comprehensive testing:
 
 ```bash
-# Run unit tests (4,612 tests)
+# Run unit tests (4,646 tests)
 npm test
 
 # Run unit tests with interactive UI
@@ -777,7 +792,7 @@ npm run test:ui
 # Generate coverage report (thresholds enforced in vitest.config.ts)
 npm run test:coverage
 
-# Run end-to-end tests (218 across chromium + mobile-safari)
+# Run end-to-end tests (239 passing across chromium + mobile-safari)
 npm run test:e2e
 
 # Run E2E tests with UI (interactive)
@@ -800,7 +815,12 @@ npm run test:e2e:debug
 
 ### Test Suites Overview
 
-#### Unit Tests (4,612 tests across 351 files, with Vitest)
+Verified on 2026-09-20: 4,646 unit tests passed; 90.82% line coverage.
+The full browser run passed 239 checks, with 125 explicitly skipped project cases
+(mainly duplicate desktop flows under mobile WebKit), zero failures, and zero retries.
+See the [quality review](docs/reports/QUALITY_REVIEW_2026-09-20.md) for evidence and limits.
+
+#### Unit Tests (4,646 tests across 357 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
@@ -816,7 +836,7 @@ npm run test:e2e:debug
 - **Composables** (20+ tests) - Auto-save, command palette, history timeline, loading states, smart toolbar, virtual scroll
 - **File Manager** - Upload, storage, and file management functionality
 
-#### End-to-End Tests (218 tests across 33 specs, with Playwright)
+#### End-to-End Tests (239 passing checks across 35 specs, with Playwright)
 
 - **Basic Functionality** - Editor loading, typing, word count
 - **Text Formatting** - Bold, italic, underline, toggle formatting
@@ -836,29 +856,22 @@ npm run test:e2e:debug
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.mjs` (core 843.7 KB, 201.7 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs` (core 868.3 KB, 208.9 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Syntax highlighting, the colour picker and both exporters are separate
     chunks, fetched the first time you use them
   - Recommended for Vite, Webpack 5+, Rollup
-- **UMD** - `dist/next-level-editor.umd.js` (1,618.0 KB, 480.2 KB gzipped)
+- **UMD** - `dist/next-level-editor.umd.js` (1,615.7 KB, 479.6 KB gzipped)
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
   - Everything in one file — UMD cannot code-split, so this is the whole
     library including features you may never use
-- **CSS** - `dist/next-level-editor.css` (243.5 KB, 38.8 KB gzipped)
+- **CSS** - `dist/next-level-editor.css` (250.4 KB, 40.4 KB gzipped)
   - Minified styles with CSS variables
   - Includes light and dark themes, all four theme presets
   - Responsive design utilities
 
 See the [Bundle Size](#-bundle-size) table above for what loads when.
-
-**Bundle Composition:**
-
-- Core editor with toolbar (~20KB gzipped)
-- Prism.js syntax highlighting for 22 languages (~40KB gzipped)
-- Rich features: tables, emojis, modals, file manager, templates (~30KB gzipped)
-- Vue 3 runtime and utilities (included in chunk sizes)
 
 All bundles are optimized with:
 
@@ -962,7 +975,7 @@ next-level-editor/
 │   │   ├── pageManagement.ts        # TOC and page breaks
 │   │   ├── spellChecker.ts          # Spell checking
 │   │   ├── fileManager.ts           # File operations
-│   │   └── __tests__/               # Unit tests (4,612 tests)
+│   │   └── __tests__/               # Unit tests (4,646 tests)
 │   ├── styles/              # CSS files
 │   │   ├── variables.css            # CSS custom properties
 │   │   └── animations.css           # Transitions
@@ -1010,20 +1023,36 @@ next-level-editor/
 <details>
 <summary><b>🌐 Browser support details</b></summary>
 
-Next Level Editor supports all modern browsers with ES6+ capabilities:
+Next Level Editor targets current evergreen browsers. Compatibility is checked
+against the Chromium, Firefox, and WebKit versions pinned by Playwright; the
+device matrix is in `playwright.devices.config.ts`.
 
 ### Desktop Browsers
 
-- ✅ **Chrome** (latest & last 2 major versions)
-- ✅ **Firefox** (latest & last 2 major versions)
-- ✅ **Safari** (latest & last 2 major versions)
-- ✅ **Edge** (Chromium-based, latest & last 2 major versions)
+- **Chrome / Edge:** Chromium engine coverage
+- **Firefox:** dedicated engine checks
+- **Safari:** WebKit engine coverage
 
 ### Mobile Browsers
 
-- ✅ **iOS Safari** 12.0+
-- ✅ **Chrome Mobile** (latest)
-- ✅ **Samsung Internet** (latest)
+The matrix exercises small and large phones, Android and iPad tablets, touch
+laptops, portrait and landscape layouts, and reduced-height windows. It also
+checks narrow layouts equivalent to 200% and 400% browser zoom. Device descriptors
+emulate viewport and input capabilities; native software keyboards, browser chrome,
+assistive technology, and vendor browsers still need device testing. Older
+browser versions do not have a verified minimum-version guarantee.
+
+Run the repeatable device checks with:
+
+```bash
+npx playwright install --with-deps chromium firefox webkit
+npm run test:devices
+```
+
+Every profile exercises typing, heading formatting, suggestions and undo,
+recovery, links, search, downloads, insert dialogs, source/preview, chapter
+navigation, mixed scripts, light/dark accessibility, keyboard access, and resizing
+with menus open. The device job gates demo deployment and package publication.
 
 ### Requirements
 
@@ -1076,6 +1105,7 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
    ```bash
    npm test              # Run unit tests
    npm run test:e2e      # Run E2E tests
+   npm run test:devices  # Run the responsive/browser matrix
    npm run lint          # Check code style
    npx vue-tsc --noEmit  # Type check
    npm run build         # Build library
@@ -1103,6 +1133,7 @@ We welcome contributions! Here's how you can help improve Next Level Editor:
 
 - ✅ All tests pass (`npm test -- --run`)
 - ✅ End-to-end tests pass (`npm run test:e2e` — set `E2E_PORT` if 5173 is busy)
+- ✅ Device matrix passes (`npm run test:devices`)
 - ✅ Code is linted (`npm run lint`)
 - ✅ TypeScript compiles without errors (`npx vue-tsc --noEmit`)
 - ✅ No known vulnerabilities (`npm audit --omit=dev`)

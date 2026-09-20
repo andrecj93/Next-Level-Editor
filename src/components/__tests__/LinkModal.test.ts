@@ -49,7 +49,7 @@ describe("LinkModal", () => {
   it("does not emit insert for a whitespace-only URL", async () => {
     const w = openModal();
     await w.get("#link-url").setValue("   ");
-    await w.get("#link-url").trigger("keyup", { key: "Enter" });
+    await w.get("#link-url").trigger("keydown", { key: "Enter" });
     expect(w.emitted("insert")).toBeUndefined();
     w.unmount();
   });
@@ -57,7 +57,7 @@ describe("LinkModal", () => {
   it("submits on Enter in the URL field", async () => {
     const w = openModal();
     await w.get("#link-url").setValue("example.com");
-    await w.get("#link-url").trigger("keyup", { key: "Enter" });
+    await w.get("#link-url").trigger("keydown", { key: "Enter" });
     expect(w.emitted("insert")![0][0]).toBe("https://example.com");
     w.unmount();
   });
@@ -92,6 +92,44 @@ describe("LinkModal", () => {
     await w.setProps({ isOpen: false });
     await w.setProps({ isOpen: true });
     expect((w.get("#link-url").element as HTMLInputElement).value).toBe("");
+    w.unmount();
+  });
+
+  it("shows the selected passage and keeps its formatting when linking", async () => {
+    const context = { url: "", text: "An important sentence", selectionText: "An important sentence", editing: false };
+    const w = mount(LinkModal, { props: { isOpen: true, context }, attachTo: document.body });
+    expect((w.get('#link-text').element as HTMLInputElement).value).toBe(context.text);
+    expect((w.get('#link-text').element as HTMLInputElement).readOnly).toBe(true);
+    await w.get('#link-url').setValue('https://example.com');
+    await w.get('.insert-button').trigger('click');
+    expect(w.emitted('insert')![0]).toEqual(['https://example.com', '']);
+    w.unmount();
+  });
+
+  it("prefills an existing link and only sends an explicitly changed caption", async () => {
+    const context = { url: 'https://old.example', text: 'A formatted caption', selectionText: '', editing: true };
+    const w = mount(LinkModal, { props: { isOpen: true, context }, attachTo: document.body });
+    expect(w.get('h3').text()).toBe('Edit link');
+    expect((w.get('#link-url').element as HTMLInputElement).value).toBe(context.url);
+    await w.get('#link-url').setValue('https://new.example');
+    await w.get('.insert-button').trigger('click');
+    expect(w.emitted('insert')![0]).toEqual(['https://new.example', '']);
+    await w.setProps({ isOpen: false });
+    await w.setProps({ isOpen: true });
+    await w.get('#link-text').setValue('New caption');
+    await w.get('.insert-button').trigger('click');
+    expect(w.emitted('insert')![1]).toEqual([context.url, 'New caption']);
+    w.unmount();
+  });
+
+  it("does not submit an IME confirmation Enter or its subsequent keyup", async () => {
+    const w = openModal();
+    await w.get('#link-url').setValue('example.com');
+    await w.get('#link-url').trigger('keydown', { key: 'Enter', isComposing: true });
+    await w.get('#link-url').trigger('keyup', { key: 'Enter' });
+    await w.get('#link-url').trigger('keydown', { key: 'Enter', keyCode: 229 });
+    expect(w.emitted('insert')).toBeUndefined();
+    expect(w.emitted('close')).toBeUndefined();
     w.unmount();
   });
 });

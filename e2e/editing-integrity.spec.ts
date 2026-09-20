@@ -25,7 +25,7 @@ const boldBtn = (page: Page) =>
   page.locator(`${MAIN_TOOLBAR} button[aria-label="Bold"]`)
 
 async function openEmptyEditor(page: Page) {
-  await page.goto('/?empty=true')
+  await page.goto('/?writingMode=false&empty=true')
   await page.waitForSelector('.editor-content')
 }
 

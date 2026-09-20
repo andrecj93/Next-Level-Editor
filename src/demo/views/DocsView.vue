@@ -71,6 +71,7 @@
         <p>Heavier subsystems are opt-in, so you only pay for what you use.</p>
         <CodeBlock :code="flagsSnippet" lang="vue" />
         <ul class="feat-list">
+          <li><strong>writingMode</strong> — manuscript typography, a focused toolbar, chapter navigation and private English writing notes. Review specific passages, apply a suggestion, undo it, or keep your wording. Alt+F10 moves to the toolbar; Escape returns to the manuscript.</li>
           <li><strong>showWritingStats</strong> — live word count, reading time, readability &amp; SEO panel.</li>
           <li><strong>enableComments</strong> — inline comment threads, a sidebar, and <code>@mention</code> support.</li>
           <li>
@@ -160,11 +161,12 @@ const props = [
   { name: "width", type: "string", def: "undefined", desc: "Editor width (any CSS length). Unset fills the parent (100%)." },
   { name: "height", type: "string", def: "undefined", desc: "Editor height (any CSS length). Unset fills the parent (100%) — give the wrapper a height." },
   { name: "themePreset", type: "string", def: "'default'", desc: "Whole-editor theme: default | classic | minimal | midnight | warm." },
+  { name: "writingMode", type: "boolean", def: "false", desc: "Manuscript typography, stable top toolbar, chapter outline, and private English writing notes. Takes precedence over toolbar layout, position, mode and adaptive chrome. Enabled by default in the playground." },
   { name: "toolbarLayout", type: "string", def: "'comfortable'", desc: "Toolbar density: comfortable (labelled) | compact (mini bar + expand toggle). Below 640px the toolbar auto-compacts to the mini bar regardless." },
   { name: "adaptiveChrome", type: "string", def: "'off'", desc: "While you write: off (default — a rock-solid static toolbar that never moves) | letterbox (toolbar dissolves into an ambient band with block format, position filament, save pulse and word count) | recede (fades to a whisper). For letterbox/recede, pointer, Escape or toolbar focus bring the bar back instantly. Desktop-only; honors reduced motion." },
   { name: "toolbarPosition", type: "string", def: "'top'", desc: "Where the toolbar lives: top | left (slim margin rail) | bottom (dock, menus open upward) | zen (no persistent toolbar — the ambient band is the only chrome; intent peeks the full bar). All fall back to top below 640px." },
   { name: "toolbarMode", type: "string", def: "'bar'", desc: "The toolbar's form: bar (docked masthead) | pill (Playhead — one floating glass capsule that contracts while you write, expands on intent and travels to your selection to become the formatting bubble). Falls back to bar below 640px." },
-  { name: "saveHandler", type: "function", def: "undefined", desc: "(html) => boolean | Promise<boolean> — makes the auto-save Saved signal assert real persistence; resolve false or throw to surface a failed save. Without it the signal means content was emitted to v-model." },
+  { name: "saveHandler", type: "function", def: "undefined", desc: "(html) => boolean | Promise<boolean> — ordered, debounced saves. Return false or throw to show an error and Retry. Pending changes guard page exit. Without a handler the indicator says Updated for a v-model handoff." },
   { name: "readonly", type: "boolean", def: "false", desc: "Viewer mode — content shown & selectable, not editable; toolbars hidden." },
   { name: "showToolbar", type: "boolean", def: "true", desc: "Show the main toolbar. Set false for a headless editor." },
   { name: "defaultViewMode", type: "string", def: "'editor'", desc: "Initial view: editor | code | split | preview." },

@@ -28,12 +28,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Run tests
-        run: npm test -- --run
-        
-      - name: Generate coverage report
+      - name: Run tests and enforce coverage thresholds
         run: npm run test:coverage -- --run
-        continue-on-error: true
+
+      - name: Preserve coverage evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
         
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
@@ -121,6 +125,34 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  devices:
+    name: Responsive editor and browser matrix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Install all three browser engines
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Exercise writing on every device profile
+        run: npm run test:devices -- --workers=2 --retries=0
+        env:
+          CI: true
+      - name: Preserve device screenshots and failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-devices
+          path: |
+            playwright-report/devices/
+            test-results/devices/
+          retention-days: 7
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -157,7 +189,7 @@ jobs:
     # e2e is a REQUIRED gate here, not just a parallel signal. It used to need
     # only [build] (which needs [test, lint]), so a fully red end-to-end suite
     # could not stop the public site from shipping.
-    needs: [build, e2e]
+    needs: [build, e2e, devices]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: read
@@ -202,7 +234,7 @@ jobs:
     runs-on: ubuntu-latest
     # Same gate as the demo: nothing reaches the public registry without the
     # end-to-end suite passing.
-    needs: [build, e2e]
+    needs: [build, e2e, devices]
     if: github.event_name == 'release'
     permissions:
       contents: read

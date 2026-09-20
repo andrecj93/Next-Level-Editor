@@ -26,7 +26,7 @@ test.describe("Print: variable pills", () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto("/?empty=true", { waitUntil: "domcontentloaded" });
+    await page.goto("/?writingMode=false&empty=true", { waitUntil: "domcontentloaded" });
     await page.waitForSelector(".editor-content", { timeout: 30000 });
   });
 

@@ -33,15 +33,17 @@
                 type="text"
                 class="text-input"
                 placeholder="Search text..."
-                @keydown.enter="findNext"
+                :aria-describedby="searchInfoId"
+                @keydown.enter="handleSearchEnter"
               />
-              <div class="search-info" role="status" aria-live="polite" aria-atomic="true">
+              <div :id="searchInfoId" class="search-info" role="status" aria-live="polite" aria-atomic="true">
                 <span v-if="matches > 0"
                   >{{ currentMatch }} of {{ matches }}</span
                 >
                 <span v-else-if="findText && matches === 0" class="no-matches"
                   >No matches</span
                 >
+                <span v-else>Enter a word or phrase to search your document.</span>
               </div>
             </div>
 
@@ -74,14 +76,14 @@
             <div class="btn-group">
               <button
                 class="btn btn-secondary"
-                :disabled="!findText"
+                :disabled="!findText || matches === 0"
                 @click="findPrevious"
               >
                 ← Previous
               </button>
               <button
                 class="btn btn-secondary"
-                :disabled="!findText"
+                :disabled="!findText || matches === 0"
                 @click="findNext"
               >
                 Next →
@@ -114,6 +116,7 @@
 import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { useModalDialog } from "../composables/useModalDialog";
 import { countMatchesInHtml } from "../composables/useFindReplace";
+import { useStableId } from "../utils/useStableId";
 
 interface Props {
   show: boolean;
@@ -145,6 +148,7 @@ const props = withDefaults(defineProps<Props>(), {
   theme: "theme-light",
 });
 const emit = defineEmits<Emits>();
+const searchInfoId = `${useStableId()}-search-info`;
 
 const findInput = ref<HTMLInputElement | null>(null);
 const modalContent = ref<HTMLElement | null>(null);
@@ -171,6 +175,14 @@ const findOptions = () => ({
   caseSensitive: caseSensitive.value,
   wholeWord: wholeWord.value,
 });
+
+const handleSearchEnter = (event: KeyboardEvent) => {
+  if (event.isComposing || event.keyCode === 229) return;
+  event.preventDefault();
+  if (matches.value === 0) return;
+  if (event.shiftKey) findPrevious();
+  else findNext();
+};
 
 const findNext = () => {
   if (!findText.value) return;
@@ -428,9 +440,8 @@ onBeforeUnmount(() => {
 }
 
 .search-info {
-  position: absolute;
-  right: 12px;
-  top: 38px;
+  min-height: 18px;
+  margin-top: 8px;
   font-size: 12px;
   color: var(--color-text-secondary);
   pointer-events: none;
@@ -449,6 +460,7 @@ onBeforeUnmount(() => {
 
 .options-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 24px;
   margin-bottom: 16px;
 }

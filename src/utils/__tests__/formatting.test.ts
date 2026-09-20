@@ -860,7 +860,7 @@ describe('Formatting Tests', () => {
       expect(headings).toEqual(['one', 'two', 'three'])
     })
 
-    it('wraps content in the tag when there is no block ancestor', () => {
+    it('formats the whole paragraph when a selected word has no block ancestor', () => {
       root.innerHTML = 'plain text'
       selectRange(root.firstChild!, 0, root.firstChild!, 5)
 
@@ -868,7 +868,7 @@ describe('Formatting Tests', () => {
 
       const h1 = root.querySelector('h1')!
       expect(h1).toBeTruthy()
-      expect(h1.textContent).toBe('plain')
+      expect(root.innerHTML).toBe('<h1>plain text</h1>')
     })
 
     it('converts a block back to the fallback tag when it already matches', () => {

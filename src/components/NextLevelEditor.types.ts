@@ -74,6 +74,9 @@ export interface NextLevelEditorProps {
    * widths; it does not pin the wide layout on small screens.
    */
   toolbarLayout?: "comfortable" | "compact";
+
+  /** Manuscript typography, a focused toolbar, chapter outline and private English writing notes. */
+  writingMode?: boolean;
   /**
    * Cinematic adaptive chrome — what the main toolbar does while you WRITE.
    *
@@ -127,8 +130,9 @@ export interface NextLevelEditorProps {
    * Make the auto-save "Saved" signal assert REAL persistence. When provided,
    * each auto-save tick awaits this handler with the current HTML; resolve
    * `false` (or throw) to surface a failed save instead of a false "Saved"
-   * pulse. Without it, the signal means "the latest content has been emitted
-   * to your `v-model`" — the host owns persistence from there.
+   * pulse. Saves are serialized and intermediate queued edits are coalesced.
+   * Without it, the signal reads "Updated" for a `v-model` handoff; the host
+   * owns persistence. A failed save exposes a Retry action using the latest HTML.
    */
   saveHandler?: (content: string) => boolean | Promise<boolean>;
   /**

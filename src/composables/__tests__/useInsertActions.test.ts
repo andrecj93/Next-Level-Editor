@@ -751,7 +751,7 @@ describe("useInsertActions", () => {
       expect(captureSnapshot).toHaveBeenCalledTimes(2);
     });
 
-    it("should handle empty URL in insertLink", () => {
+    it("opening the link dialog does not change content or capture history", () => {
       const { insertLink } = useInsertActions({
         editorContent,
         performWithSelection,
@@ -765,10 +765,12 @@ describe("useInsertActions", () => {
         closeEmojiPicker,
       });
 
-      globalThis.prompt = vi.fn(() => "");
+      const before = editorElement.innerHTML;
       insertLink();
 
-      expect(performWithSelection).not.toHaveBeenCalled();
+      expect(openLinkModal).toHaveBeenCalled();
+      expect(editorElement.innerHTML).toBe(before);
+      expect(captureSnapshot).not.toHaveBeenCalled();
     });
 
     it("should handle all insert operations without errors", () => {

@@ -130,7 +130,7 @@ const resolvedTab = (page: Page) =>
 
 test.describe('Comments — add / highlight / sidebar', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
   })
 

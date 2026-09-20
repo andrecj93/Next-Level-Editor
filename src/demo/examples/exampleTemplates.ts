@@ -24,126 +24,31 @@ export const exampleTemplates: ExampleTemplate[] = [
     name: "Feature Showcase",
     icon: "🎨",
     description: "Comprehensive demo of all editor capabilities",
-    content: `<h1>Welcome to Next Level Editor! 🚀</h1>
-<p>A <strong>professional-grade</strong> WYSIWYG editor for <em>Vue.js</em> with modern features inspired by industry leaders like <strong>CKEditor</strong>, <strong>Notion</strong>, and <strong>Medium</strong>.</p>
-
-<h2>✨ Rich Text Formatting</h2>
-<p>Experience powerful text editing with <strong>bold</strong>, <em>italic</em>, <u>underline</u>, and <s>strikethrough</s> formatting. Combine them for <strong><em><u>maximum impact</u></em></strong>!</p>
-
-<h3>📝 Multiple Heading Levels</h3>
-<p>Organize your content with three heading levels (H1, H2, H3) to create a clear document structure and improve readability.</p>
-
-<h2>📋 Lists and Organization</h2>
-<p>Create structured content with both ordered and unordered lists:</p>
+    content: `<h1>A little space for your next big idea.</h1>
+<p>Good writing starts with a thought, not a toolbar. Use this document to explore what is possible, then make it your own.</p>
+<h2>Start with the essentials</h2>
+<p>Select a few words to try <strong>bold</strong>, <em>italics</em>, or a <a href="https://vuejs.org">useful link</a>. Turn a line into a heading, add a little color, or leave a comment on a sentence worth discussing.</p>
+<blockquote><p>The best tools give your ideas room to breathe.</p></blockquote>
+<h2>Give your ideas a little structure</h2>
 <ul>
-  <li><strong>Unordered Lists</strong> - Perfect for features, benefits, or any non-sequential items</li>
-  <li><strong>Nested Support</strong> - Create hierarchical structures with ease</li>
-  <li><strong>Visual Clarity</strong> - Clean bullets for better readability</li>
+<li>Type <code>/</code> on a new line for headings, lists, tables, and more.</li>
+<li>Open <strong>Insert</strong> to add an image, a code block, or a video.</li>
+<li>Use <strong>Tools</strong> for templates, find and replace, and document history.</li>
 </ul>
-
-<h3>🔢 Numbered Lists</h3>
-<ol>
-  <li><strong>Step-by-step guides</strong> - Ideal for tutorials and instructions</li>
-  <li><strong>Sequential content</strong> - Maintain order with automatic numbering</li>
-  <li><strong>Professional presentation</strong> - Perfect for documentation</li>
-</ol>
-
-<h2>🎯 Text Alignment Options</h2>
-<p style="text-align: left;">Left-aligned text is the default and most readable option for paragraphs and body content.</p>
-<p style="text-align: center;"><strong>Center alignment</strong> works great for titles, headings, and emphasized content.</p>
-<p style="text-align: right;"><em>Right alignment</em> is useful for signatures, dates, or stylistic choices.</p>
-<p style="text-align: justify;">Justified text creates clean edges on both sides, commonly used in newspapers and formal documents for a polished, professional appearance with even margins.</p>
-
-<h2>🎨 Colors and Styling</h2>
-<p>Make your content stand out with <span style="color: #e74c3c;"><strong>colored text</strong></span> and <span style="background-color: #f39c12; padding: 2px 6px; border-radius: 3px;">highlighted backgrounds</span>.</p>
-<p>Use colors to <span style="color: #3498db;"><strong>emphasize key points</strong></span>, <span style="color: #2ecc71;"><strong>categorize information</strong></span>, or <span style="color: #9b59b6;"><strong>create visual hierarchy</strong></span> in your documents.</p>
-
-<h2>💻 Code and Technical Content</h2>
-<p>Insert inline code like <code>const editor = new NextLevelEditor()</code> or create syntax-highlighted code blocks for 22+ programming languages:</p>
-
-<pre><code class="language-javascript">// JavaScript Example
-function greetUser(name) {
-  const greeting = \`Hello, \${name}! Welcome to Next Level Editor.\`;
-  console.log(greeting);
-  return greeting;
-}
-
-greetUser('Developer');
-</code></pre>
-
-<pre><code class="language-python"># Python Example
-def calculate_fibonacci(n):
-    """Generate Fibonacci sequence up to n terms"""
-    fib = [0, 1]
-    for i in range(2, n):
-        fib.append(fib[i-1] + fib[i-2])
-    return fib
-
-print(calculate_fibonacci(10))
-</code></pre>
-
-<h2>📊 Tables for Data</h2>
-<p>Create professional tables with custom rows and columns:</p>
-<table>
-  <thead>
-    <tr>
-      <th>Feature</th>
-      <th>Description</th>
-      <th>Status</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Toolbar</strong></td>
-      <td>CKEditor-inspired horizontal design</td>
-      <td>✅ Available</td>
-    </tr>
-    <tr>
-      <td><strong>Code Blocks</strong></td>
-      <td>Syntax highlighting for 22 languages</td>
-      <td>✅ Available</td>
-    </tr>
-    <tr>
-      <td><strong>Dark Mode</strong></td>
-      <td>Beautiful theme with persistence</td>
-      <td>✅ Available</td>
-    </tr>
-    <tr>
-      <td><strong>Auto-Save</strong></td>
-      <td>Never lose your work</td>
-      <td>✅ Available</td>
-    </tr>
-  </tbody>
-</table>
-
-<h2>🔗 Links and Navigation</h2>
-<p>Add hyperlinks to <a href="https://vuejs.org" target="_blank">Vue.js</a>, <a href="https://github.com/andrecj93/next-level-editor" target="_blank">GitHub</a>, or any resource. Links are essential for connecting ideas and providing references.</p>
-
-<h2>⚡ Quick Actions</h2>
-<p><strong>Slash Commands</strong>: Type <code>/</code> anywhere to open the quick actions menu with 14+ commands for instant formatting.</p>
-<p><strong>Keyboard Shortcuts</strong>: Use <kbd>Ctrl+B</kbd> for bold, <kbd>Ctrl+I</kbd> for italic, <kbd>Ctrl+F</kbd> for find & replace, and many more!</p>
-
-<h2>🌓 Dark Mode Support</h2>
-<p>Toggle between light and dark themes with smooth transitions. Your preference is saved automatically in localStorage for a consistent experience across sessions.</p>
-
-<blockquote>
-<p><strong>💡 Pro Tip:</strong> Select any text to see the floating toolbar appear instantly. This Medium-style context menu provides quick access to common formatting options without cluttering your workspace.</p>
-</blockquote>
-
-<h2>🎯 Try These Interactive Features</h2>
-<ul>
-  <li>Select text to see the <strong>floating toolbar</strong></li>
-  <li>Type <code>/</code> to open <strong>slash commands</strong></li>
-  <li>Press <kbd>Ctrl+F</kbd> to <strong>search and replace</strong></li>
-  <li>Click the 🌙 icon to toggle <strong>dark mode</strong></li>
-  <li>Use the export buttons to save as <strong>HTML or Markdown</strong></li>
-  <li>Enter fullscreen mode for <strong>distraction-free writing</strong></li>
-</ul>
-
+<table><thead><tr><th>When you want to…</th><th>Try this</th></tr></thead><tbody>
+<tr><td>Think without distractions</td><td>Enter focus mode from the toolbar</td></tr>
+<tr><td>Review a draft together</td><td>Select text and add a comment</td></tr>
+<tr><td>Reuse a document</td><td>Insert template variables from your data</td></tr>
+<tr><td>Take your work with you</td><td>Export as HTML, Markdown, PDF, or Word</td></tr>
+</tbody></table>
+<h2>Made for the details</h2>
+<p>Switch between the visual editor, HTML source, split view, and preview. Your local draft saves in this browser; export a copy when you are ready to keep or share it.</p>
+<pre><code class="language-javascript">const idea = 'Something worth writing about';
+const nextStep = 'Make it yours';</code></pre>
+<h3>From first draft to final copy</h3>
+<ol><li>Put the idea on the page.</li><li>Review the details and resolve comments.</li><li>Export a copy in the format you need.</li></ol>
 <hr>
-
-<p style="text-align: center;"><em>Built with ❤️ using Vue.js 3, TypeScript, and modern web standards</em></p>
-<p style="text-align: center;"><strong>81% test coverage • 129 unit tests • 23 E2E tests • Zero security vulnerabilities</strong></p>`,
+<p><em>Your next sentence starts here.</em></p>`,
   },
   {
     id: "blog-post",

@@ -12,7 +12,7 @@ test.beforeEach(() => {
 
 test.describe("Focus mode (in-page, distraction-free)", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/?empty=true");
+    await page.goto("/?writingMode=false&empty=true");
     await page.waitForSelector(".editor-content");
   });
 

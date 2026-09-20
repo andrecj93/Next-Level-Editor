@@ -99,6 +99,22 @@ describe("useModalDialog", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it.each(['Escape', 'Tab'])("leaves %s to an active IME candidate picker", async (key) => {
+    const w = await openHost();
+    (w.get('.last').element as HTMLElement).focus();
+    const event = pressKey({ key, isComposing: true });
+    expect(w.emitted('close')).toBeUndefined();
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(w.get('.last').element);
+  });
+
+  it('honours the legacy composition key code when isComposing is absent', async () => {
+    const w = await openHost();
+    const event = pressKey({ key: 'Escape', keyCode: 229 });
+    expect(w.emitted('close')).toBeUndefined();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it("lets onEscape intercept Escape without closing", async () => {
     const onEscape = vi.fn(() => true);
     const w = await openHost({ onEscape });

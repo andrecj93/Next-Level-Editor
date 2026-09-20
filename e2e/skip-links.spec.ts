@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test'
 // happy-dom cannot verify real focus behaviour, so this lives at the e2e layer.
 test.describe('Accessibility — skip links', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
   })
 

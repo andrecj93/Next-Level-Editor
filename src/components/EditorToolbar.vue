@@ -1,5 +1,35 @@
 <template>
+  <nav v-if="writingMode" ref="rootEl" class="editor-toolbar-modern writing-toolbar" role="toolbar" aria-label="Text formatting toolbar" @keydown="onRovingKeydown" @focusin="onRovingFocusin">
+    <div class="writing-toolbar-row">
+      <div class="writing-history" role="group" aria-label="History">
+        <button type="button" class="toolbar-btn-modern" aria-label="Undo" title="Undo (Ctrl+Z)" :disabled="historyIndex <= 0" @mousedown.prevent="$emit('remember-selection')" @click="$emit('undo')">↶</button>
+        <button type="button" class="toolbar-btn-modern" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" :disabled="historyIndex >= historyLength - 1" @mousedown.prevent="$emit('remember-selection')" @click="$emit('redo')">↷</button>
+      </div>
+      <span class="writing-toolbar-divider" />
+      <ToolbarSection type="dropdown" label="Format" tooltip="Paragraph style" :items="formatDropdownItems" :visible="isToolbarSectionVisible('format')" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection class="writing-inline" type="buttons" :items="inlineFormatActions.filter(item => ['bold', 'italic', 'underline'].includes(item.id))" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
+      <span class="writing-toolbar-divider" />
+      <ToolbarSection type="dropdown" label="Insert" preserve-label tooltip="Add a link, image, list, or other content" :items="writingInsertItems" :visible="isToolbarSectionVisible('insert')" @remember-selection="$emit('remember-selection')" />
+      <button type="button" class="writing-more-format" aria-label="More formatting" :aria-expanded="writingFormattingOpen" @mousedown.prevent="$emit('remember-selection')" @click="writingFormattingOpen = !writingFormattingOpen"><span aria-hidden="true">Aa</span><span class="writing-format-label"> Style</span></button>
+      <div class="writing-toolbar-spacer" />
+      <ToolbarSection type="dropdown" label="Tools" preserve-label tooltip="Find, history, and document tools" :items="writingToolItems" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="dropdown" label="View" preserve-label tooltip="Editor, source, preview, and focus" :items="writingViewItems" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection class="writing-export" type="dropdown" label="Export" preserve-label tooltip="Download your document" :items="exportDropdownItems" @remember-selection="$emit('remember-selection')" />
+      <button type="button" class="toolbar-btn-modern writing-theme" aria-label="Toggle dark/light theme" :aria-pressed="theme === 'dark'" title="Toggle theme" @click="$emit('toggle-theme')">◐</button>
+    </div>
+    <div v-if="writingFormattingOpen" class="writing-format-row" role="group" aria-label="More formatting options">
+      <ToolbarSection type="buttons" :items="inlineFormatActions" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
+      <span class="writing-toolbar-divider" />
+      <ToolbarSection type="dropdown" label="Align" :items="alignmentDropdownItems" :visible="isToolbarSectionVisible('alignment')" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="dropdown" label="Size" :items="fontSizeDropdownItems" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="buttons" :items="listActions" :visible="isToolbarSectionVisible('lists')" @remember-selection="$emit('remember-selection')" />
+      <label class="writing-color" @mousedown="$emit('remember-selection')">Text <input type="color" aria-label="Text color" :disabled="!isToolbarSectionVisible('colors')" :value="textColor || '#333333'" @input="$emit('text-color-change', ($event.target as HTMLInputElement).value)"></label>
+      <label class="writing-color" @mousedown="$emit('remember-selection')">Highlight <input type="color" aria-label="Highlight color" :disabled="!isToolbarSectionVisible('colors')" :value="backgroundColor === 'transparent' ? '#fff1a8' : backgroundColor" @input="$emit('background-color-change', ($event.target as HTMLInputElement).value)"></label>
+      <button type="button" class="toolbar-btn-modern" aria-label="Close more formatting" @click="closeWritingFormatting">×</button>
+    </div>
+  </nav>
   <nav
+    v-else
     ref="rootEl"
     :class="[
       'editor-toolbar-modern',
@@ -527,6 +557,8 @@ interface Props {
   isFullScreen: boolean;
   isFocusMode?: boolean;
   toolbarLayout?: "comfortable" | "compact";
+  writingMode?: boolean;
+  writingToolActions?: ToolbarAction[];
 }
 
 const props = defineProps<Props>();
@@ -539,6 +571,7 @@ const props = defineProps<Props>();
  * surface wins. Comfortable layout ignores this entirely.
  */
 const expanded = ref(false);
+const writingFormattingOpen = ref(false);
 const isMini = computed(() => props.toolbarLayout === "compact" && !expanded.value);
 
 /**
@@ -694,7 +727,19 @@ const onRovingFocusin = (event: FocusEvent) => {
   applyRovingTabindex();
 };
 
+const closeWritingFormatting = () => {
+  writingFormattingOpen.value = false;
+  nextTick(() => rootEl.value?.querySelector<HTMLButtonElement>('.writing-more-format')?.focus());
+};
+
 const onRovingKeydown = (event: KeyboardEvent) => {
+  if (props.writingMode && event.key === 'Escape' && !(event.target as HTMLElement)?.closest('.dropdown-menu')) {
+    event.preventDefault();
+    event.stopPropagation();
+    writingFormattingOpen.value = false;
+    emit('return-editor');
+    return;
+  }
   if (!ROVING_KEYS.includes(event.key)) return;
   const target = event.target as HTMLElement | null;
   // Menus (and any future text inputs) keep their own arrow behavior.
@@ -760,6 +805,8 @@ watch(
     () => props.viewMode,
     () => props.historyIndex,
     () => props.historyLength,
+    () => props.writingMode,
+    writingFormattingOpen,
     sectionVisibilitySignature,
   ],
   () => {
@@ -794,6 +841,7 @@ const emit = defineEmits<{
   "toggle-theme": [];
   "toggle-fullscreen": [];
   "toggle-focus": [];
+  "return-editor": [];
 }>();
 
 /**
@@ -843,6 +891,24 @@ const compactMoreItems = computed(() => [
     ),
     onClick: () => emit("toggle-fullscreen"),
   },
+]);
+
+const writingInsertItems = computed(() => [
+  ...props.listActions.filter(item => ['bullet-list', 'numbered-list'].includes(item.id)).map(item => ({ ...item, isDisabled: () => !props.isToolbarSectionVisible('lists') || Boolean(item.isDisabled?.()) })),
+  { divider: true },
+  ...props.insertDropdownItems,
+]);
+const writingToolItems = computed(() => [
+  ...props.toolActions, ...(props.writingToolActions ?? []), { divider: true },
+  { id: 'writing-undo', label: 'Undo', shortcut: 'Ctrl+Z', isDisabled: () => props.historyIndex <= 0, onClick: () => emit('undo') },
+  { id: 'writing-redo', label: 'Redo', shortcut: 'Ctrl+Shift+Z', isDisabled: () => props.historyIndex >= props.historyLength - 1, onClick: () => emit('redo') },
+  { divider: true }, ...props.productivityDropdownItems,
+]);
+const writingViewItems = computed(() => [
+  ...compactMoreItems.value.filter(item => !props.toolActions.includes(item as ToolbarAction)),
+  { divider: true },
+  { id: 'writing-theme', label: props.theme === 'dark' ? 'Light appearance' : 'Dark appearance', onClick: () => emit('toggle-theme') },
+  ...(props.viewMode === 'code' || props.viewMode === 'split' ? [{ id: 'writing-format-html', label: 'Format HTML', onClick: () => emit('format-html') }] : []),
 ]);
 
 // Curated quick-pick palettes for the Colors menu (custom picker still available).

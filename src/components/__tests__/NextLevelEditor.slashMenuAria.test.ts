@@ -49,7 +49,7 @@ describe("slash menu is announced to assistive tech (#R23-5)", () => {
   it("points the editing surface at the listbox it drives", async () => {
     const surface = await openMenu();
 
-    expect(wrapper!.find(".command-menu").exists()).toBe(true);
+    expect(document.querySelector(".command-menu")).not.toBeNull();
     // NOT aria-expanded: ARIA 1.2 forbids it on role="textbox" (axe reports
     // it critical), and this element is a multiline rich-text field first.
     // The open state is announced through the live region instead. #R32-1

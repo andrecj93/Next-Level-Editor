@@ -12,6 +12,16 @@ import { useEditorHistory } from "../useEditorHistory";
  * at the history tail (typing after an undo must push and prune redo).
  */
 describe("typing coalescing (#12)", () => {
+  it('an unchanged command boundary keeps a suggestion separate from the preceding typing', () => {
+    const history = useEditorHistory();
+    history.captureSnapshot('<p></p>');
+    history.captureSnapshot('<p>the the house</p>', null, 'typing');
+    history.captureSnapshot('<p>the the house</p>');
+    history.captureSnapshot('<p>the house</p>', null, 'typing');
+    const apply = vi.fn();
+    history.undo(apply);
+    expect(apply).toHaveBeenCalledWith('<p>the the house</p>', null);
+  });
   beforeEach(() => {
     vi.useFakeTimers({ now: new Date("2026-01-01T00:00:00Z") });
   });

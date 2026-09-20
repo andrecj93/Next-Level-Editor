@@ -11,7 +11,7 @@ test.describe("Compact toolbar layout", () => {
   test("collapses to a mini essentials row and expands on demand", async ({
     page,
   }) => {
-    await page.goto("/?view=playground");
+    await page.goto("/?writingMode=false&view=playground");
     await page.waitForSelector(".editor-toolbar-modern");
 
     const toolbar = page.locator(".editor-toolbar-modern").first();
@@ -57,7 +57,7 @@ test.describe("Compact toolbar layout", () => {
   test("tucks rarely-used tools into a ⋯ More menu that still works", async ({
     page,
   }) => {
-    await page.goto("/?view=playground");
+    await page.goto("/?writingMode=false&view=playground");
     await page.waitForSelector(".editor-toolbar-modern");
     await page.locator(".pg-theme-chip", { hasText: /^Compact$/ }).click();
     await expect(page.locator(".editor-toolbar-modern")).toHaveClass(

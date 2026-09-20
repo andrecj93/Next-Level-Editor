@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 // gutter click), no desktop-only toolbar/modal, so it runs on both projects.
 test.describe("Checklist block", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/?empty=true");
+    await page.goto("/?writingMode=false&empty=true");
     await page.waitForSelector(".editor-content");
   });
 

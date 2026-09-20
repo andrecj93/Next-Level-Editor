@@ -88,6 +88,14 @@ export function useEditorHistory() {
       // Same content, but the caret may have moved since — keep the latest
       // caret so an undo landing here restores the most recent position.
       if (current && selection) current.selection = selection;
+      // A command can establish a boundary before editing unchanged content.
+      // Close the typing burst now, or execCommand's synchronous input event
+      // can merge the command into the prose the writer just typed.
+      if (!coalesceKey) {
+        delete current.coalesceKey;
+        delete current.burstStart;
+        delete current.lastInputAt;
+      }
       return;
     }
 

@@ -25,6 +25,7 @@
         :placeholder="placeholder"
         role="textbox"
         aria-multiline="true"
+        :aria-readonly="!editable"
         aria-label="Rich text editor"
         aria-haspopup="listbox"
         :aria-controls="commandMenuOpen ? commandListboxId : undefined"
@@ -92,6 +93,7 @@
             'split-toggle-btn',
             { active: splitRightMode === 'preview' },
           ]"
+          :aria-pressed="splitRightMode === 'preview'"
           @click="$emit('split-right-mode-change', 'preview')"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -106,6 +108,7 @@
         </button>
         <button
           :class="['split-toggle-btn', { active: splitRightMode === 'editor' }]"
+          :aria-pressed="splitRightMode === 'editor'"
           @click="$emit('split-right-mode-change', 'editor')"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -140,6 +143,7 @@
           :placeholder="placeholder"
           role="textbox"
           aria-multiline="true"
+          :aria-readonly="!editable"
           aria-label="Rich text editor"
           @input="$emit('split-editor-input', $event)"
           @compositionend="$emit('split-editor-input', $event)"
