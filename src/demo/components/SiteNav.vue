@@ -1,5 +1,5 @@
 <template>
-  <header class="site-nav" :class="{ scrolled }">
+  <header class="site-nav" :class="{ scrolled, 'menu-open': menuOpen }">
     <div class="container container-wide nav-inner">
       <button class="brand" @click="$emit('navigate', 'home')">
         <span class="brand-mark" aria-hidden="true"><Icon name="pen" :size="19" :stroke-width="1.9" /></span>
@@ -90,6 +90,9 @@ const go = (id: string) => {
   transition: border-color 0.3s var(--ease), background 0.3s var(--ease), box-shadow 0.3s var(--ease);
 }
 .site-nav.scrolled { border-bottom-color: var(--border); box-shadow: 0 1px 0 var(--paper-edge), var(--shadow-sm); }
+/* The open navigation must receive taps above the editor's floating chrome.
+   Keep the normal header below fullscreen editing and all modal dialogs. */
+.site-nav.menu-open { z-index: 10020; }
 .nav-inner { height: var(--nav-h); display: flex; align-items: center; gap: 20px; }
 
 .brand { display: flex; align-items: center; gap: 11px; background: none; border: none; cursor: pointer; padding: 0; color: var(--ink); }

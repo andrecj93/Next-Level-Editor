@@ -10,7 +10,16 @@ const settle = (page: Page) => page.evaluate(() => Promise.all(document.getAnima
   .map(animation => animation.finished.catch(() => undefined))));
 
 async function noHorizontalOverflow(page: Page) {
-  const size = await page.evaluate(() => ({ width: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
+  const size = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    const content = document.documentElement.scrollWidth;
+    const overflow = content > width + 1 ? [...document.querySelectorAll('body *')]
+      .map(el => ({ el, box: el.getBoundingClientRect() }))
+      .filter(({ el, box }) => box.right > width + 1 && getComputedStyle(el).visibility !== 'hidden')
+      .slice(0, 12)
+      .map(({ el, box }) => ({ tag: el.tagName, class: el.className, left: box.left, right: box.right, width: box.width })) : [];
+    return { width, content, overflow };
+  });
   expect(size.content, JSON.stringify(size)).toBeLessThanOrEqual(size.width + 1);
 }
 
@@ -322,5 +331,30 @@ test('configuration stays above the toolbar and returns focus without losing wor
   await expect(configure).toBeFocused();
   await expect(editor).toHaveAttribute('aria-readonly', 'false');
   await expect(editor).toHaveText('Keep this paragraph while changing settings.');
+  await noHorizontalOverflow(page);
+});
+
+test('site navigation stays reachable above the editor and preserves the draft', async ({ page, hasTouch }) => {
+  const editor = editorFor(page);
+  const sentence = 'The story stays with me when I leave the page.';
+  await editor.fill(sentence);
+  const toggle = page.getByRole('button', { name: 'Toggle menu', exact: true });
+  if (await toggle.isVisible()) {
+    await activate(toggle, hasTouch);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  }
+  const navigation = page.getByRole('navigation', { name: 'Primary', exact: true });
+  await settle(page);
+  await insideViewport(navigation);
+  await activate(navigation.getByRole('button', { name: 'Docs', exact: true }), hasTouch);
+  await expect(page).toHaveURL(/#docs$/);
+  await page.goBack();
+  await expect(editor).toHaveText(sentence);
+  if (await toggle.isVisible()) {
+    await activate(toggle, hasTouch);
+    await navigation.getByRole('button', { name: 'Docs', exact: true }).press('Escape');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toBeFocused();
+  }
   await noHorizontalOverflow(page);
 });
