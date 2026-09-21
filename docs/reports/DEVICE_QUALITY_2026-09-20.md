@@ -153,6 +153,18 @@ defaults to `~/.codex` when unset.
   assertions during entry animation). No forced clicks or application
   assertions were removed to obtain the final clean result.
 
+The third Ubuntu run, `35545063560`, passed 179 of 180 device cases, including
+all Firefox, narrow reflow, navigation, and contrast scenarios. It exposed one
+Android landscape overflow: a translated View menu fitted visually but retained
+its original scrollable footprint. Menus now adjust their CSS insets and keep
+that position throughout their exit transition. Page width is asserted with
+each primary menu open and immediately after dismissal. Six targeted device
+cases pass locally, and three toolbar-layout cases verify compact mode and the
+top, left, and bottom anchors (`menu-inset-browser.log`, `menu-anchor-verified.log`).
+The earlier failure and the insufficient first attempt are retained in the run
+evidence. The complete Ubuntu gate must pass on this follow-up revision before
+it is described as verified.
+
 The results establish the exercised workflows, not universal perfection.
 Physical iOS/Android keyboards, assistive technology sessions, low-end hardware
 performance, older browser versions, and the blocked Windows Firefox runtime remain

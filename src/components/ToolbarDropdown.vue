@@ -28,7 +28,7 @@
       <span class="dropdown-arrow">▼</span>
     </button>
 
-    <transition name="dropdown-fade" @after-enter="clampMenu">
+    <transition name="dropdown-fade" @after-enter="clampMenu" @after-leave="resetClosedMenuPosition">
       <div
         v-if="isOpen"
         ref="menuRef"
@@ -133,8 +133,9 @@ const menuRef = ref<HTMLElement | null>(null);
 const triggerRef = ref<HTMLButtonElement | null>(null);
 const isOpen = ref(false);
 
-// Keep the CSS anchor (including bottom/left toolbar variants) and translate
-// only the overflowing edges. `translate` composes with the entry animation.
+// Keep the CSS anchor (including bottom/left toolbar variants) and adjust its
+// insets. A transform can move a menu visually but retains its original
+// scrollable footprint, widening mobile pages even when the menu looks inside.
 const menuShift = ref({ x: 0, y: 0 });
 const menuMaxHeight = ref(400);
 
@@ -161,8 +162,14 @@ const clampMenu = async () => {
 
 watch(isOpen, (open) => {
   if (open) nextTick(clampMenu);
-  else menuShift.value = { x: 0, y: 0 };
 });
+
+const resetClosedMenuPosition = () => {
+  // Vue keeps the menu in the DOM during its exit transition. Removing the
+  // viewport offset before it leaves would widen the page again. Retain the
+  // clamped position until removal finishes.
+  if (!isOpen.value) menuShift.value = { x: 0, y: 0 };
+};
 
 const hasActiveItem = computed(() => {
   return props.items.some((item) => item.isActive?.());
@@ -182,7 +189,8 @@ const menuStyle = computed(() => {
   return {
     minWidth: "200px",
     maxHeight: `${menuMaxHeight.value}px`,
-    translate: `${menuShift.value.x}px ${menuShift.value.y}px`,
+    "--nle-menu-shift-x": `${menuShift.value.x}px`,
+    "--nle-menu-shift-y": `${menuShift.value.y}px`,
   };
 });
 
@@ -461,8 +469,8 @@ watch(
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  top: calc(100% + 4px + var(--nle-menu-shift-y, 0px));
+  left: var(--nle-menu-shift-x, 0px);
   background: var(--color-surface, white);
   /* Soft surface: hairline edge; the shadow carries the elevation. */
   border: 1px solid var(--color-divider, #e5e7eb);

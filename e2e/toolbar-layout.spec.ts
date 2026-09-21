@@ -80,3 +80,44 @@ test.describe("Compact toolbar layout", () => {
     );
   });
 });
+
+test("top, left and bottom toolbar menus fit without widening the page", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 600 });
+  await page.goto("/?writingMode=false&empty=true&view=playground");
+  const assertPageWidth = async () => {
+    const size = await page.evaluate(() => ({
+      width: document.documentElement.clientWidth,
+      content: document.documentElement.scrollWidth,
+    }));
+    expect(size.content, JSON.stringify(size)).toBeLessThanOrEqual(size.width + 1);
+  };
+
+  for (const position of ["top", "left", "bottom"]) {
+    await page.getByRole("button", { name: "Configure", exact: true }).click();
+    await page.getByLabel("Toolbar position", { exact: true }).selectOption(position);
+    await page.getByRole("button", { name: "Close configuration", exact: true }).click();
+    const shell = page.locator(".nle-toolbar-shell");
+    if (position === "top") await expect(shell).not.toHaveAttribute("data-position");
+    else await expect(shell).toHaveAttribute("data-position", position);
+
+    // Export is anchored to the opposite edge; the collapsed left rail only
+    // exposes Format, so cover that rail's flyout without changing its layout.
+    for (const label of position === "left" ? ["Format"] : ["Format", "Export"]) {
+      await page.getByRole("button", { name: label, exact: true }).first().click();
+      const menu = page.getByRole("menu", { name: label, exact: true });
+      await expect(menu).toBeVisible();
+      await page.evaluate(() => Promise.all(document.getAnimations()
+        .filter(animation => animation.effect?.getTiming().iterations !== Infinity)
+        .map(animation => animation.finished.catch(() => undefined))));
+      const box = (await menu.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(900);
+      expect(box.y + box.height).toBeLessThanOrEqual(600);
+      await assertPageWidth();
+      await menu.press("Escape");
+      await assertPageWidth();
+      await expect(menu).not.toBeVisible();
+    }
+  }
+});

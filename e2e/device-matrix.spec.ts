@@ -15,10 +15,11 @@ async function noHorizontalOverflow(page: Page) {
     const content = document.documentElement.scrollWidth;
     const overflow = content > width + 1 ? [...document.querySelectorAll('body *')]
       .map(el => ({ el, box: el.getBoundingClientRect() }))
-      .filter(({ el, box }) => box.right > width + 1 && getComputedStyle(el).visibility !== 'hidden')
+      .filter(({ el, box }) => box.right > width + 1 && getComputedStyle(el).visibility !== 'hidden'
+        && !el.closest('[inert], [aria-hidden="true"]'))
       .slice(0, 12)
       .map(({ el, box }) => ({ tag: el.tagName, class: el.className, left: box.left, right: box.right, width: box.width })) : [];
-    return { width, content, overflow };
+    return { width, content, viewport: window.visualViewport?.width, scale: window.visualViewport?.scale, overflow };
   });
   expect(size.content, JSON.stringify(size)).toBeLessThanOrEqual(size.width + 1);
 }
@@ -196,7 +197,11 @@ test('menus and insert dialogs fit the available screen', async ({ page }) => {
     await expect(menu).toBeVisible();
     await settle(page);
     await insideViewport(menu);
+    await noHorizontalOverflow(page);
     await menu.press('Escape');
+    // The leaving menu still occupies the DOM: its exit must not widen the
+    // page or make a mobile browser rescale the manuscript for one frame.
+    await noHorizontalOverflow(page);
   }
   for (const item of ['Link', 'Image', 'Table', 'Code Block', 'Video', 'File Manager']) {
     await toolbarFor(page).getByRole('button', { name: 'Insert', exact: true }).click();

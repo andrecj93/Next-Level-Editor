@@ -1678,7 +1678,7 @@
 /* Rightmost dropdown — anchor its menu to the right so it never overflows. */
 .editor-toolbar-modern .export-section .dropdown-menu {
   left: auto;
-  right: 0;
+  right: calc(0px - var(--nle-menu-shift-x, 0px));
 }
 .editor-toolbar-modern .export-section .dropdown-trigger:hover:not(:disabled) {
   background: var(--toolbar-accent-soft, var(--toolbar-hover));
@@ -2204,8 +2204,8 @@
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  top: calc(100% + 4px + var(--nle-menu-shift-y, 0px));
+  left: var(--nle-menu-shift-x, 0px);
   background: var(--editor-bg);
   /* Menus stay surfaces, but soft ones: hairline edge, shadow does the work. */
   border: 1px solid var(--color-divider);
@@ -2589,13 +2589,13 @@
    below their trigger inside the panel's scroll box (see the overflow note
    above). Both out-specify the export section's right-anchor. */
 .nle-toolbar-shell[data-position="left"] .editor-toolbar-modern .dropdown-menu {
-  top: 0;
-  left: calc(100% + 4px);
+  top: var(--nle-menu-shift-y, 0px);
+  left: calc(100% + 4px + var(--nle-menu-shift-x, 0px));
   right: auto;
 }
 .nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .dropdown-menu {
-  top: calc(100% + 4px);
-  left: 0;
+  top: calc(100% + 4px + var(--nle-menu-shift-y, 0px));
+  left: var(--nle-menu-shift-x, 0px);
   right: auto;
 }
 
@@ -2672,7 +2672,7 @@
   .editor-toolbar-modern
   .dropdown-menu {
   top: auto;
-  bottom: calc(100% + 4px);
+  bottom: calc(100% + 4px - var(--nle-menu-shift-y, 0px));
 }
 /* The open/close motion mirrors too: rise from the trigger, settle back. */
 .nle-toolbar-shell[data-position="bottom"] .dropdown-fade-enter-from {
