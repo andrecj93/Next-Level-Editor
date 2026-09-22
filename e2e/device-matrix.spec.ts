@@ -98,6 +98,11 @@ test('a blank manuscript stays spacious and offers notes without moving the page
   const opener = page.getByRole('button', { name: 'Writing companion', exact: true });
   await expect(companion).not.toBeVisible();
   const before = await editor.boundingBox();
+  const width = page.viewportSize()!.width;
+  if (width <= 700) {
+    const toolbar = await toolbarFor(page).boundingBox();
+    expect(toolbar!.height, 'mobile tools leave room for the manuscript').toBeLessThanOrEqual(width > 350 ? 52 : 96);
+  }
   await activate(editor, hasTouch);
   await page.keyboard.type('She returned in order to find the house.');
   await expect(opener).toHaveAttribute('aria-description', '1 writing note ready to review');

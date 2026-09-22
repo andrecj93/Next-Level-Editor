@@ -54,18 +54,28 @@
   .is-writing-workspace .nle-document-workspace { flex-direction: column; }
   .is-writing-workspace .editor-content { font-size: 17px; line-height: 1.7; padding: 28px 24px 64px; }
   .is-writing-workspace .editor-content h1 { font-size: 1.9em; }
-  .writing-toolbar-row { flex-wrap: wrap; gap: 2px; padding: 4px 8px; }
+  .writing-toolbar-row { flex-wrap: wrap; gap: 2px; padding: 4px 6px; }
   .writing-toolbar-row .writing-history, .writing-toolbar-row .writing-theme, .writing-toolbar-row .writing-toolbar-divider { display: none; }
-  .writing-toolbar-row .dropdown-trigger { min-height: 40px; padding: 7px; font-size: 12px; }
-  .writing-toolbar-row .writing-paragraph-format .dropdown-trigger { width: 92px; }
+  .writing-toolbar-row .dropdown-trigger { min-height: 40px; padding: 7px 5px; gap: 4px; font-size: 12px; }
+  .writing-toolbar-row .writing-paragraph-format .dropdown-trigger { width: 84px; }
   .writing-toolbar-row .writing-inline { display: none; }
   .writing-toolbar-row .writing-toolbar-spacer { display: none; }
   .writing-toolbar-row .writing-export { margin-left: auto; }
-  .writing-toolbar-row .writing-more-format { min-height: 40px; padding: 7px; }
+  .writing-toolbar-row .writing-more-format { min-height: 40px; padding: 7px 5px; }
   .writing-format-row { padding: 8px; gap: 6px; }
   .is-writing-workspace .editor-footer { flex-wrap: wrap; gap: 4px; padding: 5px 10px; }
   .is-writing-workspace .footer-counts { gap: 10px; font-size: 11px; }
   .is-writing-workspace .editor-footer .char-count { display: none; }
+}
+
+@media (max-width: 450px) {
+  .writing-toolbar-row { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) 28px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr); }
+  .writing-toolbar-row .writing-export { margin-left: 0; }
+  .writing-toolbar-row .dropdown-trigger,
+  .writing-toolbar-row .writing-paragraph-format .dropdown-trigger { width: 100%; }
+}
+@media (max-width: 350px) {
+  .writing-toolbar-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 /* A short window (landscape, enlarged UI, or keyboard) still needs actual lines
