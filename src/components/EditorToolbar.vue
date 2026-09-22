@@ -694,29 +694,48 @@ const isRovingVisible = (el: HTMLElement, root: HTMLElement): boolean => {
   return true;
 };
 
+const getToolbarControls = (): HTMLElement[] =>
+  Array.from(rootEl.value?.querySelectorAll<HTMLElement>("button, [href]") ?? [])
+    .filter(el => !el.closest(".dropdown-menu"));
+
 const getRovingControls = (): HTMLElement[] => {
   const root = rootEl.value;
   if (!root) return [];
-  return Array.from(
-    root.querySelectorAll<HTMLElement>("button, [href]")
-  ).filter(
+  return getToolbarControls().filter(
     (el) =>
       !el.hasAttribute("disabled") &&
-      !el.closest(".dropdown-menu") &&
       isRovingVisible(el, root)
   );
 };
 
 const applyRovingTabindex = () => {
+  const previousStop = rovingStop;
+  const hadFocus = previousStop !== null && document.activeElement === previousStop;
   const controls = getRovingControls();
-  if (!controls.length) return;
   if (!rovingStop || !controls.includes(rovingStop)) {
-    rovingStop = controls[0];
+    rovingStop = controls[0] ?? null;
   }
-  for (const el of controls) {
+  // Clear unavailable controls too. A hidden/disabled former stop must not
+  // compete with the visible entry point when the layout changes again.
+  for (const el of getToolbarControls()) {
     el.tabIndex = el === rovingStop ? 0 : -1;
   }
+  if (hadFocus && previousStop !== rovingStop) rovingStop?.focus();
 };
+
+const onToolbarResize = () => nextTick(applyRovingTabindex);
+
+const focusToolbar = (): boolean => {
+  // Refresh synchronously: the shortcut can arrive before a resize observer
+  // or a reactive layout update has repaired the old tab stop.
+  applyRovingTabindex();
+  if (!rovingStop) return false;
+  emit("remember-selection");
+  rovingStop.focus();
+  return document.activeElement === rovingStop;
+};
+
+defineExpose({ focusToolbar });
 
 const onRovingFocusin = (event: FocusEvent) => {
   const target = (event.target as HTMLElement | null)?.closest?.(
@@ -797,7 +816,10 @@ const sectionVisibilitySignature = () =>
     props.isToolbarSectionVisible(section) ? "1" : "0"
   ).join("");
 
-onMounted(applyRovingTabindex);
+onMounted(() => {
+  applyRovingTabindex();
+  window.addEventListener("resize", onToolbarResize);
+});
 watch(
   [
     isMini,
@@ -1089,6 +1111,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  window.removeEventListener("resize", onToolbarResize);
   document.removeEventListener("selectionchange", readSelectionColors);
   document.removeEventListener("pointerdown", onColorsOutsidePointerdown, true);
   document.removeEventListener("scroll", onAnyScroll, { capture: true });

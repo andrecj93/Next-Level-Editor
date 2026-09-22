@@ -81,6 +81,16 @@ describe("ToolbarDropdown fulfils the menu contract it claims (#R23-23)", () => 
     expect(document.activeElement).toBe(items()[0]);
   });
 
+  it.each(["Enter", " "])("%j opens the menu with focus on its first item", async (key) => {
+    mountDropdown();
+    trigger().focus();
+    await pressOnTrigger(key);
+
+    expect(wrapper!.find('div.dropdown-menu').exists()).toBe(true);
+    expect(document.activeElement).toBe(items()[0]);
+    expect(wrapper!.emitted('remember-selection')).toHaveLength(1);
+  });
+
   it("Arrow keys move between items and wrap", async () => {
     mountDropdown();
     trigger().focus();

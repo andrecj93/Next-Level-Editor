@@ -57,6 +57,7 @@
     >
     <EditorToolbar
       :id="toolbarLandmarkId"
+      ref="editorToolbarRef"
       :is-toolbar-section-visible="isToolbarSectionVisible"
       :format-dropdown-items="formatDropdownItems"
       :inline-format-actions="inlineFormatActions"
@@ -828,6 +829,7 @@ const mainLandmarkId = `${landmarkBaseId}-main`;
 const footerLandmarkId = `${landmarkBaseId}-footer`;
 
 const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
+const editorToolbarRef = ref<InstanceType<typeof EditorToolbar> | null>(null);
 
 // This instance's root element — the ownership scope for document-level
 // listeners (e.g. the selection toolbar's selectionchange handling).
@@ -2793,12 +2795,8 @@ const advancedKeyboard = useAdvancedKeyboardShortcuts(editorContent, {
 // systems never double-handle a key.
 function onEditorKeydown(event: KeyboardEvent) {
   if (event.altKey && event.key === 'F10' && props.showToolbar && !props.readonly) {
-    const toolbar = rootEl.value?.querySelector<HTMLElement>('[role="toolbar"]');
-    const first = toolbar?.querySelector<HTMLButtonElement>('button[tabindex="0"]') ?? toolbar?.querySelector<HTMLButtonElement>('button:not(:disabled)');
-    if (first) {
+    if (editorToolbarRef.value?.focusToolbar()) {
       event.preventDefault();
-      rememberSelectionFromToolbar();
-      first.focus();
       return;
     }
   }

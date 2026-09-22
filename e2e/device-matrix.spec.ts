@@ -410,6 +410,62 @@ test('resizing and keyboard navigation preserve the draft and open menus', async
   await expect(editor).toHaveText('The window changes. The story stays. Keep writing.');
 });
 
+test('toolbar keyboard entry survives desktop to phone resizing', async ({ page }) => {
+  const editor = editorFor(page);
+  const toolbar = toolbarFor(page);
+  const sentence = 'The workshop smelled of paper and rain.';
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await editor.fill(sentence);
+  await editor.press('Alt+F10');
+  await page.keyboard.press('Home');
+  await expect(toolbar.getByRole('button', { name: 'Undo', exact: true })).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const format = toolbar.getByRole('button', { name: 'Format', exact: true });
+  await expect(format).toBeVisible();
+  await expect(toolbar.locator('button[tabindex="0"]')).toHaveCount(1);
+  await editor.focus();
+  await page.keyboard.press('Alt+F10');
+  await expect(format).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(editor).toBeFocused();
+
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.keyboard.press('Shift+Tab');
+  await expect(format).toBeFocused();
+  await expect(toolbar.locator('button[tabindex="0"]')).toHaveCount(1);
+  await expect(editor).toHaveText(sentence);
+  await noHorizontalOverflow(page);
+});
+
+test('Enter and Space open toolbar menus ready for keyboard navigation', async ({ page }) => {
+  const editor = editorFor(page);
+  const toolbar = toolbarFor(page);
+  const sentence = 'I set the notebook beside the window.';
+  await editor.fill(sentence);
+  for (const key of ['Enter', 'Space']) {
+    await editor.focus();
+    await page.keyboard.press('Alt+F10');
+    await page.keyboard.press('Home');
+    if (await toolbar.getByRole('button', { name: 'Undo', exact: true }).isVisible()) {
+      await page.keyboard.press('ArrowRight');
+    }
+    const format = toolbar.getByRole('button', { name: 'Format', exact: true });
+    await expect(format).toBeFocused();
+    await page.keyboard.press(key);
+    const menu = page.getByRole('menu', { name: 'Format', exact: true });
+    await expect(menu.getByRole('menuitem').first()).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(menu.getByRole('menuitem').nth(1)).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(menu).not.toBeVisible();
+    await expect(format).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(editor).toBeFocused();
+  }
+  await expect(editor).toHaveText(sentence);
+});
+
 test('configuration stays above the toolbar and returns focus without losing work', async ({ page, hasTouch }) => {
   const editor = editorFor(page);
   await editor.fill('Keep this paragraph while changing settings.');

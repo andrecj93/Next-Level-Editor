@@ -248,6 +248,7 @@ const focusItemAt = (index: number) => {
 
 /** Open (if needed) and land on the first or last item. */
 const enterMenu = (edge: "first" | "last") => {
+  emit("remember-selection");
   const land = () => focusItemAt(edge === "first" ? 0 : focusableItems().length - 1);
   if (isOpen.value) {
     land();
@@ -260,7 +261,9 @@ const enterMenu = (edge: "first" | "last") => {
 
 const onTriggerKeydown = (event: KeyboardEvent) => {
   if (props.disabled) return;
-  if (event.key === "ArrowDown") {
+  if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+    // Suppress the native button click on Enter/Space: it would toggle the
+    // menu again after focus has already moved into its first item.
     event.preventDefault();
     enterMenu("first");
   } else if (event.key === "ArrowUp") {

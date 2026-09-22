@@ -155,6 +155,7 @@ describe("EditorToolbar roving tabindex", () => {
       .findAll("button")
       .find((b) => b.attributes("aria-label") === "Undo")!.element;
     expect(undo.hasAttribute("disabled")).toBe(true);
+    expect((undo as HTMLElement).tabIndex).toBe(-1);
 
     const controls = managedControls(wrapper);
     expect(controls).not.toContain(undo);
@@ -200,6 +201,7 @@ describe("EditorToolbar roving tabindex", () => {
 
       const controls = managedControls(compact);
       expect(controls).not.toContain(themeToggle);
+      expect(themeToggle.tabIndex).toBe(-1);
       const stops = controls.filter((el) => el.tabIndex === 0);
       expect(stops.length).toBe(1);
     } finally {
@@ -211,6 +213,19 @@ describe("EditorToolbar roving tabindex", () => {
     const nav = wrapper.find('[role="toolbar"]');
     expect(nav.exists()).toBe(true);
     expect(nav.attributes("aria-label")).toBe("Text formatting toolbar");
+  });
+
+  it("moves the tab stop when a responsive layout hides its control", async () => {
+    const controls = managedControls(wrapper);
+    controls[0].focus();
+    controls[0].style.display = "none";
+    window.dispatchEvent(new Event("resize"));
+    await wrapper.vm.$nextTick();
+
+    expect(controls[0].tabIndex).toBe(-1);
+    expect(controls[1].tabIndex).toBe(0);
+    expect(document.activeElement).toBe(controls[1]);
+    expect(wrapper.findAll('button[tabindex="0"]')).toHaveLength(1);
   });
 
   it("survives a smart-toolbar context change disabling the stop holder (#r21-a11y-1)", async () => {
