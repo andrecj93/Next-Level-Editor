@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { nextTick } from "vue";
 import { PLAYGROUND_DRAFT_KEY, usePlaygroundDocument } from "../usePlaygroundDocument";
 
 describe("playground draft recovery", () => {
@@ -42,10 +43,17 @@ describe("playground draft recovery", () => {
     await expect(draft.saveDraft("<p>Keep me</p>")).rejects.toThrow("Export your document");
   });
 
-  it("recovers safely from malformed stored data", () => {
+  it("keeps a failed recovery visible while writing until a new document is chosen", async () => {
     localStorage.setItem(PLAYGROUND_DRAFT_KEY, "{invalid");
     const draft = usePlaygroundDocument(false);
     expect(draft.notice.value).toContain("could not be restored");
     expect(draft.content.value).toBe("");
+    draft.content.value = "<p>Writing after a failed recovery.</p>";
+    await nextTick();
+    expect(draft.notice.value).toContain("could not be restored");
+    expect(draft.restoreFailed.value).toBe(true);
+    draft.applyTemplate("empty");
+    expect(draft.notice.value).toBe("");
+    expect(draft.restoreFailed.value).toBe(false);
   });
 });

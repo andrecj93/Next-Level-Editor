@@ -24,7 +24,7 @@ async function noHorizontalOverflow(page: Page) {
   expect(size.content, JSON.stringify(size)).toBeLessThanOrEqual(size.width + 1);
 }
 
-async function insideViewport(locator: Locator) {
+async function insideViewport(locator: Locator, timeout = 2000) {
   // WebKit delivers visualViewport resize after the protocol resize resolves.
   // Wait for the actual bounded geometry, including Vue's next-tick clamp.
   await expect(async () => {
@@ -37,7 +37,7 @@ async function insideViewport(locator: Locator) {
     expect(geometry.y, JSON.stringify(geometry)).toBeGreaterThanOrEqual(geometry.top - 1);
     expect(geometry.right, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.width + geometry.left + 1);
     expect(geometry.bottom, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.height + geometry.top + 1);
-  }).toPass({ timeout: 2000, intervals: [50, 100, 250] });
+  }).toPass({ timeout, intervals: [50, 100, 250] });
 }
 
 async function switchView(page: Page, mode: string) {
@@ -77,11 +77,22 @@ test('PDF progress and cancellation stay reachable without losing the draft', as
   await expect(progress).toBeVisible();
   const cancel = progress.getByRole('button', { name: 'Cancel PDF export' });
   await cancel.scrollIntoViewIfNeeded();
-  await insideViewport(cancel);
-  await noHorizontalOverflow(page);
-  await test.info().attach('pdf-progress', { body: await page.screenshot(), contentType: 'image/png' });
+  // PDF rasterization can keep WebKit's protocol busy for longer than the
+  // resize-settling budget. Allow the first measurement to return; the same
+  // strict bounds and real cancellation checks still apply.
+  const [, , progressScreenshot] = await Promise.all([
+    insideViewport(cancel, 10000),
+    noHorizontalOverflow(page),
+    page.screenshot(),
+  ]);
+  const cancelStarted = Date.now();
   await activate(cancel, hasTouch);
   await expect(progress).toHaveCount(0);
+  await test.info().attach('pdf-cancel-response', {
+    body: JSON.stringify({ elapsedMs: Date.now() - cancelStarted }),
+    contentType: 'application/json',
+  });
+  await test.info().attach('pdf-progress', { body: progressScreenshot, contentType: 'image/png' });
   await expect(editor).toBeFocused();
   await expect(page.locator('div[style*="-9999px"]')).toHaveCount(0);
   expect(await editor.innerHTML()).toBe(before);

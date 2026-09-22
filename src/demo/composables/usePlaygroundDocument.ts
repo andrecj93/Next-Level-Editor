@@ -13,6 +13,7 @@ export function usePlaygroundDocument(startEmpty: boolean) {
   const selectedTemplate = ref("empty");
   const baseline = ref(initial);
   const notice = ref("");
+  const restoreFailed = ref(false);
 
   if (!startEmpty) {
     try {
@@ -27,11 +28,12 @@ export function usePlaygroundDocument(startEmpty: boolean) {
             selectedTemplate.value = draft.template;
             baseline.value = draft.template === "empty" ? "" : sanitizeHtml(getTemplateById(draft.template)!.content);
           }
-          if (content.value !== initial) notice.value = "Your local draft has been restored.";
+          if (content.value !== initial) notice.value = "Draft restored.";
           console.debug("[NextLevelEditor playground] Draft restored", { characters: content.value.length });
         }
       }
     } catch {
+      restoreFailed.value = true;
       notice.value = "Your previous draft could not be restored. You can still write and export.";
       console.warn("[NextLevelEditor playground] Draft restore unavailable");
     }
@@ -39,7 +41,7 @@ export function usePlaygroundDocument(startEmpty: boolean) {
 
   const hasEdits = computed(() => content.value !== baseline.value);
   watch(content, () => {
-    if (hasEdits.value) notice.value = "";
+    if (hasEdits.value && !restoreFailed.value) notice.value = "";
   });
   const applyTemplate = (id: string) => {
     const template = getTemplateById(id);
@@ -48,6 +50,7 @@ export function usePlaygroundDocument(startEmpty: boolean) {
     content.value = id === "empty" ? "" : sanitizeHtml(template.content);
     baseline.value = content.value;
     notice.value = "";
+    restoreFailed.value = false;
     console.debug("[NextLevelEditor playground] Template loaded", { template: id });
   };
 
@@ -69,5 +72,5 @@ export function usePlaygroundDocument(startEmpty: boolean) {
     }
   };
 
-  return { content, selectedTemplate, hasEdits, notice, applyTemplate, saveDraft };
+  return { content, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft };
 }

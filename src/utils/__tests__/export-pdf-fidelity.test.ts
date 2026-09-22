@@ -83,6 +83,18 @@ describe("exportAsPdf fidelity + cleanup", () => {
     expect(document.querySelectorAll('div[style*="-9999px"]')).toHaveLength(0);
   });
 
+  it('finishes when a background tab stops delivering animation frames', async () => {
+    vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);
+    h2c.mockImplementation(okCanvas);
+    const el = document.createElement('div');
+    el.innerHTML = '<p>A draft exported from a background tab.</p>';
+
+    await exportAsPdf(el, 'background.pdf');
+
+    expect(save).toHaveBeenCalledWith('background.pdf');
+    expect(document.querySelectorAll('div[style*="-9999px"]')).toHaveLength(0);
+  });
+
   it('cancels between pages, releases the bitmap and never saves a partial file', async () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 800, height: 3000, top: 0, bottom: 3000, left: 0, right: 800, x: 0, y: 0, toJSON() {} });
     const canvas = await okCanvas();

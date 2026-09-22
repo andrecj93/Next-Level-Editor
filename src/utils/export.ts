@@ -950,6 +950,24 @@ export interface PdfExportOptions {
   onProgress?: (completed: number, total: number) => void;
 }
 
+/** Let the browser paint progress and handle input between rendered pages.
+ * A fixed 32 ms pause is not two frames on a busy or low-refresh browser.
+ * The fallback also allows exports to continue in a background tab. */
+function yieldPdfRendering(): Promise<void> {
+  return new Promise(resolve => {
+    let frame = 0;
+    const finish = () => {
+      clearTimeout(fallback);
+      if (frame) window.cancelAnimationFrame(frame);
+      resolve();
+    };
+    const fallback = setTimeout(finish, 250);
+    frame = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(finish);
+    });
+  });
+}
+
 export async function exportAsPdf(element: HTMLElement, filename: string = 'document.pdf', options: PdfExportOptions = {}) {
   let completed = 0;
   const checkCancelled = () => {
@@ -1042,8 +1060,7 @@ export async function exportAsPdf(element: HTMLElement, filename: string = 'docu
       options.onProgress?.(0, pages.length);
       const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
       for (const [index, page] of pages.entries()) {
-        // Give input and paint two frames between pages, including on Safari.
-        await new Promise<void>(resolve => setTimeout(resolve, 32));
+        await yieldPdfRendering();
         checkCancelled();
         // Bound every bitmap, including on older mobile canvas implementations.
         // Rendering one document-height canvas silently returned "data:," for

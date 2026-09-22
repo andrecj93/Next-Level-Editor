@@ -2,7 +2,13 @@
   <div class="playground" :class="{ 'is-writing': editorConfig.writingMode }">
     <div class="container container-wide pg-workspace">
       <header class="pg-head">
-        <div class="pg-document-heading"><span class="pg-document-icon" aria-hidden="true"><Icon name="pen" :size="19" /></span><div><h1 class="pg-document-name">{{ documentName }}</h1><span class="draft-hint">Your private writing space · auto-save to this browser</span></div></div>
+        <div class="pg-document-heading">
+          <span class="pg-document-icon" aria-hidden="true"><Icon name="pen" :size="19" /></span>
+          <div>
+            <h1 class="pg-document-name">{{ documentName }}</h1>
+            <p class="draft-hint document-status" :class="{ 'has-error': restoreFailed }" role="status" :title="notice || 'Auto-save stores your draft in this browser only.'">{{ notice || 'Private draft · auto-save' }}</p>
+          </div>
+        </div>
         <div class="pg-document-actions">
           <button class="btn btn-ghost btn-sm" type="button" @click="chooseTemplate('empty')"><Icon name="pen" :size="15" /> New document</button>
           <button ref="configTrigger" class="btn btn-ghost btn-sm" type="button" :aria-expanded="showConfig" aria-controls="playground-settings" @click="showConfig = !showConfig">Configure</button>
@@ -156,7 +162,6 @@
       </div>
 
       <!-- Editor -->
-      <p v-if="notice" class="draft-notice" role="status">{{ notice }}</p>
       <EditorSheet class="pg-editor">
         <NextLevelEditor
           :key="documentRevision"
@@ -255,7 +260,7 @@ const documentRevision = ref(0);
 
 const urlParams = new URLSearchParams(window.location.search);
 const startEmpty = urlParams.get("empty") === "true";
-const { content, selectedTemplate, hasEdits, notice, applyTemplate, saveDraft } = usePlaygroundDocument(startEmpty);
+const { content, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft } = usePlaygroundDocument(startEmpty);
 const { isOpen: confirmOpen, options: confirmOptions, requestConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 const documentName = computed(() => {
   const doc = new DOMParser().parseFromString(content.value, 'text/html');
@@ -362,7 +367,6 @@ const resetConfig = () => {
 .playground:not(.is-writing) .pg-workspace { display: block; padding-top: 18px; }
 .is-writing .pg-editor { flex: 1; min-height: 0; margin: 0 0 16px; overflow: visible; border-radius: 10px; box-shadow: 0 2px 12px #00000006; }
 .is-writing .pg-head { margin: 0; padding: 14px 2px; gap: 16px; min-height: 72px; flex-shrink: 0; }
-.is-writing .draft-notice { margin: -4px 0 8px 2px; padding: 0; border: 0; background: none; font-size: 11px; }
 .is-writing .pg-editor :deep(.editor-footer) { min-height: 43px; }
 .pg-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
 .pg-head .eyebrow { display: inline-flex; }
@@ -370,7 +374,8 @@ const resetConfig = () => {
 .pg-head .lede { font-size: 15px; margin: 0; max-width: 680px; }
 .pg-head > .btn { flex-shrink: 0; }
 .draft-hint { font-size: 12px; color: var(--ink-soft); }
-.draft-notice { padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-subtle); color: var(--ink-soft); font-size: 13px; }
+.document-status { display: block; margin: 0; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.document-status.has-error { white-space: normal; }
 .pg-writing-hints { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; margin: -4px 0 24px; color: var(--ink-soft); font-size: 12px; }
 .pg-writing-hints kbd { border: 1px solid var(--border-strong); border-radius: 4px; padding: 2px 6px; font: inherit; background: var(--bg-subtle); }
 .pg-editor { margin-bottom: 20px; }
@@ -457,7 +462,8 @@ const resetConfig = () => {
   .playground { padding-top: 0; }
   .pg-workspace { padding: 0; }
   .is-writing .pg-head { flex-direction: row; padding: 10px 14px; min-height: 60px; gap: 10px; align-items: center; }
-  .pg-document-icon, .pg-document-heading .draft-hint, .pg-document-actions .btn svg { display: none; }
+  .pg-document-icon, .pg-document-actions .btn svg { display: none; }
+  .document-status { font-size: 10px; line-height: 14px; }
   .pg-document-actions { gap: 0; }
   .pg-document-actions .btn { padding: 7px; font-size: 11px; }
   .pg-document-name { font-size: 12px; }

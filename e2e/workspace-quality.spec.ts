@@ -16,7 +16,7 @@ test.describe("Writing workspace", () => {
     await expect(page).toHaveURL(/#docs$/);
   });
 
-  test("a saved local draft survives refresh", async ({ page }) => {
+  test("a saved local draft survives refresh and resumes without moving the manuscript", async ({ page }) => {
     await page.goto("/#playground");
     await page.getByRole("button", { name: "New document", exact: true }).click();
     const editor = page.getByRole("textbox", { name: "Rich text editor", exact: true });
@@ -24,7 +24,16 @@ test.describe("Writing workspace", () => {
     await expect(page.locator(".auto-save-indicator")).toContainText("Saved at");
     await page.reload();
     await expect(editor).toHaveText("A local draft worth keeping.");
-    await expect(page.getByText("Your local draft has been restored.")).toBeVisible();
+    await expect(page.getByText("Draft restored.", { exact: true })).toBeVisible();
+    await editor.click();
+    await editor.press("ControlOrMeta+End");
+    const before = (await editor.boundingBox())!;
+    await page.keyboard.type(" Still here.");
+    await expect(page.getByText("Draft restored.", { exact: true })).not.toBeVisible();
+    await expect(editor).toHaveText("A local draft worth keeping. Still here.");
+    const after = (await editor.boundingBox())!;
+    expect(after.y, "the first keystroke does not move the manuscript").toBeCloseTo(before.y, 0);
+    expect(after.height, "the first keystroke does not resize the manuscript").toBeCloseTo(before.height, 0);
   });
 
   test("New document replaces the persisted draft, including pending edits", async ({ page }) => {
