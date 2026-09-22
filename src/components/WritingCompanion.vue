@@ -114,9 +114,9 @@ button:hover { background: var(--hover-bg); }
 .writing-outline { display: grid; gap: 3px; }
 .writing-outline button { padding: 9px 12px; text-align: left; border-left: 2px solid var(--border-color); border-radius: 0; overflow-wrap: anywhere; }
 .writing-outline button:hover { border-color: var(--primary-color); }
-@media (max-width: 700px) { .writing-companion { width: 100%; flex-basis: auto; max-height: 45%; border-left: 0; border-top: 1px solid var(--border-color); } .companion-header { padding-top: 8px; } .companion-intro, .writing-prompt, .companion-footer { display: none; } .companion-body { padding: 0 18px; } }
+@media (max-width: 700px) { .writing-companion { width: 100%; flex: 0 0 45%; height: 45%; max-height: 45%; border-left: 0; border-top: 1px solid var(--border-color); } .companion-header { padding-top: 8px; } .companion-intro, .writing-prompt, .companion-footer { display: none; } .companion-body { padding: 0 18px; } }
 @media (max-height: 500px) {
-  .writing-companion { position: fixed; inset: 8px 8px calc(8px + var(--nle-mobile-toolbar-clearance, 0px)); width: auto; max-height: none; z-index: 10001; border: 1px solid var(--border-color); border-radius: 10px; box-shadow: var(--shadow-lg); }
+  .writing-companion { position: fixed; inset: 8px 8px calc(8px + var(--nle-mobile-toolbar-clearance, 0px)); width: auto; height: auto; max-height: none; z-index: 10001; border: 1px solid var(--border-color); border-radius: 10px; box-shadow: var(--shadow-lg); }
   .companion-header { padding: 6px 14px; flex-shrink: 0; }
   .companion-tabs { padding-bottom: 6px; flex-shrink: 0; }
   .companion-body { padding: 0 18px; }

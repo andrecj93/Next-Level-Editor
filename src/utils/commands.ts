@@ -368,7 +368,61 @@ export function applyTextAlignment(
   const selection = globalThis.getSelection();
   if (!selection || selection.rangeCount === 0) return;
 
-  const range = selection.getRangeAt(0);
+  let range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
+
+  // A browser's first typed line is often bare text (with inline marks) at
+  // the editor root. Give touched inline runs their own paragraphs so block
+  // alignment is saved with the document, never on the editing surface.
+  const structural = 'p,div,h1,h2,h3,h4,h5,h6,li,blockquote,pre,br,hr,table,ul,ol,figure,td,th';
+  const runs: Node[][] = [];
+  let run: Node[] = [];
+  const flush = () => { if (run.length) runs.push(run); run = []; };
+  for (const child of Array.from(root.childNodes)) {
+    if (child.nodeType === Node.ELEMENT_NODE &&
+        ((child as Element).matches(structural) || (child as Element).querySelector(structural))) flush();
+    else run.push(child);
+  }
+  flush();
+  const touched = runs.filter(nodes => {
+    // Whitespace between serialized blocks is not another authored paragraph.
+    if (!range.collapsed && nodes.every(node => node.nodeType === Node.TEXT_NODE && !node.textContent?.trim())) return false;
+    const content = root.ownerDocument.createRange();
+    content.setStartBefore(nodes[0]);
+    content.setEndAfter(nodes[nodes.length - 1]);
+    if (range.collapsed) return range.compareBoundaryPoints(Range.START_TO_START, content) >= 0 &&
+      range.compareBoundaryPoints(Range.END_TO_END, content) <= 0;
+    const slice = range.cloneRange();
+    if (slice.compareBoundaryPoints(Range.START_TO_START, content) < 0) slice.setStart(content.startContainer, content.startOffset);
+    if (slice.compareBoundaryPoints(Range.END_TO_END, content) > 0) slice.setEnd(content.endContainer, content.endOffset);
+    return !slice.collapsed && rangeCapturesContent(slice);
+  });
+  if (touched.length) {
+    const point = (node: Node, offset: number) => ({ node, offset,
+      next: node === root ? root.childNodes[offset] : undefined,
+      previous: node === root ? root.childNodes[offset - 1] : undefined });
+    const anchor = point(selection.anchorNode!, selection.anchorOffset);
+    const focus = point(selection.focusNode!, selection.focusOffset);
+    for (const nodes of touched) {
+      const paragraph = root.ownerDocument.createElement('p');
+      root.insertBefore(paragraph, nodes[0]);
+      nodes.forEach(node => paragraph.appendChild(node));
+    }
+    const restorePoint = (saved: ReturnType<typeof point>): [Node, number] => {
+      if (saved.node !== root) return [saved.node, saved.offset];
+      const adjacent = saved.next ?? saved.previous;
+      const parent = adjacent?.parentNode;
+      return parent ? [parent, Array.from(parent.childNodes).indexOf(adjacent!) + (saved.next ? 0 : 1)] : [root, 0];
+    };
+    selection.setBaseAndExtent(...restorePoint(anchor), ...restorePoint(focus));
+    range = selection.getRangeAt(0);
+  } else if (!root.childNodes.length && range.collapsed) {
+    const paragraph = root.ownerDocument.createElement('p');
+    paragraph.appendChild(root.ownerDocument.createElement('br'));
+    root.appendChild(paragraph);
+    selection.collapse(paragraph, 0);
+    range = selection.getRangeAt(0);
+  }
 
   // Get the element - if commonAncestorContainer is a text node, use its parent
   let element = range.commonAncestorContainer;

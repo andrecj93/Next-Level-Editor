@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { keepCaretAboveToolbar, keepSelectionVisible } from "../caretVisibility";
+import { keepCaretAboveToolbar, keepSelectionVisible, preserveVisibleSelection } from "../caretVisibility";
 
 afterEach(() => { document.body.innerHTML = ""; vi.restoreAllMocks(); });
 
@@ -78,6 +78,71 @@ describe('selection scrolling after formatting', () => {
     const other = document.createElement('div');
     document.body.append(other);
     keepSelectionVisible(other);
+    expect(scroll).not.toHaveBeenCalled();
+  });
+});
+
+describe('keeping the current line during a layout change', () => {
+  function viewport(root: HTMLElement, bottom: number) {
+    root.style.overflowY = 'auto';
+    root.getBoundingClientRect = () => ({ top: 100, bottom, left: 0, right: 300 } as DOMRect);
+    Object.defineProperty(root, 'clientHeight', { configurable: true, value: bottom - 100 });
+    Object.defineProperty(root, 'scrollHeight', { configurable: true, value: 1000 });
+  }
+
+  it('reveals the previously visible line after the editing area shrinks', () => {
+    const { root, range } = setup();
+    viewport(root, 600);
+    const restore = preserveVisibleSelection(root);
+    viewport(root, 400);
+    restore();
+    expect(root.scrollTop).toBe(174);
+    expect(window.getSelection()!.getRangeAt(0).startContainer).toBe(range.startContainer);
+    expect(window.getSelection()!.focusOffset).toBe(1);
+  });
+
+  it('leaves a selection the writer scrolled away from alone', () => {
+    const { root, scroll } = setup();
+    viewport(root, 400);
+    const restore = preserveVisibleSelection(root);
+    viewport(root, 300);
+    restore();
+    expect(root.scrollTop).toBe(0);
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
+  it('keeps a formatted word whose focus is between inline elements visible', () => {
+    const { root } = setup();
+    root.innerHTML = '<p>A <em>quiet</em> room.</p>';
+    const paragraph = root.firstChild!;
+    const selection = window.getSelection()!;
+    selection.setBaseAndExtent(paragraph, 1, paragraph, 2);
+    vi.mocked(Range.prototype.getBoundingClientRect).mockImplementation(function (this: Range) {
+      return this.collapsed && this.startContainer.nodeType === Node.ELEMENT_NODE
+        ? { top: 0, bottom: 0, height: 0 } as DOMRect
+        : { top: 530, bottom: 550, height: 20 } as DOMRect;
+    });
+    viewport(root, 600);
+    const restore = preserveVisibleSelection(root);
+    viewport(root, 400);
+    restore();
+    expect(root.scrollTop).toBe(174);
+    expect(selection.toString()).toBe('quiet');
+    expect(selection.focusNode).toBe(paragraph);
+    expect(selection.focusOffset).toBe(2);
+  });
+
+  it('does not follow a selection that moved to a different editor', () => {
+    const { root, scroll } = setup();
+    viewport(root, 600);
+    const restore = preserveVisibleSelection(root);
+    const other = document.createElement('p');
+    other.textContent = 'A different document';
+    document.body.append(other);
+    window.getSelection()!.selectAllChildren(other);
+    viewport(root, 400);
+    restore();
+    expect(root.scrollTop).toBe(0);
     expect(scroll).not.toHaveBeenCalled();
   });
 });

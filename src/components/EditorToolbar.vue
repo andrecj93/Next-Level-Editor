@@ -10,7 +10,7 @@
       <ToolbarSection class="writing-inline" type="buttons" :items="inlineFormatActions.filter(item => ['bold', 'italic', 'underline'].includes(item.id))" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
       <span class="writing-toolbar-divider" />
       <ToolbarSection type="dropdown" label="Insert" preserve-label tooltip="Add a link, image, list, or other content" :items="writingInsertItems" :visible="isToolbarSectionVisible('insert')" @remember-selection="$emit('remember-selection')" />
-      <button type="button" class="writing-more-format" aria-label="More formatting" :aria-expanded="writingFormattingOpen" @mousedown.prevent="$emit('remember-selection')" @click="writingFormattingOpen = !writingFormattingOpen"><span aria-hidden="true">Aa</span><span class="writing-format-label"> Style</span></button>
+      <button type="button" class="writing-more-format" aria-label="More formatting" title="Text style, alignment, and colors" :aria-expanded="writingFormattingOpen" @mousedown.prevent="$emit('remember-selection')" @click="toggleWritingFormatting">Style <span class="dropdown-arrow" aria-hidden="true">▾</span></button>
       <div class="writing-toolbar-spacer" />
       <ToolbarSection type="dropdown" label="Tools" preserve-label tooltip="Find, history, and document tools" :items="writingToolItems" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection type="dropdown" label="View" preserve-label tooltip="Editor, source, preview, and focus" :items="writingViewItems" @remember-selection="$emit('remember-selection')" />
@@ -20,8 +20,8 @@
     <div v-if="writingFormattingOpen" class="writing-format-row" role="group" aria-label="More formatting options">
       <ToolbarSection type="buttons" :items="inlineFormatActions" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
       <span class="writing-toolbar-divider" />
-      <ToolbarSection type="dropdown" label="Align" :items="alignmentDropdownItems" :visible="isToolbarSectionVisible('alignment')" @remember-selection="$emit('remember-selection')" />
-      <ToolbarSection type="dropdown" label="Size" :items="fontSizeDropdownItems" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="dropdown" label="Align" preserve-label tooltip="Text alignment" :items="alignmentDropdownItems" :visible="isToolbarSectionVisible('alignment')" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="dropdown" label="Size" preserve-label tooltip="Text size" :items="fontSizeDropdownItems" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection type="buttons" :items="listActions" :visible="isToolbarSectionVisible('lists')" @remember-selection="$emit('remember-selection')" />
       <label class="writing-color" @mousedown="$emit('remember-selection')">Text <input type="color" aria-label="Text color" :disabled="!isToolbarSectionVisible('colors')" :value="textColor || '#333333'" @input="$emit('text-color-change', ($event.target as HTMLInputElement).value)"></label>
       <label class="writing-color" @mousedown="$emit('remember-selection')">Highlight <input type="color" aria-label="Highlight color" :disabled="!isToolbarSectionVisible('colors')" :value="backgroundColor === 'transparent' ? '#fff1a8' : backgroundColor" @input="$emit('background-color-change', ($event.target as HTMLInputElement).value)"></label>
@@ -535,6 +535,7 @@ import type { ToolbarAction } from "../types/toolbar";
 import type { ToolbarConfig } from "../composables/useSmartToolbar";
 import ToolbarSection from "./ToolbarSection.vue";
 import ColorPicker from "./ColorPicker.vue";
+import { preserveVisibleSelection } from "../utils/caretVisibility";
 
 interface Props {
   isToolbarSectionVisible: (section: keyof ToolbarConfig) => boolean;
@@ -642,6 +643,12 @@ watch(
  * state. The class only toggles on real scroll events — never at mount.
  */
 const rootEl = ref<HTMLElement | null>(null);
+const toggleWritingFormatting = () => {
+  const editor = rootEl.value?.closest('.next-level-editor')?.querySelector<HTMLElement>('.editor-content');
+  const keepPlace = preserveVisibleSelection(editor ?? null);
+  writingFormattingOpen.value = !writingFormattingOpen.value;
+  nextTick(keepPlace);
+};
 const isElevated = ref(false);
 let elevationRaf = 0;
 

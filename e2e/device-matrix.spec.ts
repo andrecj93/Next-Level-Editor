@@ -208,6 +208,23 @@ test('formatting, links, search and download remain usable', async ({ page, hasT
   const formatting = page.getByRole('group', { name: 'More formatting options' });
   await formatting.getByRole('button', { name: 'Bold', exact: true }).click();
   await expect(editor.locator('b,strong')).toHaveText('A sentence worth keeping.');
+  await expect(toolbarFor(page).getByRole('button', { name: 'More formatting', exact: true })).toContainText('Style');
+  for (const [name, option] of [['Align', 'Center'], ['Size', 'Large']]) {
+    const trigger = formatting.getByRole('button', { name, exact: true });
+    await trigger.scrollIntoViewIfNeeded();
+    // Accessible names alone missed the phone controls rendering as empty arrows.
+    await expect(trigger.locator('.dropdown-label')).toBeVisible();
+    await expect(trigger).toContainText(name);
+    await activate(trigger, hasTouch);
+    const menu = page.getByRole('menu', { name, exact: true });
+    await settle(page);
+    await insideViewport(menu);
+    await activate(menu.getByRole('menuitem', { name: option, exact: true }), hasTouch);
+  }
+  await expect(editor.locator('[style*="font-size"]')).toHaveText('A sentence worth keeping.');
+  await expect(editor.locator('[style*="text-align"]')).toHaveCSS('text-align', 'center');
+  await expect(editor).toHaveText('A sentence worth keeping.');
+  await noHorizontalOverflow(page);
   await formatting.getByRole('button', { name: 'Close more formatting', exact: true }).click();
   await editor.press('ControlOrMeta+End');
   await editor.press('Enter');
@@ -229,7 +246,10 @@ test('formatting, links, search and download remain usable', async ({ page, hasT
   await page.getByRole('menuitem', { name: 'HTML', exact: true }).click();
   const download = await downloadPending;
   expect(await download.failure()).toBeNull();
-  expect(await readFile((await download.path())!, 'utf8')).toContain('Reading room');
+  const exported = await readFile((await download.path())!, 'utf8');
+  expect(exported).toContain('Reading room');
+  expect(exported).toContain('text-align: center');
+  expect(exported).toContain('font-size: 1.25em');
   await noHorizontalOverflow(page);
 });
 

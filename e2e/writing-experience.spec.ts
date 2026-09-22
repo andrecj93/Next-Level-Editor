@@ -95,6 +95,81 @@ test.describe('Manuscript writing workspace', () => {
     }
   });
 
+  test('resizing preserves open compact notes and returns focus when the desktop sidebar closes', async ({ page }) => {
+    const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+    const opener = page.getByRole('button', { name: 'Writing companion', exact: true });
+    const companion = page.getByRole('complementary', { name: 'Writing companion' });
+    await page.setViewportSize({ width: 1200, height: 844 });
+    await editor.fill('She returned in order to find the house.');
+    await opener.click();
+    const notes = companion.getByRole('button', { name: /Writing notes/ });
+    await expect(notes).toBeFocused();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(companion).not.toBeVisible();
+    await expect(opener).toBeFocused();
+    await opener.press('Enter');
+    await expect(notes).toBeFocused();
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expect(companion).toBeVisible();
+    await expect(notes).toBeFocused();
+    const editorHeight = (await editor.boundingBox())!.height;
+    await companion.getByRole('button', { name: 'Use “to”', exact: true }).click();
+    await expect(editor).toHaveText('She returned to find the house.');
+    await expect(editor).toBeFocused();
+    expect((await editor.boundingBox())!.height, 'resolving a note does not resize the manuscript').toBeCloseTo(editorHeight, 0);
+    // Collapsing the sidebar must not steal focus from an active manuscript.
+    await page.setViewportSize({ width: 1200, height: 844 });
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(companion).not.toBeVisible();
+    await expect(editor).toBeFocused();
+    await editor.press('ControlOrMeta+End');
+    await page.keyboard.type(' Still here.');
+    await expect(editor).toContainText('Still here.');
+  });
+
+  test('opening Style or writing notes keeps the active line visible', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+    await page.getByRole('button', { name: 'View', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Code view', exact: true }).click();
+    await page.locator('.code-editor').fill('<h2>A letter home</h2>' + '<p>She carried the letter to the kitchen and set it beside her cup. The house was quiet enough to hear the clock in the hall.</p>'.repeat(20));
+    await page.getByRole('button', { name: 'View', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Editor view', exact: true }).click();
+    await editor.press('ControlOrMeta+End');
+    await editor.press('Enter');
+    await page.keyboard.type('The final line stays with its writer.');
+    const lineIsVisible = async () => {
+      await expect(async () => {
+        const geometry = await editor.evaluate(el => {
+          const caret = window.getSelection()!.getRangeAt(0).getBoundingClientRect();
+          const area = el.getBoundingClientRect();
+          return { top: caret.top, bottom: caret.bottom, areaTop: area.top, areaBottom: area.bottom };
+        });
+        expect(geometry.top, JSON.stringify(geometry)).toBeGreaterThanOrEqual(geometry.areaTop);
+        expect(geometry.bottom, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.areaBottom);
+      }).toPass({ timeout: 2000 });
+    };
+    await lineIsVisible();
+    await page.getByRole('button', { name: 'More formatting', exact: true }).click();
+    await lineIsVisible();
+    await page.getByRole('button', { name: 'Close more formatting', exact: true }).click();
+    await editor.press('ControlOrMeta+End');
+    for (let character = 0; character < 7; character++) await editor.press('Shift+ArrowLeft');
+    await editor.press('ControlOrMeta+i');
+    await expect(editor.locator('em,i')).toHaveText('writer.');
+    const before = await editor.innerHTML();
+    await page.getByRole('button', { name: 'Writing companion', exact: true }).click();
+    await lineIsVisible();
+    expect(await editor.innerHTML()).toBe(before);
+    await page.getByRole('button', { name: 'Close writing companion', exact: true }).click();
+    // A scroll-state fixture also runs in mobile WebKit, which has no wheel API.
+    await editor.evaluate(el => { el.scrollTop = 0; });
+    await expect.poll(() => editor.evaluate(el => el.scrollTop)).toBe(0);
+    await page.getByRole('button', { name: 'More formatting', exact: true }).click();
+    await expect.poll(() => editor.evaluate(el => el.scrollTop)).toBe(0);
+  });
+
   test('writing notes and toolbar reflow without covering the page on a phone', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });

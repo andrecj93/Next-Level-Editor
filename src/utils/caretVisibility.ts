@@ -29,21 +29,46 @@ export function keepCaretAboveToolbar(toolbar: HTMLElement, root: HTMLElement | 
   if (remaining > 0) window.scrollBy({ top: remaining, behavior: "instant" });
 }
 
+/** Browsers can leave the focus between inline elements after formatting.
+ * Collapsing that DOM boundary gives a zero rectangle; measure the adjacent
+ * character (or an empty line's element) without inserting a marker. */
+function selectionFocusRect(selection: Selection): DOMRect {
+  const selected = selection.getRangeAt(0);
+  const caret = selected.cloneRange();
+  const node = selection.focusNode!;
+  const offset = selection.focusOffset;
+  caret.setStart(node, offset);
+  caret.collapse(true);
+  const rect = caret.getBoundingClientRect();
+  if (rect.height) return rect;
+
+  const forward = node.nodeType === Node.TEXT_NODE
+    ? offset < (node.textContent?.length ?? 0) : offset < node.childNodes.length;
+  let adjacent = node.nodeType === Node.TEXT_NODE ? node
+    : node.childNodes[forward ? offset : offset - 1] ?? node;
+  while (adjacent.childNodes.length) adjacent = forward ? adjacent.firstChild! : adjacent.lastChild!;
+  if (adjacent.nodeType === Node.TEXT_NODE && adjacent.textContent?.length) {
+    const length = adjacent.textContent.length;
+    const position = adjacent === node ? Math.min(offset, length - 1) : forward ? 0 : length - 1;
+    caret.setStart(adjacent, position);
+    caret.setEnd(adjacent, position + 1);
+    const character = caret.getBoundingClientRect();
+    if (character.height) return character;
+  }
+  const selectedRect = selected.getBoundingClientRect();
+  if (selectedRect.height) return selectedRect;
+  const element = adjacent.nodeType === Node.ELEMENT_NODE ? adjacent as Element : adjacent.parentElement;
+  return element?.getBoundingClientRect() ?? rect;
+}
+
 /** Scroll the focus end of a selection without inserting nodes into the range.
  * A temporary scroll marker can change the live selection and the next command.
  * Read geometry instead, moving inner scroll containers before the host page. */
-export function keepSelectionVisible(root: HTMLElement | null) {
+export function keepSelectionVisible(root: HTMLElement | null, margin = 4) {
   const selection = window.getSelection();
   if (!root || !selection?.rangeCount || !selection.focusNode ||
       !root.contains(selection.focusNode)) return;
-  const selectedRange = selection.getRangeAt(0);
-  const caret = selectedRange.cloneRange();
-  caret.setStart(selection.focusNode, selection.focusOffset);
-  caret.collapse(true);
-  const rect = () => {
-    const focusRect = caret.getBoundingClientRect();
-    return focusRect.height ? focusRect : selectedRange.getBoundingClientRect();
-  };
+  const rect = () => selectionFocusRect(selection);
   const initial = rect();
   if (!initial.height) return;
   const delta = (start: number, end: number, low: number, high: number) =>
@@ -56,7 +81,8 @@ export function keepSelectionVisible(root: HTMLElement | null) {
       const box = parent.getBoundingClientRect();
       const focusRect = rect();
       if (/auto|scroll/.test(style.overflowY) && parent.scrollHeight > parent.clientHeight) {
-        parent.scrollTop += delta(focusRect.top, focusRect.bottom, box.top + 4, box.bottom - 4);
+        const inset = Math.min(margin, Math.max(0, (box.bottom - box.top) / 3));
+        parent.scrollTop += delta(focusRect.top, focusRect.bottom, box.top + inset, box.bottom - inset);
       }
       if (/auto|scroll/.test(style.overflowX) && parent.scrollWidth > parent.clientWidth) {
         parent.scrollLeft += delta(focusRect.left, focusRect.right, box.left + 4, box.right - 4);
@@ -71,4 +97,22 @@ export function keepSelectionVisible(root: HTMLElement | null) {
   const dy = delta(focusRect.top, focusRect.bottom, top + 8, top + (viewport?.height ?? innerHeight) - 8);
   const dx = delta(focusRect.left, focusRect.right, left + 8, left + (viewport?.width ?? innerWidth) - 8);
   if (dx || dy) window.scrollBy({ top: dy, left: dx, behavior: 'instant' });
+}
+
+/** Capture whether the writer's line is visible before a toolbar or panel
+ * resizes the page. Run the returned callback after layout to keep that line
+ * visible, while leaving a manually scrolled-away selection alone. */
+export function preserveVisibleSelection(root: HTMLElement | null): () => void {
+  const selection = root?.ownerDocument.getSelection();
+  if (!root || !selection?.rangeCount || !selection.focusNode ||
+      !root.contains(selection.focusNode)) return () => {};
+  const rect = selectionFocusRect(selection);
+  const bounds = root.getBoundingClientRect();
+  const view = root.ownerDocument.defaultView;
+  const viewport = view?.visualViewport;
+  const top = viewport?.offsetTop ?? 0;
+  const bottom = top + (viewport?.height ?? view?.innerHeight ?? 0);
+  const visible = rect.height > 0 && rect.top >= Math.max(bounds.top, top) &&
+    rect.bottom <= Math.min(bounds.bottom, bottom);
+  return () => { if (visible && root.isConnected) keepSelectionVisible(root, 24); };
 }

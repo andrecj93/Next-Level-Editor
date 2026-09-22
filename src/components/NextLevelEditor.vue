@@ -677,6 +677,7 @@ import SaveStatus from './SaveStatus.vue';
 import PdfExportStatus from './PdfExportStatus.vue';
 import { useWritingWorkspace } from '../composables/useWritingWorkspace';
 import { writingBlocks, writingNoteRange, type WritingNote } from '../utils/writingReview';
+import { preserveVisibleSelection } from '../utils/caretVisibility';
 
 import {
   applyTextAlignment,
@@ -1261,15 +1262,28 @@ onMounted(() => {
   // companion on a wide screen; new notes never move the page while typing.
   companionOpen.value = window.innerWidth >= 1000 && writingReview.value.notes.length > 0;
 });
-watch(rootWidth, width => { if (width < 900) companionOpen.value = false; });
+watch(rootWidth, (width, previousWidth) => {
+  // A small resize must not dismiss notes the writer deliberately opened.
+  // Only collapse the desktop sidebar when crossing into the compact layout.
+  if (width >= 900 || previousWidth < 900 || !companionOpen.value) return;
+  const panel = rootEl.value?.querySelector('.writing-companion');
+  const hadFocus = panel?.contains(panel.ownerDocument.activeElement);
+  companionOpen.value = false;
+  console.debug('[NextLevelEditor] Writing companion collapsed', { reason: 'compact-layout', focusRestored: Boolean(hadFocus) });
+  if (hadFocus) nextTick(() => rootEl.value?.querySelector<HTMLButtonElement>('.writing-footer-actions button')?.focus({ preventScroll: true }));
+});
 const toggleCompanion = () => {
   if (companionOpen.value && viewMode.value === 'editor') {
     closeCompanion();
     return;
   }
+  const keepPlace = preserveVisibleSelection(editorContent.value);
   viewMode.value = 'editor';
   companionOpen.value = true;
-  nextTick(() => rootEl.value?.querySelector<HTMLButtonElement>('.companion-tabs button')?.focus());
+  nextTick(() => {
+    keepPlace();
+    rootEl.value?.querySelector<HTMLButtonElement>('.companion-tabs button')?.focus({ preventScroll: true });
+  });
 };
 const closeCompanion = () => {
   companionOpen.value = false;

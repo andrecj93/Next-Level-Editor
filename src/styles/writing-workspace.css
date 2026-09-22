@@ -20,13 +20,13 @@
 .is-writing-workspace .editor-panel { height: auto; min-height: 0; }
 .is-writing-workspace .nle-resize-grip { display: none; }
 .is-writing-workspace .editor-footer { background: var(--background-color); flex-shrink: 0; }
-.is-writing-workspace .auto-save-indicator { position: static; padding: 0; border: 0; background: none; box-shadow: none; font-size: 11px; backdrop-filter: none; white-space: nowrap; }
+.is-writing-workspace .auto-save-indicator { position: static; display: flex; align-items: center; min-height: 18px; line-height: 18px; padding: 0; border: 0; background: none; box-shadow: none; font-size: 11px; backdrop-filter: none; white-space: nowrap; }
 .is-writing-workspace .nle-toolbar-shell { flex: 0 0 auto; }
 .editor-toolbar-modern.writing-toolbar { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 0; background: var(--background-color); border-bottom: 1px solid var(--border-color); min-height: 52px; border-radius: 0; }
 .writing-toolbar-row { display: flex; align-items: center; gap: 4px; width: 100%; min-width: 0; padding: 7px 16px; }
 .writing-toolbar-row .toolbar-group, .writing-history { display: flex; gap: 2px; align-items: center; }
 .writing-toolbar-row .dropdown-trigger { min-height: 36px; padding: 6px 9px; font-size: 12px; gap: 6px; }
-.writing-toolbar-row .dropdown-label { display: inline; }
+.writing-toolbar .dropdown-label { display: inline; }
 .writing-toolbar-row .writing-paragraph-format .dropdown-trigger { width: 104px; justify-content: space-between; }
 .writing-toolbar-row .dropdown-arrow { font-size: 8px; opacity: .6; }
 /* Native titles provide the supplementary hint without invisible pseudo
@@ -35,11 +35,12 @@
 .writing-toolbar-row .toolbar-btn-modern { width: 34px; height: 36px; min-width: 34px; padding: 6px; font-size: 22px; }
 .writing-toolbar-divider { width: 1px; height: 19px; background: var(--border-color); margin: 0 5px; flex-shrink: 0; }
 .writing-toolbar-spacer { flex: 1; }
-.writing-toolbar .writing-more-format { font: 12px var(--font-family, sans-serif); color: var(--toolbar-text); border: 0; background: transparent; border-radius: 6px; padding: 8px; min-height: 36px; cursor: pointer; white-space: nowrap; }
+.writing-toolbar .writing-more-format { display: flex; align-items: center; justify-content: center; gap: 4px; font: 12px var(--font-family, sans-serif); color: var(--toolbar-text); border: 0; background: transparent; border-radius: 6px; padding: 8px; min-width: 44px; min-height: 36px; cursor: pointer; white-space: nowrap; }
 .writing-more-format[aria-expanded='true'], .writing-more-format:hover { background: var(--toolbar-hover); }
 .writing-more-format:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
 .writing-export .dropdown-trigger { background: var(--background-alt); border: 1px solid var(--border-color); }
 .writing-format-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 18px; border-top: 1px solid var(--border-color); background: var(--background-alt); }
+.writing-format-row .dropdown-trigger { min-height: 40px; padding: 6px 8px; font-size: 12px; }
 .writing-color { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); }
 .writing-color input { width: 26px; height: 26px; border: 0; padding: 0; cursor: pointer; background: transparent; }
 .writing-toolbar .toolbar-btn-modern:disabled { opacity: .3; }
@@ -49,7 +50,7 @@
 .quick-writing-tools .toolbar-button[aria-pressed='true'] { color: var(--toolbar-accent-ink); background: var(--toolbar-hover); }
 .quick-writing-tools .toolbar-button span { display: flex; align-items: center; justify-content: center; }
 .is-writing-workspace.theme-dark .auto-save-indicator .saved { color: #75c5a4; }
-@media (max-width: 1000px) { .writing-toolbar-row { padding-inline: 8px; gap: 2px; } .writing-toolbar-row .writing-format-label { display: none; } }
+@media (max-width: 1000px) { .writing-toolbar-row { padding-inline: 8px; gap: 2px; } }
 @media (max-width: 900px) {
   .writing-toolbar-row .writing-history, .writing-toolbar-row .writing-theme,
   .writing-toolbar-row .writing-inline, .writing-toolbar-row .writing-toolbar-divider { display: none; }
@@ -73,7 +74,7 @@
 }
 
 @media (max-width: 450px) {
-  .writing-toolbar-row { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) 28px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr); }
+  .writing-toolbar-row { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(44px, .8fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr); }
   .writing-toolbar-row .writing-export { margin-left: 0; }
   .writing-toolbar-row .dropdown-trigger,
   .writing-toolbar-row .writing-paragraph-format .dropdown-trigger { width: 100%; }
