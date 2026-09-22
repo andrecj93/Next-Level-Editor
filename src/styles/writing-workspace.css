@@ -50,6 +50,10 @@
 .quick-writing-tools .toolbar-button span { display: flex; align-items: center; justify-content: center; }
 .is-writing-workspace.theme-dark .auto-save-indicator .saved { color: #75c5a4; }
 @media (max-width: 1000px) { .writing-toolbar-row { padding-inline: 8px; gap: 2px; } .writing-toolbar-row .writing-format-label { display: none; } }
+@media (max-width: 900px) {
+  .writing-toolbar-row .writing-history, .writing-toolbar-row .writing-theme,
+  .writing-toolbar-row .writing-inline, .writing-toolbar-row .writing-toolbar-divider { display: none; }
+}
 @media (max-width: 700px) {
   .is-writing-workspace .nle-document-workspace { flex-direction: column; }
   .is-writing-workspace .editor-content { font-size: 17px; line-height: 1.7; padding: 28px 24px 64px; }

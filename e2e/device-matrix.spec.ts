@@ -25,15 +25,19 @@ async function noHorizontalOverflow(page: Page) {
 }
 
 async function insideViewport(locator: Locator) {
-  const geometry = await locator.evaluate(el => {
-    const box = el.getBoundingClientRect();
-    const viewport = window.visualViewport;
-    return { x: box.x, y: box.y, right: box.right, bottom: box.bottom, width: viewport?.width ?? innerWidth, height: viewport?.height ?? innerHeight, top: viewport?.offsetTop ?? 0, left: viewport?.offsetLeft ?? 0 };
-  });
-  expect(geometry.x, JSON.stringify(geometry)).toBeGreaterThanOrEqual(geometry.left - 1);
-  expect(geometry.y, JSON.stringify(geometry)).toBeGreaterThanOrEqual(geometry.top - 1);
-  expect(geometry.right, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.width + geometry.left + 1);
-  expect(geometry.bottom, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.height + geometry.top + 1);
+  // WebKit delivers visualViewport resize after the protocol resize resolves.
+  // Wait for the actual bounded geometry, including Vue's next-tick clamp.
+  await expect(async () => {
+    const geometry = await locator.evaluate(el => {
+      const box = el.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      return { x: box.x, y: box.y, right: box.right, bottom: box.bottom, width: viewport?.width ?? innerWidth, height: viewport?.height ?? innerHeight, top: viewport?.offsetTop ?? 0, left: viewport?.offsetLeft ?? 0 };
+    });
+    expect(geometry.x, JSON.stringify(geometry)).toBeGreaterThanOrEqual(geometry.left - 1);
+    expect(geometry.y, JSON.stringify(geometry)).toBeGreaterThanOrEqual(geometry.top - 1);
+    expect(geometry.right, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.width + geometry.left + 1);
+    expect(geometry.bottom, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.height + geometry.top + 1);
+  }).toPass({ timeout: 2000, intervals: [50, 100, 250] });
 }
 
 async function switchView(page: Page, mode: string) {
@@ -62,10 +66,12 @@ test('write, format, revise, undo and recover without losing prose', async ({ pa
   await page.keyboard.type('A map of the ordinary');
   const insert = toolbarFor(page).getByRole('button', { name: 'Insert', exact: true });
   const insertBefore = await insert.boundingBox();
+  const toolbarBefore = await toolbarFor(page).evaluate(el => [...el.querySelectorAll('.writing-toolbar-row > *')].map(child => ({ class: child.className, width: child.getBoundingClientRect().width, x: child.getBoundingClientRect().x })));
   await toolbarFor(page).getByRole('button', { name: 'Format', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Heading 1', exact: true }).click();
   await expect(editor.locator('h1'), await editor.innerHTML()).toHaveText('A map of the ordinary');
-  expect(Math.abs((await insert.boundingBox())!.x - insertBefore!.x), 'format changes do not move the next toolbar control').toBeLessThanOrEqual(1);
+  const toolbarAfter = await toolbarFor(page).evaluate(el => [...el.querySelectorAll('.writing-toolbar-row > *')].map(child => ({ class: child.className, width: child.getBoundingClientRect().width, x: child.getBoundingClientRect().x })));
+  expect(Math.abs((await insert.boundingBox())!.x - insertBefore!.x), `format changes do not move the next toolbar control: ${JSON.stringify({toolbarBefore, toolbarAfter})}`).toBeLessThanOrEqual(1);
   await editor.press('End');
   await editor.press('Enter');
   await page.keyboard.type('She returned in order to find the the house.');
