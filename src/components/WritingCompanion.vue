@@ -1,16 +1,16 @@
 <template>
-  <aside class="writing-companion" aria-label="Writing companion" @keydown.esc.stop="$emit('close')">
+  <aside ref="panel" class="writing-companion" aria-label="Writing companion" @keydown.esc.stop="$emit('close')">
     <header class="companion-header">
       <span class="companion-title">In the margins</span>
       <button type="button" aria-label="Close writing companion" @click="$emit('close')">×</button>
     </header>
     <div class="companion-tabs" role="group" aria-label="Writing companion views">
-      <button type="button" :aria-pressed="tab === 'review'" @click="tab = 'review'">Writing notes <span v-if="visibleNotes.length">{{ visibleNotes.length }}</span></button>
+      <button ref="reviewButton" type="button" :aria-pressed="tab === 'review'" @click="tab = 'review'">Writing notes <span v-if="visibleNotes.length">{{ visibleNotes.length }}</span></button>
       <button type="button" :aria-pressed="tab === 'outline'" @click="tab = 'outline'">Outline</button>
     </div>
     <div class="companion-body">
       <template v-if="tab === 'review'">
-        <p class="companion-intro">A second pair of eyes.<br><span>Your words, your decisions.</span></p>
+        <p v-if="!visibleNotes.length" class="companion-intro">A second pair of eyes.<br><span>Your words, your decisions.</span></p>
         <p v-if="!review.words" class="companion-empty">Start with a sentence. When you pause, I’ll point out a few places you might want to revisit.</p>
         <p v-else-if="!visibleNotes.length" class="companion-empty">{{ review.notes.length ? 'You’ve considered every note. Keep your voice.' : 'No notes for now. Keep going — there’s room for your next thought.' }}</p>
         <article v-for="note in visibleNotes.slice(0, 5)" :key="note.id" class="writing-note">
@@ -20,7 +20,7 @@
           <div class="note-actions">
             <button v-if="note.replacement" type="button" class="note-apply" :disabled="readonly" @click="$emit('apply', note)">Use “{{ note.replacement }}”</button>
             <button v-else type="button" @click="$emit('locate', note)">Go to sentence</button>
-            <button type="button" :aria-label="`Dismiss note: ${note.title}`" @click="dismissed.add(note.id)">Keep as is</button>
+            <button type="button" :aria-label="`Dismiss note: ${note.title}`" @click="dismiss(note, $event)">Keep as is</button>
           </div>
         </article>
         <p v-if="visibleNotes.length > 5" class="companion-small">{{ visibleNotes.length - 5 }} more notes. Take these one at a time.</p>
@@ -46,19 +46,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import type { WritingReview, WritingNote } from '../utils/writingReview';
-import { computed } from 'vue';
-const props = defineProps<{ review: WritingReview; readonly?: boolean }>();
-defineEmits<{ close: []; locate: [note: WritingNote]; apply: [note: WritingNote]; navigate: [block: number] }>();
+const props = defineProps<{ review: WritingReview; dismissedNotes: ReadonlySet<string>; readonly?: boolean }>();
+const emit = defineEmits<{ close: []; locate: [note: WritingNote]; apply: [note: WritingNote]; dismiss: [note: WritingNote]; navigate: [block: number] }>();
+const panel = ref<HTMLElement | null>(null);
+const reviewButton = ref<HTMLButtonElement | null>(null);
 const tab = ref<'review' | 'outline'>('review');
-const dismissed = ref(new Set<string>());
-const visibleNotes = computed(() => props.review.notes.filter(note => !dismissed.value.has(note.id)));
-// Keep dismissal memory bounded as the manuscript evolves.
-watch(() => props.review.notes, notes => {
-  const current = new Set(notes.map(note => note.id));
-  dismissed.value = new Set([...dismissed.value].filter(id => current.has(id)));
-});
+const visibleNotes = computed(() => props.review.notes.filter(note => !props.dismissedNotes.has(note.id)));
+const dismiss = async (note: WritingNote, event: MouseEvent) => {
+  const article = (event.currentTarget as HTMLElement).closest('.writing-note');
+  const document = panel.value?.ownerDocument;
+  const ownedFocus = article?.contains(document?.activeElement ?? null);
+  const index = visibleNotes.value.findIndex(current => current.id === note.id);
+  emit('dismiss', note);
+  await nextTick();
+  // Removing the focused button sends focus to the body. Continue at the next
+  // note (or the previous last note), without stealing focus from the manuscript.
+  if (ownedFocus && !article?.isConnected && document?.activeElement === document?.body) {
+    const passages = panel.value?.querySelectorAll<HTMLButtonElement>('.note-passage');
+    const target = passages?.[Math.min(index, passages.length - 1)] ?? reviewButton.value;
+    target?.focus();
+  }
+};
 const promptIndex = ref(0);
 const prompts = [
   'What is the one thing you want the reader to feel in the next paragraph?',
@@ -69,7 +79,7 @@ const prompts = [
 </script>
 
 <style scoped>
-.writing-companion { width: 296px; flex: 0 0 296px; min-height: 0; display: flex; flex-direction: column; border-left: 1px solid var(--border-color); background: var(--background-alt); color: var(--text-color); font: 13px/1.55 var(--font-family, sans-serif); }
+.writing-companion { width: 280px; flex: 0 0 280px; min-height: 0; display: flex; flex-direction: column; border-left: 1px solid var(--border-color); background: var(--background-color); color: var(--text-color); font: 13px/1.55 var(--font-family, sans-serif); }
 .companion-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 8px; }
 .companion-title { font-weight: 650; font-size: 15px; letter-spacing: -.02em; }
 button { font: inherit; color: inherit; cursor: pointer; border: 0; background: transparent; border-radius: 6px; }
@@ -80,13 +90,14 @@ button:hover { background: var(--hover-bg); }
 .companion-tabs button { min-height: 36px; padding: 6px 9px; color: var(--text-secondary); }
 .companion-tabs [aria-pressed="true"] { background: var(--background-color); color: var(--text-color); box-shadow: 0 1px 3px #00000012; font-weight: 600; }
 .companion-tabs span { font-size: 11px; margin-left: 3px; }
-.companion-body { padding: 22px 20px; overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
+.companion-body { padding: 18px 20px; overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
 .companion-intro { margin: 0 0 20px; font-family: Georgia, serif; font-size: 19px; line-height: 1.4; }
 .companion-intro span { font: 12px/1.6 var(--font-family, sans-serif); color: var(--text-secondary); }
 .companion-empty { color: var(--text-secondary); margin-bottom: 24px; }
 .writing-note { border-top: 1px solid var(--border-color); padding: 18px 0; }
+.writing-note:first-child { border-top: 0; padding-top: 0; }
 .writing-note h3 { font: 600 13px/1.5 var(--font-family, sans-serif); margin: 0 0 10px; }
-.note-passage { text-align: left; color: var(--text-color); font: italic 15px/1.55 Georgia, serif; padding: 8px 12px; background: var(--background-color); border-left: 2px solid var(--primary-color); border-radius: 0 6px 6px 0; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; width: 100%; }
+.note-passage { text-align: left; color: var(--text-color); font: italic 15px/1.55 Georgia, serif; padding: 8px 12px; background: var(--background-alt); border-left: 2px solid var(--primary-color); border-radius: 0 6px 6px 0; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; width: 100%; }
 .note-passage span { color: var(--primary-color); }
 .writing-note p { color: var(--text-secondary); font-size: 12px; }
 .note-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-left: -6px; }

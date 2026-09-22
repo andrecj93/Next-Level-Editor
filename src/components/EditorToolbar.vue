@@ -6,7 +6,7 @@
         <button type="button" class="toolbar-btn-modern" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" :disabled="historyIndex >= historyLength - 1" @mousedown.prevent="$emit('remember-selection')" @click="$emit('redo')">↷</button>
       </div>
       <span class="writing-toolbar-divider" />
-      <ToolbarSection type="dropdown" label="Format" tooltip="Paragraph style" :items="formatDropdownItems" :visible="isToolbarSectionVisible('format')" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection class="writing-paragraph-format" type="dropdown" label="Format" tooltip="Paragraph style" :items="formatDropdownItems" :visible="isToolbarSectionVisible('format')" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection class="writing-inline" type="buttons" :items="inlineFormatActions.filter(item => ['bold', 'italic', 'underline'].includes(item.id))" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
       <span class="writing-toolbar-divider" />
       <ToolbarSection type="dropdown" label="Insert" preserve-label tooltip="Add a link, image, list, or other content" :items="writingInsertItems" :visible="isToolbarSectionVisible('insert')" @remember-selection="$emit('remember-selection')" />

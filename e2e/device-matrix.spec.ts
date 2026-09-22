@@ -60,12 +60,16 @@ test('write, format, revise, undo and recover without losing prose', async ({ pa
   const editor = editorFor(page);
   await activate(editor, hasTouch);
   await page.keyboard.type('A map of the ordinary');
+  const insert = toolbarFor(page).getByRole('button', { name: 'Insert', exact: true });
+  const insertBefore = await insert.boundingBox();
   await toolbarFor(page).getByRole('button', { name: 'Format', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Heading 1', exact: true }).click();
   await expect(editor.locator('h1'), await editor.innerHTML()).toHaveText('A map of the ordinary');
+  expect(Math.abs((await insert.boundingBox())!.x - insertBefore!.x), 'format changes do not move the next toolbar control').toBeLessThanOrEqual(1);
   await editor.press('End');
   await editor.press('Enter');
   await page.keyboard.type('She returned in order to find the the house.');
+  expect(Math.abs((await insert.boundingBox())!.x - insertBefore!.x), 'returning to a paragraph keeps the toolbar still').toBeLessThanOrEqual(1);
   await expect(editor.locator('h1'), await editor.innerHTML()).toHaveText('A map of the ordinary');
   const companion = page.getByRole('complementary', { name: 'Writing companion' });
   if (!(await companion.isVisible())) await activate(page.getByRole('button', { name: 'Writing companion', exact: true }), hasTouch);
@@ -85,6 +89,75 @@ test('write, format, revise, undo and recover without losing prose', async ({ pa
   await page.goto('/#playground');
   await expect(editor).toContainText('She returned to find the house.');
   await expect(editor.locator('h1')).toHaveText('A map of the ordinary');
+  await noHorizontalOverflow(page);
+});
+
+test('a blank manuscript stays spacious and offers notes without moving the page', async ({ page, hasTouch }) => {
+  const editor = editorFor(page);
+  const companion = page.getByRole('complementary', { name: 'Writing companion' });
+  const opener = page.getByRole('button', { name: 'Writing companion', exact: true });
+  await expect(companion).not.toBeVisible();
+  const before = await editor.boundingBox();
+  await activate(editor, hasTouch);
+  await page.keyboard.type('She returned in order to find the house.');
+  await expect(opener).toHaveAttribute('aria-description', '1 writing note ready to review');
+  await expect(companion).not.toBeVisible();
+  const after = await editor.boundingBox();
+  expect(after!.x).toBe(before!.x);
+  expect(after!.width).toBe(before!.width);
+  await activate(opener, hasTouch);
+  await expect(companion.getByRole('button', { name: 'Use “to”', exact: true })).toBeVisible();
+  await activate(companion.getByRole('button', { name: 'Dismiss note: A little more direct', exact: true }), hasTouch);
+  await expect(opener).not.toHaveAttribute('aria-description');
+  await expect(editor).toHaveText('She returned in order to find the house.');
+  await noHorizontalOverflow(page);
+});
+
+test('dismissing writing notes keeps keyboard focus and leaves the manuscript intact', async ({ page }) => {
+  const editor = editorFor(page);
+  await editor.fill('She returned in order to find the the house.');
+  const before = await editor.innerHTML();
+  const companion = page.getByRole('complementary', { name: 'Writing companion' });
+  if (!(await companion.isVisible())) await page.getByRole('button', { name: 'Writing companion', exact: true }).click();
+  await companion.getByRole('button', { name: 'Dismiss note: An accidental echo?', exact: true }).press('Enter');
+  await expect(companion.getByRole('button', { name: 'Show passage: in order to', exact: true })).toBeFocused();
+  await companion.getByRole('button', { name: 'Dismiss note: A little more direct', exact: true }).press('Enter');
+  await expect(companion.getByRole('button', { name: 'Writing notes', exact: true })).toBeFocused();
+  await expect(companion).toContainText('You’ve considered every note. Keep your voice.');
+  expect(await editor.innerHTML()).toBe(before);
+  await companion.getByRole('button', { name: 'Writing notes', exact: true }).press('Escape');
+  await expect(page.getByRole('button', { name: 'Writing companion', exact: true })).toBeFocused();
+});
+
+test('kept writing notes survive closing the panel and edits elsewhere in the book', async ({ page, hasTouch }) => {
+  const draft = '<h2>Arrival</h2><p>She returned in order to find the house.</p>';
+  await switchView(page, 'Code');
+  await page.locator('.code-editor').fill(draft);
+  await switchView(page, 'Editor');
+  const companion = page.getByRole('complementary', { name: 'Writing companion' });
+  const opener = page.getByRole('button', { name: 'Writing companion', exact: true });
+  if (!(await companion.isVisible())) await activate(opener, hasTouch);
+  const before = await editorFor(page).innerHTML();
+  await activate(companion.getByRole('button', { name: 'Dismiss note: A little more direct', exact: true }), hasTouch);
+  await activate(companion.getByRole('button', { name: 'Close writing companion' }), hasTouch);
+  await activate(opener, hasTouch);
+  await expect(companion).toContainText('You’ve considered every note. Keep your voice.');
+  expect(await editorFor(page).innerHTML()).toBe(before);
+  await activate(companion.getByRole('button', { name: 'Close writing companion' }), hasTouch);
+  await switchView(page, 'Code');
+  const prefix = '<p>The the harbor was quiet.</p>';
+  await page.locator('.code-editor').fill(prefix + draft);
+  await switchView(page, 'Editor');
+  await activate(opener, hasTouch);
+  // The new note proves the debounced review has caught up with this edit.
+  await expect(companion.getByRole('button', { name: 'Use “The”', exact: true })).toBeVisible();
+  await expect(companion.getByRole('button', { name: 'Use “to”', exact: true })).toHaveCount(0);
+  await activate(companion.getByRole('button', { name: 'Close writing companion' }), hasTouch);
+  await switchView(page, 'Code');
+  await page.locator('.code-editor').fill(prefix + draft.replace('find the house', 'see the house'));
+  await switchView(page, 'Editor');
+  await activate(opener, hasTouch);
+  await expect(companion.getByRole('button', { name: 'Use “to”', exact: true })).toBeVisible();
   await noHorizontalOverflow(page);
 });
 

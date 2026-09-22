@@ -113,6 +113,7 @@ test.describe('Manuscript writing workspace', () => {
   test('light and dark manuscript interfaces meet automated accessibility checks', async ({ page }) => {
     test.skip(test.info().project.name !== 'chromium', 'axe browser coverage');
     await page.getByRole('textbox', { name: 'Rich text editor', exact: true }).fill('She went in order to see the the house.');
+    await page.getByRole('button', { name: 'Writing companion', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Use “the”', exact: true })).toBeVisible();
     await expect(page.locator('.auto-save-indicator')).toContainText('Saved');
     for (const dark of [false, true]) {

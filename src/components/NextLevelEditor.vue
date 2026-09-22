@@ -165,10 +165,12 @@
     <WritingCompanion
       v-if="writingMode && companionOpen && viewMode === 'editor'"
       :review="writingReview"
+      :dismissed-notes="dismissedWritingNotes"
       :readonly="readonly"
       @close="closeCompanion"
       @locate="locateWritingNote"
       @apply="applyWritingNote"
+      @dismiss="dismissWritingNote"
       @navigate="navigateWritingBlock"
     />
     </div>
@@ -184,6 +186,7 @@
       :full-width="isFullWidth"
       :writing-mode="writingMode"
       :companion-open="companionOpen && viewMode === 'editor'"
+      :writing-note-count="writingReview.notes.filter(note => !dismissedWritingNotes.has(note.id)).length"
       :enable-comments="enableComments"
       :enable-variables="enableVariables && !readonly"
       :comments-open="showCommentsSidebar"
@@ -1237,9 +1240,22 @@ usePendingSaveGuard(
   () => forceSave(sanitizeHtml(htmlContent.value))
 );
 
-const { review: writingReview, refresh: refreshWritingReview } = useWritingWorkspace(htmlContent, toRef(props, 'writingMode'));
+const {
+  review: writingReview, refresh: refreshWritingReview,
+  dismissedNotes: dismissedWritingNotes, dismissNote,
+} = useWritingWorkspace(htmlContent, toRef(props, 'writingMode'));
+const dismissWritingNote = (note: WritingNote) => {
+  if (!dismissNote(note)) return;
+  announce('Note dismissed. Your words are unchanged.');
+  console.debug('[NextLevelEditor] Writing note dismissed', { kind: note.title });
+};
 const companionOpen = ref(false);
-onMounted(() => { companionOpen.value = window.innerWidth >= 1000; });
+onMounted(() => {
+  refreshWritingReview();
+  // Start a blank page with room to write. Existing notes can introduce the
+  // companion on a wide screen; new notes never move the page while typing.
+  companionOpen.value = window.innerWidth >= 1000 && writingReview.value.notes.length > 0;
+});
 watch(rootWidth, width => { if (width < 900) companionOpen.value = false; });
 const toggleCompanion = () => {
   if (companionOpen.value && viewMode.value === 'editor') {

@@ -1,7 +1,7 @@
 <template>
   <div class="editor-footer">
     <div v-if="writingMode" class="writing-footer-actions">
-      <button type="button" class="width-toggle" :aria-expanded="companionOpen" @click="$emit('toggle-companion')">Writing companion</button>
+      <button type="button" class="width-toggle" aria-label="Writing companion" :aria-description="writingNoteCount ? `${writingNoteCount} writing ${writingNoteCount === 1 ? 'note' : 'notes'} ready to review` : undefined" :aria-expanded="companionOpen" @click="$emit('toggle-companion')">Writing companion <span v-if="writingNoteCount" class="writing-note-count" aria-hidden="true">{{ writingNoteCount }}</span></button>
       <button v-if="enableComments" type="button" class="width-toggle" :aria-expanded="commentsOpen" @click="$emit('open-comments')">Comments</button>
       <button v-if="enableVariables" type="button" class="width-toggle" :aria-expanded="variablesOpen" @click="$emit('open-variables')">Variables</button>
     </div>
@@ -55,6 +55,7 @@ defineProps<{
   fullWidth?: boolean;
   writingMode?: boolean;
   companionOpen?: boolean;
+  writingNoteCount?: number;
   enableComments?: boolean;
   enableVariables?: boolean;
   commentsOpen?: boolean;
@@ -72,6 +73,7 @@ defineEmits<{
 <style scoped>
 .writing-footer-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .writing-footer-actions button { min-height: 30px; }
+.writing-note-count { min-width: 18px; padding: 1px 5px; border-radius: 9px; background: var(--background-alt); color: var(--toolbar-accent-ink, var(--text-color)); font-size: 11px; line-height: 16px; font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .writing-footer-actions { gap: 2px; } .char-count { display: none; } .writing-footer-actions button { font-size: 11px; } }
 .editor-footer {
   /* Extra right padding clears the corner resize grip that overlays this
