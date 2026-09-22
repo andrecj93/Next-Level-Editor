@@ -54,3 +54,40 @@ Persistent run directory:
 Earlier failed runs are retained. They include the mobile layout regression, initial integration failures, and a Windows command-line quoting failure; the successful verification commands and exit codes are recorded separately. The demo build retains its existing large-chunk warning.
 
 Browser developer tools expose sanitized `[NextLevelEditor]` writing-suggestion applied/refreshed/failure events and existing save diagnostics. They contain the operation kind or reason, never the manuscript text. The completed story remains in the local preview's browser draft. At this checkpoint, changes were local and uncommitted; the [device review](DEVICE_QUALITY_2026-09-20.md) records the subsequent draft PR and browser qualification.
+
+## Follow-up: book export and ordinary typing, 2026-09-22
+
+A 20-chapter, 1,000-paragraph manuscript exposed a PDF failure: the previous
+renderer requested a 1,520 × 186,522 canvas, received `data:,`, and failed with
+`wrong PNG signature`. The draft remained intact. PDF export now snapshots the
+document, waits for image dimensions and fonts, and renders bounded A4 pages.
+Paragraphs, text lines, table rows and explicit page breaks guide pagination.
+Page progress, cancellation, duplicate-export prevention and cleanup are wired
+through the editor. Dark-theme output uses paper contrast and visible checklist
+glyphs. The file remains image based, without tagged or selectable prose.
+
+The same writing exercise found that typing in an existing paragraph beginning
+with `1.` could turn earlier text into a list and split the paragraph. Live
+input now activates a block shortcut only when the new input completes it;
+inline formatting and newly typed shortcuts remain available.
+
+Local evidence under `$CODEX_HOME/logs/next-level-editor/20260922T011127Z/`:
+
+- Final book export: 94 A4 pages, 32,960,929 bytes, final paragraph visually
+  present, no application errors, no leaked export snapshot, draft unchanged.
+- Five-page dark-theme proof: rendered and inspected all pages for explicit
+  breaks, a paragraph spanning pages, twelve table rows, an image, both
+  checklist states, and the final paragraph. Raw HTML before/after is retained;
+  the only live serialization difference was empty `style` attributes.
+- Writing and real downloads: 24 browser cases passed without retry; six
+  existing mobile exclusions remain explicit. Both engines exercised typing
+  during PDF preparation and cancellation back to the unchanged draft.
+- PDF progress and cancellation: nine local desktop, tablet, phone,
+  landscape and reduced-viewport profiles passed without retry. The complete
+  CI device gate now runs 17 scenarios across 18 profiles.
+- `events.jsonl`, `summary.md`, the PDF files, rendered page images, browser
+  traces and failed attempts preserve the verification chain. Full CI results
+  for the final revision are recorded in draft PR #131 and the run summary.
+
+These checks do not replace physical keyboards, native assistive technology,
+actual browser zoom, or physical mobile performance qualification.

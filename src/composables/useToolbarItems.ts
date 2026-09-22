@@ -213,6 +213,7 @@ interface ToolbarItemsOptions {
   handleExportHtml: () => void;
   handleExportMarkdown: () => void;
   handleExportPdf: () => void;
+  isExportingPdf?: Ref<boolean>;
   handleExportWord: () => void;
   handleCopyFormat: () => void;
   handlePasteFormat: () => void;
@@ -262,6 +263,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
     handleExportHtml,
     handleExportMarkdown,
     handleExportPdf,
+    isExportingPdf,
     handleExportWord,
     handleCopyFormat,
     handlePasteFormat,
@@ -589,6 +591,7 @@ export function useToolbarItems(options: ToolbarItemsOptions) {
       shortcut: ".pdf",
       icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><line x1="8" x2="16" y1="13" y2="13"/><line x1="8" x2="13" y1="17" y2="17"/></svg>',
       tooltip: "Export as PDF",
+      disabled: Boolean(isExportingPdf?.value),
       onClick: handleExportPdf,
     },
     {

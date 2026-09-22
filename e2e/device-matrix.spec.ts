@@ -60,6 +60,34 @@ test.afterEach(async ({ page }, info) => {
   if (info.status === info.expectedStatus) await info.attach('device-state', { body: await page.screenshot(), contentType: 'image/png' });
 });
 
+test('PDF progress and cancellation stay reachable without losing the draft', async ({ page, hasTouch }) => {
+  const editor = editorFor(page);
+  const downloads: string[] = [];
+  page.on('download', download => downloads.push(download.suggestedFilename()));
+  const closeMobile = page.getByRole('button', { name: 'Close toolbar', exact: true });
+  if (await closeMobile.isVisible()) await activate(closeMobile, hasTouch);
+  await switchView(page, 'Code');
+  const paragraph = 'The writer stopped at the harbor and opened her notebook. She had a whole chapter left to tell, and the quiet room gave her time to find the words.';
+  await page.locator('.code-editor').fill(`<h1>A chapter in progress</h1>${`<p>${paragraph}</p>`.repeat(200)}`);
+  await switchView(page, 'Editor');
+  const before = await editor.innerHTML();
+  await activate(toolbarFor(page).getByRole('button', { name: 'Export', exact: true }), hasTouch);
+  await activate(page.getByRole('menuitem', { name: 'PDF', exact: true }), hasTouch);
+  const progress = page.getByRole('group', { name: 'PDF export progress' });
+  await expect(progress).toBeVisible();
+  const cancel = progress.getByRole('button', { name: 'Cancel PDF export' });
+  await cancel.scrollIntoViewIfNeeded();
+  await insideViewport(cancel);
+  await noHorizontalOverflow(page);
+  await test.info().attach('pdf-progress', { body: await page.screenshot(), contentType: 'image/png' });
+  await activate(cancel, hasTouch);
+  await expect(progress).toHaveCount(0);
+  await expect(editor).toBeFocused();
+  await expect(page.locator('div[style*="-9999px"]')).toHaveCount(0);
+  expect(await editor.innerHTML()).toBe(before);
+  expect(downloads).toEqual([]);
+});
+
 test('write, format, revise, undo and recover without losing prose', async ({ page, hasTouch }) => {
   const editor = editorFor(page);
   await activate(editor, hasTouch);

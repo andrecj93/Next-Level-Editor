@@ -1,4 +1,4 @@
-import { type Ref } from "vue";
+import { computed, getCurrentScope, onScopeDispose, ref, type Ref } from "vue";
 import {
   exportAsHtml,
   exportAsMarkdown,
@@ -49,6 +49,20 @@ export function useExportActions(options: ExportActionsOptions) {
     prepareHtml,
     prepareRoot,
   } = options;
+
+  const pdfProgress = ref<{ completed: number; total: number; cancelling: boolean } | null>(null);
+  const isExportingPdf = computed(() => pdfProgress.value !== null);
+  let pdfController: AbortController | null = null;
+  let disposed = false;
+  const cancelPdfExport = () => {
+    if (!pdfController) return;
+    if (pdfProgress.value) pdfProgress.value.cancelling = true;
+    pdfController.abort();
+  };
+  if (getCurrentScope()) onScopeDispose(() => {
+    disposed = true;
+    cancelPdfExport();
+  });
 
   /**
    * The document to export. In Preview view mode there is no editable surface
@@ -112,6 +126,7 @@ export function useExportActions(options: ExportActionsOptions) {
    * Export content as PDF file
    */
   const exportPdf = async () => {
+    if (disposed || isExportingPdf.value) return;
     // PDF is the one format that needs a laid-out ELEMENT, not a string:
     // html2canvas rasterizes the live DOM. In preview mode there is nothing to
     // rasterize, so say that rather than fail silently. #R23-15
@@ -124,17 +139,33 @@ export function useExportActions(options: ExportActionsOptions) {
       return;
     }
 
+    const controller = new AbortController();
+    pdfController = controller;
+    pdfProgress.value = { completed: 0, total: 0, cancelling: false };
     try {
       // PDF reads the live DOM, so the refresh happens on the element. #R24-3
       prepareRoot?.(editorContent.value);
-      await exportAsPdf(editorContent.value);
+      await exportAsPdf(editorContent.value, undefined, {
+        signal: controller.signal,
+        onProgress: (completed, total) => {
+          if (pdfProgress.value) Object.assign(pdfProgress.value, { completed, total });
+        },
+      });
+      if (controller.signal.aborted) throw new DOMException('PDF export cancelled', 'AbortError');
       showToast(
         "✓ Document downloaded as PDF! Check your Downloads folder",
         "success"
       );
     } catch (error) {
+      if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) {
+        if (!disposed) showToast("PDF export cancelled. Your document is unchanged.");
+        return;
+      }
       console.error("Export error:", error);
       showToast("✗ Failed to export as PDF", "error");
+    } finally {
+      pdfProgress.value = null;
+      pdfController = null;
     }
   };
 
@@ -174,6 +205,9 @@ export function useExportActions(options: ExportActionsOptions) {
     exportHtml,
     exportMarkdown,
     exportPdf,
+    pdfProgress,
+    isExportingPdf,
+    cancelPdfExport,
     exportWord,
     formatHtmlCode,
     // Aliases for backwards compatibility

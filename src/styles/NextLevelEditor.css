@@ -812,6 +812,22 @@
   color: var(--toolbar-text);
 }
 
+/* A glyph keeps the saved PDF's checked state independent of SVG background
+   rendering and of the writer's light/dark appearance. */
+.editor-content.nle-pdf-snapshot ul.checklist li::before {
+  background: none;
+  border: 1.5px solid #475569;
+  transition: none;
+}
+.editor-content.nle-pdf-snapshot ul.checklist li[data-checked="true"]::before {
+  content: "\2713";
+  color: #20242a;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 15px;
+  text-align: center;
+}
+
 .word-count,
 .char-count {
   font-weight: 500;

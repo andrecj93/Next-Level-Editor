@@ -894,12 +894,12 @@ export function exportAsMarkdown(html: string, filename: string = 'document.md')
  * Remove the on-screen page-break WIDGET chrome from an export clone. html2canvas
  * (used by the PDF path) rasterizes the live DOM and does NOT honor @media print,
  * so the "PAGE BREAK" label and its dashed band would otherwise print into the
- * PDF as literal editor chrome. (Splitting the PDF AT the break positions is a
- * separate, larger enhancement.)
+ * PDF as literal editor chrome. The zero-height markers remain available to
+ * the PDF page planner so explicit page breaks are honored.
  */
 export function stripPageBreakChrome(container: HTMLElement): void {
   container
-    .querySelectorAll('.page-break-label')
+    .querySelectorAll('.page-break-label, .page-break-line')
     .forEach((label) => label.remove())
   container
     .querySelectorAll<HTMLElement>('.page-break')
@@ -945,26 +945,40 @@ export function copyEditorVariables(
   }
 }
 
-export async function exportAsPdf(element: HTMLElement, filename: string = 'document.pdf') {
-  try {
-    // Lazy-load the heavy PDF/canvas libs only when export is actually invoked.
-    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-      import('html2canvas'),
-      import('jspdf'),
-    ])
+export interface PdfExportOptions {
+  signal?: AbortSignal;
+  onProgress?: (completed: number, total: number) => void;
+}
 
+export async function exportAsPdf(element: HTMLElement, filename: string = 'document.pdf', options: PdfExportOptions = {}) {
+  let completed = 0;
+  const checkCancelled = () => {
+    if (options.signal?.aborted) throw new DOMException('PDF export cancelled', 'AbortError');
+  };
+  try {
+    checkCancelled();
+    console.debug('[NextLevelEditor] PDF export started');
     // Create a temporary container with the content.
     const tempDiv = document.createElement('div')
+    tempDiv.setAttribute('aria-hidden', 'true');
+    tempDiv.inert = true;
     // Carry the `.editor-content` class so every editor style SCOPED to it
     // still matches in the clone — most visibly the checklist checkboxes and
     // their checked/strikethrough state, which are drawn entirely by
     // `.editor-content ul.checklist li::before`. Without the class the PDF
     // rasterized a plain bulleted list and the done/not-done state was lost.
-    tempDiv.className = 'editor-content'
-    tempDiv.style.position = 'absolute'
+    tempDiv.className = 'editor-content nle-pdf-snapshot'
+    tempDiv.style.position = 'fixed'
     tempDiv.style.left = '-9999px'
     tempDiv.style.top = '0'
     tempDiv.style.width = '800px'
+    tempDiv.style.maxWidth = 'none'
+    tempDiv.style.minHeight = '0'
+    tempDiv.style.height = 'auto'
+    tempDiv.style.maxHeight = 'none'
+    tempDiv.style.overflow = 'visible'
+    tempDiv.style.boxSizing = 'border-box'
+    tempDiv.style.margin = '0'
     tempDiv.style.padding = '20px'
     tempDiv.style.backgroundColor = 'white'
     tempDiv.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
@@ -976,6 +990,20 @@ export async function exportAsPdf(element: HTMLElement, filename: string = 'docu
       element.closest?.('.next-level-editor') ??
         document.querySelector('.next-level-editor')
     )
+    const sourceStyle = getComputedStyle(element);
+    for (const property of ['font-family', 'font-size', 'line-height', 'letter-spacing', 'direction']) {
+      const value = sourceStyle.getPropertyValue(property);
+      if (value) tempDiv.style.setProperty(property, value);
+    }
+    // The saved file is paper, including when the writing surface is dark.
+    const paperColors: Record<string, string> = {
+      '--text-color': '#20242a', '--text-secondary': '#4b5563',
+      '--background-color': '#ffffff', '--background-alt': '#f5f5f5',
+      '--editor-bg': '#ffffff', '--editor-border': '#cbd0d6', '--border-color': '#cbd0d6',
+      '--color-surface': '#ffffff', '--color-border': '#cbd0d6', '--color-text-secondary': '#4b5563',
+    };
+    Object.entries(paperColors).forEach(([name, value]) => tempDiv.style.setProperty(name, value));
+    tempDiv.style.color = '#20242a';
     // Variables become their values before html2canvas rasterizes the clone,
     // otherwise the PDF shows a blue pill reading `{{ user.name }}` while
     // Ctrl+P on the same document prints the value. #R23-64
@@ -995,38 +1023,56 @@ export async function exportAsPdf(element: HTMLElement, filename: string = 'docu
     document.body.appendChild(tempDiv)
 
     try {
-      // Convert HTML to canvas
-      const canvas = await html2canvas(tempDiv, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      })
-
-      // Calculate PDF dimensions
-      const imgWidth = 210 // A4 width in mm
-      const pageHeight = 297 // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let heightLeft = imgHeight
-
-      // Create PDF
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      let position = 0
-
-      // Add image to PDF (handle multiple pages if needed)
-      const imgData = canvas.toDataURL('image/png')
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
+      // Snapshot before waiting for converters so writing can continue safely.
+      const [{ default: html2canvas }, { default: jsPDF }, { measurePdfPages, waitForPdfResources }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+        import('./pdfPagination'),
+      ]);
+      checkCancelled();
+      await waitForPdfResources(tempDiv, options.signal);
+      checkCancelled();
+      const margin = 12;
+      const imageWidth = 210 - margin * 2;
+      const imageHeight = 297 - margin * 2;
+      const width = Math.ceil(tempDiv.getBoundingClientRect().width) || 800;
+      const pageHeight = Math.floor(width * imageHeight / imageWidth);
+      const pages = measurePdfPages(tempDiv, pageHeight);
+      console.debug('[NextLevelEditor] PDF pages planned', { pages: pages.length, width, pageHeight });
+      options.onProgress?.(0, pages.length);
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+      for (const [index, page] of pages.entries()) {
+        // Give input and paint two frames between pages, including on Safari.
+        await new Promise<void>(resolve => setTimeout(resolve, 32));
+        checkCancelled();
+        // Bound every bitmap, including on older mobile canvas implementations.
+        // Rendering one document-height canvas silently returned "data:," for
+        // a 1,000-paragraph manuscript and failed with a PNG signature error.
+        const scale = Math.min(2, Math.sqrt(3_000_000 / (width * page.height)));
+        const canvas = await html2canvas(tempDiv, {
+          width, height: page.height, y: page.top, scale,
+          windowWidth: Math.max(1024, width),
+          useCORS: true, logging: false, backgroundColor: '#ffffff',
+        });
+        try {
+          checkCancelled();
+          const image = canvas.toDataURL('image/png');
+          if (image === 'data:,' || !canvas.width || !canvas.height) throw new Error('PDF page rendering returned an empty image');
+          if (index) pdf.addPage();
+          pdf.addImage(image, 'PNG', margin, margin, imageWidth, canvas.height * imageWidth / canvas.width, undefined, 'FAST');
+          pdf.setFontSize(9);
+          pdf.setTextColor(100);
+          pdf.text(String(index + 1), 105, 291, { align: 'center' });
+        } finally {
+          canvas.width = 0;
+          canvas.height = 0;
+        }
+        completed = index + 1;
+        options.onProgress?.(completed, pages.length);
       }
-
-      // Save PDF
+      checkCancelled();
       pdf.save(filename)
+      console.debug('[NextLevelEditor] PDF export completed', { pages: completed });
     } finally {
       // Always remove the off-screen clone — on the success path AND on any
       // html2canvas/jsPDF failure. It used to leak permanently on failure
@@ -1035,7 +1081,8 @@ export async function exportAsPdf(element: HTMLElement, filename: string = 'docu
       tempDiv.remove()
     }
   } catch (error) {
-    console.error('Error exporting PDF:', error)
+    if (error instanceof Error && error.name === 'AbortError') console.debug('[NextLevelEditor] PDF export cancelled', { completed });
+    else console.error('Error exporting PDF:', { completed, name: error instanceof Error ? error.name : 'UnknownError' });
     throw error
   }
 }

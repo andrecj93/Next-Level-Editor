@@ -7,6 +7,9 @@ vi.mock("jspdf", () => {
     addImage = vi.fn();
     addPage = vi.fn();
     save = vi.fn();
+    setFontSize = vi.fn();
+    setTextColor = vi.fn();
+    text = vi.fn();
   }
   return {
     default: MockJsPDF,
@@ -36,42 +39,9 @@ vi.mock("html-docx-js-typescript", () => ({
 describe("PDF and Word Export Tests", () => {
   // Shared setup for both test suites
   beforeEach(() => {
-    // Mock document methods
-    vi.spyOn(document.body, "appendChild").mockImplementation(
-      () => null as any
-    );
-    vi.spyOn(document.body, "removeChild").mockImplementation(
-      () => null as any
-    );
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock-url");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
-
-    // Mock link click and remove
-    const mockClick = vi.fn();
-    const mockRemove = vi.fn();
-    vi.spyOn(document, "createElement").mockImplementation((tag) => {
-      const element = {
-        style: {},
-        innerHTML: "",
-        click: mockClick,
-        remove: mockRemove,
-        href: "",
-        download: "",
-        // exportAsPdf now strips page-break chrome from the clone before render.
-        querySelectorAll: () => [],
-      } as any;
-
-      if (tag === "a") {
-        element.click = mockClick;
-        element.remove = mockRemove;
-      }
-
-      if (tag === "div") {
-        element.remove = mockRemove;
-      }
-
-      return element;
-    });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
   });
 
   afterEach(() => {

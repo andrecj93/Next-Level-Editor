@@ -68,6 +68,9 @@ an AI service. The chapter outline helps you find your way through longer work.
 your tables, checklists, page breaks, code blocks and embeds. Videos that no
 static format can render degrade to a labelled link instead of vanishing —
 because silently losing content is worse than admitting the format's limits.
+PDF export prepares numbered A4 pages with progress and cancellation, including
+long manuscripts and explicit page breaks. Its document text is rendered as
+images; use HTML, Markdown or Word when you need selectable text.
 
 **You only download what you use.** Syntax
 highlighting, the colour picker and both exporters are separate chunks your

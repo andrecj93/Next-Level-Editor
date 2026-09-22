@@ -197,8 +197,10 @@
       @open-variables="showVariablesPanel = !showVariablesPanel"
       @toggle-full-width="toggleFullWidth"
     >
-      <SaveStatus v-if="writingMode" :save-status="saveStatus" :is-saving="isSaving" :last-saved="lastSaved" :has-pending-changes="isDirty" :persistent-save="Boolean(props.saveHandler)" @retry-save="forceSave(sanitizeHtml(htmlContent))" />
+      <PdfExportStatus v-if="pdfProgress" v-bind="pdfProgress" @cancel="cancelPdfExport(); performWithSelection(() => {})" />
+      <SaveStatus v-if="writingMode && (!pdfProgress || saveStatus === 'error' || saveStatus === 'conflict')" :save-status="saveStatus" :is-saving="isSaving" :last-saved="lastSaved" :has-pending-changes="isDirty" :persistent-save="Boolean(props.saveHandler)" @retry-save="forceSave(sanitizeHtml(htmlContent))" />
     </EditorFooter>
+    <PdfExportStatus v-if="pdfProgress && effectiveToolbarPosition === 'bottom'" v-bind="pdfProgress" @cancel="cancelPdfExport(); performWithSelection(() => {})" />
 
     <!-- Corner resize grip: drag (or focus + arrow keys) to size the editor so
          more text is visible. Hidden in fullscreen (fixed inset) and pill mode
@@ -672,6 +674,7 @@ import {
 import { useStableId } from "../utils/useStableId";
 import WritingCompanion from './WritingCompanion.vue';
 import SaveStatus from './SaveStatus.vue';
+import PdfExportStatus from './PdfExportStatus.vue';
 import { useWritingWorkspace } from '../composables/useWritingWorkspace';
 import { writingBlocks, writingNoteRange, type WritingNote } from '../utils/writingReview';
 
@@ -1816,6 +1819,9 @@ const {
   handleExportPdf,
   handleExportWord,
   formatHtmlCode,
+  pdfProgress,
+  isExportingPdf,
+  cancelPdfExport,
 } = useExportActions({
   editorContent,
   htmlContent,
@@ -1931,6 +1937,7 @@ const {
   handleExportHtml,
   handleExportMarkdown,
   handleExportPdf,
+  isExportingPdf,
   handleExportWord,
   handleCopyFormat,
   handlePasteFormat,
@@ -2618,7 +2625,7 @@ const onInput = (event?: Event) => {
   // Runs BEFORE onInputBase so the converted DOM is what gets synced to
   // v-model. Re-entrancy is handled inside the composable (isApplying guard).
   if (viewMode.value === "editor" || viewMode.value === "split") {
-    handleSmartAutocomplete();
+    handleSmartAutocomplete(event);
   }
 
   // Wrap completed variable tokens BEFORE the capture+sanitize+emit pass so

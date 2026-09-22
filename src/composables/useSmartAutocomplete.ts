@@ -148,8 +148,7 @@ export function useSmartAutocomplete(
   // While an IME composition session is active (CJK input methods, predictive
   // keyboards), applyAutocomplete's range.deleteContents() +
   // selection.removeAllRanges() would abort or corrupt the live composition
-  // buffer. handleInput receives no event object (the host calls it bare), so
-  // composition state is tracked internally by listening for
+  // buffer. Composition state is also tracked internally by listening for
   // compositionstart/compositionend on the editor element itself.
   let isComposing = false;
   // An input that arrives mid-composition is deferred: one detection pass
@@ -157,6 +156,7 @@ export function useSmartAutocomplete(
   // race where the host's compositionend-driven input handler fires before
   // our own compositionend listener has cleared the flag.
   let pendingCompositionInput = false;
+  let pendingInputEvent: Event | undefined;
   let compositionTarget: HTMLElement | null = null;
 
   const handleCompositionStart = () => {
@@ -167,7 +167,8 @@ export function useSmartAutocomplete(
     isComposing = false;
     if (pendingCompositionInput) {
       pendingCompositionInput = false;
-      handleInput();
+      handleInput(pendingInputEvent);
+      pendingInputEvent = undefined;
     }
   };
 
@@ -524,7 +525,8 @@ export function useSmartAutocomplete(
   /**
    * Detect and apply markdown shortcuts
    */
-  const detectMarkdown = (text: string): AutocompleteResult | null => {
+  const isBlockMarkup = (markup: string) => /^<(?:h[1-6]|ul|ol|blockquote|pre|hr)(?:\s|>)/i.test(markup);
+  const detectMarkdown = (text: string, allowBlocks = true): AutocompleteResult | null => {
     if (!enableMarkdownShortcuts) return null;
 
     for (const shortcut of markdownShortcuts) {
@@ -537,6 +539,7 @@ export function useSmartAutocomplete(
       }
       if (match) {
         const replacement = shortcut.replacement(match);
+        if (!allowBlocks && isBlockMarkup(replacement)) continue;
         return {
           type: "markdown",
           // Only the matched source span is replaced (for block patterns the
@@ -696,11 +699,11 @@ export function useSmartAutocomplete(
   /**
    * Detect any autocomplete opportunity in text
    */
-  const detectAutocomplete = (text: string): AutocompleteResult | null => {
+  const detectAutocomplete = (text: string, allowBlockMarkdown = true): AutocompleteResult | null => {
     // Try detections in order of priority
 
     // 1. Markdown shortcuts (highest priority for block-level formatting)
-    const markdown = detectMarkdown(text);
+    const markdown = detectMarkdown(text, allowBlockMarkdown);
     if (markdown) return markdown;
 
     // 2. URLs and emails (important for linking)
@@ -912,7 +915,7 @@ export function useSmartAutocomplete(
   /**
    * Handle input and check for autocomplete opportunities
    */
-  const handleInput = () => {
+  const handleInput = (event?: Event) => {
     if (!editorRef.value) return;
     ensureCompositionListeners();
     if (isApplying) return;
@@ -920,6 +923,7 @@ export function useSmartAutocomplete(
       // Defer: run one detection pass when the composition commits instead
       // of mutating the DOM under a live IME buffer.
       pendingCompositionInput = true;
+      pendingInputEvent = event;
       return;
     }
 
@@ -945,8 +949,23 @@ export function useSmartAutocomplete(
     // Get text before cursor (for detection)
     const textBeforeCursor = text.substring(0, cursorPos);
 
-    // Detect autocomplete
-    const result = detectAutocomplete(textBeforeCursor);
+    // A live keystroke may complete a new block shortcut, but must not
+    // reinterpret existing prose such as "1. A numbered observation".
+    // Explicit callers without an input event retain whole-string conversion.
+    let result = detectAutocomplete(textBeforeCursor);
+    if (event && result?.type === 'markdown' && isBlockMarkup(result.replacement)) {
+      const data = (event as InputEvent).data;
+      const insertsText = (event as InputEvent).inputType === 'insertText' || event.type === 'compositionend' || (event as InputEvent).inputType === 'insertCompositionText';
+      let allowBlockMarkdown = false;
+      if (insertsText && data && textBeforeCursor.endsWith(data) && editorRef.value.contains(textNode)) {
+        const previousMatch = detectMarkdown(textBeforeCursor.slice(0, -data.length));
+        const beforeNode = document.createRange();
+        beforeNode.selectNodeContents(closestParagraph(textNode, editorRef.value) ?? editorRef.value);
+        beforeNode.setEnd(textNode, 0);
+        allowBlockMarkdown = !beforeNode.toString() && !(previousMatch && isBlockMarkup(previousMatch.replacement));
+      }
+      if (!allowBlockMarkdown) result = detectAutocomplete(textBeforeCursor, false);
+    }
 
     if (result) {
       applyAutocomplete(result);
