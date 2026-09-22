@@ -678,6 +678,7 @@ onMounted(() => {
  * pattern roves across top-level controls only; menus own their navigation.
  */
 const ROVING_KEYS = ["ArrowLeft", "ArrowRight", "Home", "End"];
+const TOOLBAR_CONTROL_SELECTOR = 'button, [href], input[type="color"]';
 let rovingStop: HTMLElement | null = null;
 
 const isRovingVisible = (el: HTMLElement, root: HTMLElement): boolean => {
@@ -695,7 +696,7 @@ const isRovingVisible = (el: HTMLElement, root: HTMLElement): boolean => {
 };
 
 const getToolbarControls = (): HTMLElement[] =>
-  Array.from(rootEl.value?.querySelectorAll<HTMLElement>("button, [href]") ?? [])
+  Array.from(rootEl.value?.querySelectorAll<HTMLElement>(TOOLBAR_CONTROL_SELECTOR) ?? [])
     .filter(el => !el.closest(".dropdown-menu"));
 
 const getRovingControls = (): HTMLElement[] => {
@@ -739,7 +740,7 @@ defineExpose({ focusToolbar });
 
 const onRovingFocusin = (event: FocusEvent) => {
   const target = (event.target as HTMLElement | null)?.closest?.(
-    "button, [href]"
+    TOOLBAR_CONTROL_SELECTOR
   ) as HTMLElement | null;
   if (!target || target.closest(".dropdown-menu")) return;
   rovingStop = target;
@@ -761,14 +762,15 @@ const onRovingKeydown = (event: KeyboardEvent) => {
   }
   if (!ROVING_KEYS.includes(event.key)) return;
   const target = event.target as HTMLElement | null;
-  // Menus (and any future text inputs) keep their own arrow behavior.
+  // Text fields and menus own their arrows. A closed native color control is
+  // a toolbar control; its browser-owned picker handles keys after opening.
   if (!target || target.closest(".dropdown-menu")) return;
-  if (target.matches?.("input, textarea, select")) return;
+  if (target.matches?.('input:not([type="color"]), textarea, select')) return;
   const controls = getRovingControls();
   if (!controls.length) return;
 
   const current = controls.indexOf(
-    (target.closest("button, [href]") as HTMLElement | null) ?? target
+    (target.closest(TOOLBAR_CONTROL_SELECTOR) as HTMLElement | null) ?? target
   );
   let next: number;
   if (event.key === "Home") {

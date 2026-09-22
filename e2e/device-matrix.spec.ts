@@ -466,6 +466,34 @@ test('Enter and Space open toolbar menus ready for keyboard navigation', async (
   await expect(editor).toHaveText(sentence);
 });
 
+test('expanded formatting includes colors in keyboard navigation without losing selection', async ({ page }) => {
+  const editor = editorFor(page);
+  const toolbar = toolbarFor(page);
+  const sentence = 'We left before dusk.';
+  await editor.fill(sentence);
+  await editor.press('ControlOrMeta+A');
+  await toolbar.getByRole('button', { name: 'More formatting', exact: true }).click();
+  await editor.press('Alt+F10');
+  await page.keyboard.press('End');
+  await expect(toolbar.getByRole('button', { name: 'Close more formatting', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(toolbar.getByLabel('Highlight color', { exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(toolbar.getByLabel('Text color', { exact: true })).toBeFocused();
+  await expect(toolbar.locator('button[tabindex="0"], input[tabindex="0"]')).toHaveCount(1);
+  await page.keyboard.press('ArrowRight');
+  await expect(toolbar.getByLabel('Highlight color', { exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(editor).toBeFocused();
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(sentence);
+  await page.keyboard.press('ControlOrMeta+b');
+  await expect(editor.locator('b,strong')).toHaveText(sentence);
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(editor.locator('b,strong')).toHaveCount(0);
+  await expect(editor).toHaveText(sentence);
+  await noHorizontalOverflow(page);
+});
+
 test('configuration stays above the toolbar and returns focus without losing work', async ({ page, hasTouch }) => {
   const editor = editorFor(page);
   await editor.fill('Keep this paragraph while changing settings.');

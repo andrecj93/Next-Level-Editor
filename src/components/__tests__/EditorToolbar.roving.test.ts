@@ -228,6 +228,31 @@ describe("EditorToolbar roving tabindex", () => {
     expect(wrapper.findAll('button[tabindex="0"]')).toHaveLength(1);
   });
 
+  it("includes writing colors in the toolbar's single keyboard sequence", async () => {
+    await wrapper.setProps({ writingMode: true });
+    await wrapper.get('.writing-more-format').trigger('click');
+    await wrapper.vm.$nextTick();
+    const close = wrapper.get('[aria-label="Close more formatting"]').element as HTMLElement;
+    const text = wrapper.get('[aria-label="Text color"]').element as HTMLElement;
+    const highlight = wrapper.get('[aria-label="Highlight color"]').element as HTMLElement;
+    close.focus();
+
+    await wrapper.get('[aria-label="Close more formatting"]').trigger('keydown', { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(highlight);
+    await wrapper.get('[aria-label="Highlight color"]').trigger('keydown', { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(text);
+    await wrapper.get('[aria-label="Text color"]').trigger('keydown', { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(highlight);
+    expect(wrapper.findAll('[tabindex="0"]')).toHaveLength(1);
+    expect(highlight.tabIndex).toBe(0);
+
+    await wrapper.setProps({ isToolbarSectionVisible: (section: string) => section !== 'colors' });
+    await wrapper.vm.$nextTick();
+    expect(highlight.tabIndex).toBe(-1);
+    expect(text.tabIndex).toBe(-1);
+    expect(document.activeElement).not.toBe(highlight);
+  });
+
   it("survives a smart-toolbar context change disabling the stop holder (#r21-a11y-1)", async () => {
     // The smart toolbar swaps which sections are available per context (caret
     // in a code block, image selected...). If the control holding the roving
