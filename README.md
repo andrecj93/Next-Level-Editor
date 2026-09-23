@@ -102,8 +102,8 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,658 unit tests
-across 358 files, plus end-to-end checks on Chromium and mobile Safari. Both
+**It is tested like something you'd put in production.** 4,796 unit tests
+across 371 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
 ---
@@ -290,16 +290,16 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 1,309.5 KB | **317.8 KB** | On import |
+| **Core (ES)** | 1,311.4 KB | **318.4 KB** | On import |
 | **CSS** | 263.8 KB | **42.7 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (html2canvas + jsPDF) | 803.1 KB | 196.3 KB | First PDF export |
-| **UMD** | 3,346.2 KB | 1,074.8 KB | On import (no splitting) |
+| **UMD** | 3,347.6 KB | 1,075.1 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **360.5 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **361.1 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 DOCX conversion, semantic PDF and its fonts, citation formatting, and the
@@ -802,7 +802,7 @@ The editor uses CSS custom properties (variables) for easy theming and customiza
 The project maintains high quality standards with comprehensive testing:
 
 ```bash
-# Run unit tests (4,646 tests)
+# Run unit tests (4,796 tests)
 npm test
 
 # Run unit tests with interactive UI
@@ -811,7 +811,7 @@ npm run test:ui
 # Generate coverage report (thresholds enforced in vitest.config.ts)
 npm run test:coverage
 
-# Run end-to-end tests (239 passing across chromium + mobile-safari)
+# Run end-to-end tests across Chromium and mobile Safari
 npm run test:e2e
 
 # Run E2E tests with UI (interactive)
@@ -828,18 +828,20 @@ npm run test:e2e:debug
 
 | File Type   | Statements | Branches | Functions | Lines   |
 | ----------- | ---------- | -------- | --------- | ------- |
-| **Overall** | **81%**    | **69%**  | **84%**   | **83%** |
-| Components  | 65%        | 57%      | 50%       | 67%     |
-| Utils       | 81%        | 70%      | 88%       | 84%     |
+| **Overall** | **82.77%** | **74.12%** | **77.61%** | **85.06%** |
+
+Measured on 2026-09-23. The CI coverage artifact includes per-file results.
 
 ### Test Suites Overview
 
-Verified on 2026-09-23: 4,790 unit tests passed; 85.0% line coverage.
-The full browser run passed 290 checks, with 132 explicitly skipped project cases
-(mainly duplicate desktop flows under mobile WebKit), zero failures, and zero retries.
+Verified on 2026-09-23: 4,796 unit tests passed; 85.06% line coverage.
+Browser suites cover Chromium and mobile WebKit; duplicate desktop flows have
+explicit mobile exclusions. A separate 18-profile device matrix exercises all
+three browser engines. Current run counts and retained reports are available in
+[GitHub Actions](https://github.com/andrecj93/Next-Level-Editor/actions).
 See the [document workspace](docs/document-workspace.md) for supported features and qualification limits, and the [earlier quality review](docs/reports/QUALITY_REVIEW_2026-09-20.md) for the writing baseline.
 
-#### Unit Tests (4,790 tests across 371 files, with Vitest)
+#### Unit Tests (4,796 tests across 371 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
@@ -875,12 +877,12 @@ See the [document workspace](docs/document-workspace.md) for supported features 
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.mjs` (core 1,309.5 KB, 317.8 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs` (core 1,311.4 KB, 318.4 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Syntax highlighting, the colour picker and both exporters are separate
     chunks, fetched the first time you use them
   - Recommended for Vite, Webpack 5+, Rollup
-- **UMD** - `dist/next-level-editor.umd.js` (3,346.2 KB, 1,074.8 KB gzipped)
+- **UMD** - `dist/next-level-editor.umd.js` (3,347.6 KB, 1,075.1 KB gzipped)
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
   - Everything in one file — UMD cannot code-split, so this is the whole
@@ -994,7 +996,7 @@ next-level-editor/
 │   │   ├── pageManagement.ts        # TOC and page breaks
 │   │   ├── spellChecker.ts          # Spell checking
 │   │   ├── fileManager.ts           # File operations
-│   │   └── __tests__/               # Unit tests (4,646 tests)
+│   │   └── __tests__/               # Unit tests (4,796 tests)
 │   ├── styles/              # CSS files
 │   │   ├── variables.css            # CSS custom properties
 │   │   └── animations.css           # Transitions

@@ -42,6 +42,8 @@ import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import {
   computeToolbarPosition,
   ESTIMATED_WIDTH,
+  ABOVE_OFFSET,
+  BELOW_OFFSET,
   type ToolbarPosition
 } from '../utils/floatingToolbarPosition'
 
@@ -64,6 +66,7 @@ interface ToolbarAction {
 interface Props {
   show: boolean
   actions: ToolbarAction[]
+  boundary?: HTMLElement | null
 }
 
 const props = defineProps<Props>()
@@ -84,7 +87,22 @@ const updatePosition = () => {
   }
 
   const range = selection.getRangeAt(0)
-  const rect = range.getBoundingClientRect()
+  let rect = range.getBoundingClientRect()
+  const viewport = window.visualViewport
+  const paper = props.boundary?.getBoundingClientRect()
+  const bounds = {
+    top: Math.max(viewport?.offsetTop ?? 0, paper?.top ?? 0),
+    bottom: Math.min((viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight), paper?.bottom ?? Infinity),
+    left: Math.max(viewport?.offsetLeft ?? 0, paper?.left ?? 0),
+    right: Math.min((viewport?.offsetLeft ?? 0) + (viewport?.width ?? window.innerWidth), paper?.right ?? Infinity)
+  }
+  if (paper) {
+    // Anchor to a visible line, including multi-line and cross-block selections.
+    // Scrolling selected prose out of view must not leave detached controls.
+    const visible = Array.from(range.getClientRects()).find(line => line.height > 0 && line.bottom > bounds.top && line.top < bounds.bottom)
+    if (!visible) { position.value = null; return }
+    rect = visible
+  }
 
   if (rect.width === 0 && rect.height === 0) {
     position.value = null
@@ -95,14 +113,25 @@ const updatePosition = () => {
   // an estimate and re-run once the element exists.
   const measuredWidth = toolbarEl.value?.offsetWidth || 0
   const hadElement = measuredWidth > 0
+  const height = toolbarEl.value?.offsetHeight || ABOVE_OFFSET - BELOW_OFFSET
 
-  position.value = computeToolbarPosition({
+  const nextPosition = computeToolbarPosition({
     rect: { top: rect.top, bottom: rect.bottom, left: rect.left, width: rect.width },
     toolbarWidth: hadElement ? measuredWidth : ESTIMATED_WIDTH,
+    toolbarHeight: height,
     viewportWidth: window.innerWidth,
+    bounds,
     scrollX: window.scrollX,
     scrollY: window.scrollY
   })
+  const top = nextPosition.top - window.scrollY
+  // If a very short paper cannot fit a bubble beside the selected line, the
+  // main toolbar remains available. Never cover the selection to force it in.
+  if (paper && (top + height > bounds.bottom || (top < rect.bottom && top + height > rect.top))) {
+    position.value = null
+    return
+  }
+  position.value = nextPosition
 
   if (!hadElement) {
     // First paint used the estimate; re-clamp once with the real width.
@@ -129,6 +158,16 @@ const handleResize = () => {
   }
 }
 
+// A responsive side panel or toolbar can resize the paper after the window's
+// resize event. Follow that settled layout as well as page/editor scrolling.
+let boundaryObserver: ResizeObserver | undefined
+watch(() => props.boundary, boundary => {
+  boundaryObserver?.disconnect()
+  if (!boundary || typeof ResizeObserver === 'undefined') return
+  boundaryObserver = new ResizeObserver(handleResize)
+  boundaryObserver.observe(boundary)
+}, { immediate: true, flush: 'post' })
+
 onMounted(() => {
   window.addEventListener('resize', handleResize)
   window.addEventListener('scroll', handleResize, true)
@@ -140,6 +179,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  boundaryObserver?.disconnect()
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('scroll', handleResize, true)
   document.removeEventListener('selectionchange', handleResize)

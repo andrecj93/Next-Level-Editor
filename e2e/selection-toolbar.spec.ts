@@ -294,4 +294,46 @@ test.describe('Selection / floating toolbar', () => {
     await collapseSelection(page)
     await expect(bubble).toHaveCount(0)
   })
+
+  test('search selection controls remain reachable beside the manuscript after reflow', async ({ page }) => {
+    const editor = await freshEditor(page)
+    await editor.fill('The harbor was quiet. '.repeat(80) + 'Coffee kept the night away. ' + 'The room was warm. '.repeat(80))
+    const before = await editor.innerHTML()
+    await editor.press('ControlOrMeta+f')
+    const search = page.getByRole('search', { name: 'Find & Replace' })
+    const query = search.getByRole('textbox', { name: 'Find', exact: true })
+    await query.fill('Coffee')
+    await expect(search.locator('.search-count')).toHaveText('1 of 1')
+    await query.press('Escape')
+    const bubble = page.locator(BUBBLE)
+    for (const viewport of [{ width: 413, height: 730 }, { width: 834, height: 1112 }]) {
+      await page.setViewportSize(viewport)
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+      // Reproduce a reader scrolling the selected line near the paper's top.
+      // The viewport itself still has room above, occupied by the main toolbar.
+      await editor.evaluate(el => {
+        const range = window.getSelection()!.getRangeAt(0)
+        el.scrollTop += range.getBoundingClientRect().top - el.getBoundingClientRect().top - 24
+      })
+      await expect(bubble).toBeVisible()
+      await expect(async () => {
+        const bounds = await bubble.evaluate(el => {
+          const box = el.getBoundingClientRect()
+          const paper = document.querySelector('.editor-content')!.getBoundingClientRect()
+          const selection = window.getSelection()!.getRangeAt(0).getBoundingClientRect()
+          const buttons = [...el.querySelectorAll('button')]
+          return { top: box.top, bottom: box.bottom, paperTop: Math.max(0, paper.top), paperBottom: Math.min(innerHeight, paper.bottom), selectionTop: selection.top, selectionBottom: selection.bottom, toolbarStyle: el.getAttribute('style'), classes: el.className, transform: getComputedStyle(el).transform, rangeRects: [...window.getSelection()!.getRangeAt(0).getClientRects()].map(r => ({ top: r.top, bottom: r.bottom })),
+            hit: buttons.every(button => { const b = button.getBoundingClientRect(); return [b.top + 3, b.bottom - 3].every(y => button.contains(document.elementFromPoint(b.left + b.width / 2, y))) }) }
+        })
+        expect(bounds.top, JSON.stringify(bounds)).toBeGreaterThanOrEqual(bounds.paperTop)
+        expect(bounds.bottom, JSON.stringify(bounds)).toBeLessThanOrEqual(bounds.paperBottom)
+        expect(bounds.bottom <= bounds.selectionTop || bounds.top >= bounds.selectionBottom, JSON.stringify(bounds)).toBe(true)
+        expect(bounds.hit, JSON.stringify(bounds)).toBe(true)
+      }).toPass({ timeout: 2500 })
+    }
+    await bubble.getByRole('button', { name: 'Italic', exact: true }).click()
+    await expect(editor.locator('em')).toHaveText('Coffee')
+    await editor.press('ControlOrMeta+z')
+    await expect(editor).toHaveJSProperty('innerHTML', before)
+  })
 })
