@@ -31,7 +31,9 @@ let selectionValue: Selection | null = null;
 
 const rectSelection = (rect: Partial<DOMRect>): Selection => {
   const full = {
-    top: 0, left: 0, right: 0, bottom: 0,
+    top: 0, left: 0,
+    right: (rect.left ?? 0) + (rect.width ?? 0),
+    bottom: (rect.top ?? 0) + (rect.height ?? 0),
     width: 0, height: 0, x: 0, y: 0,
     toJSON: () => ({}),
     ...rect,
@@ -195,12 +197,9 @@ describe("FloatingToolbar", () => {
       const rect = { top: 5, left: 300, width: 40, height: 18 };
       const { w } = await mountVisible({ rect });
       const el = w.get(".floating-toolbar").element as HTMLElement;
-      // top 5 < FLIP_THRESHOLD 60 -> placed below at rect.bottom + scrollY +
-      // 8. (This suite's rect stub carries no computed `bottom`, so it reads
-      // as 0 -> "8px"; the exact-geometry matrix lives in
-      // FloatingToolbar.positioning.test.ts.)
+      // top 5 < FLIP_THRESHOLD 60 -> placed below at bottom (5 + 18) + 8.
       expect(el.classList.contains("is-below")).toBe(true);
-      expect(el.style.top).toBe("8px");
+      expect(el.style.top).toBe("31px");
     });
 
     it("keeps the bubble's LEFT EDGE on-screen for a selection near the viewport left", async () => {

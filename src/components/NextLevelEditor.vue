@@ -254,6 +254,7 @@
         showFloatingToolbar && !readonly && !mobileBarOnScreen && !isPillMode
       "
       :actions="floatingActions"
+      :boundary="editorContent"
     />
 
     <!-- Playhead pill (toolbarMode="pill"): the ONE floating capsule that is
