@@ -158,6 +158,8 @@ export interface UseCommentsOptions {
   onCommentDeleted?: (threadId: string, commentId: string) => void;
   onThreadResolved?: (threadId: string) => void;
   onThreadReopened?: (threadId: string) => void;
+  /** A reader activated an inline highlight, including the already-active thread. */
+  onThreadActivated?: (threadId: string) => void;
   onMentionTriggered?: (query: string) => Promise<MentionSuggestion[]>;
 }
 
@@ -361,6 +363,7 @@ export function useComments(options: UseCommentsOptions = {}) {
     span.addEventListener("click", (e) => {
       e.stopPropagation();
       setActiveThread(threadId);
+      options.onThreadActivated?.(threadId);
     });
     return span;
   }
@@ -844,6 +847,7 @@ export function useComments(options: UseCommentsOptions = {}) {
           clone.addEventListener("click", (e) => {
             e.stopPropagation();
             setActiveThread(thread.id);
+            options.onThreadActivated?.(thread.id);
           });
           span.replaceWith(clone);
           return clone;

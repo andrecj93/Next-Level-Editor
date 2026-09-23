@@ -448,6 +448,7 @@
 
     <!-- Comments Sidebar (opt-in feature) -->
     <CommentsSidebar
+      ref="commentsSidebarRef"
       v-if="enableComments && comments"
       :threads="comments.threads.value"
       :active-thread-id="comments.activeThread.value?.id ?? null"
@@ -1128,11 +1129,13 @@ const comments = props.enableComments
       onMentionTriggered: props.mentionSearch
         ? async (query: string) => props.mentionSearch!(query)
         : undefined,
+      onThreadActivated: handleThreadActivation,
     })
   : (null as ReturnType<typeof useComments> | null);
 
 // Comments UI state
 const showCommentsSidebar = ref(false);
+const commentsSidebarRef = ref<InstanceType<typeof CommentsSidebar> | null>(null);
 const showCommentModal = ref(false);
 const selectedTextForComment = ref("");
 let commentsReturnSelection: {
@@ -3029,6 +3032,13 @@ const CARET_MOVE_KEYS = new Set([
 ]);
 
 // Comments handlers
+function handleThreadActivation(threadId: string) {
+  rememberCommentsPosition();
+  showCommentsSidebar.value = true;
+  nextTick(() => commentsSidebarRef.value?.revealThread(threadId));
+  console.debug('[NextLevelEditor comments] Discussion opened');
+}
+
 function handleSelectThread(threadId: string) {
   if (!comments) return;
   comments.setActiveThread(threadId);

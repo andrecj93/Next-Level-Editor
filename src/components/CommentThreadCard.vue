@@ -2,6 +2,7 @@
 <template>
   <div
     class="comment-thread-card"
+    :data-thread-id="thread.id"
     :class="{ 'comment-thread-card-expanded': isExpanded }"
   >
     <!-- Selected Text Quote -->

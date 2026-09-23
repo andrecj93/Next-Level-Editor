@@ -194,6 +194,30 @@ describe("NextLevelEditor — comment highlights reach the model", () => {
     expect(wrapper!.findComponent(CommentsSidebar).props('threads')[0].comments[0].content).toBe('Keep this discussion');
   });
 
+  it('opens an inline discussion repeatedly and reveals resolved replies in the right tab', async () => {
+    const editor = await mountEditor();
+    selectBrave(editor);
+    await submitComment('Keep this passage');
+    const sidebar = wrapper!.findComponent(CommentsSidebar);
+    const threadId = editor.querySelector<HTMLElement>('.comment-highlight')!.dataset.threadId!;
+    sidebar.vm.$emit('add-reply', threadId, 'A useful reply', []);
+    sidebar.vm.$emit('resolve-thread', threadId);
+    await nextTick();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      sidebar.vm.$emit('close');
+      await nextTick();
+      await nextTick();
+      expect(sidebar.props('isOpen')).toBe(false);
+      (editor.querySelector('.comment-highlight') as HTMLElement).click();
+      await nextTick();
+      await nextTick();
+      expect(sidebar.props('isOpen')).toBe(true);
+      expect(sidebar.find('[role="tab"][aria-selected="true"]').text()).toBe('Resolved1');
+      expect(sidebar.find('.comment-reply').text()).toContain('A useful reply');
+    }
+    expect(editor.textContent).toBe('Hello brave new world');
+  });
+
   it("emits when a thread is deleted (highlight unwrapped)", async () => {
     const editor = await mountEditor();
     selectBrave(editor);

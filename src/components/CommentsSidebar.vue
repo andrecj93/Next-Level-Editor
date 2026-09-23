@@ -271,6 +271,21 @@ function addReply(threadId: string, content: string, mentions: string[]) {
 function createNewComment() {
   emit("create-comment");
 }
+
+/** Reveal the passage's discussion, even when its thread is already selected. */
+function revealThread(threadId: string) {
+  const thread = props.threads.find(item => item.id === threadId);
+  if (!thread) return;
+  activeTab.value = thread.status;
+  expandedThreads.value = new Set([...expandedThreads.value, threadId]);
+  nextTick(() => {
+    const cards = sidebarContentRef.value?.querySelectorAll<HTMLElement>('.comment-thread-card');
+    const card = cards && Array.from(cards).find(item => item.dataset.threadId === threadId);
+    card?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  });
+}
+
+defineExpose({ revealThread });
 </script>
 
 <style scoped>
