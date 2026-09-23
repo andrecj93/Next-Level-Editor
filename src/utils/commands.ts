@@ -138,18 +138,28 @@ export interface EditorCommand {
  * reads during render, so a bare `document.createElement` here crashed SSR with
  * `document is not defined`; the client re-computes the exact value on hydration.
  */
-function htmlToPlainText(html: string): string {
+function htmlToPlainText(html: string, source?: Element): string {
   if (typeof document !== "undefined") {
-    const temp = document.createElement("div");
-    temp.innerHTML = html;
-    // Detached elements do not get layout-aware innerText. Insert explicit
-    // boundaries without splitting words around inline marks such as <em>.
-    temp.querySelectorAll('script, style, .table-of-contents, .page-break').forEach(node => node.remove());
-    temp.querySelectorAll('p,div,li,h1,h2,h3,h4,h5,h6,tr,td,th,blockquote,pre,br').forEach(node => {
-      node.before(document.createTextNode(' '));
-      node.after(document.createTextNode(' '));
-    });
-    return (temp.textContent || '').replace(/\s+/g, ' ').trim();
+    const temp = source ?? document.createElement("div");
+    if (!source) temp.innerHTML = html;
+    // Preserve block boundaries without creating thousands of temporary text
+    // nodes on every keystroke in a manuscript. Inline marks stay within words.
+    const blocks = new Set(['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TR', 'TD', 'TH', 'BLOCKQUOTE', 'PRE', 'BR']);
+    const parts: string[] = [];
+    const read = (node: Node): void => {
+      if (node.nodeType === Node.TEXT_NODE) { parts.push(node.textContent || ''); return; }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const element = node as Element;
+      const tag = element.localName.toUpperCase();
+      if (tag === 'SCRIPT' || tag === 'STYLE'
+        || element.classList.contains('table-of-contents') || element.classList.contains('page-break')) return;
+      const boundary = blocks.has(tag);
+      if (boundary) parts.push(' ');
+      for (let child = node.firstChild; child; child = child.nextSibling) read(child);
+      if (boundary) parts.push(' ');
+    };
+    read(temp);
+    return parts.join('').replace(/\s+/g, ' ').trim();
   }
   // SSR fallback: turn block-closing tags and <br> into spaces so words across
   // block boundaries don't fuse, strip the rest, then decode the few entities a
@@ -174,9 +184,17 @@ function htmlToPlainText(html: string): string {
  * @returns Word count
  */
 export function getWordCount(html: string): number {
-  const text = htmlToPlainText(html);
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  return words.length;
+  return getTextStatistics(html).wordCount;
+}
+
+/** Shared counts avoid parsing the same manuscript twice during a render. */
+export function getTextStatistics(html: string, source?: Element): { wordCount: number; characterCount: number } {
+  const text = htmlToPlainText(html, source);
+  let wordCount = text ? 1 : 0;
+  // Whitespace is already normalized. Count boundaries without allocating a
+  // separate string for every word in the book.
+  for (let at = text.indexOf(' '); at !== -1; at = text.indexOf(' ', at + 1)) wordCount++;
+  return { wordCount, characterCount: text.length };
 }
 
 /**

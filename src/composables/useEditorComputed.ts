@@ -1,5 +1,5 @@
 import { computed, watch, nextTick, type Ref, type ComputedRef } from "vue";
-import { getWordCount, getCharacterCount } from "../utils/commands";
+import { getTextStatistics } from "../utils/commands";
 import { useHtmlSanitizer } from "./useHtmlSanitizer";
 
 interface EditorComputedOptions {
@@ -60,18 +60,19 @@ export function useEditorComputed(options: EditorComputedOptions) {
   /**
    * Computed word count from editor content
    */
-  const wordCount: ComputedRef<number> = computed(() => {
+  const textStatistics = computed(() => {
     const content = htmlContent.value || editorContent.value?.innerHTML || "";
-    return getWordCount(content);
+    const root = editorContent.value;
+    // Ordinary input has already produced this DOM. Read it without cloning
+    // it; source/preview and externally changed HTML still use the string.
+    return getTextStatistics(content, root && root.innerHTML === content ? root : undefined);
   });
+  const wordCount: ComputedRef<number> = computed(() => textStatistics.value.wordCount);
 
   /**
    * Computed character count from editor content
    */
-  const characterCount: ComputedRef<number> = computed(() => {
-    const content = htmlContent.value || editorContent.value?.innerHTML || "";
-    return getCharacterCount(content);
-  });
+  const characterCount: ComputedRef<number> = computed(() => textStatistics.value.characterCount);
 
   /**
    * Watch modelValue changes and update editor content
@@ -81,6 +82,10 @@ export function useEditorComputed(options: EditorComputedOptions) {
     (newValue) => {
       if (!editorContent.value) return;
       if (isApplyingHistory.value) return;
+
+      // A host's exact v-model echo needs no DOM reconciliation. Changed input
+      // still goes through the sanitized comparison and ingestion path below.
+      if (newValue === editorContent.value.innerHTML) return;
 
       // Compare sanitized versions to avoid unnecessary innerHTML updates that destroy cursor position
       const currentSanitized = sanitizeHtml(editorContent.value.innerHTML);

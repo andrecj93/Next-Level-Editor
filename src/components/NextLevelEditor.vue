@@ -373,7 +373,7 @@
       :initial-cell-props="initialCellProps"
       :initial-table-props="initialTableProps"
       :formatted-html-content="
-        formatHtml(htmlContent || editorContent?.innerHTML || '')
+        showHtmlCodeModal ? formatHtml(htmlContent || editorContent?.innerHTML || '') : ''
       "
       :command-palette-commands="commandPaletteCommands"
       :recent-command-ids="recentCommands"

@@ -61,11 +61,23 @@ export function useEditorHistory() {
   /**
    * Build a preview text from HTML content
    */
-  const buildPreview = (html: string): string => {
-    const temp = document.createElement("div");
-    temp.innerHTML = html;
-    // Normalize whitespace
-    const text = temp.innerText.replace(/\s+/g, " ").trim();
+  const buildPreview = (html: string, plainText?: string): string => {
+    if (plainText === undefined) {
+      const temp = document.createElement("div");
+      temp.innerHTML = html;
+      plainText = temp.textContent || "";
+    }
+    // A timeline label needs only its first 61 normalized characters. Do not
+    // normalize a whole book on every key when the preview ends on line one.
+    let text = "";
+    let space = false;
+    for (const character of plainText) {
+      if (/\s/.test(character)) { space = text.length > 0; continue; }
+      if (space) text += " ";
+      text += character;
+      space = false;
+      if (text.length > 60) break;
+    }
     return text.length > 60
       ? `${text.slice(0, 57)}...`
       : text || "Empty content";
@@ -77,11 +89,12 @@ export function useEditorHistory() {
   const captureSnapshot = (
     html: string,
     selection?: CaretOffsets | null,
-    coalesceKey?: HistoryCoalesceKey
+    coalesceKey?: HistoryCoalesceKey,
+    /** Already available from the live editor; avoids reparsing its HTML. */
+    plainText?: string
   ): void => {
     if (isApplyingHistory.value) return;
 
-    const preview = buildPreview(html);
     const current = history.value[historyIndex.value];
 
     if (current?.html === html) {
@@ -99,6 +112,7 @@ export function useEditorHistory() {
       return;
     }
 
+    const preview = buildPreview(html, plainText);
     const now = Date.now();
 
     // Continue the current keystroke burst: fold this capture into the tail

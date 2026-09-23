@@ -283,16 +283,16 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 909.7 KB | **219.8 KB** | On import |
+| **Core (ES)** | 910.5 KB | **220.1 KB** | On import |
 | **CSS** | 258.6 KB | **41.7 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
-| **UMD** | 1,662.2 KB | 495.5 KB | On import (no splitting) |
+| **UMD** | 1,662.7 KB | 495.8 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **261.5 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **261.8 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 
