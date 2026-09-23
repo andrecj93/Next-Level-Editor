@@ -367,6 +367,33 @@ describe("ingestion and structured engine security", () => {
   });
 });
 describe("document workspace operations", () => {
+  it("returns to the saved editing caret only while the original document is unchanged", () => {
+    const scope = effectScope(), html = ref('<p data-nle-id="nle-a">Original document</p>');
+    const options = shallowRef<DocumentOptions>({ id: "first" });
+    const root = document.createElement("div");
+    root.tabIndex = 0; root.innerHTML = html.value; document.body.append(root);
+    const read = vi.fn<() => { start: number; end: number } | null>(() => ({ start: 4, end: 4 }));
+    const write = vi.fn();
+    const workspace = scope.run(() => useDocumentWorkspace({ options, html, root: ref(root),
+      apply: value => { html.value = value; }, sanitize: sanitizeHtml, locale: () => "en", selection: { read, write } }))!;
+    try {
+      workspace.captureSelection();
+      read.mockReturnValue(null);
+      workspace.captureSelection(); // Focus is in page controls, not the editor.
+      workspace.restoreEditingSelection();
+      expect(write).toHaveBeenLastCalledWith({ start: 4, end: 4 });
+      expect(document.activeElement).toBe(root);
+      write.mockClear();
+      html.value = "<p>Replaced by host</p>";
+      workspace.restoreEditingSelection();
+      expect(write).not.toHaveBeenCalled();
+      read.mockReturnValue({ start: 2, end: 2 });
+      workspace.captureSelection();
+      options.value = { id: "second" };
+      workspace.restoreEditingSelection();
+      expect(write).not.toHaveBeenCalled();
+    } finally { scope.stop(); root.remove(); }
+  });
   it("applies a template as one undoable edit and prevents viewer edits", async () => {
     const scope = effectScope(),
       html = ref('<p data-nle-id="nle-a">Hello {{name}}</p>'),

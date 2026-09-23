@@ -5,6 +5,9 @@ import autoprefixer from "autoprefixer";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => ({
+  // Published browser assets must resolve relative to the installed module,
+  // including when a consumer bundles the library under a nested app base.
+  base: "./",
   // Types are emitted separately by `vue-tsc -p tsconfig.build.json` in the
   // build script (the official Vue path). It handles the main component's
   // `<script setup>` props cleanly, unlike vite-plugin-dts's .vue→virtual

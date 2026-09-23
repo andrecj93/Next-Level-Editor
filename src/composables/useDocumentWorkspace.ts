@@ -111,6 +111,9 @@ export function useDocumentWorkspace(ctx: {
   let controller: AbortController | undefined,
     generation = 0;
   let citationFormatter: CitationFormatter | undefined;
+  let editingSelection:
+    | { id?: string; html: string; caret: CaretOffsets }
+    | undefined;
   async function prepareReferences() {
     const id = ctx.options.value?.id;
     citationFormatter =
@@ -157,8 +160,25 @@ export function useDocumentWorkspace(ctx: {
     clearPdf();
   }
   function captureSelection() {
+    const caret = ctx.selection?.read();
+    if (caret)
+      editingSelection = { id: ctx.options.value?.id, html: ctx.html.value, caret };
     if (ctx.root.value) selected.value = selectedAnchor(ctx.root.value);
     return selected.value;
+  }
+  function restoreEditingSelection() {
+    const root = ctx.root.value;
+    if (!root) return;
+    root.focus({ preventScroll: true });
+    if (
+      editingSelection &&
+      editingSelection.id === ctx.options.value?.id &&
+      editingSelection.html === ctx.html.value
+    )
+      ctx.selection?.write(editingSelection.caret);
+    const focus = root.ownerDocument.getSelection()?.focusNode;
+    if (focus && root.contains(focus))
+      focus.parentElement?.scrollIntoView({ block: "nearest" });
   }
   function locateBlock(id: string) {
     const block = ctx.root.value && findBlock(ctx.root.value, id);
@@ -690,6 +710,7 @@ export function useDocumentWorkspace(ctx: {
       cancel();
       clearPdf();
       selected.value = null;
+      editingSelection = undefined;
       importReport.value = null;
       comparison.value = null;
       findings.value = [];
@@ -734,6 +755,7 @@ export function useDocumentWorkspace(ctx: {
     run,
     mutate,
     captureSelection,
+    restoreEditingSelection,
     locateBlock,
     checkContent,
     locateFinding,

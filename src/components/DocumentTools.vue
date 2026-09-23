@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch, nextTick } from "vue";
+import { computed, ref, shallowRef, watch, nextTick, defineAsyncComponent } from "vue";
 import type { useDocumentWorkspace } from "../composables/useDocumentWorkspace";
 import type {
   DocumentOptions,
@@ -20,6 +20,7 @@ const props = defineProps<{
   collaborative?: boolean;
 }>();
 const w = props.workspace;
+const DocumentPdfPreview = defineAsyncComponent(() => import("./DocumentPdfPreview.vue"));
 const { t, locale, date, direction: uiDirection } = useEditorLocale();
 const id = useStableId();
 const trigger = ref<HTMLButtonElement>();
@@ -139,15 +140,25 @@ watch(
   },
 );
 function toggle() {
-  if (!w.open.value) {
-    w.captureSelection();
-    w.tab.value = "Versions";
+  if (w.open.value) {
+    close();
+    return;
   }
-  w.open.value = !w.open.value;
+  w.captureSelection();
+  w.tab.value = "Versions";
+  w.open.value = true;
 }
 function close() {
+  if (w.tab.value === "Export and pages" && w.pdf.value) {
+    returnToWriting();
+    return;
+  }
   w.open.value = false;
   nextTick(() => trigger.value?.focus());
+}
+function returnToWriting() {
+  w.open.value = false;
+  nextTick(() => w.restoreEditingSelection());
 }
 function tabKey(event: KeyboardEvent, index: number) {
   let next = index;
@@ -252,6 +263,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
       v-if="w.open.value"
       :id="id + '-panel'"
       class="document-tools-panel"
+      :class="{ 'has-page-preview': w.tab.value === 'Export and pages' && w.pdf.value }"
       :aria-label="t('Document tools')"
       @keydown.esc.stop="close"
     >
@@ -543,10 +555,12 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
                 {{ t(warning) }}
               </li>
             </ul>
-            <iframe
-              :src="w.pdfUrl.value"
-              :title="t('PDF preview')"
-              class="document-pdf"
+            <DocumentPdfPreview
+              :blob="w.pdf.value.blob"
+              :document-id="options?.id"
+              :language="w.session.metadata.value.page.language"
+              :sink="options?.onDiagnostic"
+              @return="returnToWriting"
             />
             <a :href="w.pdfUrl.value" target="_blank" rel="noopener">
               {{ t("Open PDF preview") }}
@@ -1199,6 +1213,10 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
   overflow: auto;
   overscroll-behavior: contain;
 }
+.document-tools-panel.has-page-preview {
+  max-height: 85vh;
+  max-height: 85dvh;
+}
 .document-tools-panel header {
   display: flex;
   justify-content: space-between;
@@ -1339,11 +1357,6 @@ select:focus-visible,
 }
 .document-error {
   color: var(--error-color, #b42318);
-}
-.document-pdf {
-  width: 100%;
-  height: 55vh;
-  border: 1px solid #cbd5e1;
 }
 .document-block-title {
   text-align: start;

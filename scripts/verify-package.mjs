@@ -33,8 +33,9 @@ function run(name, arguments_, cwd = consumer) {
   if (result.error || result.status !== 0) throw new Error(`${name} failed: ${result.error?.message || (result.stderr || result.stdout || '').slice(-5000)}`);
   return result.stdout;
 }
-async function verifyBrowser() {
-  event('package.step_started', { step: 'consumer-browser' });
+async function verifyBrowser(format = 'esm') {
+  const step = format === 'umd' ? 'consumer-umd-browser' : 'consumer-browser';
+  event('package.step_started', { step });
   const server = await preview({ root: consumer, configFile: join(consumer, 'vite.config.mjs'), preview: { host: '127.0.0.1', port: 0, strictPort: true, open: false } });
   let browser;
   let page;
@@ -46,7 +47,7 @@ async function verifyBrowser() {
     page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     page.on('pageerror', error => errors.push(error.message));
     page.on('response', response => { if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${new URL(response.url()).pathname}`); });
-    await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: 'networkidle' });
+    await page.goto(`http://127.0.0.1:${address.port}/installed-editor/?format=${format}`, { waitUntil: 'networkidle' });
     const editor = page.getByRole('textbox', { name: 'Editor de texto', exact: true });
     await expect(editor).toContainText('Installed package');
     await expect(editor).toHaveCSS('font-family', /./);
@@ -75,12 +76,43 @@ async function verifyBrowser() {
     await expect(editor).toHaveAttribute('contenteditable', 'false');
     await page.getByRole('button', { name: 'Toggle read-only', exact: true }).click();
     await expect(editor).toHaveAttribute('contenteditable', 'true');
+    // The PDF viewer must load its deferred module/worker from the installed
+    // tarball, including a host app deployed under a non-root base path.
+    await page.getByRole('button', { name: 'Fechar', exact: true }).click();
+    await page.getByRole('button', { name: 'Preview fixture', exact: true }).click();
+    await expect(editor).toContainText('Second consumer page');
+    await editor.locator('p').first().click();
+    await editor.press('Home');
+    await editor.press('ArrowRight');
+    const selectedOffset = await editor.evaluate(root => {
+      const selection = window.getSelection();
+      return root.contains(selection.focusNode) ? selection.focusOffset : -1;
+    });
+    await page.getByRole('button', { name: 'Ferramentas do documento', exact: false }).click();
+    await page.getByRole('tab', { name: 'Exportar e páginas', exact: true }).click();
+    await page.getByRole('button', { name: 'Criar pré-visualização PDF', exact: true }).click();
+    const pdf = page.getByRole('region', { name: 'Pré-visualização PDF', exact: true });
+    await expect(pdf.getByRole('status')).toHaveText('Página 1 de 2', { timeout: 40000 });
+    await pdf.getByRole('button', { name: 'Página seguinte', exact: true }).click();
+    await expect(pdf.getByRole('status')).toHaveText('Página 2 de 2');
+    await pdf.getByText('Texto da página', { exact: true }).click();
+    await expect(pdf.locator('pre')).toContainText('Second consumer page');
+    await pdf.locator('.pdf-canvas-container').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: join(evidence, step + '-pdf-preview.png'), fullPage: true, caret: 'initial' });
+    await pdf.getByRole('button', { name: 'Voltar à escrita', exact: true }).click();
+    await expect(editor).toBeFocused();
+    expect(await editor.evaluate(root => {
+      const selection = window.getSelection();
+      return root.contains(selection.focusNode) ? selection.focusOffset : -1;
+    })).toBe(selectedOffset);
+    await page.keyboard.type('!');
+    await expect(editor.locator('p').first()).toHaveText('F!irst consumer page');
     expect(errors).toEqual([]);
-    await page.screenshot({ path: join(evidence, 'consumer-browser.png'), fullPage: true });
-    event('package.step_finished', { step: 'consumer-browser', browser: browser.version(), exitCode: 0, checks: ['css', 'model-update', 'formatting', 'undo', 'lazy-document-tools', 'version-store', 'reactive-readonly'], errors });
+    await page.screenshot({ path: join(evidence, step + '.png'), fullPage: true });
+    event('package.step_finished', { step, format, browser: browser.version(), exitCode: 0, checks: ['css', 'model-update', 'formatting', 'undo', 'lazy-document-tools', 'version-store', 'reactive-readonly', 'nested-base-pdf-assets', 'pdf-page-navigation', 'return-caret'], errors });
   } catch (error) {
-    if (page) await page.screenshot({ path: join(evidence, 'consumer-browser-failed.png'), fullPage: true }).catch(() => {});
-    event('package.step_finished', { step: 'consumer-browser', exitCode: 1, errors, message: String(error) });
+    if (page) await page.screenshot({ path: join(evidence, step + '-failed.png'), fullPage: true }).catch(() => {});
+    event('package.step_finished', { step, format, exitCode: 1, errors, message: String(error) });
     throw error;
   } finally {
     await browser?.close();
@@ -158,19 +190,32 @@ assert.equal(require('next-level-editor/locales/pt-PT').default.Save,'Guardar');
 console.log(JSON.stringify({independentCatalogs:true,vueInstalled:false}));`);
   run('independent-catalogs', [join(standalone, 'catalogs.mjs')], standalone);
   writeFileSync(join(consumer, 'index.html'), '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Installed editor verification</title></head><body><div id="app"></div><script type="module" src="/main.mjs"></script></body></html>');
-  writeFileSync(join(consumer, 'main.mjs'), `import {createApp,h,ref} from 'vue';
-import plugin,{NextLevelEditor,createMemoryVersionStore} from 'next-level-editor';
+  writeFileSync(join(consumer, 'main.mjs'), `import * as Vue from 'vue';
+import * as library from 'next-level-editor';
 import portuguese from 'next-level-editor/locales/pt-PT';
 import 'next-level-editor/style.css';
+const {createApp,h,ref}=Vue;
+function launch({default:plugin,NextLevelEditor,createMemoryVersionStore}){
 createApp({setup(){const html=ref('<p>Installed package</p>');const readonly=ref(false);const documentOptions={id:'packed-consumer',store:createMemoryVersionStore(),localRecovery:false};return()=>h('main',[
   h('button',{onClick:()=>readonly.value=!readonly.value},'Toggle read-only'),
+  h('button',{onClick:()=>html.value='<p data-nle-id="nle-first">First consumer page</p><div class="page-break" data-nle-id="nle-break"></div><p data-nle-id="nle-second">Second consumer page</p>'},'Preview fixture'),
   h('output',{'data-testid':'host-model'},html.value),
   h(NextLevelEditor,{modelValue:html.value,'onUpdate:modelValue':value=>html.value=value,documentTools:true,locale:'pt-PT',messages:portuguese,readonly:readonly.value,documentOptions}),
-]);}}).use(plugin).mount('#app');`);
-  writeFileSync(join(consumer, 'vite.config.mjs'), 'export default {build:{emptyOutDir:true}};');
+]);}}).use(plugin).mount('#app');}
+if(new URL(location.href).searchParams.get('format')==='umd'){
+ window.Vue=Vue;const script=document.createElement('script');script.src=import.meta.env.BASE_URL+'vendor/next-level-editor.umd.js';
+ script.onload=()=>launch(window.NextLevelEditor);script.onerror=()=>{throw new Error('UMD script load failed');};document.head.append(script);
+}else launch(library);`);
+  const vendor = join(consumer, 'public/vendor');
+  mkdirSync(vendor, { recursive: true });
+  for (const name of ['next-level-editor.umd.js', 'pdf.min.mjs', 'pdf.worker.min.mjs']) {
+    cpSync(join(consumer, 'node_modules/next-level-editor/dist', name), join(vendor, name));
+  }
+  writeFileSync(join(consumer, 'vite.config.mjs'), 'export default {base:"/installed-editor/",build:{emptyOutDir:true}};');
   run('consumer-build', [join(repository, 'node_modules/vite/bin/vite.js'), 'build', '--config', join(consumer, 'vite.config.mjs')]);
   await verifyBrowser();
-  const result = { startedAt, finishedAt: new Date().toISOString(), status: 'passed', archive, sha256, workspace, consumer, vueVersion: '3.3.0', checks: ['esm', 'commonjs', 'ssr', 'plugin-registration', 'consumer-types', 'independent-locales', 'consumer-production-build', 'consumer-browser'] };
+  await verifyBrowser('umd');
+  const result = { startedAt, finishedAt: new Date().toISOString(), status: 'passed', archive, sha256, workspace, consumer, vueVersion: '3.3.0', checks: ['esm', 'commonjs', 'ssr', 'plugin-registration', 'consumer-types', 'independent-locales', 'consumer-production-build', 'consumer-browser', 'consumer-umd-browser'] };
   writeFileSync(join(evidence, 'result.json'), JSON.stringify(result, null, 2));
   event('package.verification_completed', result);
 } catch (error) {

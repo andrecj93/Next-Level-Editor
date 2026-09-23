@@ -15,6 +15,9 @@ function visit(path) {
 }
 console.log(JSON.stringify({ event: 'declarations.started', timestamp: new Date().toISOString() }));
 try {
+  // The on-demand PDF viewer ships the unmodified browser module as an asset.
+  // Carry its full Apache license in the installed tarball as well.
+  writeFileSync(join(root, 'PDFJS-LICENSE.txt'), readFileSync(resolve(root, '../node_modules/pdfjs-dist/LICENSE'), 'utf8'));
   visit(root);
   const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
   for (const file of files) {

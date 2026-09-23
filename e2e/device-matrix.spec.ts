@@ -24,6 +24,23 @@ async function noHorizontalOverflow(page: Page) {
   expect(size.content, JSON.stringify(size)).toBeLessThanOrEqual(size.width + 1);
 }
 
+async function toolbarLabelsFit(page: Page) {
+  const overflow = await toolbarFor(page).evaluate(toolbar => {
+    return [...toolbar.querySelectorAll('.writing-toolbar-row button')].flatMap(button => {
+      const bounds = button.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return [];
+      return [...button.querySelectorAll('.dropdown-label, .dropdown-arrow')].flatMap(label => {
+        const rect = label.getBoundingClientRect();
+        if (!rect.width || !rect.height) return [];
+        return rect.left < bounds.left - 1 || rect.right > bounds.right + 1
+          ? [{ button: button.getAttribute('aria-label'), label: label.textContent, buttonLeft: bounds.left, buttonRight: bounds.right, labelLeft: rect.left, labelRight: rect.right }]
+          : [];
+      });
+    });
+  });
+  expect(overflow, 'Toolbar labels must remain inside their own hit areas').toEqual([]);
+}
+
 async function insideViewport(locator: Locator, timeout = 2000) {
   // WebKit delivers visualViewport resize after the protocol resize resolves.
   // Wait for the actual bounded geometry, including Vue's next-tick clamp.
@@ -63,7 +80,10 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(async ({ page }, info) => {
   expect((page as Page & { deviceErrors?: string[] }).deviceErrors).toEqual([]);
-  if (info.status === info.expectedStatus) await info.attach('device-state', { body: await page.screenshot(), contentType: 'image/png' });
+  if (info.status === info.expectedStatus) {
+    await settle(page);
+    await info.attach('device-state', { body: await page.screenshot(), contentType: 'image/png' });
+  }
 });
 
 test('heading and list changes preserve the caret for continued writing', async ({ page, hasTouch }) => {
@@ -121,6 +141,8 @@ test('heading and list changes preserve the caret for continued writing', async 
   await page.keyboard.type('Z');
   await expect(editor.locator('p').last()).toHaveText('KZeep this sentence.');
   await expect(editor.locator('p').first()).toHaveText('A quiet arrival.');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await toolbarLabelsFit(page);
   await noHorizontalOverflow(page);
 });
 

@@ -78,15 +78,12 @@
 }
 
 @media (max-width: 450px) {
-  .writing-toolbar-row { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(44px, .8fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr); }
+  /* Two balanced rows keep each label and arrow inside its own tap target. */
+  .writing-toolbar-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .writing-toolbar-row .writing-export { margin-left: 0; }
   .writing-toolbar-row .dropdown-trigger,
   .writing-toolbar-row .writing-paragraph-format .dropdown-trigger { width: 100%; }
 }
-@media (max-width: 350px) {
-  .writing-toolbar-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
 /* A short window (landscape, enlarged UI, or keyboard) still needs actual lines
    of prose. The host can scroll its surrounding chrome out of the way. */
 @media (max-height: 500px) {

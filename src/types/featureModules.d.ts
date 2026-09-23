@@ -10,3 +10,7 @@ declare module "mammoth/mammoth.browser" {
   import * as mammoth from "mammoth";
   export default mammoth;
 }
+declare module "*?url&no-inline" {
+  const url: string;
+  export default url;
+}
