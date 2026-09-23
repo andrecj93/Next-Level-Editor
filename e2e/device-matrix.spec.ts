@@ -376,8 +376,9 @@ test('a blank manuscript stays spacious and offers notes without moving the page
   const width = page.viewportSize()!.width;
   if (width <= 700) {
     const toolbar = await toolbarFor(page).boundingBox();
-    expect(toolbar!.height, 'mobile tools leave room for the manuscript').toBeLessThanOrEqual(width > 350 ? 52 : 96);
+    expect(toolbar!.height, 'mobile tools stay within their one- or two-row budget').toBeLessThanOrEqual(width > 450 ? 52 : 96);
   }
+  await toolbarLabelsFit(page);
   await activate(editor, hasTouch);
   await page.keyboard.type('She returned in order to find the house.');
   await expect(opener).toHaveAttribute('aria-description', '1 writing note ready to review');
@@ -385,6 +386,18 @@ test('a blank manuscript stays spacious and offers notes without moving the page
   const after = await editor.boundingBox();
   expect(after!.x).toBe(before!.x);
   expect(after!.width).toBe(before!.width);
+  // Allow one pixel for fractional layout rounding at device scale factors.
+  await expect.poll(() => editor.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const screenTop = viewport?.offsetTop ?? 0;
+    const screenBottom = screenTop + (viewport?.height ?? innerHeight);
+    const toolbar = document.querySelector('[role="toolbar"][aria-label="Text formatting toolbar"]')!.getBoundingClientRect();
+    const dock = document.querySelector('.mobile-toolbar')?.getBoundingClientRect();
+    const toolbarBottom = toolbar.bottom > screenTop && toolbar.top < screenBottom ? toolbar.bottom : screenTop;
+    const dockTop = dock?.height && dock.top < screenBottom && dock.bottom > screenTop ? dock.top : screenBottom;
+    return Math.min(box.bottom, dockTop, screenBottom) - Math.max(box.top, toolbarBottom, screenTop);
+  }), { message: 'at least 96px of manuscript remain visible between the toolbar and touch dock' }).toBeGreaterThanOrEqual(95);
   await activate(opener, hasTouch);
   await expect(companion.getByRole('button', { name: 'Use “to”', exact: true })).toBeVisible();
   await activate(companion.getByRole('button', { name: 'Dismiss note: A little more direct', exact: true }), hasTouch);
