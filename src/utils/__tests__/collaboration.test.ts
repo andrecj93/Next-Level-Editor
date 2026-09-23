@@ -60,6 +60,7 @@ describe("structured collaborative editing", () => {
     const a = await connect("A"),
       b = await connect("B");
     paused = true;
+    a.applyHtml(a.readHtml().replace("Alpha", "<strong>Alpha</strong>"));
     a.applyHtml(a.readHtml().replace("Beta ", ""));
     b.applyHtml(b.readHtml().replace("Gamma", "Gamma Added"));
     b.applyHtml(b.readHtml().replace("Alpha", "<em>Alpha</em>"));
@@ -72,6 +73,7 @@ describe("structured collaborative editing", () => {
     const result = document.createElement("div");
     result.innerHTML = a.readHtml();
     expect(result.firstElementChild?.textContent).toBe("Alpha Gamma Added");
+    expect(result.querySelector("strong")?.textContent).toBe("Alpha");
     expect(result.querySelector("em")?.textContent).toBe("Alpha");
     expect(result.querySelector("td[colspan='2']")?.textContent).toBe(
       "Merged cell",
@@ -90,6 +92,8 @@ describe("structured collaborative editing", () => {
     a.undo();
     expect(b.readHtml()).toContain("Added");
     expect(b.readHtml()).toContain("Beta");
+    expect(b.readHtml()).toContain("<em>Alpha</em>");
+    expect(b.readHtml()).not.toContain("<strong>");
   });
   it("synchronizes two peers and local undo preserves the other author edits", async () => {
     const provider = createMemoryCollaborationProvider();
