@@ -52,6 +52,18 @@ const sourceType = ref<"book" | "webpage">("book"),
   editingSource = ref(""),
   editingNote = ref("");
 const chapter = ref(true);
+const previewBlockId = ref("");
+const chapterPreview = computed(() => {
+  const blocks = w.blocks.value;
+  const start = blocks.findIndex((block) => block.id === previewBlockId.value);
+  if (start < 0) return [];
+  const level = /^H[1-6]$/.test(blocks[start].tag) ? Number(blocks[start].tag[1]) : 0;
+  let end = start + 1;
+  if (chapter.value && level) {
+    while (end < blocks.length && !(/^H[1-6]$/.test(blocks[end].tag) && Number(blocks[end].tag[1]) <= level)) end++;
+  }
+  return blocks.slice(start, end);
+});
 const page = ref<PageSettings>(cloneDocument(w.session.metadata.value.page));
 const fields = shallowRef<TemplateField[]>([]),
   data = ref<Record<string, string>>({});
@@ -901,6 +913,21 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
               >
                 {{ index + 1 }} · {{ block.text || block.tag }}
               </button>
+              <button
+                v-if="chapter && /^H[1-6]$/.test(block.tag)"
+                type="button"
+                :aria-expanded="previewBlockId === block.id"
+                :aria-controls="previewBlockId === block.id ? id + '-scope-' + block.id : undefined"
+                @click="previewBlockId = previewBlockId === block.id ? '' : block.id"
+              >
+                {{ t("Preview chapter scope") }}
+              </button>
+              <div v-if="chapter && previewBlockId === block.id" :id="id + '-scope-' + block.id" class="document-preview">
+                <p>{{ t("These blocks move together, up to the next heading of the same or higher level.") }}</p>
+                <ol>
+                  <li v-for="item in chapterPreview" :key="item.id">{{ item.text || item.tag }}</li>
+                </ol>
+              </div>
               <div class="document-actions">
                 <button
                   :disabled="w.readonly.value || !index"

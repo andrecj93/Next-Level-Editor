@@ -527,6 +527,9 @@ export const editorPortuguese: Record<string, string> = {
   Yes: "Sim",
   No: "Não",
   "Add field": "Adicionar campo",
+  "Preview chapter scope": "Pré-visualizar o conteúdo do capítulo",
+  "These blocks move together, up to the next heading of the same or higher level.":
+    "Estes blocos são movidos em conjunto, até ao próximo título do mesmo nível ou superior.",
   "Review decisions require an exclusive editing session.":
     "As decisões de revisão requerem uma sessão de edição exclusiva.",
   "Add an image description or explicitly mark the image as decorative.":

@@ -84,6 +84,46 @@ test("imports a Word document through preview and restores with undo", async ({
   await editor(page).press("ControlOrMeta+z");
   await expect(editor(page)).toContainText("A better document");
 });
+
+test("two named checkpoints reopen with dates and remain isolated by document", async ({ page, context }) => {
+  await tools(primary(page), "Versions");
+  for (const name of ["First named version", "Second named version"]) {
+    await primary(page).getByLabel("Checkpoint name").fill(name);
+    await primary(page).getByRole("button", { name: "Save checkpoint", exact: true }).click();
+    await expect(primary(page).getByText(name, { exact: true })).toBeVisible();
+  }
+  await page.close();
+  const reopened = await context.newPage();
+  await reopened.goto("/?lab=documents");
+  await tools(primary(reopened), "Versions");
+  for (const name of ["First named version", "Second named version"]) {
+    const card = primary(reopened).locator(".document-card").filter({ has: reopened.getByText(name, { exact: true }) });
+    await expect(card).toBeVisible();
+    await expect(card.locator("time")).toHaveAttribute("datetime", /^\d{4}-\d{2}-\d{2}T/);
+  }
+  await reopened.goto("/?lab=documents&document=another-document");
+  await tools(primary(reopened), "Versions");
+  await expect(primary(reopened).getByText("First named version", { exact: true })).toHaveCount(0);
+  await expect(primary(reopened).getByText("Second named version", { exact: true })).toHaveCount(0);
+});
+
+test("chapter scope preview includes subordinate blocks before an undoable move", async ({ page }) => {
+  await editor(page).evaluate((element) => {
+    element.innerHTML = '<h2>First chapter</h2><p>First paragraph.</p><h3>Nested section</h3><p>Nested paragraph.</p><h2>Second chapter</h2><p>Second paragraph.</p>';
+    element.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" }));
+  });
+  const before = await editor(page).innerHTML();
+  await tools(primary(page), "Structure");
+  const chapter = primary(page).locator(".document-card").filter({ has: page.getByRole("button", { name: "1 · First chapter", exact: true }) });
+  await chapter.getByRole("button", { name: "Preview chapter scope", exact: true }).click();
+  const preview = chapter.locator(".document-preview");
+  await expect(preview.locator("li")).toHaveText(["First chapter", "First paragraph.", "Nested section", "Nested paragraph."]);
+  await chapter.getByRole("button", { name: "Move down", exact: true }).click();
+  await expect(editor(page).locator("h2")).toHaveText(["Second chapter", "First chapter"]);
+  await expect(editor(page).locator("p")).toHaveText(["Second paragraph.", "First paragraph.", "Nested paragraph."]);
+  await editor(page).press("ControlOrMeta+z");
+  await expect(editor(page)).toHaveJSProperty("innerHTML", before);
+});
 test("review proposes, rejects and retains the original accepted content", async ({
   page,
 }) => {
