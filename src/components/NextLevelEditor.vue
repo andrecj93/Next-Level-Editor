@@ -11,6 +11,7 @@
         'is-full-width': isFullWidth,
         'is-resizing': isResizing,
         'is-writing-workspace': writingMode,
+        'has-writing-search': writingMode && showFindReplaceModal,
       },
     ]"
     :style="
@@ -134,8 +135,22 @@
     />
     </Teleport>
 
+    <WritingSearch
+      v-if="writingMode"
+      ref="writingSearchRef"
+      :show="showFindReplaceModal"
+      :content="htmlContent"
+      :editor="editorContent"
+      :readonly="readonly"
+      :initially-replace="writingSearchInitiallyReplace"
+      :find="handleFind"
+      :replace="handleReplace"
+      :replace-all="handleReplaceAll"
+      :clear="clearFindHighlight"
+      @close="closeWritingSearch"
+    />
     <!-- Editor and Preview Panels -->
-    <div class="nle-document-workspace">
+    <div class="nle-document-workspace" :class="{ 'has-writing-search': writingMode && showFindReplaceModal }">
     <EditorPanels
       :id="mainLandmarkId"
       ref="editorPanelsRef"
@@ -165,6 +180,7 @@
     />
     <WritingCompanion
       v-if="writingMode && companionOpen && viewMode === 'editor'"
+      v-show="!showFindReplaceModal"
       :review="writingReview"
       :dismissed-notes="dismissedWritingNotes"
       :start-note-id="writingReviewStart"
@@ -335,7 +351,7 @@
       :theme="teleportThemeClass"
       :owns-fixed-chrome="ownsFixedChrome"
       :show-table-modal="showTableModal"
-      :show-find-replace-modal="showFindReplaceModal"
+      :show-find-replace-modal="showFindReplaceModal && !writingMode"
       :show-code-block-modal="showCodeBlockModal"
       :show-table-designer="showTableDesigner"
       :show-table-properties-modal="showTablePropertiesModal"
@@ -675,6 +691,7 @@ import {
 } from "vue";
 import { useStableId } from "../utils/useStableId";
 import WritingCompanion from './WritingCompanion.vue';
+import WritingSearch from './WritingSearch.vue';
 import SaveStatus from './SaveStatus.vue';
 import PdfExportStatus from './PdfExportStatus.vue';
 import { useWritingWorkspace } from '../composables/useWritingWorkspace';
@@ -1260,6 +1277,17 @@ const dismissWritingNote = (note: WritingNote) => {
   console.debug('[NextLevelEditor] Writing note dismissed', { kind: note.title });
 };
 const companionOpen = ref(false);
+const writingSearchRef = ref<InstanceType<typeof WritingSearch> | null>(null);
+const writingSearchInitiallyReplace = ref(false);
+const closeWritingSearch = () => {
+  closeFindReplaceModal();
+  nextTick(() => {
+    editorContent.value?.focus({ preventScroll: true });
+    keepSelectionVisible(editorContent.value, 24);
+    rememberSelectionBase();
+  });
+  console.debug('[NextLevelEditor] Writing search closed');
+};
 const writingReviewStart = ref<string>();
 const startReviewNearWriting = () => {
   const root = editorContent.value;
@@ -1531,12 +1559,21 @@ const {
   closeTableModal,
   openTablePropertiesModal,
   closeTablePropertiesModal,
-  openFindReplaceModal,
+  openFindReplaceModal: openLegacyFindReplaceModal,
   closeFindReplaceModal,
   openCodeBlockModal,
   closeCodeBlockModal,
   toggleEmojiPicker,
 } = useModals({ rememberSelection });
+const openFindReplaceModal = (replace = false) => {
+  const alreadyOpen = showFindReplaceModal.value;
+  writingSearchInitiallyReplace.value = replace;
+  openLegacyFindReplaceModal();
+  if (props.writingMode && alreadyOpen) void writingSearchRef.value?.focusSearch(replace);
+};
+watch(showFindReplaceModal, open => {
+  if (open && props.writingMode) viewMode.value = 'editor';
+}, { flush: 'sync' });
 
 // Editor UI State using composable
 const {
@@ -1786,7 +1823,7 @@ const {
 });
 
 // Find & Replace using composable
-const { handleFind, handleReplace, handleReplaceAll } = useFindReplace({
+const { handleFind, handleReplace, handleReplaceAll, clearPendingHighlight: clearFindHighlight } = useFindReplace({
   editorContent,
   captureSnapshot,
   // Replace All rewrites innerHTML, dropping the listeners on comment highlights
@@ -1971,9 +2008,7 @@ const {
   openTableModal,
   openCodeBlockModal,
   openHtmlCodeModal,
-  openFindReplaceModal: () => {
-    showFindReplaceModal.value = true;
-  },
+  openFindReplaceModal: () => openFindReplaceModal(),
   openTemplateModal,
   toggleEmojiPicker: () => {
     showEmojiPicker.value = !showEmojiPicker.value;
@@ -2781,9 +2816,7 @@ const { handleKeydown } = useKeyboardShortcuts({
   redo,
   openCommandMenu,
   insertLink,
-  openFindReplaceModal: () => {
-    showFindReplaceModal.value = true;
-  },
+  openFindReplaceModal: () => openFindReplaceModal(),
   handleInlineAction,
   handleBlockAction,
   handleSlashMenuKeydown,
@@ -2831,7 +2864,7 @@ const advancedKeyboard = useAdvancedKeyboardShortcuts(editorContent, {
   undo: () => undo(),
   redo: () => redo(),
   find: () => openFindReplaceModal(),
-  replace: () => openFindReplaceModal(),
+  replace: () => openFindReplaceModal(true),
   toggleFullscreen: () => toggleFullScreen(),
   togglePreview: () => {
     viewMode.value = viewMode.value === "preview" ? "editor" : "preview";

@@ -64,6 +64,11 @@ small, explainable suggestions. Apply a change, undo it, or keep your wording.
 These English prose checks run on your device; they do not generate text or call
 an AI service. The chapter outline helps you find your way through longer work.
 
+**Revise without losing your place.** In writing mode, Find & Replace stays
+beside the manuscript, with a chapter and sentence excerpt for each match.
+Enter and Shift+Enter move through results while focus stays in search. Replace
+one occurrence or all, undo in the document, and keep writing with search open.
+
 **It exports what you actually see.** PDF, Word, Markdown and HTML round-trip
 your tables, checklists, page breaks, code blocks and embeds. Videos that no
 static format can render degrade to a labelled link instead of vanishing —

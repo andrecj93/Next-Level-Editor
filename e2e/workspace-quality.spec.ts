@@ -100,7 +100,7 @@ test.describe("Writing workspace", () => {
     await expect(page.getByRole("region", { name: "Editor configuration" })).toHaveCount(0);
     await page.getByRole('button', { name: 'Tools', exact: true }).click();
     await page.getByRole("menuitem", { name: "Find & Replace", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Find & Replace" })).toBeVisible();
+    await expect(page.getByRole("search", { name: "Find & Replace" })).toBeVisible();
     await scan();
   });
 

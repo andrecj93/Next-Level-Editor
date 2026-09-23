@@ -3,6 +3,7 @@
 .nle-document-workspace > .editor-container { min-width: 0; }
 .is-writing-workspace { --content-measure: 760px; padding-bottom: var(--nle-mobile-toolbar-clearance, 0px); overflow: visible; }
 .is-writing-workspace .nle-document-workspace { container: nle-writing-area / size; }
+.is-writing-workspace .nle-document-workspace.has-writing-search { min-height: 96px; }
 .is-writing-workspace .editor-content {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 19px; line-height: 1.7; letter-spacing: normal;
@@ -15,6 +16,8 @@
 .is-writing-workspace .editor-content h2 { font-family: inherit; font-size: 1.5em; font-weight: 500; letter-spacing: -.025em; margin: 1.75em 0 .8em; }
 .is-writing-workspace .editor-content h3 { font-family: inherit; font-size: 1.15em; font-weight: 600; margin: 1.6em 0 .7em; }
 .is-writing-workspace .editor-content ::selection { background: var(--selection-bg, #d8ccab80); }
+.editor-content::highlight(nle-find-matches) { color: #422006; background-color: #fde68a; }
+.editor-content::highlight(nle-find-current) { color: #fff; background-color: #92400e; }
 .is-writing-workspace .editor-content:empty:before { font-style: italic; color: var(--text-secondary); opacity: 1; }
 .is-writing-workspace .editor-container { border-top: 0; }
 .is-writing-workspace .editor-container.view-mode-editor { display: flex; flex-direction: column; overflow: hidden; }
@@ -87,6 +90,9 @@
 /* A short window (landscape, enlarged UI, or keyboard) still needs actual lines
    of prose. The host can scroll its surrounding chrome out of the way. */
 @media (max-height: 500px) {
+  /* Let search scroll into view without the pinned toolbar covering its
+     focused input when the window is shorter than the combined controls. */
+  .is-writing-workspace.has-writing-search .nle-toolbar-shell { position: relative; }
   .is-writing-workspace .editor-content { padding-block: 16px 32px; scroll-padding-block: 16px; }
   .is-writing-workspace .nle-document-workspace { min-height: 96px; }
   .writing-format-row { max-height: 38dvh; overflow-y: auto; }
