@@ -245,6 +245,22 @@ test('comments stay usable by touch and keyboard from selection back to writing'
     return selected.anchorNode === range.endContainer && selected.anchorOffset === range.endOffset;
   });
   expect(direction, 'Closing comments restores the backwards selection before any cursor movement').toBe(true);
+  // A blank next paragraph has the same text offset as the preceding sentence.
+  // Reading the discussion must not pull the author back into that sentence.
+  await editor.press('ControlOrMeta+End');
+  await editor.press('Enter');
+  await activate(page.getByRole('button', { name: 'Comments', exact: true }), hasTouch);
+  await activate(sidebar.getByRole('button', { name: 'Close comments sidebar', exact: true }), hasTouch);
+  await expect(editor).toBeFocused();
+  await expect.poll(() => editor.evaluate(root => {
+    const selection = window.getSelection()!;
+    return selection.isCollapsed && root.lastElementChild?.contains(selection.anchorNode);
+  })).toBe(true);
+  await editor.pressSequentially('She opened a fresh page.');
+  await expect(editor.locator('p').last()).toHaveText('She opened a fresh page.');
+  await editor.press('ControlOrMeta+z');
+  await editor.press('ControlOrMeta+z');
+  await expect(editor).toHaveText(originalText.replace(/\n/g, ''));
   await editor.press('ControlOrMeta+Home');
   await editor.pressSequentially('At last, ');
   await expect(editor).toHaveText('At last, ' + originalText.replace(/\n/g, ''));

@@ -798,6 +798,7 @@ import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
 import { getCaretOffsets, setCaretOffsets, type CaretOffsets } from "../utils/caretOffset";
+import { captureSelectionBookmark } from "../utils/selectionBookmark";
 import { useVariables, type Variable } from "../composables/useVariables";
 import { usePlugin } from "../composables/usePlugin";
 import { useSmartAutocomplete } from "../composables/useSmartAutocomplete";
@@ -1134,7 +1135,12 @@ const comments = props.enableComments
 const showCommentsSidebar = ref(false);
 const showCommentModal = ref(false);
 const selectedTextForComment = ref("");
-let commentsReturnSelection: { offsets: CaretOffsets; text: string; backwards: boolean } | null = null;
+let commentsReturnSelection: {
+  offsets: CaretOffsets;
+  text: string;
+  backwards: boolean;
+  bookmark: ReturnType<typeof captureSelectionBookmark>;
+} | null = null;
 function rememberCommentsPosition() {
   const root = editorContent.value;
   const offsets = root && getCaretOffsets(root);
@@ -1142,6 +1148,7 @@ function rememberCommentsPosition() {
   const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
   commentsReturnSelection = root && offsets && range ? {
     offsets,
+    bookmark: captureSelectionBookmark(root),
     text: root.textContent || '',
     backwards: !range.collapsed && selection?.anchorNode === range.endContainer
       && selection.anchorOffset === range.endOffset,
@@ -1161,6 +1168,13 @@ function closeCommentsSidebar() {
       // Comment metadata changes preserve text. A different document, or prose
       // edited while the panel was open, must not receive an old text offset.
       if (!position || root.textContent !== position.text) return;
+      // Text offsets cannot distinguish an empty paragraph or a boundary
+      // outside emphasis. Prefer surviving DOM points, but reject clamped
+      // points when comment markup has split their original text nodes.
+      if (position.bookmark?.restore()) {
+        const restored = getCaretOffsets(root);
+        if (restored?.start === position.offsets.start && restored.end === position.offsets.end) return;
+      }
       if (setCaretOffsets(root, position.offsets) && position.backwards) {
         const selection = root.ownerDocument.getSelection();
         const range = selection?.getRangeAt(0);
