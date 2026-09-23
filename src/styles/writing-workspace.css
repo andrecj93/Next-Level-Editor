@@ -29,7 +29,7 @@
 .editor-toolbar-modern.writing-toolbar { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 0; background: var(--background-color); border-bottom: 1px solid var(--border-color); min-height: 52px; border-radius: 0; }
 .writing-toolbar-row { display: flex; align-items: center; gap: 4px; width: 100%; min-width: 0; padding: 7px 16px; }
 .writing-toolbar-row .toolbar-group, .writing-history { display: flex; gap: 2px; align-items: center; }
-.writing-toolbar-row .dropdown-trigger { min-height: 36px; padding: 6px 9px; font-size: 12px; gap: 6px; }
+.writing-toolbar-row .dropdown-trigger { min-height: 36px; padding: 6px 9px; font-family: inherit; font-size: 12px; gap: 6px; }
 .writing-toolbar .dropdown-label { display: inline; }
 .writing-toolbar-row .writing-paragraph-format .dropdown-trigger { width: 104px; justify-content: space-between; }
 .writing-toolbar-row .dropdown-arrow { font-size: 8px; opacity: .6; }
