@@ -18,7 +18,7 @@ template variables, and PDF / Word / Markdown / HTML export — in one `v-model`
 [![CI/CD](https://github.com/andrecj93/Next-Level-Editor/actions/workflows/ci.yml/badge.svg)](https://github.com/andrecj93/Next-Level-Editor/actions/workflows/ci.yml)
 [![Playwright Tests](https://img.shields.io/badge/Playwright-browser%20checks-45ba4b?logo=playwright)](https://github.com/andrecj93/Next-Level-Editor/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/next-level-editor.svg)](https://www.npmjs.com/package/next-level-editor)
-[![WCAG 2.2 AA](https://img.shields.io/badge/WCAG_2.2_AA-0_violations-45ba4b)](#why-this-one)
+[![Accessibility checks](https://img.shields.io/badge/axe--core-A%2FAA_checks-45ba4b)](#why-this-one)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://www.typescriptlang.org/)
 [![Vue 3](https://img.shields.io/badge/Vue-3.3%2B-4FC08D.svg)](https://vuejs.org/)
@@ -152,7 +152,7 @@ readable — click any section to open it.
 <details>
 <summary><b>✨ Every feature, in detail</b></summary>
 
-> **Why Next Level Editor?** Built with modern web standards, best practices, and a focus on developer experience. Every feature is thoroughly tested, accessible, and performant.
+> **Why Next Level Editor?** A writing workspace with contextual feedback, selection-preserving controls, and automated browser checks. The verification scope and remaining limits are described below.
 
 ### 🎨 Modern UI & Experience
 
@@ -214,20 +214,20 @@ readable — click any section to open it.
 - **Table of Contents** - Auto-generate clickable TOC from document headings (H1-H6) with smooth scrolling
 - **Table Designer** - Advanced table editing with properties modal for customization
 - **Spell Checker** - Browser-based spell checking with enable/disable toggle
-- **Virtual Scrolling** - Performance-optimized rendering for large documents
+- **Long Documents** - Chapter navigation, deferred analysis, and large-document writing/export checks. The editable document remains in the DOM; it is not virtualized.
 
 ### 🔐 Security & Quality
 
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **4,646 Unit Tests** - Across 357 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches)
-- **239 Passing E2E Checks** - Playwright across Chromium and mobile Safari, both gating the release
+- **4,784 Unit Checks** - Across 372 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
+- **Browser Gates** - Playwright on Chromium and mobile WebKit, plus the same writing scenarios on 18 desktop, tablet, phone, landscape, and reflow profiles
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
-- **Keyboard & screen readers** - Full keyboard operability, ARIA live regions, skip links, focus management, and 44×44px touch targets
+- **Keyboard & screen readers** - Tested keyboard workflows, ARIA live regions, skip links, and focus management
 - **Plugin System** - Register plugins with the `plugins` prop: slash commands, Tools-menu buttons and palette commands
-- **Mobile Gestures** - Touch-friendly interface with 10 gesture types
+- **Mobile Gestures (integration helper)** - Exported `useMobileGestures` composable recognizes 10 gesture types. Hosts must opt in and provide callbacks; the editor does not install these gestures automatically.
 
 ### 🎯 Advanced Features (Opt-in)
 
@@ -244,15 +244,15 @@ Professional text analysis powered by industry-standard readability algorithms:
 
 #### 💬 Comments & Collaboration
 
-Full-featured commenting system for collaborative editing:
+Comment threads anchored to selected text. Shared storage, synchronization, and mention lookup are supplied by the host application:
 
 - **Comment Threads** - Add comments to any selected text with Range API anchoring
 - **Replies** - Thread-based conversation with nested replies
-- **@ Mentions** - Tag team members with autocomplete dropdown
+- **@ Mentions** - Autocomplete using a host-supplied mention provider
 - **Status Management** - Mark threads as open or resolved
 - **Visual Highlights** - Color-coded text highlighting (yellow for open, green for resolved)
 - **Sidebar UI** - Dedicated sidebar with tabs for open/resolved comments
-- **Persistence** - Export/import threads as JSON for storage
+- **Persistence API** - Export/import threads as JSON alongside the document HTML. Saving the document's `v-model` alone does not save comment bodies; the playground's local draft stores document HTML only.
 - **Auto-restore** - Automatically re-anchor comments after content changes
 
 #### ♿ Accessibility
@@ -263,17 +263,16 @@ open dialogs, an open toolbar menu, the colour popup, a mobile viewport, and
 320px reflow. **Zero violations**, and `e2e/accessibility.spec.ts` re-runs the
 scan on every CI build so it stays that way.
 
-That audit is automated, and automated scanning catches roughly a third of
-real accessibility problems — keyboard order, focus management and screen
-reader announcements have their own dedicated tests, but no third-party human
-audit has been done, so this is a tested conformance claim rather than a
-certified one. What is implemented:
+Automated scans cover only the tested states. Keyboard order, focus management,
+and announcement markup have separate tests. Physical devices, assistive
+technology sessions, and an independent human accessibility audit remain
+unverified; these checks do not establish full WCAG conformance. Implemented support:
 
-- **Keyboard Navigation** - 80+ keyboard shortcuts, full keyboard operability
+- **Keyboard Navigation** - Shortcut help, toolbar navigation, and tested editing workflows
 - **Screen Reader Support** - ARIA live regions, proper labels, semantic HTML
 - **Skip Links** - Skip to main content, toolbar, and footer
 - **Focus Management** - Visible focus indicators, focus trap for modals
-- **Touch Targets** - 44x44px, which meets the AAA criterion (2.5.5), not just the AA minimum
+- **Touch Targets** - Responsive controls with larger targets in the touch dock and comment thread actions. Sizes vary by control; there is no blanket 44×44px or AAA claim.
 - **Announcements** - Live region for status updates
 - **Landmark Regions** - Proper ARIA landmarks for navigation
 
@@ -821,20 +820,22 @@ npm run test:e2e:debug
 
 ### Test Coverage Statistics
 
-| File Type   | Statements | Branches | Functions | Lines   |
-| ----------- | ---------- | -------- | --------- | ------- |
-| **Overall** | **81%**    | **69%**  | **84%**   | **83%** |
-| Components  | 65%        | 57%      | 50%       | 67%     |
-| Utils       | 81%        | 70%      | 88%       | 84%     |
+Measured in [CI run 35886211595](https://github.com/andrecj93/Next-Level-Editor/actions/runs/35886211595), 2026-09-23:
+
+| Scope | Statements | Branches | Functions | Lines |
+| --- | --- | --- | --- | --- |
+| Overall | 88.66% | 82.08% | 84.07% | 90.60% |
 
 ### Test Suites Overview
 
-Verified on 2026-09-20: 4,646 unit tests passed; 90.82% line coverage.
-The full browser run passed 239 checks, with 125 explicitly skipped project cases
-(mainly duplicate desktop flows under mobile WebKit), zero failures, and zero retries.
-See the [quality review](docs/reports/QUALITY_REVIEW_2026-09-20.md) for evidence and limits.
+The linked CI checkpoint passed 4,780 unit checks, with four bundle-dependent
+checks deferred to the seven-check package build gate. Browser results were
+200 Chromium and 67 mobile WebKit passes, with 133 explicit mobile exclusions.
+The separate device matrix passed all 360 cases on 18 profiles with no skips,
+failures, or retries. Subsequent changes add a comment lifecycle scenario to
+each profile. See the CI reports for the result of the revision being reviewed.
 
-#### Unit Tests (4,646 tests across 357 files, with Vitest)
+#### Unit Tests (372 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
@@ -850,7 +851,7 @@ See the [quality review](docs/reports/QUALITY_REVIEW_2026-09-20.md) for evidence
 - **Composables** (20+ tests) - Auto-save, command palette, history timeline, loading states, smart toolbar, virtual scroll
 - **File Manager** - Upload, storage, and file management functionality
 
-#### End-to-End Tests (239 passing checks across 35 specs, with Playwright)
+#### End-to-End Tests (Playwright browser and device suites)
 
 - **Basic Functionality** - Editor loading, typing, word count
 - **Text Formatting** - Bold, italic, underline, toggle formatting
@@ -870,17 +871,17 @@ See the [quality review](docs/reports/QUALITY_REVIEW_2026-09-20.md) for evidence
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.mjs` (core 909.3 KB, 219.7 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs`
   - Modern ES6+ syntax with code splitting
   - Syntax highlighting, the colour picker and both exporters are separate
     chunks, fetched the first time you use them
   - Recommended for Vite, Webpack 5+, Rollup
-- **UMD** - `dist/next-level-editor.umd.js` (1,650.2 KB, 490.6 KB gzipped)
+- **UMD** - `dist/next-level-editor.umd.js`
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
   - Everything in one file — UMD cannot code-split, so this is the whole
     library including features you may never use
-- **CSS** - `dist/next-level-editor.css` (258.6 KB, 41.7 KB gzipped)
+- **CSS** - `dist/next-level-editor.css`
   - Minified styles with CSS variables
   - Includes light and dark themes, all four theme presets
   - Responsive design utilities
@@ -989,7 +990,7 @@ next-level-editor/
 │   │   ├── pageManagement.ts        # TOC and page breaks
 │   │   ├── spellChecker.ts          # Spell checking
 │   │   ├── fileManager.ts           # File operations
-│   │   └── __tests__/               # Unit tests (4,646 tests)
+│   │   └── __tests__/               # Utility unit tests
 │   ├── styles/              # CSS files
 │   │   ├── variables.css            # CSS custom properties
 │   │   └── animations.css           # Transitions

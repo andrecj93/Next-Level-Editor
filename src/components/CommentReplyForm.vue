@@ -5,6 +5,7 @@
       ref="textareaRef"
       v-model="content"
       class="comment-reply-textarea"
+      aria-label="Write a reply"
       placeholder="Write a reply... (use @ to mention)"
       rows="3"
       @input="handleInput"
@@ -64,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onBeforeUnmount } from "vue";
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from "vue";
 import type { MentionSuggestion } from "../composables/useComments";
 
 interface Props {
@@ -98,6 +99,8 @@ const showMentions = ref(false);
 const mentionQuery = ref("");
 const selectedMentionIndex = ref(0);
 const mentionSuggestions = ref<MentionSuggestion[]>([]);
+
+onMounted(() => textareaRef.value?.focus());
 
 let mentionSearchTimer: ReturnType<typeof setTimeout> | null = null;
 let mentionSearchToken = 0;

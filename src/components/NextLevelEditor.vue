@@ -453,7 +453,7 @@
       :active-thread-id="comments.activeThread.value?.id ?? null"
       :is-open="showCommentsSidebar"
       :mention-search="mentionSearch"
-      @close="showCommentsSidebar = false"
+      @close="closeCommentsSidebar"
       @select-thread="handleSelectThread"
       @resolve-thread="handleResolveThread"
       @reopen-thread="handleReopenThread"
@@ -1131,6 +1131,13 @@ const comments = props.enableComments
 
 // Comments UI state
 const showCommentsSidebar = ref(false);
+function closeCommentsSidebar() {
+  showCommentsSidebar.value = false;
+  nextTick(() => {
+    performWithSelection(() => {});
+    keepSelectionVisible(editorContent.value, 24);
+  });
+}
 const showCommentModal = ref(false);
 const selectedTextForComment = ref("");
 
@@ -1992,7 +1999,7 @@ const {
   alignmentDropdownItems,
   fontSizeDropdownItems,
   listActions,
-  insertDropdownItems,
+  insertDropdownItems: baseInsertDropdownItems,
   toolActions,
   exportDropdownItems,
   productivityDropdownItems,
@@ -2040,6 +2047,18 @@ const {
   // Adds the Tools > Keyboard Shortcuts item (the item only renders when this
   // handler is provided). Opens the registry-backed help modal.
   openShortcutHelpModal,
+});
+
+// The phone dock replaces the selection bubble, so commenting also needs a
+// permanent toolbar entry. Restore the selected passage before opening its form.
+const insertDropdownItems = computed(() => {
+  const items = baseInsertDropdownItems.value;
+  const comment = floatingActions.value.find(action => action.id === 'comment');
+  if (!comment) return items;
+  return [items[0], {
+    ...comment,
+    onClick: () => performWithSelection(() => handleCreateComment()),
+  }, ...items.slice(1)];
 });
 
 // Command Palette Commands using composable

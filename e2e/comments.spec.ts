@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
-// Desktop editing UI (main toolbar + range selection). Mobile uses a different
-// toolbar/selection model, so this runs on chromium only.
+// Desktop selection-bubble coverage. The device matrix separately exercises
+// Insert > Comment, reply, resolve/reopen, and anchor round-trips on every profile.
 test.beforeEach(() => {
   test.skip(
     test.info().project.name === 'mobile-safari',
@@ -19,18 +19,9 @@ test.beforeEach(() => {
 // src/components/{FloatingToolbar,CommentModal,CommentsSidebar,CommentThreadCard,
 // CommentReplyForm}.vue, wired in NextLevelEditor.vue.
 //
-// ── IMPORTANT (documents BUG, see the `bugs` report) ─────────────────────────
-// The inline highlight <span class="comment-highlight" data-thread-id="…"> is
-// injected straight into the contenteditable but is NOT part of the sanitized
-// content model: useHtmlSanitizer only allows `style` on <span>, so it strips
-// the `comment-highlight` class and `data-thread-id`. Whenever the editor
-// re-syncs its content (useEditorContent.ts `applySanitizedContent`), the
-// highlight's identifying markup is sanitized away and the inline anchor
-// disappears — intermittently under load, deterministically on a v-model
-// round-trip. The reactive thread model (sidebar) is unaffected. Therefore this
-// spec verifies the highlight is CREATED at comment time (deterministic) and
-// verifies the whole thread lifecycle through the STABLE sidebar model; it does
-// NOT assert the inline highlight survives later interactions.
+// Inline comment anchors are preserved by the sanitizer and emitted to v-model.
+// device-matrix.spec.ts also verifies their identity after editing and switching
+// through code view; NextLevelEditor.commentPersistence.test.ts covers saves.
 
 /**
  * Set a real DOM Range over the first occurrence of `needle` inside the editor.
@@ -76,7 +67,7 @@ async function typeContent(page: Page, text: string): Promise<void> {
 /**
  * Full add-comment flow: select `needle`, open the floating bubble, click its
  * Comment button, fill the modal, submit. Asserts the inline highlight is
- * created for the selection at submit time (before any re-sync can strip it),
+ * created for the selection at submit time,
  * then leaves the modal closed.
  */
 async function addComment(
@@ -102,8 +93,7 @@ async function addComment(
   await expect(submit).toBeEnabled()
   await submit.click()
 
-  // Highlight is created synchronously on submit; poll passes on the first
-  // read. (We do NOT assert it *survives* — see the file-header BUG note.)
+  // Verify the selected passage is associated with a real thread identity.
   await expect
     .poll(
       () =>
