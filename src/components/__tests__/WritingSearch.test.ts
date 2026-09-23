@@ -163,4 +163,27 @@ describe('WritingSearch', () => {
     expect(wrapper.find('[role="search"]').exists()).toBe(false);
     expect(editor.innerHTML).not.toContain('nle-find');
   });
+
+  it('returns to the found passage on Escape and preserves a writer who moved their caret', async () => {
+    const { wrapper, editor, search } = await setup();
+    await search('Celia');
+    await wrapper.get('[aria-label="Next match"]').trigger('click');
+    await wrapper.get('input[type="text"]').trigger('keydown', { key: 'Escape' });
+    const match = wrapper.emitted('close')![0][0] as Range;
+    expect(match.toString()).toBe('Celia');
+    expect(match.startContainer).toBe(editor.querySelectorAll('p')[1].firstChild);
+
+    editor.focus();
+    editor.lastElementChild!.append(' Again.');
+    await wrapper.setProps({ content: editor.innerHTML });
+    document.getSelection()!.collapse(editor.lastElementChild!.firstChild, 12);
+    editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true, cancelable: true }));
+    await nextTick();
+    await vi.advanceTimersByTimeAsync(160);
+    await wrapper.get('input[type="text"]').trigger('keydown', { key: 'Escape' });
+    const caret = wrapper.emitted('close')![1][0] as Range;
+    expect(caret.collapsed).toBe(true);
+    expect(caret.startContainer).toBe(editor.lastElementChild!.firstChild);
+    expect(caret.startOffset).toBe(12);
+  });
 });

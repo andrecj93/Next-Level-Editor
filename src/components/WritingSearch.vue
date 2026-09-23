@@ -12,7 +12,7 @@
         <span :id="statusId" class="search-count" role="status" aria-live="polite" aria-atomic="true">{{ pending ? t('Searching…') : query ? result.total ? `${result.current.toLocaleString(locale)} ${t('of')} ${result.total.toLocaleString(locale)}` : t('No matches') : t('Find a passage') }}</span>
         <button type="button" :aria-label="t('Previous match')" :title="t('Previous match') + ' (Shift+Enter)'" :disabled="!result.total" @click="search('previous')">↑</button>
         <button type="button" :aria-label="t('Next match')" :title="t('Next match') + ' (Enter)'" :disabled="!result.total" @click="search('next')">↓</button>
-        <button type="button" :aria-label="t('Close search')" :title="t('Close search') + ' (Escape)'" @click="emit('close')">×</button>
+        <button type="button" :aria-label="t('Close search')" :title="t('Close search') + ' (Escape)'" @click="closeSearch">×</button>
       </div>
       <div class="search-options">
         <label><input v-model="caseSensitive" type="checkbox"> {{ t('Match case') }}</label>
@@ -55,7 +55,7 @@ const props = defineProps<{
   replaceAll: (data: ReplaceRequest) => void;
   clear: () => void;
 }>();
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: [range?: Range] }>();
 const panel = ref<HTMLElement | null>(null);
 const queryInput = ref<HTMLInputElement | null>(null);
 const replacementInput = ref<HTMLInputElement | null>(null);
@@ -94,6 +94,8 @@ const rememberMatchPosition = useWritingReflow(toRef(props, 'editor'), toRef(pro
 });
 const statusId = `${useStableId()}-writing-search-status`;
 let timer: ReturnType<typeof setTimeout> | undefined;
+let returnRange: Range | undefined;
+let returnToMatch = false;
 const options = () => ({ caseSensitive: caseSensitive.value, wholeWord: wholeWord.value });
 const stopPending = () => { clearTimeout(timer); timer = undefined; pending.value = false; };
 const search = (direction: FindRequest['direction'] = 'current', selectMatch = true) => {
@@ -105,6 +107,10 @@ const search = (direction: FindRequest['direction'] = 'current', selectMatch = t
   const inputSelection = input ? [input.selectionStart, input.selectionEnd] as const : null;
   result.value = props.find({ findText: query.value, direction, options: options(), preview: true, selectMatch });
   const selected = result.value.range;
+  if (selected && (selectMatch || returnToMatch)) {
+    returnRange = selected.cloneRange();
+    returnToMatch = true;
+  }
   if (selectMatch && selected) {
     revealMatch(selected);
     // The excerpt can wrap after this render. Measure the same live range
@@ -126,7 +132,10 @@ const schedule = (selectMatch: boolean) => {
   }
 };
 watch([query, caseSensitive, wholeWord], () => { notice.value = ''; schedule(true); });
-watch(() => props.content, () => schedule(false));
+watch(() => props.content, () => {
+  if (props.editor?.contains(props.editor.ownerDocument.activeElement)) { returnRange = undefined; returnToMatch = false; }
+  schedule(false);
+});
 const focusSearch = async (replace = false) => {
   if (replace) replaceOpen.value = true;
   await nextTick();
@@ -137,10 +146,13 @@ const focusSearch = async (replace = false) => {
 };
 watch(() => props.show, async show => {
   stopPending();
-  if (!show) { props.clear(); return; }
+  returnToMatch = false;
+  if (!show) { returnRange = undefined; props.clear(); return; }
   const selection = props.editor?.ownerDocument.getSelection();
   const selected = selection?.rangeCount && props.editor?.contains(selection.anchorNode) && props.editor.contains(selection.focusNode)
     ? selection.toString() : '';
+  returnRange = selection?.rangeCount && props.editor?.contains(selection.anchorNode) && props.editor.contains(selection.focusNode)
+    ? selection.getRangeAt(0).cloneRange() : undefined;
   if (selected && selected.length <= 200 && !/[\r\n]/.test(selected)) query.value = selected;
   replaceOpen.value = Boolean(props.initiallyReplace);
   notice.value = '';
@@ -187,21 +199,46 @@ const toggleReplace = async () => {
   replaceOpen.value = !replaceOpen.value;
   await focusSearch(replaceOpen.value);
 };
-const editPassage = () => { search(); emit('close'); };
+// Text inputs own a separate selection. Keep a bookmark before they disappear
+// so Escape and Close return to the match, not the editor's old focus position.
+const closeSearch = () => emit('close', returnRange);
+const editPassage = () => { search(); closeSearch(); };
 const onKeydown = (event: KeyboardEvent) => {
   if (event.isComposing || event.keyCode === 229) return;
-  if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); emit('close'); }
+  if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeSearch(); }
+};
+const rememberWriterRange = () => {
+  returnToMatch = false;
+  const selection = props.editor?.ownerDocument.getSelection();
+  returnRange = selection?.rangeCount && props.editor?.contains(selection.anchorNode) && props.editor.contains(selection.focusNode)
+    ? selection.getRangeAt(0).cloneRange() : undefined;
+};
+const onManuscriptPointer = (event: PointerEvent) => {
+  if (!props.show) return;
+  if (props.editor?.contains(event.target as Node)) { returnRange = undefined; returnToMatch = false; }
+  else if (panel.value?.contains(event.target as Node) && props.editor?.contains(props.editor.ownerDocument.activeElement)) rememberWriterRange();
 };
 const onDocumentKeydown = (event: KeyboardEvent) => {
-  if (!props.show || event.isComposing || !(event.ctrlKey || event.metaKey) || !['f', 'h'].includes(event.key.toLowerCase())) return;
+  if (!props.show || event.isComposing) return;
   const target = event.target as Node | null;
+  // Once the writer moves their own caret, closing search must leave it there.
+  if (target && props.editor?.contains(target)) { returnRange = undefined; returnToMatch = false; }
+  if (!(event.ctrlKey || event.metaKey) || !['f', 'h'].includes(event.key.toLowerCase())) return;
   if (!target || (!panel.value?.contains(target) && !props.editor?.contains(target))) return;
+  if (props.editor?.contains(target)) rememberWriterRange();
   event.preventDefault();
   event.stopPropagation();
   void focusSearch(event.key.toLowerCase() === 'h');
 };
-onMounted(() => document.addEventListener('keydown', onDocumentKeydown, true));
-onBeforeUnmount(() => { stopPending(); props.clear(); document.removeEventListener('keydown', onDocumentKeydown, true); });
+onMounted(() => {
+  document.addEventListener('keydown', onDocumentKeydown, true);
+  document.addEventListener('pointerdown', onManuscriptPointer, true);
+});
+onBeforeUnmount(() => {
+  stopPending(); props.clear();
+  document.removeEventListener('keydown', onDocumentKeydown, true);
+  document.removeEventListener('pointerdown', onManuscriptPointer, true);
+});
 defineExpose({ focusSearch });
 </script>
 

@@ -194,12 +194,17 @@ test('search keeps prose visible through navigation, replacement, undo and conti
   await editor.press('ControlOrMeta+f');
   await expect(query).toBeFocused();
   await queryIsVisible();
+  await query.press('Escape');
+  await page.keyboard.type(' Still writing.');
+  await expect(editor).toContainText('The next sentence stays here. Still writing.');
+  await editor.press('ControlOrMeta+f');
   await query.press('Shift+Enter');
   await expect(search.locator('.search-count')).toHaveText('1 of 3');
   await matchIsVisible();
   await activate(search.getByRole('button', { name: 'Close search' }), hasTouch);
   await expect(search).toHaveCount(0);
   await expect(editor).toBeFocused();
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('Celia');
   expect(await page.evaluate(() => CSS.highlights.has('nle-find-current'))).toBe(false);
   await noHorizontalOverflow(page);
 });

@@ -263,6 +263,15 @@ test.describe('Manuscript writing workspace', () => {
     await expect(editor).toContainText('Célia folded the map.');
     await editor.press('ControlOrMeta+z');
     await expect(editor).toHaveJSProperty('innerHTML', before);
+    await editor.press('ControlOrMeta+f');
+    await query.fill('Celia');
+    await query.press('Enter');
+    await query.press('Escape');
+    await expect(editor).toBeFocused();
+    await page.keyboard.type('Célia');
+    await expect(editor).toContainText('Célia folded the map.');
+    await editor.press('ControlOrMeta+z');
+    await expect(editor).toHaveJSProperty('innerHTML', before);
   });
 
   test('writing notes and toolbar reflow without covering the page on a phone', async ({ page }) => {

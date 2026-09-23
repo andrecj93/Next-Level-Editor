@@ -1351,10 +1351,16 @@ const dismissWritingNote = (note: WritingNote) => {
 const companionOpen = ref(false);
 const writingSearchRef = ref<InstanceType<typeof WritingSearch> | null>(null);
 const writingSearchInitiallyReplace = ref(false);
-const closeWritingSearch = () => {
+const closeWritingSearch = (range?: Range) => {
   closeFindReplaceModal();
   nextTick(() => {
-    editorContent.value?.focus({ preventScroll: true });
+    const root = editorContent.value;
+    root?.focus({ preventScroll: true });
+    if (range && root?.contains(range.startContainer) && root.contains(range.endContainer)) {
+      const selection = root.ownerDocument.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
     keepSelectionVisible(editorContent.value, 24);
     rememberSelectionBase();
   });
