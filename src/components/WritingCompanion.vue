@@ -24,6 +24,7 @@
           <button type="button" class="note-passage" :aria-label="`Show passage in ${currentContext.location}: ${currentContext.before}${currentNote.quote}${currentContext.after}`" @click="$emit('locate', currentNote)">“{{ currentContext.before }}<mark>{{ currentNote.quote }}</mark>{{ currentContext.after }}” <span aria-hidden="true">↗</span></button>
           <p>{{ currentNote.detail }}</p>
         </article>
+        <button v-if="keptCount" type="button" class="review-kept" @click="reviewKept">Review {{ keptCount }} kept {{ keptCount === 1 ? 'note' : 'notes' }}</button>
         <div v-if="!visibleNotes.length" class="writing-prompt">
           <span class="companion-kicker">A nudge, if you need one</span>
           <p>{{ prompts[promptIndex] }}</p>
@@ -54,7 +55,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { writingNoteContext, type WritingReview, type WritingNote } from '../utils/writingReview';
 const props = defineProps<{ review: WritingReview; dismissedNotes: ReadonlySet<string>; readonly?: boolean; startNoteId?: string }>();
-const emit = defineEmits<{ close: []; leave: []; locate: [note: WritingNote]; apply: [note: WritingNote]; dismiss: [note: WritingNote]; navigate: [block: number] }>();
+const emit = defineEmits<{ close: []; leave: []; locate: [note: WritingNote]; apply: [note: WritingNote]; dismiss: [note: WritingNote]; navigate: [block: number]; reviewKept: [] }>();
 const panel = ref<HTMLElement | null>(null);
 const body = ref<HTMLElement | null>(null);
 const reviewButton = ref<HTMLButtonElement | null>(null);
@@ -68,6 +69,7 @@ const onFocusOut = (event: FocusEvent) => {
   }
 };
 const visibleNotes = computed(() => props.review.notes.filter(note => !props.dismissedNotes.has(note.id)));
+const keptCount = computed(() => props.review.notes.length - visibleNotes.value.length);
 const noteIndex = ref(0);
 const currentNote = computed(() => visibleNotes.value[noteIndex.value]);
 const currentContext = computed(() => currentNote.value && writingNoteContext(currentNote.value, props.review.outline));
@@ -106,6 +108,16 @@ const dismiss = async (note: WritingNote, event: MouseEvent) => {
     target?.focus({ preventScroll: true });
   }
 };
+const reviewKept = async () => {
+  const firstKept = props.review.notes.find(note => props.dismissedNotes.has(note.id))?.id;
+  emit('reviewKept');
+  await nextTick();
+  noteIndex.value = Math.max(0, visibleNotes.value.findIndex(note => note.id === firstKept));
+  await nextTick();
+  scrollToNote();
+  // The control disappears after the reset; continue at the restored passage.
+  (panel.value?.querySelector<HTMLButtonElement>('.note-passage') ?? reviewButton.value)?.focus({ preventScroll: true });
+};
 const promptIndex = ref(0);
 const prompts = [
   'What is the one thing you want the reader to feel in the next paragraph?',
@@ -135,6 +147,7 @@ button:hover { background: var(--hover-bg); }
 .companion-intro { margin: 0 0 20px; font-family: Georgia, serif; font-size: 19px; line-height: 1.4; }
 .companion-intro span { font: 12px/1.6 var(--font-family, sans-serif); color: var(--text-secondary); }
 .companion-empty { color: var(--text-secondary); margin-bottom: 24px; }
+.review-kept { min-height: 44px; margin: 0 0 12px; padding: 6px 8px; text-decoration: underline; text-underline-offset: 3px; }
 .writing-note { border-top: 1px solid var(--border-color); padding: 18px 0; }
 .writing-note:first-child { border-top: 0; padding-top: 0; }
 .writing-note h3 { font: 600 13px/1.5 var(--font-family, sans-serif); margin: 0 0 10px; }

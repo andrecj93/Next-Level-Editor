@@ -371,6 +371,7 @@ test('writing notes follow the current paragraph and keep every decision reachab
   await expect(companion.locator('.note-location')).toHaveText('Chapter 2 · Paragraph 1');
   await activate(companion.getByRole('button', { name: /Dismiss note:/ }), hasTouch);
   await expect(companion.locator('.note-location')).toHaveText('Chapter 3 · Paragraph 1');
+  await expect(companion.locator('.note-passage')).toBeInViewport({ ratio: 0.1 });
   // A WebKit tap keeps focus in the manuscript; keyboard/mouse activation
   // moves to the next passage. Neither path may strand focus on the body.
   await expect.poll(() => page.evaluate(() => document.activeElement?.matches('.note-passage, .editor-content'))).toBe(true);
@@ -587,7 +588,7 @@ test('dismissing writing notes keeps keyboard focus and leaves the manuscript in
   await expect(page.getByRole('button', { name: 'Writing companion', exact: true })).toBeFocused();
 });
 
-test('kept writing notes survive closing the panel and edits elsewhere in the book', async ({ page, hasTouch }) => {
+test('kept writing notes survive recovery and edits elsewhere in the book', async ({ page, hasTouch }) => {
   const draft = '<h2>Arrival</h2><p>She returned in order to find the house.</p>';
   await switchView(page, 'Code');
   await page.locator('.code-editor').fill(draft);
@@ -601,6 +602,21 @@ test('kept writing notes survive closing the panel and edits elsewhere in the bo
   await activate(opener, hasTouch);
   await expect(companion).toContainText('You’ve considered every note. Keep your voice.');
   expect(await editorFor(page).innerHTML()).toBe(before);
+  await activate(companion.getByRole('button', { name: 'Close writing companion' }), hasTouch);
+  await expect(page.locator('.auto-save-indicator')).toContainText('Saved at');
+  await page.goto('/#playground');
+  expect(await editorFor(page).innerHTML()).toBe(before);
+  await expect(companion).not.toBeVisible();
+  await openWritingNotes(page, hasTouch);
+  await expect(companion).toContainText('You’ve considered every note. Keep your voice.');
+  await test.info().attach('kept-notes-recovered', { body: await page.screenshot(), contentType: 'image/png' });
+  const revisit = companion.getByRole('button', { name: 'Review 1 kept note', exact: true });
+  await revisit.scrollIntoViewIfNeeded();
+  await insideViewport(revisit);
+  await activate(revisit, hasTouch);
+  await expect(companion.getByRole('button', { name: /^Show passage/ })).toBeFocused();
+  await expect(companion.getByRole('button', { name: 'Use “to”', exact: true })).toBeVisible();
+  await activate(companion.getByRole('button', { name: 'Dismiss note: A little more direct', exact: true }), hasTouch);
   await activate(companion.getByRole('button', { name: 'Close writing companion' }), hasTouch);
   await switchView(page, 'Code');
   const prefix = '<p>The the harbor was quiet.</p>';
@@ -617,6 +633,14 @@ test('kept writing notes survive closing the panel and edits elsewhere in the bo
   await activate(opener, hasTouch);
   await expect(companion.getByRole('button', { name: /Writing notes/ })).toContainText('2');
   await activate(companion.getByRole('button', { name: 'Next note', exact: true }), hasTouch);
+  await expect(companion.getByRole('button', { name: 'Use “to”', exact: true })).toBeVisible();
+  await activate(companion.getByRole('button', { name: 'Dismiss note: A little more direct', exact: true }), hasTouch);
+  await activate(companion.getByRole('button', { name: 'Close writing companion' }), hasTouch);
+  // A new document must discard both the decision and its queued save.
+  await activate(page.getByRole('button', { name: 'New document', exact: true }), hasTouch);
+  await activate(page.getByRole('button', { name: 'Replace document', exact: true }), hasTouch);
+  await editorFor(page).fill('She returned in order to see the house.');
+  await openWritingNotes(page, hasTouch);
   await expect(companion.getByRole('button', { name: 'Use “to”', exact: true })).toBeVisible();
   await noHorizontalOverflow(page);
 });

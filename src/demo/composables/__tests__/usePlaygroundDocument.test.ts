@@ -115,4 +115,41 @@ describe("playground draft recovery", () => {
     await draft.saveDraft('<p>Saved text.</p>');
     expect(usePlaygroundDocument(false).commentThreads.value).toContain('A reply worth keeping.');
   });
+
+  const kept = JSON.stringify(['0:' + JSON.stringify(['In order to remember.', 0, 'In order to', 'A little more direct'])]);
+  it('restores kept writing decisions with the prose and clears them for a new document', async () => {
+    const draft = usePlaygroundDocument(true);
+    draft.keptWritingNotes.value = kept;
+    expect(draft.hasEdits.value).toBe(true);
+    await draft.saveDraft('<p>In order to remember.</p>');
+    expect(usePlaygroundDocument(false).keptWritingNotes.value).toBe(kept);
+    draft.applyTemplate('empty');
+    await draft.saveDraft('');
+    const restored = usePlaygroundDocument(false);
+    expect(restored.keptWritingNotes.value).toBe('[]');
+    expect(restored.content.value).toBe('');
+    expect(restored.hasEdits.value).toBe(false);
+  });
+
+  it('recovers prose and valid comments when writing-decision metadata is invalid', () => {
+    localStorage.setItem(PLAYGROUND_DRAFT_KEY, JSON.stringify({ version: 3, content: '<p>Recover me.</p>', keptWritingNotes: '["broken"]', commentThreads: discussion }));
+    const draft = usePlaygroundDocument(false);
+    expect(draft.content.value).toBe('<p>Recover me.</p>');
+    expect(draft.keptWritingNotes.value).toBe('[]');
+    expect(draft.commentThreads.value).toContain('A reply worth keeping.');
+    expect(draft.notice.value).toContain('writing decisions could not be recovered');
+    expect(draft.restoreFailed.value).toBe(true);
+  });
+
+  it('retains the last complete draft when writing decisions cannot be saved', async () => {
+    const draft = usePlaygroundDocument(true);
+    await draft.saveDraft('<p>In order to remember.</p>');
+    const previous = localStorage.getItem(PLAYGROUND_DRAFT_KEY);
+    draft.keptWritingNotes.value = '["broken"]';
+    await expect(draft.saveDraft('<p>In order to remember.</p>')).rejects.toThrow('could not be saved');
+    expect(localStorage.getItem(PLAYGROUND_DRAFT_KEY)).toBe(previous);
+    draft.keptWritingNotes.value = kept;
+    await draft.saveDraft('<p>In order to remember.</p>');
+    expect(usePlaygroundDocument(false).keptWritingNotes.value).toBe(kept);
+  });
 });

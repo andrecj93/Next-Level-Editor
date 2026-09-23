@@ -97,8 +97,8 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,808 unit checks
-across 372 files, plus end-to-end checks on Chromium and mobile Safari. Both
+**It is tested like something you'd put in production.** 4,835 unit checks
+across 376 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
 ---
@@ -376,6 +376,8 @@ For a long-form writing workspace, add `writing-mode`:
 
 This gives the manuscript a readable column, a small formatting toolbar, a chapter outline, and writing notes beside the page. Notes identify repeated words, a few wordy phrases, and long sentences. Review one note at a time, with chapter context and the exact wording highlighted inside an excerpt; previous and next controls reach every note. Feedback starts near the paragraph being written, and its accept/keep actions stay visible on small screens. Jumping to a passage reveals the selected words, including in a long paragraph, and closes an overlay that would cover them. Edits are undoable. These are private, on-device English checks and optional writing prompts, not an AI generation service. Press **Alt+F10** to reach the toolbar and **Escape** to return to the manuscript.
 
+The playground remembers **Keep as is** when reopening a saved draft. **Review kept notes** brings those suggestions back whenever you want to reconsider. For your own recovery flow, bind `v-model:kept-writing-notes` to a string initialized as `'[]'` and persist that JSON with the HTML in `saveHandler`. A decision-only change also triggers save status and Retry. These private keys contain exact passage text; keep them with the document, not in analytics. Decisions survive formatting and edits elsewhere, and are discarded when their paragraph changes. Use a fresh component key and empty decisions for a new document.
+
 The playground opens in this workspace and saves its draft to the current browser. **Configure → Writing workspace** switches to the library's other toolbar layouts.
 
 ```vue
@@ -626,6 +628,7 @@ to its own instance.
 | `height`           | `string`  | `undefined`         | Custom height for the editor (e.g., '500px', '80vh', '30em') |
 | `themePreset`      | `string`  | `'default'`         | Whole-editor theme: `default` \| `classic` \| `minimal` \| `midnight` \| `warm` |
 | `writingMode`      | `boolean` | `false`             | Manuscript typography, a focused toolbar, chapter outline and private writing notes. Uses a stable top toolbar and a small mobile formatting dock; takes precedence over toolbar layout, position, mode and adaptive chrome |
+| `keptWritingNotes` | `string` | `undefined` | Private kept-note JSON (`v-model:kept-writing-notes`). Persist with HTML to remember "Keep as is" after recovery. Changes trigger `saveHandler` without changing prose. |
 | `toolbarLayout`    | `string`  | `'comfortable'`     | Toolbar density: `comfortable` (labelled) \| `compact` (mini bar + expand toggle). Below 640px the toolbar auto-compacts to the mini bar regardless |
 | `adaptiveChrome`   | `string`  | `'off'`             | What the toolbar does while you write: `off` (default — a rock-solid static bar that never moves or reshuffles) \| `letterbox` (buttons dissolve into an ambient band — block format, position filament, save pulse, word count) \| `recede` (toolbar fades to a whisper). For `letterbox`/`recede`, returns instantly on pointer/Escape/toolbar focus; desktop-only; honors reduced motion |
 | `toolbarPosition`  | `string`  | `'top'`             | Where the toolbar lives: `top` \| `left` (slim margin rail) \| `bottom` (dock, menus open upward) \| `zen` (no persistent toolbar — the ambient band is the only chrome; intent peeks the full bar). All fall back to `top` below 640px |
@@ -850,7 +853,7 @@ The separate device matrix passed all 360 cases on 18 profiles with no skips,
 failures, or retries. Subsequent changes add a comment lifecycle scenario to
 each profile. See the CI reports for the result of the revision being reviewed.
 
-#### Unit Tests (372 files, with Vitest)
+#### Unit Tests (376 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color

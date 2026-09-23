@@ -167,6 +167,7 @@
           :key="documentRevision"
           v-model="content"
           v-model:comment-threads="commentThreads"
+          v-model:kept-writing-notes="keptWritingNotes"
           width="100%"
           :height="editorConfig.writingMode ? '100%' : editorHeight"
           :writing-mode="editorConfig.writingMode"
@@ -261,7 +262,7 @@ const documentRevision = ref(0);
 
 const urlParams = new URLSearchParams(window.location.search);
 const startEmpty = urlParams.get("empty") === "true";
-const { content, commentThreads, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft } = usePlaygroundDocument(startEmpty);
+const { content, commentThreads, keptWritingNotes, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft } = usePlaygroundDocument(startEmpty);
 const { isOpen: confirmOpen, options: confirmOptions, requestConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 const documentName = computed(() => {
   const doc = new DOMParser().parseFromString(content.value, 'text/html');
