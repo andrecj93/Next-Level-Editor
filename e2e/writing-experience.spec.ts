@@ -170,6 +170,42 @@ test.describe('Manuscript writing workspace', () => {
     await expect.poll(() => editor.evaluate(el => el.scrollTop)).toBe(0);
   });
 
+  test('reflow keeps the visible writing line and leaves a scrolled-away caret alone', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+    await page.getByRole('button', { name: 'View', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Code view', exact: true }).click();
+    await page.locator('.code-editor').fill('<h2>A letter home</h2>' + '<p>Mara carried the letter to the kitchen and set it beside her cup. The house was quiet enough to hear the clock in the hall.</p>'.repeat(40));
+    await page.getByRole('button', { name: 'View', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Editor view', exact: true }).click();
+    await editor.press('ControlOrMeta+End');
+    await page.keyboard.type(' The next sentence belongs here.');
+    const before = await editor.innerHTML();
+    for (const viewport of [{ width: 375, height: 812 }, { width: 834, height: 1112 }, { width: 1280, height: 700 }]) {
+      await page.setViewportSize(viewport);
+      await expect(async () => {
+        const position = await editor.evaluate(el => {
+          const caret = window.getSelection()!.getRangeAt(0).getBoundingClientRect();
+          const box = el.getBoundingClientRect();
+          return { top: caret.top, bottom: caret.bottom, low: box.top, high: box.bottom };
+        });
+        expect(position.top, JSON.stringify(position)).toBeGreaterThanOrEqual(position.low);
+        expect(position.bottom, JSON.stringify(position)).toBeLessThanOrEqual(position.high);
+      }).toPass({ timeout: 3000 });
+      await expect(editor).toBeFocused();
+    }
+    expect(await editor.innerHTML()).toBe(before);
+    // Finish the resize delivery before starting a separate reading gesture.
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))));
+    await editor.evaluate(el => { el.scrollTop = 0; });
+    await expect.poll(() => editor.evaluate(el => el.scrollTop)).toBe(0);
+    // Let the actual scroll event record that the writer is reading elsewhere.
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect.poll(() => editor.evaluate(el => el.scrollTop)).toBe(0);
+    expect(await editor.innerHTML()).toBe(before);
+  });
+
   test('writing notes and toolbar reflow without covering the page on a phone', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });

@@ -20,6 +20,21 @@ export interface WritingReview {
   notes: WritingNote[];
 }
 
+/** Give short, repeated phrases enough context to recognise before jumping. */
+export function writingNoteContext(note: WritingNote, outline: WritingReview['outline']) {
+  let section: WritingReview['outline'][number] | undefined;
+  for (const heading of outline) {
+    if (heading.block >= note.block) break;
+    section = heading;
+  }
+  const before = note.blockText.slice(0, note.start);
+  const after = note.blockText.slice(note.start + note.quote.length);
+  const lead = before.length > 56 ? `…${before.slice(-56).replace(/^\S*\s/, '')}` : before;
+  const tail = after.length > 56 ? `${after.slice(0, 56).replace(/\s\S*$/, '')}…` : after;
+  const paragraph = note.block - (section?.block ?? -1);
+  return { before: lead, after: tail, location: `${section ? `${section.text} · ` : ''}Paragraph ${paragraph}` };
+}
+
 const WRITING_BLOCKS = 'h1,h2,h3,h4,h5,h6,p,li,blockquote,div,td,th';
 interface WritingBlock {
   element: HTMLElement;
@@ -61,6 +76,25 @@ export function writingBlocks(root: HTMLElement): WritingBlock[] {
   visit(root, root, !root.closest('pre,code,[contenteditable="false"]'));
   flush();
   return blocks;
+}
+
+/** Resolve the writing position only on review/open, never on each keystroke. */
+export function writingNoteNearSelection(root: HTMLElement, notes: WritingNote[]): string | undefined {
+  const selection = root.ownerDocument.getSelection();
+  const node = selection?.focusNode;
+  if (!node || (node !== root && !root.contains(node)) || !notes.length) return;
+  const blocks = writingBlocks(root);
+  const offset = selection!.focusOffset;
+  const probe = node.nodeType === Node.TEXT_NODE ? node : node.childNodes[Math.max(0, offset - 1)] ?? node;
+  const matching = blocks.map((block, index) => ({ block, index })).filter(({ block }) =>
+    block.spans.some(span => span.editable && (span.node === probe || probe.contains(span.node))));
+  const current = node.nodeType !== Node.TEXT_NODE && offset > 0 ? matching[matching.length - 1] : matching[0];
+  if (!current) return;
+  // Start with the current paragraph, then the next one with a note. At the
+  // end of a document, return to the closest preceding paragraph with notes.
+  const next = notes.find(note => note.block >= current.index);
+  const candidate = next ?? notes.find(note => note.block === notes[notes.length - 1].block);
+  return candidate && blocks[candidate.block]?.text === candidate.blockText ? candidate.id : undefined;
 }
 
 const passageIsEditable = (block: WritingBlock, start: number, end: number) =>

@@ -2,6 +2,7 @@
 .nle-document-workspace { position: relative; display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; overflow: hidden; }
 .nle-document-workspace > .editor-container { min-width: 0; }
 .is-writing-workspace { --content-measure: 760px; padding-bottom: var(--nle-mobile-toolbar-clearance, 0px); overflow: visible; }
+.is-writing-workspace .nle-document-workspace { container: nle-writing-area / size; }
 .is-writing-workspace .editor-content {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 19px; line-height: 1.7; letter-spacing: normal;

@@ -102,7 +102,7 @@ export function keepSelectionVisible(root: HTMLElement | null, margin = 4) {
 /** Capture whether the writer's line is visible before a toolbar or panel
  * resizes the page. Run the returned callback after layout to keep that line
  * visible, while leaving a manually scrolled-away selection alone. */
-export function preserveVisibleSelection(root: HTMLElement | null): () => void {
+export function preserveVisibleSelection(root: HTMLElement | null, preserveReadingPosition = false): () => void {
   const selection = root?.ownerDocument.getSelection();
   if (!root || !selection?.rangeCount || !selection.focusNode ||
       !root.contains(selection.focusNode)) return () => {};
@@ -114,5 +114,23 @@ export function preserveVisibleSelection(root: HTMLElement | null): () => void {
   const bottom = top + (viewport?.height ?? view?.innerHeight ?? 0);
   const visible = rect.height > 0 && rect.top >= Math.max(bounds.top, top) &&
     rect.bottom <= Math.min(bounds.bottom, bottom);
-  return () => { if (visible && root.isConnected) keepSelectionVisible(root, 24); };
+  // Some browsers scroll back to the focused caret during reflow. If the
+  // writer was reading elsewhere, preserve that paragraph instead. Use its
+  // relative position so changing line wraps does not jump to another chapter.
+  const previousTop = root.scrollTop;
+  const anchor = !visible && preserveReadingPosition && previousTop > 0
+    ? Array.from(root.children).find(child => child.getBoundingClientRect().bottom > bounds.top)
+    : undefined;
+  const anchorRect = anchor?.getBoundingClientRect();
+  const fraction = anchorRect?.height ? (bounds.top - anchorRect.top) / anchorRect.height : 0;
+  return () => {
+    if (!root.isConnected) return;
+    if (visible) keepSelectionVisible(root, 24);
+    else if (preserveReadingPosition) {
+      if (anchor?.isConnected && root.contains(anchor)) {
+        const next = anchor.getBoundingClientRect();
+        root.scrollTop += next.top - root.getBoundingClientRect().top + fraction * next.height;
+      } else root.scrollTop = previousTop;
+    }
+  };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reviewWriting, writingNoteRange } from '../writingReview';
+import { reviewWriting, writingNoteContext, writingNoteNearSelection, writingNoteRange } from '../writingReview';
 import { getWordCount } from '../commands';
 
 describe('manuscript review', () => {
@@ -67,5 +67,61 @@ describe('manuscript review', () => {
     expect(review.notes).toHaveLength(1);
     expect(review.notes[0].quote).toBe(sentence);
     expect(review.notes[0].replacement).toBeUndefined();
+  });
+
+  it('distinguishes repeated phrases with their surrounding prose and nearest heading', () => {
+    const review = reviewWriting('<h1>A book</h1><h2>The letter</h2><p>Celia wrote in order to save paper.</p><p>Tomas came in order to help.</p>');
+    expect(writingNoteContext(review.notes[0], review.outline)).toEqual({ before: 'Celia wrote ', after: ' save paper.', location: 'The letter · Paragraph 1' });
+    expect(writingNoteContext(review.notes[1], review.outline)).toEqual({ before: 'Tomas came ', after: ' help.', location: 'The letter · Paragraph 2' });
+    const untitled = reviewWriting('<p>She came in order to help.</p>');
+    expect(writingNoteContext(untitled.notes[0], []).location).toBe('Paragraph 1');
+  });
+
+  it('bounds context without changing the exact quoted passage', () => {
+    const review = reviewWriting(`<p>${'A quiet morning. '.repeat(12)}She came in order to help. ${'The library was open. '.repeat(12)}</p>`);
+    const note = review.notes.find(note => note.quote === 'in order to')!;
+    const context = writingNoteContext(note, []);
+    expect(context.before.startsWith('…')).toBe(true);
+    expect(context.after.endsWith('…')).toBe(true);
+    expect(context.before.length).toBeLessThanOrEqual(57);
+    expect(context.after.length).toBeLessThanOrEqual(57);
+    expect(note.blockText).toContain(context.before.slice(1) + note.quote + context.after.slice(0, -1));
+  });
+
+  it('starts review at the current paragraph, including inline and root boundary selections', () => {
+    const root = document.createElement('div');
+    root.contentEditable = 'true';
+    root.innerHTML = '<p>First in order to listen.</p><h2>Later</h2><p>Second in <em>order</em> to help.</p><p>A quiet ending.</p>';
+    document.body.appendChild(root);
+    try {
+      const notes = reviewWriting(root.innerHTML).notes;
+      const selection = document.getSelection()!;
+      selection.collapse(root.querySelector('em')!.firstChild, 2);
+      expect(writingNoteNearSelection(root, notes)).toBe(notes[1].id);
+      selection.collapse(root, 0);
+      expect(writingNoteNearSelection(root, notes)).toBe(notes[0].id);
+      selection.collapse(root, root.childNodes.length);
+      expect(writingNoteNearSelection(root, notes)).toBe(notes[1].id);
+      selection.collapse(root.querySelector('h2')!.firstChild, 0);
+      expect(writingNoteNearSelection(root, notes)).toBe(notes[1].id);
+      root.querySelector('em')!.textContent = 'a different thought';
+      expect(writingNoteNearSelection(root, notes)).toBeUndefined();
+    } finally { document.getSelection()?.removeAllRanges(); root.remove(); }
+  });
+
+  it('does not follow selection in another editor or protected content', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<p>She came in order to help. <code>Keep this.</code></p>';
+    document.body.appendChild(root);
+    try {
+      const notes = reviewWriting(root.innerHTML).notes;
+      const selection = document.getSelection()!;
+      selection.collapse(document.body, 0);
+      expect(writingNoteNearSelection(root, notes)).toBeUndefined();
+      selection.collapse(root.querySelector('code')!.firstChild, 2);
+      expect(writingNoteNearSelection(root, notes)).toBeUndefined();
+      selection.removeAllRanges();
+      expect(writingNoteNearSelection(root, notes)).toBeUndefined();
+    } finally { root.remove(); }
   });
 });

@@ -367,7 +367,7 @@ For a long-form writing workspace, add `writing-mode`:
 <NextLevelEditor v-model="manuscript" writing-mode theme-preset="warm" height="80vh" />
 ```
 
-This gives the manuscript a readable column, a small formatting toolbar, a chapter outline, and writing notes beside the page. Notes identify repeated words, a few wordy phrases, and long sentences; each quotes the passage and lets the writer jump to it, accept an available edit, or keep their wording. Edits are undoable. These are private, on-device English checks and optional writing prompts, not an AI generation service. Press **Alt+F10** to reach the toolbar and **Escape** to return to the manuscript.
+This gives the manuscript a readable column, a small formatting toolbar, a chapter outline, and writing notes beside the page. Notes identify repeated words, a few wordy phrases, and long sentences. Review one note at a time, with chapter context and the exact wording highlighted inside an excerpt; previous and next controls reach every note. Feedback starts near the paragraph being written, and its accept/keep actions stay visible on small screens. Jumping to a passage reveals the selected words, including in a long paragraph, and closes an overlay that would cover them. Edits are undoable. These are private, on-device English checks and optional writing prompts, not an AI generation service. Press **Alt+F10** to reach the toolbar and **Escape** to return to the manuscript.
 
 The playground opens in this workspace and saves its draft to the current browser. **Configure → Writing workspace** switches to the library's other toolbar layouts.
 

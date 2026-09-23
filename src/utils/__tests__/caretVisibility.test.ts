@@ -145,4 +145,28 @@ describe('keeping the current line during a layout change', () => {
     expect(root.scrollTop).toBe(0);
     expect(scroll).not.toHaveBeenCalled();
   });
+
+  it('preserves the reading paragraph if native reflow tries to reveal a distant caret', () => {
+    const { root } = setup();
+    viewport(root, 400);
+    root.scrollTop = 200;
+    const paragraph = root.firstElementChild!;
+    vi.spyOn(paragraph, 'getBoundingClientRect').mockReturnValue({ top: 60, bottom: 220, height: 160 } as DOMRect);
+    const restore = preserveVisibleSelection(root, true);
+    // The same paragraph rewraps to twice its old height, while the browser
+    // independently scrolls to the off-screen caret.
+    root.scrollTop = 900;
+    vi.mocked(paragraph.getBoundingClientRect).mockReturnValue({ top: -600, bottom: -280, height: 320 } as DOMRect);
+    restore();
+    expect(root.scrollTop).toBe(280);
+  });
+
+  it('keeps the document opening when the reading position is at the top', () => {
+    const { root } = setup();
+    viewport(root, 400);
+    const restore = preserveVisibleSelection(root, true);
+    root.scrollTop = 900;
+    restore();
+    expect(root.scrollTop).toBe(0);
+  });
 });

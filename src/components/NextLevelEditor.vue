@@ -167,8 +167,10 @@
       v-if="writingMode && companionOpen && viewMode === 'editor'"
       :review="writingReview"
       :dismissed-notes="dismissedWritingNotes"
+      :start-note-id="writingReviewStart"
       :readonly="readonly"
       @close="closeCompanion"
+      @leave="companionOpen = false"
       @locate="locateWritingNote"
       @apply="applyWritingNote"
       @dismiss="dismissWritingNote"
@@ -676,8 +678,9 @@ import WritingCompanion from './WritingCompanion.vue';
 import SaveStatus from './SaveStatus.vue';
 import PdfExportStatus from './PdfExportStatus.vue';
 import { useWritingWorkspace } from '../composables/useWritingWorkspace';
-import { writingBlocks, writingNoteRange, type WritingNote } from '../utils/writingReview';
-import { preserveVisibleSelection } from '../utils/caretVisibility';
+import { writingBlocks, writingNoteRange, writingNoteNearSelection, type WritingNote } from '../utils/writingReview';
+import { keepSelectionVisible, preserveVisibleSelection } from '../utils/caretVisibility';
+import { useWritingReflow } from '../composables/useWritingReflow';
 
 import {
   applyTextAlignment,
@@ -1250,12 +1253,25 @@ const {
   review: writingReview, refresh: refreshWritingReview,
   dismissedNotes: dismissedWritingNotes, dismissNote,
 } = useWritingWorkspace(htmlContent, toRef(props, 'writingMode'));
+useWritingReflow(editorContent, toRef(props, 'writingMode'));
 const dismissWritingNote = (note: WritingNote) => {
   if (!dismissNote(note)) return;
   announce('Note dismissed. Your words are unchanged.');
   console.debug('[NextLevelEditor] Writing note dismissed', { kind: note.title });
 };
 const companionOpen = ref(false);
+const writingReviewStart = ref<string>();
+const startReviewNearWriting = () => {
+  const root = editorContent.value;
+  if (!root) return;
+  writingReviewStart.value = writingNoteNearSelection(root, writingReview.value.notes.filter(note => !dismissedWritingNotes.value.has(note.id)));
+};
+watch(writingReview, () => {
+  const root = editorContent.value;
+  // New feedback follows a writing pause. Reading or navigating existing
+  // notes must never move the panel out from under the writer's controls.
+  if (root && root.ownerDocument.activeElement === root) startReviewNearWriting();
+});
 onMounted(() => {
   refreshWritingReview();
   // Start a blank page with room to write. Existing notes can introduce the
@@ -1278,6 +1294,8 @@ const toggleCompanion = () => {
     return;
   }
   const keepPlace = preserveVisibleSelection(editorContent.value);
+  refreshWritingReview();
+  startReviewNearWriting();
   viewMode.value = 'editor';
   companionOpen.value = true;
   nextTick(() => {
@@ -1288,6 +1306,17 @@ const toggleCompanion = () => {
 const closeCompanion = () => {
   companionOpen.value = false;
   nextTick(() => rootEl.value?.querySelector<HTMLButtonElement>('.writing-footer-actions button')?.focus());
+};
+const revealWritingPassage = (root: HTMLElement) => {
+  const panel = rootEl.value?.querySelector('.writing-companion');
+  if (panel && getComputedStyle(panel).position === 'fixed') {
+    companionOpen.value = false;
+    console.debug('[NextLevelEditor] Writing companion collapsed', { reason: 'passage-revealed' });
+    nextTick(() => keepSelectionVisible(root, 24));
+  }
+  // A paragraph can be taller than the editing surface. Reveal the exact
+  // selected words rather than an unrelated line in the middle of the block.
+  keepSelectionVisible(root, 24);
 };
 const locateWritingNote = (note: WritingNote) => {
   const root = editorContent.value;
@@ -1305,6 +1334,7 @@ const locateWritingNote = (note: WritingNote) => {
   selection?.addRange(range);
   const block = writingBlocks(root)[note.block];
   block?.element.scrollIntoView({ block: 'center', behavior: 'auto' });
+  revealWritingPassage(root);
   rememberSelectionBase();
   return true;
 };
@@ -1334,6 +1364,7 @@ const navigateWritingBlock = (index: number) => {
   selection?.removeAllRanges();
   selection?.addRange(range);
   block.scrollIntoView({ block: 'center', behavior: 'auto' });
+  revealWritingPassage(root);
   rememberSelectionBase();
 };
 

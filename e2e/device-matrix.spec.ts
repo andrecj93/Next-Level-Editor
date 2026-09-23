@@ -45,6 +45,12 @@ async function switchView(page: Page, mode: string) {
   await page.getByRole('menuitem', { name: `${mode} view`, exact: true }).click();
 }
 
+async function openWritingNotes(page: Page, touch: boolean) {
+  const companion = page.getByRole('complementary', { name: 'Writing companion' });
+  if (!(await companion.isVisible())) await activate(page.getByRole('button', { name: 'Writing companion', exact: true }), touch);
+  return companion;
+}
+
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -58,6 +64,72 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }, info) => {
   expect((page as Page & { deviceErrors?: string[] }).deviceErrors).toEqual([]);
   if (info.status === info.expectedStatus) await info.attach('device-state', { body: await page.screenshot(), contentType: 'image/png' });
+});
+
+test('writing notes follow the current paragraph and keep every decision reachable', async ({ page, hasTouch }) => {
+  const editor = editorFor(page);
+  const companion = page.getByRole('complementary', { name: 'Writing companion' });
+  await switchView(page, 'Code');
+  await page.locator('.code-editor').fill(Array.from({ length: 8 }, (_, index) =>
+    `<h2>Chapter ${index + 1}</h2><p>Mara returned in order to find house ${index + 1}.${index === 7 ? ' There was a map beside the window.'.repeat(60) : ''}</p>`).join(''));
+  await switchView(page, 'Editor');
+  await editor.press('ControlOrMeta+End');
+  const before = await editor.innerHTML();
+  await activate(page.getByRole('button', { name: 'Writing companion', exact: true }), hasTouch);
+  await expect(companion.getByRole('navigation', { name: 'Writing note navigation' })).toContainText('8 of 8');
+  await expect(companion.locator('.note-location')).toHaveText('Chapter 8 · Paragraph 1');
+  await expect(companion.locator('.note-passage')).toContainText('find house 8.');
+  await expect(companion.locator('.note-passage mark')).toHaveText('in order to');
+  expect(await companion.locator('.note-passage').evaluate(el => el.scrollHeight <= el.clientHeight + 1), 'the full excerpt remains readable without clipping its last line').toBe(true);
+  const apply = companion.getByRole('button', { name: 'Use “to”', exact: true });
+  await insideViewport(apply);
+  await insideViewport(companion.getByRole('button', { name: /Dismiss note:/ }));
+  expect((await companion.locator('.companion-body').boundingBox())!.height, 'the note keeps readable space above its actions').toBeGreaterThanOrEqual(96);
+  await noHorizontalOverflow(page);
+  expect(await editor.innerHTML()).toBe(before);
+  if (await companion.evaluate(el => getComputedStyle(el).position === 'fixed')) {
+    await companion.getByRole('button', { name: /Dismiss note:/ }).press('Tab');
+    await expect(companion).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Writing companion', exact: true })).toBeFocused();
+    await openWritingNotes(page, hasTouch);
+  }
+  await activate(companion.locator('.note-passage'), hasTouch);
+  await expect(editor).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('in order to');
+  await expect(async () => {
+    const position = await editor.evaluate(el => {
+      const range = window.getSelection()!.getRangeAt(0).getBoundingClientRect();
+      const box = el.getBoundingClientRect();
+      return { top: range.top, bottom: range.bottom, low: box.top, high: box.bottom };
+    });
+    expect(position.top, JSON.stringify(position)).toBeGreaterThanOrEqual(position.low);
+    expect(position.bottom, JSON.stringify(position)).toBeLessThanOrEqual(position.high);
+  }).toPass({ timeout: 2000 });
+  if (page.viewportSize()!.height <= 500) await expect(companion).not.toBeVisible();
+  await openWritingNotes(page, hasTouch);
+  for (let index = 7; index >= 1; index--) {
+    await activate(companion.getByRole('button', { name: 'Previous note', exact: true }), hasTouch);
+    await expect(companion.locator('.note-location')).toHaveText(`Chapter ${index} · Paragraph 1`);
+    await expect(companion.locator('.note-passage')).toBeFocused();
+  }
+  await expect(companion.getByRole('button', { name: 'Previous note', exact: true })).toBeDisabled();
+  expect(await editor.innerHTML()).toBe(before);
+  await activate(companion.getByRole('button', { name: 'Next note', exact: true }), hasTouch);
+  await expect(companion.locator('.note-location')).toHaveText('Chapter 2 · Paragraph 1');
+  await activate(apply, hasTouch);
+  await expect(editor.locator('p').nth(1)).toHaveText('Mara returned to find house 2.');
+  await expect(editor.locator('p').filter({ hasText: 'in order to' })).toHaveCount(7);
+  await expect(editor).toBeFocused();
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(editor).toHaveJSProperty('innerHTML', before);
+  await openWritingNotes(page, hasTouch);
+  await expect(companion.locator('.note-location')).toHaveText('Chapter 2 · Paragraph 1');
+  await activate(companion.getByRole('button', { name: /Dismiss note:/ }), hasTouch);
+  await expect(companion.locator('.note-location')).toHaveText('Chapter 3 · Paragraph 1');
+  // A WebKit tap keeps focus in the manuscript; keyboard/mouse activation
+  // moves to the next passage. Neither path may strand focus on the body.
+  await expect.poll(() => page.evaluate(() => document.activeElement?.matches('.note-passage, .editor-content'))).toBe(true);
+  expect(await editor.innerHTML()).toBe(before);
 });
 
 test('PDF progress and cancellation stay reachable without losing the draft', async ({ page, hasTouch }) => {
@@ -120,16 +192,17 @@ test('write, format, revise, undo and recover without losing prose', async ({ pa
   if (!(await companion.isVisible())) await activate(page.getByRole('button', { name: 'Writing companion', exact: true }), hasTouch);
   await companion.getByRole('button', { name: 'Use “the”', exact: true }).click();
   await expect(editor).toContainText('find the house');
-  await companion.getByRole('button', { name: 'Close writing companion' }).click();
+  if (await companion.isVisible()) await companion.getByRole('button', { name: 'Close writing companion' }).click();
   await toolbarFor(page).getByRole('button', { name: 'Tools', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Undo', exact: true }).click();
   await expect(editor).toContainText('find the the house');
   await expect(editor.locator('h1')).toHaveText('A map of the ordinary');
   await activate(page.getByRole('button', { name: 'Writing companion', exact: true }), hasTouch);
   await companion.getByRole('button', { name: 'Use “the”', exact: true }).click();
+  await openWritingNotes(page, hasTouch);
   await companion.getByRole('button', { name: 'Use “to”', exact: true }).click();
   await expect(editor).toContainText('She returned to find the house.');
-  await companion.getByRole('button', { name: 'Close writing companion' }).click();
+  if (await companion.isVisible()) await companion.getByRole('button', { name: 'Close writing companion' }).click();
   await expect(page.locator('.auto-save-indicator')).toContainText('Saved');
   await page.goto('/#playground');
   await expect(editor).toContainText('She returned to find the house.');
@@ -170,7 +243,7 @@ test('dismissing writing notes keeps keyboard focus and leaves the manuscript in
   const companion = page.getByRole('complementary', { name: 'Writing companion' });
   if (!(await companion.isVisible())) await page.getByRole('button', { name: 'Writing companion', exact: true }).click();
   await companion.getByRole('button', { name: 'Dismiss note: An accidental echo?', exact: true }).press('Enter');
-  await expect(companion.getByRole('button', { name: 'Show passage: in order to', exact: true })).toBeFocused();
+  await expect(companion.getByRole('button', { name: /^Show passage in Paragraph 1:.*in order to/ })).toBeFocused();
   await companion.getByRole('button', { name: 'Dismiss note: A little more direct', exact: true }).press('Enter');
   await expect(companion.getByRole('button', { name: 'Writing notes', exact: true })).toBeFocused();
   await expect(companion).toContainText('You’ve considered every note. Keep your voice.');
@@ -207,6 +280,8 @@ test('kept writing notes survive closing the panel and edits elsewhere in the bo
   await page.locator('.code-editor').fill(prefix + draft.replace('find the house', 'see the house'));
   await switchView(page, 'Editor');
   await activate(opener, hasTouch);
+  await expect(companion.getByRole('button', { name: /Writing notes/ })).toContainText('2');
+  await activate(companion.getByRole('button', { name: 'Next note', exact: true }), hasTouch);
   await expect(companion.getByRole('button', { name: 'Use “to”', exact: true })).toBeVisible();
   await noHorizontalOverflow(page);
 });
@@ -374,8 +449,10 @@ test('notes, chapter navigation and the caret retain usable space', async ({ pag
   await companion.getByRole('button', { name: 'Outline', exact: true }).click();
   await companion.getByRole('button', { name: 'Arrival', exact: true }).click();
   await expect(editor.locator('h2').first()).toBeInViewport();
-  await companion.getByRole('button', { name: 'Close writing companion' }).click();
-  await expect(page.getByRole('button', { name: 'Writing companion', exact: true })).toBeFocused();
+  if (await companion.isVisible()) {
+    await companion.getByRole('button', { name: 'Close writing companion' }).click();
+    await expect(page.getByRole('button', { name: 'Writing companion', exact: true })).toBeFocused();
+  } else await expect(editor).toBeFocused();
   await editor.click();
   await editor.press('ControlOrMeta+End');
   const caret = await editor.evaluate(el => {
