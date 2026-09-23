@@ -66,6 +66,136 @@ const cleanText = (target: Locator) => target.evaluate(element => {
   return clone.textContent;
 });
 
+test("a deleted comment passage stays orphaned through concurrent replies and reload", async ({ browser, baseURL }, info) => {
+  info.setTimeout(90000);
+  const r = await peers(browser, baseURL!, '<p data-nle-id="nle-commented">Repeated passage</p><p data-nle-id="nle-identical">Repeated passage</p>');
+  const [a, b] = r.pages;
+  const history: { phase: string; documents: string[] }[] = [];
+  const record = async (phase: string) => history.push({ phase, documents: await Promise.all([r.a.innerHTML(), r.b.innerHTML()]) });
+  try {
+    await r.a.locator('p').first().evaluate(async element => {
+      (element.closest('[contenteditable]') as HTMLElement).focus();
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      document.getSelection()!.removeAllRanges();
+      document.getSelection()!.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    });
+    await a.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true }).getByRole('button', { name: 'Insert', exact: true }).click();
+    await a.getByRole('menuitem', { name: 'Comment', exact: true }).click();
+    const modal = a.getByRole('dialog', { name: 'Add Comment', exact: true });
+    await modal.locator('textarea').fill('Keep this discussion');
+    await modal.getByRole('button', { name: 'Add Comment', exact: true }).click();
+    await expect(r.b.locator('.comment-highlight')).toHaveText('Repeated passage', { timeout: 20000 });
+    await a.getByRole('button', { name: 'Close comments sidebar', exact: true }).click();
+    await r.b.locator('.comment-highlight').click();
+    await expect(b.locator('.comment-thread-card')).toContainText('Keep this discussion');
+    await record('comment-created');
+    r.partition();
+    await r.a.locator('p').first().evaluate(async element => {
+      (element.closest('[contenteditable]') as HTMLElement).focus();
+      const range = document.createRange();
+      range.selectNode(element);
+      document.getSelection()!.removeAllRanges();
+      document.getSelection()!.addRange(range);
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    });
+    await a.keyboard.press('Backspace');
+    await expect(r.a.locator('.comment-highlight')).toHaveCount(0);
+    await record('passage-deleted');
+    const card = b.locator('.comment-thread-card');
+    await card.getByRole('button', { name: 'Write a reply', exact: true }).click();
+    await card.locator('textarea').fill('Reply from the other author');
+    await card.getByRole('button', { name: 'Reply', exact: true }).click();
+    r.reconnect();
+    for (const page of [a, b]) {
+      await expect(editable(page).locator('.comment-highlight')).toHaveCount(0, { timeout: 20000 });
+      if (!(await page.locator('.comments-sidebar-open').count())) await page.getByRole('button', { name: 'Open comments', exact: true }).click();
+      await expect(page.locator('.comment-anchor-notice')).toHaveText('This passage was removed. The discussion is still available.');
+      await expect(page.locator('.comment-thread-card')).toContainText('Keep this discussion');
+    }
+    await a.getByRole('button', { name: 'Close comments sidebar', exact: true }).click();
+    await record('reply-merged');
+    await r.a.press('ControlOrMeta+z');
+    await record('local-undo');
+    await expect(r.b.locator('.comment-highlight')).toHaveText('Repeated passage');
+    await expect(b.locator('.comment-anchor-notice')).toHaveCount(0);
+    await expect(card.locator('.comment-reply')).toContainText('Reply from the other author');
+    await r.a.press('ControlOrMeta+y');
+    await expect(r.b.locator('.comment-highlight')).toHaveCount(0);
+    await r.connect(a);
+    await a.getByRole('button', { name: 'Open comments', exact: true }).click();
+    await expect(a.locator('.comment-anchor-notice')).toBeVisible();
+    const reloaded = a.locator('.comment-thread-card');
+    await reloaded.getByRole('button', { name: 'View 1 reply', exact: true }).click();
+    await expect(reloaded.locator('.comment-reply')).toContainText('Reply from the other author');
+    await expect(editable(a).locator('.comment-highlight')).toHaveCount(0);
+    await info.attach('orphaned-discussion', { body: await a.screenshot(), contentType: 'image/png' });
+    expect(r.errors).toEqual([]);
+  } finally {
+    try {
+      await record('final');
+      await info.attach('comment-anchor-history', { body: JSON.stringify(history, null, 2), contentType: 'application/json' });
+    } finally { await r.close(); }
+  }
+});
+
+test("rich paste converges with a remote edit and remains one local undo", async ({ browser, baseURL }, info) => {
+  info.setTimeout(90000);
+  const r = await peers(browser, baseURL!, '<p data-nle-id="nle-paste">Paste here.</p><p data-nle-id="nle-remote">Remote paragraph.</p>');
+  const [a, b] = r.pages;
+  const html = '<h2>Pasted heading</h2><ul><li><p>Parent item</p><ul><li><p>Nested item</p></li></ul></li></ul><table><tbody><tr><td colspan="2"><p>Merged paste</p></td></tr><tr><td><p>Left</p></td><td><p>Right</p></td></tr></tbody></table><p><img alt="Pasted diagram" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XcAAAAASUVORK5CYII=" onerror="window.pasteExecuted=1"><span class="editor-variable" data-variable="customer" data-value="Ana">{{ customer }}</span><a href="javascript:window.pasteExecuted=1">Unsafe link</a></p><script>window.pasteExecuted=1</script>';
+  try {
+    r.partition();
+    await caretAtEnd(r.a.locator('p').first());
+    if (info.project.name === 'chromium') {
+      await a.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      await a.evaluate(async content => {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([content], { type: 'text/html' }),
+          'text/plain': new Blob(['Pasted heading'], { type: 'text/plain' }),
+        })]);
+      }, html);
+      await a.keyboard.press('ControlOrMeta+v');
+    } else {
+      // WebKit does not expose Chromium's programmatic clipboard permission.
+      // Exercise the same application event path with both clipboard flavors.
+      await r.a.evaluate((element, content) => {
+        const clipboardData = new DataTransfer();
+        clipboardData.setData('text/html', content);
+        clipboardData.setData('text/plain', 'Pasted heading');
+        element.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData }));
+      }, html);
+    }
+    await expect(r.a.locator('h2')).toHaveText('Pasted heading');
+    await caretAtEnd(r.b.locator('p').last());
+    await b.keyboard.insertText(' Kept from B.');
+    r.reconnect();
+    const verify = async (editor: Locator) => {
+      await expect(editor.locator('h2')).toHaveText('Pasted heading', { timeout: 20000 });
+      await expect(editor.locator('ul ul p')).toHaveText('Nested item');
+      await expect(editor.locator('td[colspan="2"]')).toHaveText('Merged paste');
+      await expect(editor.getByRole('img', { name: 'Pasted diagram', exact: true })).toHaveCount(1);
+      await expect(editor.locator('[data-variable]')).toHaveAttribute('data-value', 'Ana');
+      await expect(editor).toContainText('Remote paragraph. Kept from B.');
+      await expect(editor.locator('script, [onerror], a[href^="javascript:"]')).toHaveCount(0);
+    };
+    await verify(r.a);
+    await verify(r.b);
+    await r.a.press('ControlOrMeta+z');
+    await expect(r.b.locator('h2, table, ul, [data-variable]')).toHaveCount(0);
+    await expect(r.b).toContainText('Remote paragraph. Kept from B.');
+    await r.a.press('ControlOrMeta+y');
+    await verify(r.b);
+    await r.connect(a);
+    await verify(editable(a));
+    expect(await a.evaluate(() => (window as Window & { pasteExecuted?: number }).pasteExecuted)).toBeUndefined();
+    await info.attach('rich-paste-reconnect', { body: JSON.stringify({ clipboard: info.project.name === 'chromium' ? 'system' : 'event', nestedList: true, mergedTable: true, image: true, variable: true, sanitized: true, localUndo: true, durableReload: true }), contentType: 'application/json' });
+    expect(r.errors).toEqual([]);
+  } finally { await r.close(); }
+});
+
 test("a paragraph split preserves a concurrent insertion at its formatting boundary", async ({ browser, baseURL }, info) => {
   info.setTimeout(90000);
   const r = await peers(browser, baseURL!, '<p data-nle-id="nle-marked">Before <strong>Marked passage</strong> After</p><p data-nle-id="nle-next">Next</p>');

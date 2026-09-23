@@ -713,6 +713,7 @@ import { provideEditorLocale } from '../composables/useEditorLocale';
 import { localizedMessage } from '../utils/localizedMessage';
 import type { EditorMessageDescriptor } from '../types/locale';
 import { assignBlockIds } from '../utils/documentOperations';
+import { diagnostic } from '../utils/documentDiagnostics';
 import type { CollaborationBinding } from '../utils/collaborationBinding';
 import { defaultDocumentMetadata } from '../types/document';
 import type { ConnectionState } from '../types/collaboration';
@@ -1177,6 +1178,11 @@ const comments = props.enableComments
         ? async (query: string) => props.mentionSearch!(query)
         : undefined,
       onThreadActivated: handleThreadActivation,
+      onAnchorStateChanged: (threadId, status) => diagnostic(
+        props.documentOptions?.onDiagnostic,
+        status === 'orphaned' ? 'comment.anchor_orphaned' : 'comment.anchor_attached',
+        props.documentOptions?.id, { threadId },
+      ),
     })
   : (null as ReturnType<typeof useComments> | null);
 
@@ -3582,6 +3588,9 @@ useEditorSetup({
 // serialized watch tracks data only, never live ranges/elements. Host echoes must
 // not re-import highlights: replacing their nodes would disturb a writing caret.
 if (comments) {
+  // Local input and remote transactions can remove or move an anchor without
+  // replacing the editor element. Keep the discussion's location state current.
+  watch(htmlContent, () => comments.restoreThreads(), { flush: "post" });
   let ready = false;
   let synchronizedThreads: string | undefined;
   const restoreCommentModel = (value: string | undefined) => {

@@ -75,6 +75,13 @@ afterEach(() => {
 });
 
 describe("CommentThreadCard", () => {
+  it("keeps an orphaned discussion readable and explains its missing passage", () => {
+    const w = mountCard({ anchorStatus: "orphaned" }, { readonly: true });
+    expect(w.get('[role="status"]').text()).toBe("This passage was removed. The discussion is still available.");
+    expect(w.get(".comment-text").text()).toContain("This is the first comment");
+    expect(w.find('[aria-label="Delete thread"]').exists()).toBe(false);
+    w.unmount();
+  });
   // -------------------------------------------------------------------------
   describe("rendering comment data", () => {
     it("renders the author name, timestamp slot and comment body", () => {

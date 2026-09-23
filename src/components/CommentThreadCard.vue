@@ -17,6 +17,10 @@
       </div>
     </div>
 
+    <p v-if="thread.anchorStatus === 'orphaned'" class="comment-anchor-notice" role="status">
+      {{ t('This passage was removed. The discussion is still available.') }}
+    </p>
+
     <!-- Main Comment -->
     <div class="comment-main" @click="handleToggle">
       <div class="comment-avatar-wrapper">
@@ -405,6 +409,15 @@ function renderCommentContent(content: string): string {
 }
 
 /* Quote */
+.comment-anchor-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-inline-start: 2px solid var(--text-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .comment-quote {
   display: flex;
   gap: 12px;

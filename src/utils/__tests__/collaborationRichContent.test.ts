@@ -68,6 +68,43 @@ function change(binding: CollaborationBinding, mutate: (root: HTMLElement) => vo
 }
 
 describe("rich-content concurrent editing corpus", () => {
+  it.each(['block', 'text'])('restores a deleted comment %s while retaining a concurrent reply', async target => {
+    const metadata = defaultDocumentMetadata();
+    const date = new Date().toISOString();
+    metadata.comments = JSON.stringify([{
+      id: 'thread-one', status: 'open', createdAt: date, updatedAt: date,
+      rangeData: { startContainerPath: [0, 0], startOffset: 0, endContainerPath: [0, 0], endOffset: 16, text: 'Repeated passage', anchorMode: 'highlight' },
+      comments: [{ id: 'first', author: 'A', content: 'Keep this discussion', createdAt: date }],
+    }]);
+    const r = await room('<p data-nle-id="nle-commented"><span class="comment-highlight" data-thread-id="thread-one">Repeated passage</span></p><p data-nle-id="nle-identical">Repeated passage</p>', metadata);
+    r.partition();
+    change(r.a, root => {
+      if (target === 'block') root.firstElementChild!.remove();
+      else root.firstElementChild!.textContent = '';
+    });
+    const before = r.current.get('B')!;
+    const after = structuredClone(before);
+    const threads = JSON.parse(after.comments!);
+    threads[0].comments.push({ id: 'reply', author: 'B', content: 'Reply from the other author', createdAt: date });
+    after.comments = JSON.stringify(threads);
+    r.b.applyMetadata(before, after);
+    r.reconnect();
+    expect(documentRoot(r.a.readHtml()).querySelector('.comment-highlight')).toBeNull();
+    const beforeEcho = r.a.readHtml();
+    const history = r.a.history();
+    // Host/session snapshots pass through the HTML sanitizer, which represents
+    // an empty paragraph with a BR. Hydration must not turn it into a new edit.
+    r.a.applySnapshot({ html: sanitizeHtml(beforeEcho), metadata: r.current.get('A')! });
+    expect(r.a.readHtml()).toBe(beforeEcho);
+    expect(r.a.history()).toEqual(history);
+    r.a.undo();
+    expect(documentRoot(r.b.readHtml()).querySelector('.comment-highlight')?.textContent).toBe('Repeated passage');
+    expect(r.current.get('A')!.comments).toContain('Reply from the other author');
+    r.a.redo();
+    expect(documentRoot(r.b.readHtml()).querySelector('.comment-highlight')).toBeNull();
+    expect((await r.connect('Reload')).readHtml()).toBe(r.a.readHtml());
+  });
+
   it("retains resolved comment anchors while discarding transient decoration", async () => {
     const r = await room('<p data-nle-id="nle-comment"><span class="comment-highlight comment-highlight-resolved comment-highlight-pulse" data-thread-id="thread-one">Resolved passage</span></p>');
     const span = documentRoot(r.b.readHtml()).querySelector("[data-thread-id='thread-one']");

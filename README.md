@@ -105,7 +105,7 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,941 unit tests
+**It is tested like something you'd put in production.** 4,953 unit tests
 across 390 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
@@ -229,7 +229,7 @@ readable — click any section to open it.
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **4,941 Unit Checks** - Across 391 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
+- **4,953 Unit Checks** - Across 393 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
 - **Browser Gates** - Playwright on Chromium and mobile WebKit, plus the same writing scenarios on 18 desktop, tablet, phone, landscape, and reflow profiles
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
@@ -261,7 +261,7 @@ Comment threads anchored to selected text. Shared storage, synchronization, and 
 - **Visual Highlights** - Color-coded text highlighting (yellow for open, green for resolved)
 - **Sidebar UI** - Dedicated sidebar with tabs for open/resolved comments
 - **Persistence API** - Bind `v-model:comment-threads` to receive and restore thread JSON alongside the document HTML. Replies also trigger auto-save, including failure and Retry. The playground saves both together in its local draft; document workspace checkpoints also include the discussion metadata.
-- **Auto-restore** - Automatically re-anchor comments after content changes
+- **Stable Anchors** - Follow the original highlighted passage through edits. Removing it keeps the discussion available with a clear notice; identical text elsewhere cannot silently acquire the thread. Undoing the deletion reattaches the original passage.
 
 #### ♿ Accessibility
 
@@ -292,17 +292,17 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 1,409.81 KB | **346.02 KB** | On import |
-| **CSS** | 273.10 KB | **44.26 KB** | On import |
+| **Core (ES)** | 1,411.98 KB | **346.59 KB** | On import |
+| **CSS** | 273.33 KB | **44.30 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
 | PDF page preview module and worker assets | 1,467.53 KB | 409.50 KB | First page preview (ES and UMD) |
-| **UMD** | 3,452.54 KB | 1,109.77 KB | On import (no splitting) |
+| **UMD** | 3,454.34 KB | 1,110.34 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **390.27 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **390.89 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 DOCX conversion, semantic PDF and its fonts, citation formatting, and the
@@ -854,13 +854,13 @@ npm run test:e2e:debug
 
 | File Type   | Statements | Branches | Functions | Lines   |
 | ----------- | ---------- | -------- | --------- | ------- |
-| **Overall** | **83.42%** | **75.13%** | **78.65%** | **85.59%** |
+| **Overall** | **83.58%** | **75.25%** | **78.83%** | **85.75%** |
 
 Measured on 2026-09-23. The CI coverage artifact includes per-file results.
 
 ### Test Suites Overview
 
-Verified on 2026-09-23: 4,941 unit tests passed; 85.59% line coverage.
+Verified on 2026-09-23: 4,953 unit tests passed; 85.75% line coverage.
 Browser suites cover Chromium and mobile WebKit; duplicate desktop flows have
 explicit mobile exclusions. A separate 18-profile device matrix exercises all
 three browser engines. Current run counts and retained reports are available in
@@ -903,7 +903,7 @@ See the [document workspace](docs/document-workspace.md) for supported features 
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.mjs` (core 1,409.81 KB, 346.02 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs` (core 1,411.98 KB, 346.59 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Syntax highlighting, the colour picker and both exporters are separate
     chunks, fetched the first time you use them

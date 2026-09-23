@@ -325,9 +325,14 @@ export async function bindCollaborativeEditor(options: {
   }
   function applyHtml(html: string) {
     if (closed || options.readonly()) return;
+    const sanitized = options.sanitize(html);
+    // Native editing represents an empty text block without a content BR.
+    // The sanitizer adds its HTML placeholder. A metadata-only snapshot or
+    // model echo must not turn that placeholder into an extra undoable edit.
+    if (sanitized === options.sanitize(serializeCollaborativeDocument(view.state.doc))) return;
     const tr = replaceDifference(
       view.state.tr,
-      parseCollaborativeHtml(options.sanitize(html)),
+      parseCollaborativeHtml(sanitized),
     );
     if (tr.docChanged) view.dispatch(tr);
   }

@@ -752,6 +752,7 @@ test('menus and insert dialogs fit the available screen', async ({ page }) => {
   for (const name of ['Format', 'Insert', 'Tools', 'View', 'Export']) {
     const trigger = toolbarFor(page).getByRole('button', { name, exact: true });
     await trigger.click();
+    await expect(trigger).toBeFocused();
     const menu = page.locator('.dropdown-menu:visible').first();
     await expect(menu).toBeVisible();
     await settle(page);
@@ -764,6 +765,8 @@ test('menus and insert dialogs fit the available screen', async ({ page }) => {
     if (name === 'View') {
       await test.info().attach('toolbar-view-menu', { body: await page.screenshot(), contentType: 'image/png' });
     }
+    await page.keyboard.press('ArrowDown');
+    await expect(menu.locator('[role="menuitem"]:not([disabled])').first()).toBeFocused();
     await menu.press('Escape');
     // The leaving menu still occupies the DOM: its exit must not widen the
     // page or make a mobile browser rescale the manuscript for one frame.

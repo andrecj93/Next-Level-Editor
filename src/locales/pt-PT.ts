@@ -1242,5 +1242,8 @@ export const portugueseMessages: EditorMessages = {
   "Start typing...": "Comece a escrever...",
   "English prose checks are unavailable for this document language.":
     "As verificações de escrita em inglês não estão disponíveis para este idioma.",
+  "This passage was removed. The discussion is still available.":
+    "Esta passagem foi removida. A discussão continua disponível.",
+  "Invalid comment anchor mode": "Modo de âncora de comentário inválido",
 };
 export default portugueseMessages;

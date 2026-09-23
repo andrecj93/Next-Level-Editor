@@ -913,7 +913,7 @@ describe("useComments", () => {
       expect(comments.activeThreadId.value).toBe(thread.id);
     });
 
-    it("warns when no live span exists and the range cannot be restored", () => {
+    it("marks a thread orphaned when no live span exists", () => {
       const editor = makeEditor("<p>Hello wonderful world</p>");
       const editorElement = ref<HTMLElement | undefined>(editor);
       const comments = useComments({ editorElement });
@@ -935,10 +935,8 @@ describe("useComments", () => {
 
       comments.restoreThreads();
 
-      expect(warnSpy).toHaveBeenCalledWith(
-        "Failed to restore thread range:",
-        thread.id
-      );
+      expect(comments.threads.value[0].anchorStatus).toBe("orphaned");
+      expect(comments.threads.value[0].highlightElement).toBeUndefined();
     });
 
     it("logs and skips a thread when the range offset is out of bounds", () => {
@@ -983,10 +981,7 @@ describe("useComments", () => {
         "Failed to deserialize range:",
         expect.anything()
       );
-      expect(warnSpy).toHaveBeenCalledWith(
-        "Failed to restore thread range:",
-        "oob"
-      );
+      expect(comments.threads.value[0].anchorStatus).toBe("orphaned");
       expect(editor.querySelector(".comment-highlight")).toBeNull();
     });
   });
@@ -1016,9 +1011,8 @@ describe("useComments", () => {
     });
 
     it("round-trips exported data back through importThreads", () => {
-      // Author a thread in one editor, export it, then import into a freshly
-      // rendered editor with the same structure (the intended cross-session
-      // flow). The serialized path resolves and the highlight is rebuilt.
+      // Restore the persisted discussion alongside its marked manuscript.
+      // The same anchor identity survives the cross-session round trip.
       const authoringEditor = makeEditor("<p>Hello wonderful world</p>");
       const authoringRef = ref<HTMLElement | undefined>(authoringEditor);
       const authoring = useComments({ editorElement: authoringRef });
@@ -1028,7 +1022,9 @@ describe("useComments", () => {
       const thread = authoring.addThread("root")!;
       const json = authoring.exportThreads();
 
-      const freshEditor = makeEditor("<p>Hello wonderful world</p>");
+      // Persist the marked manuscript together with its discussion metadata.
+      // A new-format thread must not attach to unmarked identical text.
+      const freshEditor = makeEditor(authoringEditor.innerHTML);
       const freshRef = ref<HTMLElement | undefined>(freshEditor);
       const fresh = useComments({ editorElement: freshRef });
 
@@ -1111,7 +1107,7 @@ describe("useComments", () => {
 
       // Swap in a brand-new editor element with the same structure. The
       // post-flush watcher should re-run restoreThreads against it.
-      const newEditor = makeEditor("<p>Hello wonderful world</p>");
+      const newEditor = makeEditor(editor.innerHTML);
       editorElement.value = newEditor;
       await nextTick();
 
