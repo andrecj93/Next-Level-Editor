@@ -388,6 +388,7 @@ watch(
   color: var(--toolbar-text-secondary, var(--color-text-secondary, #6b7280));
   border-radius: var(--radius-md, 6px);
   cursor: pointer;
+  font-family: inherit;
   font-size: 14px;
   transition: background-color var(--nle-motion-quick, 120ms)
       var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
@@ -495,6 +496,7 @@ watch(
   background: transparent;
   color: var(--color-text, #333);
   cursor: pointer;
+  font-family: inherit;
   font-size: 14px;
   text-align: left;
   transition: background-color var(--nle-motion-quick, 120ms)

@@ -448,8 +448,8 @@
 
     <!-- Comments Sidebar (opt-in feature) -->
     <CommentsSidebar
-      ref="commentsSidebarRef"
       v-if="enableComments && comments"
+      ref="commentsSidebarRef"
       :threads="comments.threads.value"
       :active-thread-id="comments.activeThread.value?.id ?? null"
       :is-open="showCommentsSidebar"
