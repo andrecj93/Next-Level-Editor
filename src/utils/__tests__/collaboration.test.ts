@@ -7,6 +7,8 @@ import {
 } from "../collaborationBinding";
 import { useHtmlSanitizer } from "../../composables/useHtmlSanitizer";
 import { defaultDocumentMetadata } from "../../types/document";
+import { formatReferenceCaret } from "../referenceClipboard";
+import { renderReferences } from "../documentReferences";
 import type { CollaborationProvider } from "../../types/collaboration";
 import {
   updateSharedMetadata,
@@ -19,6 +21,99 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 describe("structured collaborative editing", () => {
+  it("publishes pasted reference text and definitions in one update and one local undo", async () => {
+    const base = createMemoryCollaborationProvider(),
+      sent: Uint8Array[] = [];
+    const provider: CollaborationProvider = {
+      async connect(options) {
+        const transport = await base.connect(options);
+        return {
+          ...transport,
+          send(update) {
+            sent.push(update);
+            return transport.send(update);
+          },
+        };
+      },
+    };
+    const metadata = defaultDocumentMetadata();
+    metadata.citationStyle = "numbered";
+    const latest = new Map<string, typeof metadata>();
+    const connect = async (name: string) => {
+      const root = document.createElement("div");
+      document.body.append(root);
+      const binding = await bindCollaborativeEditor({
+        root,
+        documentId: "reference-paste",
+        html: '<p data-nle-id="nle-body">Existing paragraph</p>',
+        metadata,
+        configuration: { provider, user: { id: name, name, color: "#2563eb" } },
+        readonly: () => false,
+        sanitize: sanitizeHtml,
+        signal: new AbortController().signal,
+        onUpdate: () => {},
+        onState: () => {},
+        onPresence: () => {},
+        onMetadata: (value) => latest.set(name, value),
+      });
+      cleanups.push(() => binding.destroy());
+      return binding;
+    };
+    const a = await connect("A"),
+      b = await connect("B");
+    const imported = {
+      ...metadata,
+      sources: [
+        {
+          id: "nle-copied-source",
+          title: "Clareza",
+          author: "Ana",
+          year: "2026",
+        },
+      ],
+      notes: [{ id: "nle-copied-note", text: "Note detail" }],
+    };
+    const format = (html: string, caret: number) =>
+      formatReferenceCaret(html, caret, (value) =>
+        renderReferences(value, imported),
+      );
+    sent.length = 0;
+    a.insertHtml(
+      '<span data-nle-cite="nle-copied-source">[Citation]</span><a data-nle-note="nle-copied-note">[Note]</a>',
+      imported,
+      format,
+    );
+    expect(sent).toHaveLength(1);
+    expect(a.history().undo).toBe(1);
+    expect(b.readHtml()).toBe(a.readHtml());
+    expect(b.readHtml()).toContain("Note detail");
+    expect(b.readHtml()).toContain('data-nle-note="nle-copied-note"');
+    expect(latest.get("B")?.notes).toEqual(imported.notes);
+    expect(latest.get("B")?.sources).toEqual(imported.sources);
+    b.applyHtml(
+      b.readHtml().replace("Existing paragraph", "Existing paragraph from B"),
+    );
+    a.undo();
+    expect(b.readHtml()).toContain("from B");
+    expect(b.readHtml()).not.toContain("data-nle-cite");
+    expect(b.readHtml()).not.toContain("Note detail");
+    expect(latest.get("B")?.notes).toEqual([]);
+    expect(latest.get("B")?.sources).toEqual([]);
+    a.redo();
+    expect(b.readHtml()).toContain("data-nle-cite");
+    expect(b.readHtml()).toContain("from B");
+    expect(latest.get("B")?.sources).toEqual(imported.sources);
+    const before = a.readHtml(),
+      count = sent.length;
+    expect(() =>
+      a.insertHtml("Text", metadata, () => {
+        throw new Error("Formatter unavailable");
+      }),
+    ).toThrow("Formatter unavailable");
+    expect(a.readHtml()).toBe(before);
+    expect(sent).toHaveLength(count);
+    expect(latest.get("B")?.sources).toEqual(imported.sources);
+  });
   it("converges same-paragraph edits with reordered duplicate updates and retains rich anchors", async () => {
     const base = createMemoryCollaborationProvider();
     const deliveries: (() => void)[] = [];

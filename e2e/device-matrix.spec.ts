@@ -66,6 +66,64 @@ test.afterEach(async ({ page }, info) => {
   if (info.status === info.expectedStatus) await info.attach('device-state', { body: await page.screenshot(), contentType: 'image/png' });
 });
 
+test('heading and list changes preserve the caret for continued writing', async ({ page, hasTouch }) => {
+  const editor = editorFor(page);
+  await switchView(page, 'Code');
+  await page.locator('.code-editor').fill('<h1>A Place to Wait</h1><p>A quiet arrival.</p><p>Keep this sentence.</p>');
+  await switchView(page, 'Editor');
+  const change = async (menu: string, item: string) => {
+    await activate(toolbarFor(page).getByRole('button', { name: menu, exact: true }), hasTouch);
+    await activate(page.getByRole('menuitem', { name: item, exact: true }), hasTouch);
+  };
+
+  await editor.press('ControlOrMeta+Home');
+  await editor.press('ArrowRight');
+  await editor.press('ArrowRight');
+  const original = await editor.innerHTML();
+  await change('Format', 'Heading 2');
+  await expect(editor).toBeFocused();
+  await page.keyboard.type('Quiet ');
+  await expect(editor.locator('h2')).toHaveText('A Quiet Place to Wait');
+  await editor.press('ControlOrMeta+z');
+  await expect(editor.locator('h2')).toHaveText('A Place to Wait');
+  await editor.press('ControlOrMeta+z');
+  await expect(editor).toHaveJSProperty('innerHTML', original);
+
+  // Select a word backwards, change the paragraph style, then emphasize only
+  // that same word. A collapsed or expanded selection would change the result.
+  await editor.press('ControlOrMeta+Home');
+  for (let step = 0; step < 7; step++) await editor.press('ArrowRight');
+  for (let step = 0; step < 5; step++) await editor.press('Shift+ArrowLeft');
+  await change('Format', 'Heading 2');
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('Place');
+  const direction = await editor.evaluate(el => {
+    const selected = window.getSelection()!;
+    return { backwards: selected.anchorOffset > selected.focusOffset, sameNode: selected.anchorNode === selected.focusNode, inside: el.contains(selected.anchorNode) };
+  });
+  expect(direction).toEqual({ backwards: true, sameNode: true, inside: true });
+  await editor.press('ControlOrMeta+i');
+  await expect(editor.locator('h2 em, h2 i')).toHaveText('Place');
+
+  await editor.press('ControlOrMeta+End');
+  await editor.press('Home');
+  await editor.press('ArrowRight');
+  await change('Insert', 'Bullet List');
+  expect(await page.evaluate(() => window.getSelection()?.isCollapsed)).toBe(true);
+  await page.keyboard.type('X');
+  await expect(editor.locator('ul > li')).toHaveText('KXeep this sentence.');
+  await editor.press('ControlOrMeta+z');
+  await expect(editor.locator('ul > li')).toHaveText('Keep this sentence.');
+  await change('Insert', 'Numbered List');
+  await page.keyboard.type('Y');
+  await expect(editor.locator('ol > li')).toHaveText('KYeep this sentence.');
+  await editor.press('ControlOrMeta+z');
+  await change('Insert', 'Numbered List');
+  await page.keyboard.type('Z');
+  await expect(editor.locator('p').last()).toHaveText('KZeep this sentence.');
+  await expect(editor.locator('p').first()).toHaveText('A quiet arrival.');
+  await noHorizontalOverflow(page);
+});
+
 test('writing notes follow the current paragraph and keep every decision reachable', async ({ page, hasTouch }) => {
   const editor = editorFor(page);
   const companion = page.getByRole('complementary', { name: 'Writing companion' });

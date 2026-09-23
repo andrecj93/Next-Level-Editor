@@ -270,11 +270,12 @@ const marks: Record<string, MarkSpec> = {
   sup: simpleMark("sup"),
   code: simpleMark("code"),
   link: {
-    attrs: { href: {}, title: { default: null }, ...attrs },
+    attrs: { href: { default: null }, title: { default: null }, ...attrs },
     inclusive: false,
     parseDOM: [
       {
-        tag: "a[href]",
+        // Pasted notes acquire their final backlink during reference rendering.
+        tag: "a[href], a[data-nle-note]",
         getAttrs: (node) => ({
           ...read(node),
           href: (node as Element).getAttribute("href"),

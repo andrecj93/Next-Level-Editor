@@ -147,3 +147,4 @@ export { createEditorLocaleFormatter } from './utils/editorLocale';
 export { useEditorLocale } from './composables/useEditorLocale';
 export type * from './types/locale';
 export { loadCitationFormatter } from './utils/citationFormatter';
+export { createReferenceFragment, importReferenceFragment } from './utils/referenceClipboard';

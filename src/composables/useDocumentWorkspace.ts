@@ -39,6 +39,7 @@ import {
   type TemplateResult,
 } from "../utils/documentTemplates";
 import { renderReferences } from "../utils/documentReferences";
+import { remapFragmentAnchors } from "../utils/referenceClipboard";
 import {
   proposeDocumentChanges,
   decideSuggestion,
@@ -242,18 +243,8 @@ export function useDocumentWorkspace(ctx: {
         sink: ctx.options.value?.onDiagnostic,
       });
       if (g !== generation) return;
-      const imported = documentRoot(report.html),
-        ids = new Map<string, string>();
-      imported.querySelectorAll("[id]").forEach((el) => {
-        const previous = el.id;
-        const id = "nle-note-" + operationId();
-        ids.set(previous, id);
-        el.id = id;
-      });
-      imported.querySelectorAll('a[href^="#"]').forEach((el) => {
-        const id = ids.get(el.getAttribute("href")!.slice(1));
-        if (id) el.setAttribute("href", "#" + id);
-      });
+      const imported = documentRoot(report.html);
+      remapFragmentAnchors(imported);
       // Imported endnote containers use paragraphs so their anchor survives sanitization.
       imported.querySelectorAll("[id]").forEach((el) => {
         if (!/^(A|P|H[1-6])$/.test(el.tagName)) {
@@ -761,6 +752,8 @@ export function useDocumentWorkspace(ctx: {
     addSource,
     insertReference,
     refreshReferences,
+    prepareReferences,
+    formatReferences,
     updateReference,
     blockAction,
     previewTemplate,

@@ -1,5 +1,11 @@
 import * as Y from "yjs";
-import { EditorState, Plugin } from "prosemirror-state";
+import {
+  EditorState,
+  Plugin,
+  Selection,
+  type Transaction,
+} from "prosemirror-state";
+import { DOMParser, type Node as PMNode } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
 import { baseKeymap, chainCommands } from "prosemirror-commands";
 import { keymap } from "prosemirror-keymap";
@@ -45,6 +51,11 @@ export interface CollaborationBinding {
   applyHtml(html: string): void;
   applySnapshot(value: DocumentSnapshot): void;
   applyMetadata(before: DocumentMetadata, after: DocumentMetadata): void;
+  insertHtml(
+    html: string,
+    metadata: DocumentMetadata,
+    format: (html: string, caret: number) => { html: string; caret: number },
+  ): void;
   readHtml(): string;
   undo(): void;
   redo(): void;
@@ -266,12 +277,10 @@ export async function bindCollaborativeEditor(options: {
   );
   options.onState("synced");
   diagnostic(config.onDiagnostic, "sync.connected", options.documentId);
-  function applyHtml(html: string) {
-    if (closed || options.readonly()) return;
-    const next = parseCollaborativeHtml(options.sanitize(html));
-    const old = view.state.doc;
+  function replaceDifference(tr: Transaction, next: PMNode): Transaction {
+    const old = tr.doc;
     const start = old.content.findDiffStart(next.content);
-    if (start == null) return;
+    if (start == null) return tr;
     const end = old.content.findDiffEnd(next.content)!;
     let oldEnd = end.a,
       nextEnd = end.b;
@@ -280,13 +289,63 @@ export async function bindCollaborativeEditor(options: {
       oldEnd += overlap;
       nextEnd += overlap;
     }
-    view.dispatch(
-      view.state.tr.replace(start, oldEnd, next.slice(start, nextEnd)),
+    return tr.replace(start, oldEnd, next.slice(start, nextEnd));
+  }
+  function applyHtml(html: string) {
+    if (closed || options.readonly()) return;
+    const tr = replaceDifference(
+      view.state.tr,
+      parseCollaborativeHtml(options.sanitize(html)),
     );
+    if (tr.docChanged) view.dispatch(tr);
+  }
+  function atomicSnapshot(action: () => void) {
+    undoManager.stopCapturing();
+    doc.transact(action, localOperation);
+    undoManager.stopCapturing();
   }
   return {
     applyHtml,
     readHtml: () => serializeCollaborativeDocument(view.state.doc),
+    insertHtml: (html, metadata, format) => {
+      if (closed || options.readonly()) return;
+      const slice = DOMParser.fromSchema(collaborationSchema).parseSlice(
+        documentRoot(options.sanitize(html)),
+        { context: view.state.selection.$from },
+      );
+      const tr = view.state.tr.replaceSelection(slice);
+      // Prepare the entire operation before touching Yjs so failed formatters
+      // cannot publish metadata without its text (or create a partial undo).
+      const formatted = format(
+        serializeCollaborativeDocument(tr.doc),
+        tr.doc.textBetween(0, tr.selection.from, "", "").length,
+      );
+      replaceDifference(
+        tr,
+        parseCollaborativeHtml(options.sanitize(formatted.html)),
+      );
+      let offset = formatted.caret,
+        position = tr.doc.content.size;
+      tr.doc.descendants((node, at) => {
+        if (!node.isText || offset < 0) return;
+        if (offset <= node.nodeSize) {
+          position = at + offset;
+          offset = -1;
+        } else offset -= node.nodeSize;
+      });
+      tr.setSelection(
+        Selection.near(tr.doc.resolve(position)),
+      ).scrollIntoView();
+      atomicSnapshot(() => {
+        updateSharedMetadata(
+          sharedMetadata,
+          readSharedMetadata(sharedMetadata, options.sanitize),
+          metadata,
+        );
+        view.dispatch(tr);
+      });
+      view.focus();
+    },
     applyMetadata: (before, after) => {
       if (!options.readonly())
         doc.transact(
@@ -295,19 +354,15 @@ export async function bindCollaborativeEditor(options: {
         );
     },
     applySnapshot: (value) => {
-      if (options.readonly()) return;
-      undoManager.stopCapturing();
-      doc.transact(
-        () =>
-          updateSharedMetadata(
-            sharedMetadata,
-            readSharedMetadata(sharedMetadata, options.sanitize),
-            value.metadata,
-          ),
-        localOperation,
-      );
-      applyHtml(value.html);
-      undoManager.stopCapturing();
+      if (closed || options.readonly()) return;
+      atomicSnapshot(() => {
+        updateSharedMetadata(
+          sharedMetadata,
+          readSharedMetadata(sharedMetadata, options.sanitize),
+          value.metadata,
+        );
+        applyHtml(value.html);
+      });
     },
     undo: () => {
       if (!options.readonly()) undo(view.state);

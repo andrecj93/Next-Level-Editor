@@ -727,6 +727,15 @@ export const editorPortuguese: Record<string, string> = {
     "O contraste do texto é inferior a 4,5:1. Escolha cores com maior contraste.",
   "Contrast needs a manual check because the background or colour cannot be determined reliably.":
     "O contraste requer verificação manual porque não foi possível determinar as cores com segurança.",
+  "The reference selection is too large or contains invalid definitions. Copy a smaller passage.": "A seleção de referências é demasiado grande ou contém definições inválidas. Copie uma passagem mais pequena.",
+  "The pasted content is too large. Copy a smaller passage.": "O conteúdo colado é demasiado grande. Copie uma passagem mais pequena.",
+  "The document reference limit has been reached.": "Foi atingido o limite de referências do documento.",
+  "Choose a passage outside generated notes or bibliography.": "Escolha uma passagem fora das notas ou da bibliografia geradas.",
+  "The document or selection changed. Paste the passage again.": "O documento ou a seleção mudou. Cole novamente a passagem.",
+  "The passage could not be pasted. Try again.": "Não foi possível colar a passagem. Tente novamente.",
+  "Use the keyboard shortcut to copy or cut this passage.": "Use o atalho de teclado para copiar ou cortar esta passagem.",
+  "Use the keyboard shortcut to paste this passage.": "Use o atalho de teclado para colar esta passagem.",
+  "Some pasted references had no valid definitions. Their visible text was preserved.": "Algumas referências coladas não tinham definições válidas. O respetivo texto visível foi preservado.",
 };
 
 export const portugueseMessages: EditorMessages = {

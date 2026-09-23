@@ -320,13 +320,21 @@ const sanitizeStyleValue = (styleValue: string): string => {
  * Provides secure HTML cleaning and validation
  */
 export function useHtmlSanitizer() {
+  // Input capture, document history and the host's v-model echo share this
+  // instance. The allowlist is immutable, so identical input in the same DOM
+  // environment can reuse its validated result. Retain only the latest pair,
+  // with a combined one-million-character limit (about 2 MB of UTF-16 text).
+  let cachedDocument: Document | undefined;
+  let cachedInput: string | undefined;
+  let cachedResult = "";
   const sanitizeHtml = (input: string | null = ""): string => {
     const value = input ?? "";
     if (!value.trim()) return "";
     // No DOM (SSR / Node): we cannot sanitize, so never echo raw untrusted HTML
     // through — return empty. The editor is browser-only and re-applies the real
     // content on client mount, so this only affects a server pre-render.
-    if (globalThis.window === undefined || document === undefined) return "";
+    if (globalThis.window === undefined || typeof document === "undefined") return "";
+    if (cachedDocument === document && cachedInput === value) return cachedResult;
 
     const workingDocument =
       document.implementation.createHTMLDocument("sanitizer");
@@ -1026,7 +1034,17 @@ export function useHtmlSanitizer() {
     ensureBlockLineBreaks(workingDocument.body);
     workingDocument.body.normalize();
 
-    return workingDocument.body.innerHTML;
+    const result = workingDocument.body.innerHTML;
+    if (value.length + result.length <= 1_000_000) {
+      cachedDocument = document;
+      cachedInput = value;
+      cachedResult = result;
+    } else {
+      cachedDocument = undefined;
+      cachedInput = undefined;
+      cachedResult = "";
+    }
+    return result;
   };
 
   return {

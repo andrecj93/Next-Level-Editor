@@ -33,6 +33,8 @@
         @input="$emit('input', $event)"
         @compositionend="$emit('input', $event)"
         @paste="$emit('paste', $event)"
+        @copy="$emit('copy', $event)"
+        @cut="$emit('copy', $event)"
         @drop="$emit('drop', $event)"
         @dragstart="$emit('dragstart', $event)"
         @dragend="$emit('dragend', $event)"
@@ -71,6 +73,8 @@
         @input="$emit('input', $event)"
         @compositionend="$emit('input', $event)"
         @paste="$emit('paste', $event)"
+        @copy="$emit('copy', $event)"
+        @cut="$emit('copy', $event)"
         @drop="$emit('drop', $event)"
         @dragstart="$emit('dragstart', $event)"
         @dragend="$emit('dragend', $event)"
@@ -148,6 +152,8 @@
           @input="$emit('split-editor-input', $event)"
           @compositionend="$emit('split-editor-input', $event)"
           @paste="$emit('paste', $event)"
+          @copy="$emit('copy', $event)"
+          @cut="$emit('copy', $event)"
           @drop="$emit('drop', $event)"
           @dragstart="$emit('dragstart', $event)"
           @dragend="$emit('dragend', $event)"
@@ -216,6 +222,7 @@ defineEmits<{
   mouseup: [event: MouseEvent];
   contextmenu: [event: MouseEvent];
   paste: [event: ClipboardEvent];
+  copy: [event: ClipboardEvent];
   drop: [event: DragEvent];
   dragstart: [event: DragEvent];
   dragend: [event: DragEvent];

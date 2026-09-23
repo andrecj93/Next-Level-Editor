@@ -95,7 +95,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
 
     // Record the caret alongside the snapshot so undo/redo can restore it
     // instead of dropping the cursor to the top of the document.
-    captureSnapshot(html, getCaretOffsets(editorContent.value), coalesceKey);
+    captureSnapshot(html, getCaretOffsets(editorContent.value), coalesceKey, editorContent.value.textContent || "");
 
     if (emitUpdate) {
       const sanitized = sanitizeHtml(html);
@@ -229,6 +229,9 @@ export function useEditorContent(options: UseEditorContentOptions) {
         return;
       }
 
+      // captureAndEmit has already sanitized the outbound model. An exact
+      // echo cannot change the DOM; avoid parsing the entire book twice again.
+      if (newValue === editorContent.value.innerHTML) return;
       const currentSanitized = sanitizeHtml(editorContent.value.innerHTML);
       const newSanitized = sanitizeHtml(newValue);
 

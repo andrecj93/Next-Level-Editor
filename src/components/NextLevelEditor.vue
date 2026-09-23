@@ -172,6 +172,7 @@
       :split-right-mode="splitRightMode"
       @input="onInput"
       @paste="onPaste"
+      @copy="documentClipboard.onCopy"
       @drop="onDrop"
       @dragstart="onDragStart"
       @dragend="onDragEnd"
@@ -381,7 +382,7 @@
       :initial-cell-props="initialCellProps"
       :initial-table-props="initialTableProps"
       :formatted-html-content="
-        formatHtml(htmlContent || editorContent?.innerHTML || '')
+        showHtmlCodeModal ? formatHtml(htmlContent || editorContent?.innerHTML || '') : ''
       "
       :command-palette-commands="commandPaletteCommands"
       :recent-command-ids="recentCommands"
@@ -701,6 +702,8 @@ import {
 } from "vue";
 import DocumentTools from './DocumentTools.vue';
 import { useDocumentWorkspace } from '../composables/useDocumentWorkspace';
+import { useDocumentClipboard } from '../composables/useDocumentClipboard';
+import { REFERENCE_CLIPBOARD_TYPE, hasReferenceFragment, importReferenceFragment } from '../utils/referenceClipboard';
 import { provideEditorLocale } from '../composables/useEditorLocale';
 import { assignBlockIds } from '../utils/documentOperations';
 import type { CollaborationBinding } from '../utils/collaborationBinding';
@@ -1310,6 +1313,11 @@ const documentWorkspace = useDocumentWorkspace({
     if (collaborationBinding) { collaborationBinding.applySnapshot({html,metadata:documentWorkspace.session.snapshot().metadata}); return; }
     applySanitizedContent(html); codeContent.value = html; captureSnapshotBase();
   },
+});
+const documentClipboard = useDocumentClipboard({
+  root: editorContent, options: effectiveDocumentOptions, workspace: documentWorkspace,
+  readonly: () => effectiveReadonly.value, collaboration: () => collaborationBinding,
+  sanitize: sanitizeHtml, notify: (message, type) => showToastNotification(message, type),
 });
 
 function captureSnapshot(...args: Parameters<typeof captureSnapshotBase>) {
@@ -1971,6 +1979,7 @@ const {
   closeContextMenu,
 } = useContextMenu({
   editorContent,
+  clipboardAction: documentClipboard.contextAction,
   handleInlineAction,
   insertLink,
   insertImage,
@@ -2604,7 +2613,13 @@ const onPaste = (event: ClipboardEvent) => {
   // Rebuild Word/Docs list paragraphs into real <ul>/<ol> BEFORE sanitizing
   // (which strips the mso-list markup they're detected by), else they paste as
   // flat paragraphs with literal bullet glyphs.
-  const clean = sanitizeHtml(reconstructWordLists(html));
+  const richHtml = reconstructWordLists(html), referenceData = clipboard.getData(REFERENCE_CLIPBOARD_TYPE);
+  if (documentClipboard.onPaste(richHtml, referenceData)) return;
+  // A plain HTML editor has no metadata store; retain readable text without
+  // adopting identifiers whose definitions it cannot save.
+  const clean = hasReferenceFragment(richHtml, referenceData)
+    ? importReferenceFragment({ html: richHtml, metadata: defaultDocumentMetadata(), documentId: '', sanitize: sanitizeHtml, preserveDefinitions: false }).html
+    : sanitizeHtml(richHtml);
 
   // Real visible content (text or media) → insert it directly.
   if (htmlHasVisibleContent(clean)) {
@@ -2778,6 +2793,7 @@ const onDrop = (event: DragEvent) => {
 };
 
 const onInput = (event?: Event) => {
+  if (documentClipboard.isApplying()) return;
   // The structured editor owns input/composition and its inline decorations.
   if (collaborationBinding) return;
   // IME guard: while a composition is live the browser fires input events
@@ -2872,6 +2888,7 @@ function handleSplitRightModeChange(mode: "preview" | "editor") {
 // (editorContent resolves to the split editor here) and keep the hidden main
 // editor mirrored so switching modes preserves content.
 function onSplitEditorInput(event: Event) {
+  if (documentClipboard.isApplying()) return;
   // Keep IME candidates out of history and autosave, as on the main surface.
   // compositionend runs this pipeline once with the committed text.
   if ((event as InputEvent).isComposing) return;

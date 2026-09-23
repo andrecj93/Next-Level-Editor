@@ -317,16 +317,33 @@ test.describe('Manuscript writing workspace', () => {
     await editor.click();
     await editor.press('ControlOrMeta+End');
     await editor.press('Enter');
-    const start = Date.now();
-    await page.keyboard.type('A small final thought.');
-    await expect(editor).toContainText('A small final thought.');
-    const typingRoundTripMs = Date.now() - start;
-    console.info('[writing-workspace] Book-length interaction', JSON.stringify({ paragraphs: 1000, chapters: 20, typingRoundTripMs }));
-    await test.info().attach('book-length-interaction.json', { body: JSON.stringify({ paragraphs:1000, chapters:20, typingRoundTripMs }), contentType:'application/json' });
+    const before = await editor.evaluate(element => element.innerHTML);
+    const session = await page.context().newCDPSession(page);
+    let typingRoundTripMs = 0;
+    let browserWorkMs = 0;
+    try {
+      await session.send('Performance.enable');
+      await session.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+      const metricsBefore = await session.send('Performance.getMetrics');
+      const start = Date.now();
+      await page.keyboard.type('A small final thought.');
+      await expect(editor).toContainText('A small final thought.');
+      typingRoundTripMs = Date.now() - start;
+      const metricsAfter = await session.send('Performance.getMetrics');
+      browserWorkMs = ((metricsAfter.metrics.find(metric => metric.name === 'TaskDuration')?.value ?? 0)
+        - (metricsBefore.metrics.find(metric => metric.name === 'TaskDuration')?.value ?? 0)) * 1000;
+    } finally {
+      await session.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+      await session.send('Performance.disable');
+      await session.detach();
+    }
+    const measurement = { paragraphs: 1000, chapters: 20, cpuRate: 4, typingRoundTripMs, browserWorkMs };
+    console.info('[writing-workspace] Book-length interaction', JSON.stringify(measurement));
+    await test.info().attach('book-length-interaction.json', { body: JSON.stringify(measurement), contentType:'application/json' });
     expect(typingRoundTripMs).toBeLessThan(5000);
     await expect(editor.locator('h2')).toHaveCount(20);
     await page.keyboard.press('ControlOrMeta+z');
-    await expect(editor).not.toContainText('A small final thought.');
+    await expect(editor).toHaveJSProperty('innerHTML', before);
   });
 
   for (const mode of ['editor', 'split']) test(`composed text commits and cancels without corrupting undo or recovery in ${mode}`, async ({ page, browserName }) => {
