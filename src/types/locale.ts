@@ -3,6 +3,15 @@ export type EditorPluralMessage = Partial<Record<Intl.LDMLPluralRule, string>> &
 export type EditorMessage = string | EditorPluralMessage;
 export type EditorMessages = Readonly<Record<string, EditorMessage>>;
 export type EditorMessageParameters = Readonly<Record<string, string | number>>;
+/** Deferred UI message so an already visible notification follows locale changes. */
+export interface EditorMessageDescriptor {
+  key: string;
+  parameters?: EditorMessageParameters;
+  /** Parameter values that are themselves UI labels, never document text. */
+  translatedParameters?: readonly string[];
+  /** Canonical keyboard tokens rendered for the user's platform. */
+  shortcutParameters?: readonly string[];
+}
 export type EditorUiDirection = 'ltr' | 'rtl' | 'auto';
 
 export interface EditorLocaleFormatter {

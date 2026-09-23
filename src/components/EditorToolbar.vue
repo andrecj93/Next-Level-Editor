@@ -2,8 +2,8 @@
   <nav v-if="writingMode" ref="rootEl" class="editor-toolbar-modern writing-toolbar" role="toolbar" :aria-label="t('Text formatting toolbar')" @keydown="onRovingKeydown" @focusin="onRovingFocusin">
     <div class="writing-toolbar-row">
       <div class="writing-history" role="group" :aria-label="t('History')">
-        <button type="button" class="toolbar-btn-modern" :aria-label="t('Undo')" :title="t('Undo (Ctrl+Z)')" :disabled="historyIndex <= 0" @mousedown.prevent="$emit('remember-selection')" @click="$emit('undo')">↶</button>
-        <button type="button" class="toolbar-btn-modern" :aria-label="t('Redo')" :title="t('Redo (Ctrl+Shift+Z)')" :disabled="historyIndex >= historyLength - 1" @mousedown.prevent="$emit('remember-selection')" @click="$emit('redo')">↷</button>
+        <button type="button" class="toolbar-btn-modern" :aria-label="t('Undo')" :title="hint('Undo', 'Mod+Z')" :disabled="historyIndex <= 0" @mousedown.prevent="$emit('remember-selection')" @click="$emit('undo')">↶</button>
+        <button type="button" class="toolbar-btn-modern" :aria-label="t('Redo')" :title="hint('Redo', 'Mod+Shift+Z')" :disabled="historyIndex >= historyLength - 1" @mousedown.prevent="$emit('remember-selection')" @click="$emit('redo')">↷</button>
       </div>
       <span class="writing-toolbar-divider" />
       <ToolbarSection class="writing-paragraph-format" type="dropdown" label="Format" tooltip="Paragraph style" :items="formatDropdownItems" :visible="isToolbarSectionVisible('format')" @remember-selection="$emit('remember-selection')" />
@@ -68,7 +68,7 @@
       <div class="toolbar-group" role="group" :aria-label="t('Undo and redo')">
         <button
           class="toolbar-btn-modern"
-          data-tooltip="Undo (Ctrl+Z)"
+        :data-tooltip="hint('Undo', 'Mod+Z')"
           :aria-label="t('Undo')"
           :disabled="historyIndex <= 0"
           @click="$emit('undo')"
@@ -90,7 +90,7 @@
         </button>
         <button
           class="toolbar-btn-modern"
-          data-tooltip="Redo (Ctrl+Shift+Z)"
+          :data-tooltip="hint('Redo', 'Mod+Shift+Z')"
           :aria-label="t('Redo')"
           :disabled="historyIndex >= historyLength - 1"
           @click="$emit('redo')"
@@ -209,9 +209,9 @@
           class="dropdown-trigger"
           :class="{ open: showColorsDropdown }"
           :data-tooltip="
-            isToolbarSectionVisible('colors')
+            t(isToolbarSectionVisible('colors')
               ? 'Text & background colors'
-              : 'Text & background colors (not available for current selection)'
+              : 'Text & background colors (not available for current selection)')
           "
           :aria-label="t('Colors')"
           :aria-expanded="showColorsDropdown"
@@ -249,8 +249,8 @@
                   class="colors-swatch"
                   :class="{ active: sameColor(selectionTextColor, c) }"
                   :style="{ background: c }"
-                  :aria-label="`Text color ${c}`"
-                  :title="t(c)"
+                  :aria-label="t('Text color {color}', { color: c })"
+                  :title="c"
                   @mousedown.prevent="$emit('remember-selection')"
                   @click="pickTextColor(c)"
                 />
@@ -286,8 +286,8 @@
                   class="colors-swatch"
                   :class="{ active: sameColor(selectionHighlightColor, c) }"
                   :style="{ background: c }"
-                  :aria-label="`Highlight ${c}`"
-                  :title="t(c)"
+                  :aria-label="t('Highlight {color}', { color: c })"
+                  :title="c"
                   @mousedown.prevent="$emit('remember-selection')"
                   @click="pickHighlightColor(c)"
                 />
@@ -373,7 +373,7 @@
             'with-text',
             { active: viewMode === 'editor' },
           ]"
-          data-tooltip="WYSIWYG Editor - Edit with visual formatting"
+          :data-tooltip="t('WYSIWYG Editor - Edit with visual formatting')"
           :aria-label="t('Editor view')"
           :aria-pressed="viewMode === 'editor'"
           @click="$emit('view-mode-change', 'editor')"
@@ -387,7 +387,7 @@
             'with-text',
             { active: viewMode === 'code' },
           ]"
-          data-tooltip="HTML Source Code - Edit raw HTML"
+          :data-tooltip="t('HTML Source Code - Edit raw HTML')"
           :aria-label="t('Code view')"
           :aria-pressed="viewMode === 'code'"
           @click="$emit('view-mode-change', 'code')"
@@ -401,7 +401,7 @@
             'with-text',
             { active: viewMode === 'split' },
           ]"
-          data-tooltip="Split View - Editor and code side by side"
+          :data-tooltip="t('Split View - Editor and code side by side')"
           :aria-label="t('Split view')"
           :aria-pressed="viewMode === 'split'"
           @click="$emit('view-mode-change', 'split')"
@@ -415,7 +415,7 @@
             'with-text',
             { active: viewMode === 'preview' },
           ]"
-          data-tooltip="Preview - View final output without editing"
+          :data-tooltip="t('Preview - View final output without editing')"
           :aria-label="t('Preview view')"
           :aria-pressed="viewMode === 'preview'"
           @click="$emit('view-mode-change', 'preview')"
@@ -429,7 +429,7 @@
       <button
         v-if="viewMode === 'code' || viewMode === 'split'"
         class="toolbar-btn-modern"
-        data-tooltip="Format HTML (pretty-print)"
+        :data-tooltip="t('Format HTML (pretty-print)')"
         :aria-label="t('Format HTML')"
         @click="$emit('format-html')"
       >
@@ -473,7 +473,7 @@
         v-if="toolbarLayout !== 'compact'"
         class="toolbar-btn-modern focus-toggle"
         :data-tooltip="
-          isFocusMode ? 'Exit focus mode (Esc)' : 'Focus mode — fill the window'
+          isFocusMode ? hint('Exit focus mode', 'Esc') : t('Focus mode — fill the window')
         "
         :aria-label="t(isFocusMode ? 'Exit focus mode' : 'Enter focus mode')"
         :aria-pressed="isFocusMode"
@@ -487,7 +487,7 @@
       <button
         v-if="toolbarLayout !== 'compact'"
         class="toolbar-btn-modern fullscreen-toggle"
-        data-tooltip="Toggle fullscreen mode"
+        :data-tooltip="t('Toggle fullscreen mode')"
         :aria-label="t('Toggle fullscreen mode')"
         :aria-pressed="isFullScreen"
         @click="$emit('toggle-fullscreen')"
@@ -499,7 +499,7 @@
       <!-- Theme Toggle -->
       <button
         class="toolbar-btn-modern theme-toggle"
-        data-tooltip="Toggle theme"
+        :data-tooltip="t('Toggle theme')"
         :aria-label="t('Toggle dark/light theme')"
         :aria-pressed="theme === 'dark'"
         @click="$emit('toggle-theme')"
@@ -519,7 +519,7 @@
       type="button"
       class="toolbar-btn-modern toolbar-expand-toggle"
       :class="{ 'is-open': expanded }"
-      :data-tooltip="expanded ? 'Show fewer tools' : 'Show all tools'"
+      :data-tooltip="t(expanded ? 'Show fewer tools' : 'Show all tools')"
       :aria-label="t(expanded ? 'Collapse toolbar' : 'Expand toolbar')"
       :aria-expanded="expanded"
       @click="toggleExpanded"
@@ -531,7 +531,10 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t, direction: uiDirection } = useEditorLocale();
+const locale = useEditorLocale();
+const { t, direction: uiDirection } = locale;
+import { toolbarHint } from '../utils/toolbarHint';
+const hint = (label?: string, keys?: string) => toolbarHint(locale, label, keys);
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import type { ToolbarAction } from "../types/toolbar";
 import type { ToolbarConfig } from "../composables/useSmartToolbar";
@@ -1037,7 +1040,7 @@ const onColorsKeydownCapture = (event: KeyboardEvent) => {
   // (the PlayheadPill #R24-9 landmine).
   void nextTick(() =>
     colorsWrapRef.value
-      ?.querySelector<HTMLElement>('button[aria-label="Colors"]')
+      ?.querySelector<HTMLElement>(':scope > button')
       ?.focus()
   );
 };

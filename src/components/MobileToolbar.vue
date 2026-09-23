@@ -160,7 +160,7 @@
             v-for="block in blockActions"
             :key="block.id"
             class="block-button touch-target"
-            :aria-label="`Convert to ${block.label}`"
+            :aria-label="t('Convert to {block}', { block: t(block.label) })"
             @click="block.onClick"
           >
             <span

@@ -21,7 +21,7 @@ const props = defineProps<{
 }>();
 const w = props.workspace;
 const DocumentPdfPreview = defineAsyncComponent(() => import("./DocumentPdfPreview.vue"));
-const { t, locale, date, direction: uiDirection } = useEditorLocale();
+const { t, number, locale, date, direction: uiDirection } = useEditorLocale();
 const id = useStableId();
 const trigger = ref<HTMLButtonElement>();
 const tabs = [
@@ -365,7 +365,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
                   :key="version.id"
                   :value="version.id"
                 >
-                  {{ version.label }} · {{ version.revision }}
+                  {{ version.label }} · {{ number(version.revision) }}
                 </option>
               </select>
             </label>
@@ -924,7 +924,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
                 class="document-block-title"
                 @click="w.run(() => w.locateBlock(block.id))"
               >
-                {{ index + 1 }} · {{ block.text || block.tag }}
+                {{ number(index + 1) }} · {{ block.text || block.tag }}
               </button>
               <button
                 v-if="chapter && /^H[1-6]$/.test(block.tag)"
@@ -1203,6 +1203,10 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
 }
 .document-tool-bar {
   padding: 0.5rem 1rem;
+}
+@media (max-height: 500px) {
+  /* Preserve writing space above the phone dock without shrinking controls. */
+  .document-tool-bar { padding-block: 0.25rem; }
 }
 .document-tool-bar > span {
   font-size: 0.8rem;

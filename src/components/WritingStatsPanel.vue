@@ -57,19 +57,19 @@
           </div>
           <div class="stat-item">
             <span class="stat-label" :title="t('Number of sentences detected.')">{{ t("Sentences") }}</span>
-            <span class="stat-value">{{ stats.sentences }}</span>
+            <span class="stat-value">{{ number(stats.sentences) }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label" :title="t('Number of paragraphs — blocks separated by blank lines.')">{{ t("Paragraphs") }}</span>
-            <span class="stat-value">{{ stats.paragraphs }}</span>
+            <span class="stat-value">{{ number(stats.paragraphs) }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label" :title="t('Estimated silent reading time at ~200 words per minute.')">{{ t("Reading Time") }}</span>
-            <span class="stat-value">{{ stats.readingTime }} {{ t("min") }}</span>
+            <span class="stat-value">{{ number(stats.readingTime) }} {{ t("min") }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label" :title="t('Estimated time to read aloud at ~130 words per minute.')">{{ t("Speaking Time") }}</span>
-            <span class="stat-value">{{ stats.speakingTime }} {{ t("min") }}</span>
+            <span class="stat-value">{{ number(stats.speakingTime) }} {{ t("min") }}</span>
           </div>
         </div>
       </div>
@@ -89,7 +89,7 @@
             :class="getReadabilityClass(readability.fleschReadingEase)"
           >
             <div class="score-value">
-              {{ readability.fleschReadingEase.toFixed(1) }}
+              {{ number(readability.fleschReadingEase, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }}
             </div>
             <div class="score-label" :title="t('How easy the text is to read, 0–100. Higher is easier; 60–70 is plain English.')">
               {{ t("Flesch Reading Ease") }}
@@ -100,7 +100,7 @@
           </div>
           <div class="grade-box">
             <div class="grade-value">
-              {{ Math.round(readability.averageGradeLevel) }}
+              {{ number(Math.round(readability.averageGradeLevel)) }}
             </div>
             <div class="grade-label" :title="t('US school grade needed to understand the text, averaged across formulas.')">
               {{ t("Grade Level") }}
@@ -111,20 +111,20 @@
         <div class="readability-details">
           <div class="detail-item">
             <span :title="t('US grade level from sentence length and syllables per word.')">{{ t("Flesch-Kincaid:") }}</span>
-            <strong>{{ t("Grade") }} {{ readability.fleschKincaidGrade.toFixed(1) }}</strong>
+            <strong>{{ t("Grade") }} {{ number(readability.fleschKincaidGrade, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }}</strong>
           </div>
           <div class="detail-item">
             <span :title="t('Years of schooling needed to read it on the first try. Aim below 12.')">{{ t("Gunning Fog:") }}</span>
-            <strong>{{ readability.gunningFog.toFixed(1) }}</strong>
+            <strong>{{ number(readability.gunningFog, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }}</strong>
           </div>
           <div class="detail-item">
             <span :title="t('US grade level based on letters per word instead of syllables.')">{{ t("Coleman-Liau:") }}</span>
-            <strong>{{ t("Grade") }} {{ readability.colemanLiauIndex.toFixed(1) }}</strong>
+            <strong>{{ t("Grade") }} {{ number(readability.colemanLiauIndex, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }}</strong>
           </div>
           <div class="detail-item">
             <span :title="t('Automated Readability Index — grade level from letters, words and sentences.')">{{ t("ARI:") }}</span>
             <strong>{{ t("Grade") }}
-              {{ readability.automatedReadabilityIndex.toFixed(1) }}</strong>
+              {{ number(readability.automatedReadabilityIndex, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }}</strong>
           </div>
         </div>
       </div>
@@ -142,31 +142,31 @@
             <div
               class="bar-segment short"
               :style="{ width: `${getSentencePercentage('short')}%` }"
-              :title="`Short: ${sentenceAnalysis.shortSentences}`"
+              :title="t('Short: {count}', { count: sentenceAnalysis.shortSentences })"
             />
             <div
               class="bar-segment medium"
               :style="{ width: `${getSentencePercentage('medium')}%` }"
-              :title="`Medium: ${sentenceAnalysis.mediumSentences}`"
+              :title="t('Medium: {count}', { count: sentenceAnalysis.mediumSentences })"
             />
             <div
               class="bar-segment long"
               :style="{ width: `${getSentencePercentage('long')}%` }"
-              :title="`Long: ${sentenceAnalysis.longSentences}`"
+              :title="t('Long: {count}', { count: sentenceAnalysis.longSentences })"
             />
           </div>
           <div class="distribution-legend">
             <span class="legend-item">
               <span class="legend-color short" />
-              {{ t("Short (<15):") }} {{ sentenceAnalysis.shortSentences }}
+              {{ t("Short (<15):") }} {{ number(sentenceAnalysis.shortSentences) }}
             </span>
             <span class="legend-item">
               <span class="legend-color medium" />
-              {{ t("Medium (15-25):") }} {{ sentenceAnalysis.mediumSentences }}
+              {{ t("Medium (15-25):") }} {{ number(sentenceAnalysis.mediumSentences) }}
             </span>
             <span class="legend-item">
               <span class="legend-color long" />
-              {{ t("Long (>25):") }} {{ sentenceAnalysis.longSentences }}
+              {{ t("Long (>25):") }} {{ number(sentenceAnalysis.longSentences) }}
             </span>
           </div>
         </div>
@@ -174,12 +174,12 @@
           <div class="stat-item">
             <span class="stat-label" :title="t('Average sentence length. 15–20 words reads smoothly.')">{{ t("Avg Words/Sentence") }}</span>
             <span class="stat-value">{{
-              sentenceAnalysis.averageWordsPerSentence.toFixed(1)
+              number(sentenceAnalysis.averageWordsPerSentence, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
             }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label" :title="t('Length of the longest sentence — watch for run-ons.')">{{ t("Longest Sentence") }}</span>
-            <span class="stat-value">{{ sentenceAnalysis.longestSentence }} {{ t("words") }}</span>
+            <span class="stat-value">{{ number(sentenceAnalysis.longestSentence) }} {{ t("words") }}</span>
           </div>
         </div>
       </div>
@@ -202,16 +202,16 @@
           <div class="stat-item">
             <span class="stat-label" :title="t('Average characters per word. Higher reads as denser.')">{{ t("Avg Word Length") }}</span>
             <span class="stat-value">{{
-              wordAnalysis.averageWordLength.toFixed(1)
+              number(wordAnalysis.averageWordLength, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
             }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label" :title="t('Words longer than 6 characters.')">{{ t("Long Words (>6)") }}</span>
-            <span class="stat-value">{{ wordAnalysis.longWords }}</span>
+            <span class="stat-value">{{ number(wordAnalysis.longWords) }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label" :title="t('Words longer than 12 characters — often harder to read.')">{{ t("Very Long (>12)") }}</span>
-            <span class="stat-value">{{ wordAnalysis.veryLongWords }}</span>
+            <span class="stat-value">{{ number(wordAnalysis.veryLongWords) }}</span>
           </div>
         </div>
 
@@ -229,7 +229,7 @@
               :key="item.word"
               class="word-tag"
             >
-              {{ item.word }} <span class="word-count">({{ item.count }})</span>
+              {{ item.word }} <span class="word-count">({{ number(item.count) }})</span>
             </span>
           </div>
         </div>
@@ -250,7 +250,7 @@
         >
           <div class="issue-header">
             <span class="issue-icon">🔄</span>
-            <span class="issue-title">{{ t("Passive Voice (") }}{{ issues.passiveVoice.length }})</span>
+            <span class="issue-title">{{ t("Passive Voice (") }}{{ number(issues.passiveVoice.length) }})</span>
           </div>
           <div class="issue-hint">
             {{ t("Consider using active voice for clearer writing") }}
@@ -263,7 +263,7 @@
         >
           <div class="issue-header">
             <span class="issue-icon">💭</span>
-            <span class="issue-title">{{ t("Weak Adverbs (") }}{{ issues.adverbs.length }})</span>
+            <span class="issue-title">{{ t("Weak Adverbs (") }}{{ number(issues.adverbs.length) }})</span>
           </div>
           <div class="issue-hint">
             {{ t("Remove or replace with stronger verbs") }}
@@ -276,7 +276,7 @@
         >
           <div class="issue-header">
             <span class="issue-icon">📖</span>
-            <span class="issue-title">{{ t("Complex Words (") }}{{ issues.complexWords.length }})</span>
+            <span class="issue-title">{{ t("Complex Words (") }}{{ number(issues.complexWords.length) }})</span>
           </div>
           <div class="issue-hint">
             {{ t("Consider simpler alternatives") }}
@@ -289,7 +289,7 @@
         >
           <div class="issue-header">
             <span class="issue-icon">🔁</span>
-            <span class="issue-title">{{ t("Repeated Words (") }}{{ issues.repeatedWords.length }})</span>
+            <span class="issue-title">{{ t("Repeated Words (") }}{{ number(issues.repeatedWords.length) }})</span>
           </div>
           <div class="repeated-words">
             <span
@@ -297,7 +297,7 @@
               :key="item.word"
               class="repeated-word"
             >
-              {{ item.word }} ({{ item.count }}×)
+              {{ item.word }} ({{ number(item.count) }}×)
             </span>
           </div>
         </div>
@@ -308,7 +308,7 @@
         >
           <div class="issue-header">
             <span class="issue-icon">🎭</span>
-            <span class="issue-title">{{ t("Clichés (") }}{{ issues.cliches.length }})</span>
+            <span class="issue-title">{{ t("Clichés (") }}{{ number(issues.cliches.length) }})</span>
           </div>
           <div class="issue-hint">
             {{ t("Find more original expressions") }}
@@ -359,7 +359,7 @@
                 y="20.35"
                 class="percentage"
               >
-                {{ Math.round(seo.score) }}
+                {{ number(Math.round(seo.score)) }}
               </text>
             </svg>
           </div>
@@ -374,18 +374,18 @@
             :class="{ success: seo.headingStructure.h1Count === 1 }"
           >
             <span :title="t('Number of H1 headings. Best practice is exactly one per page.')">{{ t("H1 Headings:") }}</span>
-            <strong>{{ seo.headingStructure.h1Count }}</strong>
+            <strong>{{ number(seo.headingStructure.h1Count) }}</strong>
           </div>
           <div
             class="seo-item"
             :class="{ success: seo.headingStructure.h2Count > 0 }"
           >
             <span :title="t('Number of H2 subheadings that structure the content.')">{{ t("H2 Headings:") }}</span>
-            <strong>{{ seo.headingStructure.h2Count }}</strong>
+            <strong>{{ number(seo.headingStructure.h2Count) }}</strong>
           </div>
           <div class="seo-item">
             <span :title="t('Length of the meta description. Aim for 120–160 characters.')">{{ t("Meta Length:") }}</span>
-            <strong>{{ seo.metaDescriptionLength }} {{ t("chars") }}</strong>
+            <strong>{{ number(seo.metaDescriptionLength) }} {{ t("chars") }}</strong>
           </div>
         </div>
 

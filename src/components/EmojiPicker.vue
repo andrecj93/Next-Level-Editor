@@ -305,8 +305,8 @@ const emojis: Emoji[] = [
 const filteredEmojis = computed(() => {
   let result = emojis.filter((e) => e.category === activeCategory.value);
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    result = result.filter((e) => e.name.toLowerCase().includes(query));
+    const query = searchQuery.value.toLocaleLowerCase();
+    result = result.filter((e) => t(e.name).toLocaleLowerCase().includes(query) || e.name.toLocaleLowerCase().includes(query));
   }
   return result;
 });

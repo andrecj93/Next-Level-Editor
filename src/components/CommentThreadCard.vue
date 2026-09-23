@@ -29,7 +29,7 @@
             :alt="thread.comments[0]?.author.name"
           />
           <span v-else>
-            {{ t(getInitials(thread.comments[0]?.author.name || "")) }}
+            {{ getInitials(thread.comments[0]?.author.name || "") }}
           </span>
         </div>
       </div>
@@ -133,8 +133,7 @@
           stroke-linejoin="round"
         />
       </svg>
-      {{ t("View") }} {{ thread.comments.length - 1 }}
-      {{ t(thread.comments.length === 2 ? "reply" : "replies") }}
+      {{ t('View {count} replies', { count: thread.comments.length - 1 }) }}
     </button>
 
     <!-- Add Reply Button (always visible when not showing form) -->

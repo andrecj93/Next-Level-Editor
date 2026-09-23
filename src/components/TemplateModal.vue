@@ -44,7 +44,7 @@
               class="template-card"
               role="button"
               tabindex="0"
-              :aria-label="`Apply template: ${template.name}`"
+              :aria-label="t('Apply template: {name}', { name: t(template.name) })"
               @click="selectTemplate(template)"
               @keydown.enter.prevent="selectTemplate(template)"
               @keydown.space.prevent="selectTemplate(template)"
@@ -53,7 +53,7 @@
                 {{ template.icon }}
               </div>
               <div class="template-info">
-                <h4>{{ template.name }}</h4>
+                <h4>{{ t(template.name) }}</h4>
                 <p>{{ t(template.description) }}</p>
               </div>
             </div>

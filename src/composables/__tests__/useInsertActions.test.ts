@@ -622,7 +622,7 @@ describe("useInsertActions", () => {
       handleInsertTable(tableData);
 
       expect(showToast).toHaveBeenCalledWith(
-        "✓ Table (2×3) inserted successfully!"
+        "✓ Table (2×3) inserted successfully!", 'success', { key: '✓ Table ({rows}×{columns}) inserted successfully!', parameters: { rows: 2, columns: 3 } }
       );
     });
 
@@ -645,7 +645,7 @@ describe("useInsertActions", () => {
 
       expect(performWithSelection).toHaveBeenCalled();
       expect(showToast).toHaveBeenCalledWith(
-        "✓ Table (5×5) inserted successfully!"
+        "✓ Table (5×5) inserted successfully!", 'success', { key: '✓ Table ({rows}×{columns}) inserted successfully!', parameters: { rows: 5, columns: 5 } }
       );
     });
 
@@ -668,7 +668,7 @@ describe("useInsertActions", () => {
 
       expect(performWithSelection).toHaveBeenCalled();
       expect(showToast).toHaveBeenCalledWith(
-        "✓ Table (2×2) inserted successfully!"
+        "✓ Table (2×2) inserted successfully!", 'success', { key: '✓ Table ({rows}×{columns}) inserted successfully!', parameters: { rows: 2, columns: 2 } }
       );
     });
   });

@@ -41,6 +41,23 @@ async function toolbarLabelsFit(page: Page) {
   expect(overflow, 'Toolbar labels must remain inside their own hit areas').toEqual([]);
 }
 
+async function noOrphanToolbarHints(page: Page) {
+  for (const button of await toolbarFor(page).locator('.writing-toolbar-row .dropdown-trigger[data-tooltip]').all()) {
+    await button.hover();
+    await settle(page);
+    const hint = await button.evaluate(el => {
+      const visible = (pseudo: string) => {
+        const style = getComputedStyle(el, pseudo);
+        return style.display !== 'none' && style.visibility === 'visible'
+          && Number(style.opacity) > 0 && !['none', 'normal'].includes(style.content);
+      };
+      return { name: el.getAttribute('aria-label'), arrow: visible('::before'), label: visible('::after') };
+    });
+    expect(hint.arrow && !hint.label, `${hint.name} must not leave a tooltip arrow without its label`).toBe(false);
+  }
+  await page.mouse.move(0, 0);
+}
+
 async function insideViewport(locator: Locator, timeout = 2000) {
   // WebKit delivers visualViewport resize after the protocol resize resolves.
   // Wait for the actual bounded geometry, including Vue's next-tick clamp.
@@ -143,6 +160,7 @@ test('heading and list changes preserve the caret for continued writing', async 
   await expect(editor.locator('p').first()).toHaveText('A quiet arrival.');
   await expect(page.getByRole('menu')).toHaveCount(0);
   await toolbarLabelsFit(page);
+  await noOrphanToolbarHints(page);
   await noHorizontalOverflow(page);
 });
 
@@ -382,9 +400,9 @@ test('a blank manuscript stays spacious and offers notes without moving the page
   if (width <= 700) {
     const toolbar = await toolbarFor(page).boundingBox();
     // Phones deliberately use two balanced rows so labels fit their targets.
-    expect(toolbar!.height, 'mobile tools leave room for the manuscript').toBeLessThanOrEqual(width <= 450 ? 96 : 52);
-    await toolbarLabelsFit(page);
+    expect(toolbar!.height, 'mobile tools stay within their one- or two-row budget').toBeLessThanOrEqual(width > 450 ? 52 : 96);
   }
+  await toolbarLabelsFit(page);
   await activate(editor, hasTouch);
   await page.keyboard.type('She returned in order to find the house.');
   await expect(opener).toHaveAttribute('aria-description', '1 writing note ready to review');
@@ -392,6 +410,18 @@ test('a blank manuscript stays spacious and offers notes without moving the page
   const after = await editor.boundingBox();
   expect(after!.x).toBe(before!.x);
   expect(after!.width).toBe(before!.width);
+  // Allow one pixel for fractional layout rounding at device scale factors.
+  await expect.poll(() => editor.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const screenTop = viewport?.offsetTop ?? 0;
+    const screenBottom = screenTop + (viewport?.height ?? innerHeight);
+    const toolbar = document.querySelector('[role="toolbar"][aria-label="Text formatting toolbar"]')!.getBoundingClientRect();
+    const dock = document.querySelector('.mobile-toolbar')?.getBoundingClientRect();
+    const toolbarBottom = toolbar.bottom > screenTop && toolbar.top < screenBottom ? toolbar.bottom : screenTop;
+    const dockTop = dock?.height && dock.top < screenBottom && dock.bottom > screenTop ? dock.top : screenBottom;
+    return Math.min(box.bottom, dockTop, screenBottom) - Math.max(box.top, toolbarBottom, screenTop);
+  }), { message: 'at least 96px of manuscript remain visible between the toolbar and touch dock' }).toBeGreaterThanOrEqual(95);
   await activate(opener, hasTouch);
   await expect(companion.getByRole('button', { name: 'Use “to”', exact: true })).toBeVisible();
   await activate(companion.getByRole('button', { name: 'Dismiss note: A little more direct', exact: true }), hasTouch);

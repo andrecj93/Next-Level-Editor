@@ -9,6 +9,8 @@ export interface WritingNote {
   quote: string;
   title: string;
   detail: string;
+  /** Optional UI message; detail retains the English fallback for existing hosts. */
+  detailMessage?: { key: string; parameters: Record<string, string | number> };
   replacement?: string;
 }
 
@@ -21,7 +23,7 @@ export interface WritingReview {
 }
 
 /** Give short, repeated phrases enough context to recognise before jumping. */
-export function writingNoteContext(note: WritingNote, outline: WritingReview['outline']) {
+export function writingNoteContext(note: WritingNote, outline: WritingReview['outline'], paragraphLabel: (number: number) => string = number => `Paragraph ${number}`) {
   let section: WritingReview['outline'][number] | undefined;
   for (const heading of outline) {
     if (heading.block >= note.block) break;
@@ -32,7 +34,7 @@ export function writingNoteContext(note: WritingNote, outline: WritingReview['ou
   const lead = before.length > 56 ? `…${before.slice(-56).replace(/^\S*\s/, '')}` : before;
   const tail = after.length > 56 ? `${after.slice(0, 56).replace(/\s\S*$/, '')}…` : after;
   const paragraph = note.block - (section?.block ?? -1);
-  return { before: lead, after: tail, location: `${section ? `${section.text} · ` : ''}Paragraph ${paragraph}` };
+  return { before: lead, after: tail, location: `${section ? `${section.text} · ` : ''}${paragraphLabel(paragraph)}` };
 }
 
 const WRITING_BLOCKS = 'h1,h2,h3,h4,h5,h6,p,li,blockquote,div,td,th';
@@ -113,9 +115,10 @@ export function reviewWriting(html: string): WritingReview {
       return;
     }
     result.paragraphs++;
-    const add = (start: number, quote: string, title: string, detail: string, replacement?: string) => {
+    const add = (start: number, quote: string, title: string, detail: string | NonNullable<WritingNote['detailMessage']>, replacement?: string) => {
       if (!passageIsEditable(block, start, start + quote.length)) return;
-      result.notes.push({ id: `${index}:${start}:${title}:${quote}`, block: index, blockText: paragraph, start, quote, title, detail, replacement });
+      const fallback = typeof detail === 'string' ? detail : detail.key.replace(/\{(\w+)\}/g, (token, key: string) => String(detail.parameters[key] ?? token));
+      result.notes.push({ id: `${index}:${start}:${title}:${quote}`, block: index, blockText: paragraph, start, quote, title, detail: fallback, ...(typeof detail === 'string' ? {} : { detailMessage: detail }), replacement });
     };
     const repeated = /\b([a-z]+)(\s+)\1\b/gi;
     let match: RegExpExecArray | null;
@@ -127,13 +130,13 @@ export function reviewWriting(html: string): WritingReview {
     while ((match = phrases.exec(paragraph))) {
       let replacement = simpler[match[0].toLowerCase()];
       if (/^[A-Z]/.test(match[0])) replacement = replacement[0].toUpperCase() + replacement.slice(1);
-      add(match.index, match[0], 'A little more direct', `“${replacement}” carries the same idea with fewer words. Your rhythm may call for the longer version.`, replacement);
+      add(match.index, match[0], 'A little more direct', { key: '“{replacement}” carries the same idea with fewer words. Your rhythm may call for the longer version.', parameters: { replacement } }, replacement);
     }
     const sentences = /[^.!?]+(?:[.!?]+|$)/g;
     while ((match = sentences.exec(paragraph))) {
       const sentence = match[0].trim();
       const count = sentence.split(/\s+/).length;
-      if (count > 35) add(match.index + match[0].indexOf(sentence), sentence, 'Give this thought room to breathe', `This sentence runs to ${count} words. Read it aloud; if you lose the thread, try a full stop where the thought turns.`);
+      if (count > 35) add(match.index + match[0].indexOf(sentence), sentence, 'Give this thought room to breathe', { key: 'This sentence runs to {count} words. Read it aloud; if you lose the thread, try a full stop where the thought turns.', parameters: { count } });
     }
   });
   return result;

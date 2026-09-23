@@ -40,7 +40,7 @@
               v-if="item.shortcut"
               class="context-menu-shortcut"
             >{{
-              item.shortcut
+              shortcut(item.shortcut)
             }}</span>
           </button>
         </div>
@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
+const { t, shortcut, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, watch, nextTick, onBeforeUnmount } from "vue";
 import type { ContextMenuItem } from "../types/contextMenu";
 

@@ -389,6 +389,7 @@
       :last-saved="lastSaved"
       :save-status="saveStatus"
       :toast-message="toastMessage"
+      :toast-descriptor="toastDescriptor"
       :has-pending-changes="isDirty"
       :persistent-save="Boolean(props.saveHandler)"
       :toast-type="toastType"
@@ -530,7 +531,7 @@
           v-if="comments.threads.value.some((t) => t.status === 'open')"
           class="comments-toggle-badge"
         >
-          {{ comments.threads.value.filter((t) => t.status === "open").length }}
+          {{ number(comments.threads.value.filter((t) => t.status === "open").length) }}
         </span>
       </button>
     </Transition>
@@ -705,6 +706,8 @@ import { useDocumentWorkspace } from '../composables/useDocumentWorkspace';
 import { useDocumentClipboard } from '../composables/useDocumentClipboard';
 import { REFERENCE_CLIPBOARD_TYPE, hasReferenceFragment, importReferenceFragment } from '../utils/referenceClipboard';
 import { provideEditorLocale } from '../composables/useEditorLocale';
+import { localizedMessage } from '../utils/localizedMessage';
+import type { EditorMessageDescriptor } from '../types/locale';
 import { assignBlockIds } from '../utils/documentOperations';
 import type { CollaborationBinding } from '../utils/collaborationBinding';
 import { defaultDocumentMetadata } from '../types/document';
@@ -856,7 +859,8 @@ const props = withDefaults(defineProps<NextLevelEditorProps>(), {
 const effectiveReadonly = computed(() => props.readonly || props.documentOptions?.role === 'viewer' ||
   Boolean(props.collaboration && props.documentOptions?.role === 'reviewer'));
 const writingLanguageSupported = computed(() => /^en(?:-|$)/i.test(props.contentLanguage));
-const { t, locale: resolvedUiLocale, direction: resolvedUiDirection } = provideEditorLocale(() => props.locale, () => props.messages ?? {}, () => props.uiDirection ?? 'auto', () => props.documentOptions);
+const editorLocale = provideEditorLocale(() => props.locale, () => props.messages ?? {}, () => props.uiDirection ?? 'auto', () => props.documentOptions);
+const { t, number, locale: resolvedUiLocale, direction: resolvedUiDirection } = editorLocale;
 const ephemeralDocumentId=useStableId();
 const effectiveDocumentOptions = computed(() => {
   const options=props.documentOptions ?? (props.documentTools ? {id:'ephemeral-'+ephemeralDocumentId} : undefined);
@@ -1359,7 +1363,7 @@ const {
 const rememberWritingPosition = useWritingReflow(editorContent, toRef(props, 'writingMode'));
 const dismissWritingNote = (note: WritingNote) => {
   if (!dismissNote(note)) return;
-  announce('Note dismissed. Your words are unchanged.');
+  announce(t('Note dismissed. Your words are unchanged.'));
   console.debug('[NextLevelEditor] Writing note dismissed', { kind: note.title });
 };
 const companionOpen = ref(false);
@@ -1444,7 +1448,7 @@ const locateWritingNote = (note: WritingNote) => {
   const range = writingNoteRange(root, note);
   if (!range) {
     refreshWritingReview();
-    announce('That passage has changed. The writing notes have been refreshed.');
+    announce(t('That passage has changed. The writing notes have been refreshed.'));
     console.debug('[NextLevelEditor] Writing suggestion refreshed', { reason: 'passage-changed' });
     return false;
   }
@@ -1465,10 +1469,10 @@ const applyWritingNote = (note: WritingNote) => {
     onInput();
     captureSnapshot();
     refreshWritingReview();
-    announce('Suggestion applied. You can undo this change.');
+    announce(t('Suggestion applied. You can undo this change.'));
     console.debug('[NextLevelEditor] Writing suggestion applied', { kind: note.title });
   } else {
-    announce('The suggestion could not be applied. You can edit the selected passage directly.');
+    announce(t('The suggestion could not be applied. You can edit the selected passage directly.'));
     console.warn('[NextLevelEditor] Writing suggestion could not be applied', { kind: note.title });
   }
 };
@@ -1688,6 +1692,7 @@ const {
   showColorsDropdown,
   showToast,
   toastMessage,
+  toastDescriptor,
   toastType,
   showToastNotification,
   toggleFullScreen,
@@ -1697,9 +1702,9 @@ const {
 // A visible toast is also user-facing feedback that screen-reader users must
 // hear. `notify` fires both so every "Table inserted", "Copied", etc. is
 // spoken. Passed to the composables below in place of the bare toast fn.
-const notify = (message: string, type?: "success" | "error") => {
-  showToastNotification(message, type);
-  announce(t(message), { priority: type === "error" ? "assertive" : "polite" });
+const notify = (message: string, type?: "success" | "error", descriptor?: EditorMessageDescriptor) => {
+  showToastNotification(message, type, descriptor);
+  announce(localizedMessage(editorLocale, message, descriptor), { priority: type === "error" ? "assertive" : "polite" });
 };
 
 // Table state
@@ -1774,7 +1779,7 @@ const handleInlineAction = (tag: string) => {
   handleInlineActionBase(tag);
   const label = INLINE_FORMAT_LABELS[tag];
   if (label) {
-    announce(`${label} ${isInlineActionActive(tag) ? "on" : "off"}`);
+    announce(t(isInlineActionActive(tag) ? '{label} on' : '{label} off', { label: t(label) }));
   }
 };
 
@@ -1872,7 +1877,8 @@ const handleSelectTemplate = async (template: {
     hasContent
       ? "Template applied — press Ctrl+Z to restore your previous content"
       : "Template applied",
-    "success"
+    "success",
+    hasContent ? { key: 'Template applied — press {shortcut} to restore your previous content', parameters: { shortcut: 'Mod+Z' }, shortcutParameters: ['shortcut'] } : undefined,
   );
 };
 
@@ -2430,6 +2436,7 @@ const {
   showToast: notify,
   editorRoot: rootEl,
   pluginSlashCommands,
+  translate: t,
 });
 
 // The editing surface can host TWO exclusive popups — the slash menu and the
@@ -2465,7 +2472,7 @@ watch(
   (open, wasOpen) => {
     if (open === wasOpen) return;
     if (!open) {
-      announce("Suggestions closed");
+      announce(t("Suggestions closed"));
       return;
     }
     const count = showVariableAutocomplete.value
@@ -2473,8 +2480,8 @@ watch(
       : commandOptions.length;
     announce(
       typeof count === "number"
-        ? `${count} suggestion${count === 1 ? "" : "s"} available. Use arrow keys to review, Enter to insert.`
-        : "Suggestions available. Use arrow keys to review, Enter to insert."
+        ? t('{count} suggestions available. Use arrow keys to review, {shortcut} to insert.', { count, shortcut: editorLocale.shortcut('Enter') })
+        : t('Suggestions available. Use arrow keys to review, {shortcut} to insert.', { shortcut: editorLocale.shortcut('Enter') })
     );
   }
 );

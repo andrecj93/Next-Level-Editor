@@ -47,7 +47,7 @@
               class="btn btn-danger"
               @click="deleteSelected"
             >
-              {{ t("🗑️ Delete (") }}{{ selectedFiles.length }})
+              {{ t('🗑️ Delete ({count})', { count: selectedFiles.length }) }}
             </button>
           </div>
           <div class="toolbar-right">
@@ -111,6 +111,7 @@
               <div class="file-checkbox">
                 <input
                   type="checkbox"
+                  :aria-label="t('Select {name}', { name: file.name })"
                   :checked="selectedFiles.includes(file.id)"
                   @click.stop="toggleSingleSelection(file.id)"
                 />
@@ -126,7 +127,7 @@
                 </div>
               </div>
               <div class="file-info">
-                <div class="file-name" :title="t(file.name)">
+                <div class="file-name" :title="file.name">
                   {{ file.name }}
                 </div>
                 <div class="file-meta">
@@ -148,7 +149,7 @@
                      "check mark" and "wastebasket". #R23-28 -->
                 <button
                   class="btn-icon"
-                  :aria-label="`Insert ${file.name} into editor`"
+                  :aria-label="t('Insert {name} into editor', { name: file.name })"
                   :title="t('Insert into editor')"
                   @click.stop="insertFile(file)"
                 >
@@ -156,7 +157,7 @@
                 </button>
                 <button
                   class="btn-icon btn-danger"
-                  :aria-label="`Delete ${file.name}`"
+                  :aria-label="t('Delete {name}', { name: file.name })"
                   :title="t('Delete')"
                   @click.stop="deleteFile(file.id)"
                 >
@@ -174,6 +175,7 @@
                   <th style="width: 40px">
                     <input
                       type="checkbox"
+                      :aria-label="t('Select all files')"
                       :checked="allFilesSelected"
                       @change="toggleSelectAll"
                     />
@@ -195,6 +197,7 @@
                   <td>
                     <input
                       type="checkbox"
+                      :aria-label="t('Select {name}', { name: file.name })"
                       :checked="selectedFiles.includes(file.id)"
                       @click.stop="toggleSingleSelection(file.id)"
                     />
@@ -203,13 +206,14 @@
                     <span class="file-icon-inline">{{
                       getFileIcon(file.type)
                     }}</span>
-                    <span :title="t(file.name)">{{ file.name }}</span>
+                    <span :title="file.name">{{ file.name }}</span>
                   </td>
                   <td>{{ formatFileSize(file.size) }}</td>
                   <td>{{ formatDate(file.uploadedAt) }}</td>
                   <td class="actions-cell">
                     <button
                       class="btn-icon"
+                      :aria-label="t('Insert {name} into editor', { name: file.name })"
                       :title="t('Insert into editor')"
                       @click.stop="insertFile(file)"
                     >
@@ -217,6 +221,7 @@
                     </button>
                     <button
                       class="btn-icon btn-danger"
+                      :aria-label="t('Delete {name}', { name: file.name })"
                       :title="t('Delete')"
                       @click.stop="deleteFile(file.id)"
                     >
@@ -232,13 +237,13 @@
         <!-- Storage Info -->
         <div v-if="files.length > 0" class="storage-info">
           <span
-            >{{ files.length }} {{ t("file(s) •") }}
+            >{{ t('{count} files', { count: files.length }) }} •
             {{ formatFileSize(totalSize) }} {{ t("used") }}</span
           >
         </div>
 
         <!-- Error Message -->
-        <div v-if="errorMessage" class="error-message">
+        <div v-if="errorMessage" class="error-message" role="alert">
           ⚠️ {{ errorMessage }}
         </div>
       </div>
@@ -251,9 +256,10 @@
 </template>
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t, date: calendarDate } = useEditorLocale();
+const { t, number, date: calendarDate } = useEditorLocale();
 import { ref, computed, watch } from "vue";
 import { fileManager, type ManagedFile } from "../utils/fileManager";
+import { FileValidationError } from '../utils/fileValidationError';
 import { useModalDialog } from "../composables/useModalDialog";
 
 interface Props {
@@ -274,10 +280,22 @@ const files = ref<ManagedFile[]>([]);
 const selectedFiles = ref<string[]>([]);
 const viewMode = ref<"grid" | "list">("grid");
 const isDragging = ref(false);
-const errorMessage = ref("");
+const uploadResult = ref<{ uploaded: number; failed: number; reasons: unknown[] } | null>(null);
+const errorMessage = computed(() => {
+  const result = uploadResult.value;
+  if (!result?.failed) return '';
+  const count = t('{count} files uploaded, {failed} failed', { count: result.uploaded, failed: result.failed });
+  const reasons = result.reasons.map(error => {
+    if (error instanceof FileValidationError) return error.reason === 'size'
+      ? t('File size exceeds maximum allowed size of {size}', { size: formatFileSize(Number(error.value)) })
+      : t('File type {type} is not allowed', { type: String(error.value) });
+    return t(error instanceof Error ? error.message : 'Upload failed');
+  });
+  return count + (reasons.length ? ' — ' + [...new Set(reasons)].join('; ') : '');
+});
 
 const maxFileSizeFormatted = computed(() =>
-  fileManager.formatFileSize(10 * 1024 * 1024)
+  formatFileSize(10 * 1024 * 1024)
 );
 
 const totalSize = computed(() =>
@@ -302,7 +320,7 @@ watch(
   (isOpen) => {
     if (isOpen) {
       loadFiles();
-      errorMessage.value = "";
+      uploadResult.value = null;
       selectedFiles.value = [];
     }
   }
@@ -328,12 +346,12 @@ async function handleDrop(event: DragEvent) {
 }
 
 async function uploadFiles(fileList: File[]) {
-  errorMessage.value = "";
+  uploadResult.value = null;
   let successCount = 0;
   let errorCount = 0;
   // Collect the distinct WHY of each failure — a bare "N failed" left the user
   // with no idea what to fix ("type not allowed", "size exceeds maximum", …).
-  const reasons = new Set<string>();
+  const reasons: unknown[] = [];
 
   for (const file of fileList) {
     try {
@@ -341,18 +359,16 @@ async function uploadFiles(fileList: File[]) {
       successCount++;
     } catch (error) {
       errorCount++;
-      reasons.add(error instanceof Error ? error.message : "Upload failed");
+      reasons.push(error);
     }
   }
 
   loadFiles();
 
   if (successCount > 0 && errorCount === 0) {
-    errorMessage.value = "";
+    uploadResult.value = null;
   } else if (errorCount > 0) {
-    const why = [...reasons].join("; ");
-    const count = `${successCount} file(s) uploaded, ${errorCount} failed`;
-    errorMessage.value = why ? `${count} — ${why}` : count;
+    uploadResult.value = { uploaded: successCount, failed: errorCount, reasons };
   }
 }
 
@@ -395,7 +411,7 @@ function toggleSelectAll() {
 }
 
 function deleteFile(fileId: string) {
-  if (confirm("Delete this file?")) {
+  if (confirm(t("Delete this file?"))) {
     fileManager.deleteFile(fileId);
     selectedFiles.value = selectedFiles.value.filter((id) => id !== fileId);
     loadFiles();
@@ -403,7 +419,7 @@ function deleteFile(fileId: string) {
 }
 
 function deleteSelected() {
-  if (confirm(`Delete ${selectedFiles.value.length} file(s)?`)) {
+  if (confirm(t('Delete {count} files?', { count: selectedFiles.value.length }))) {
     fileManager.deleteFiles(selectedFiles.value);
     selectedFiles.value = [];
     loadFiles();
@@ -424,7 +440,10 @@ function isContentAvailable(file: ManagedFile): boolean {
 }
 
 function formatFileSize(bytes: number): string {
-  return fileManager.formatFileSize(bytes);
+  const value = Math.max(0, Number.isFinite(bytes) ? bytes : 0);
+  const index = value ? Math.max(0, Math.min(3, Math.floor(Math.log(value) / Math.log(1024)))) : 0;
+  const unit = ['Bytes', 'KB', 'MB', 'GB'][index];
+  return `${number(value / 1024 ** index, { maximumFractionDigits: 2 })} ${unit}`;
 }
 
 function formatDate(date: Date): string {

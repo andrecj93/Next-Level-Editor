@@ -20,7 +20,7 @@
           class="floating-btn"
           :class="{ active: action.isActive?.() }"
           :aria-label="t(action.label)"
-          :title="t(action.tooltip)"
+          :title="hint(action.tooltip, action.shortcut)"
           @click="action.onClick"
         >
           <span
@@ -36,7 +36,10 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
+const locale = useEditorLocale();
+const { t, locale: uiLocale, direction: uiDirection } = locale;
+import { toolbarHint } from '../utils/toolbarHint';
+const hint = (label?: string, keys?: string) => toolbarHint(locale, label, keys);
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 // Positioning math lives in utils/ (pure + unit-testable; a second plain
 // <script> block exporting it from this SFC tripped TS4082 in vue-tsc's
@@ -60,6 +63,7 @@ interface ToolbarAction {
   id: string
   label: string
   tooltip: string
+  shortcut?: string
   icon?: string
   onClick: () => void
   isActive?: () => boolean

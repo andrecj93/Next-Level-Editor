@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
+import { ensureToolbarExpanded } from './helpers/toolbar';
 
 async function selectText(editor: Locator, needle: string) {
   await editor.evaluate((root, text) => {
@@ -25,6 +26,80 @@ async function load(page: Page, query = '') {
   await expect(editor).toContainText('A better document');
   return { root, editor };
 }
+
+test('file names, localized sizes, errors and dialog actions survive a live language switch', async ({ page }, info) => {
+  const { root, editor } = await load(page);
+  const before = await editor.innerHTML();
+  await ensureToolbarExpanded(page);
+  await root.getByRole('button', { name: 'Insert', exact: true }).click();
+  await root.getByRole('menuitem', { name: 'File Manager', exact: true }).click();
+  const dialog = page.locator('dialog.file-manager-modal');
+  await expect(dialog).toBeVisible();
+  await dialog.locator('input[type=file]').setInputFiles([
+    { name: 'Save', mimeType: 'text/plain', buffer: Buffer.alloc(1536, 'a') },
+    { name: 'invalid.html', mimeType: 'text/html', buffer: Buffer.from('<p>rejected file</p>') },
+  ]);
+  await expect(dialog.getByRole('alert')).toContainText('1 file uploaded, 1 failed');
+  await expect(dialog.locator('.file-meta')).toHaveText('1.5 KB');
+  await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
+  await expect(dialog).toHaveAccessibleName('📁 Gestor de ficheiros');
+  await expect(dialog.getByRole('alert')).toContainText('1 ficheiro carregado; falhas: 1');
+  await expect(dialog.getByRole('alert')).toContainText('O tipo de ficheiro text/html não é permitido');
+  await expect(dialog.locator('.file-name')).toHaveText('Save');
+  await expect(dialog.locator('.file-meta')).toHaveText('1,5 KB');
+  await expect(dialog.getByRole('checkbox', { name: 'Selecionar Save', exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Inserir Save no editor', exact: true })).toBeVisible();
+  await info.attach('Localized file manager', { body: await dialog.screenshot(), contentType: 'image/png' });
+  await page.getByLabel('Interface', { exact: true }).selectOption('en');
+  await expect(dialog.getByRole('alert')).toContainText('File type text/html is not allowed');
+  await dialog.getByRole('button', { name: 'List view', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'Insert Save into editor', exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(await editor.innerHTML()).toBe(before);
+});
+
+test('translated color controls return keyboard focus to their trigger on Escape', async ({ page }) => {
+  const { root, editor } = await load(page);
+  await ensureToolbarExpanded(page);
+  await selectText(editor, 'Write, review');
+  const before = await editor.innerHTML();
+  await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
+  const trigger = root.getByRole('button', { name: 'Cores', exact: true });
+  const expand = root.getByRole('button', { name: 'Expandir barra de ferramentas', exact: true });
+  if (await expand.isVisible()) await expand.click();
+  await trigger.click();
+  const menu = root.locator('.colors-menu');
+  await expect(menu).toBeVisible();
+  const swatch = menu.getByRole('button', { name: /^Cor do texto #/ }).first();
+  await expect(swatch).toBeVisible();
+  await swatch.focus();
+  await swatch.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  expect(await editor.innerHTML()).toBe(before);
+});
+
+test('a table insertion and its visible feedback follow locale changes and remain undoable', async ({ page }) => {
+  const { root, editor } = await load(page);
+  await selectText(editor, 'Write, review');
+  await ensureToolbarExpanded(page);
+  const before = await editor.innerHTML();
+  await root.getByRole('button', { name: 'Insert', exact: true }).click();
+  await root.getByRole('menuitem', { name: 'Table', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Insert Table', exact: true });
+  await dialog.getByLabel('Rows', { exact: true }).fill('2');
+  await dialog.getByLabel('Columns', { exact: true }).fill('3');
+  await dialog.getByRole('button', { name: 'Insert Table', exact: true }).click();
+  const toast = root.locator('.toast-notification');
+  await expect(toast).toHaveText('✓ Table (2×3) inserted successfully!');
+  await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
+  await expect(toast).toHaveText('✓ Tabela (2×3) inserida com sucesso!');
+  await expect(editor.locator('table')).toHaveCount(2);
+  await editor.focus();
+  await editor.press('ControlOrMeta+z');
+  expect(await editor.innerHTML()).toBe(before);
+});
 
 test('UI locale changes preserve the draft, selected passage, document language and undo', async ({ page }) => {
   const { root, editor } = await load(page);

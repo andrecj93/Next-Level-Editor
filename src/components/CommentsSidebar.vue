@@ -60,7 +60,7 @@
             @click="activeTab = 'open'"
           >
             <span class="comments-tab-label">{{ t("Open") }}</span>
-            <span class="comments-tab-badge">{{ openThreads.length }}</span>
+            <span class="comments-tab-badge">{{ number(openThreads.length) }}</span>
           </button>
           <button
             class="comments-tab"
@@ -70,7 +70,7 @@
             @click="activeTab = 'resolved'"
           >
             <span class="comments-tab-label">{{ t("Resolved") }}</span>
-            <span class="comments-tab-badge">{{ resolvedThreads.length }}</span>
+            <span class="comments-tab-badge">{{ number(resolvedThreads.length) }}</span>
           </button>
         </div>
       </div>
@@ -154,7 +154,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, number } = useEditorLocale();
 import { ref, computed, watch, nextTick } from "vue";
 import type {
   CommentThread,

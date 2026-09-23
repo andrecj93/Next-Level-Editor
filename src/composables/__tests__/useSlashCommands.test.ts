@@ -377,7 +377,7 @@ describe("useSlashCommands", () => {
         showToast,
       });
       handleCommandOption(commandOptions.find((c) => c.id === "slash-bold")!);
-      expect(showToast).toHaveBeenCalledWith("Bold applied", "success");
+      expect(showToast).toHaveBeenCalledWith("Bold applied", "success", { key: '{label} applied', parameters: { label: 'Bold' }, translatedParameters: ['label'] });
     });
 
     it("does NOT toast 'applied' for a command that only opens a modal", () => {

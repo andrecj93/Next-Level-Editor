@@ -4,13 +4,13 @@
       <span class="companion-title">{{ t("In the margins") }}</span>
       <nav v-if="tab === 'review' && visibleNotes.length > 1" class="note-pagination" :aria-label="t('Writing note navigation')">
         <button type="button" :aria-label="t('Previous note')" :disabled="noteIndex === 0" @click="changeNote(-1)">←</button>
-        <span>{{ noteIndex + 1 }} {{ t('of') }} {{ visibleNotes.length }}</span>
+        <span>{{ t('{current} of {total}', { current: noteIndex + 1, total: visibleNotes.length }) }}</span>
         <button type="button" :aria-label="t('Next note')" :disabled="noteIndex === visibleNotes.length - 1" @click="changeNote(1)">→</button>
       </nav>
       <button type="button" :aria-label="t('Close writing companion')" @click="$emit('close')">×</button>
     </header>
     <div class="companion-tabs" role="group" :aria-label="t('Writing companion views')">
-      <button ref="reviewButton" type="button" :aria-pressed="tab === 'review'" @click="tab = 'review'">{{ t("Writing notes") }} <span v-if="visibleNotes.length">{{ visibleNotes.length }}</span></button>
+      <button ref="reviewButton" type="button" :aria-pressed="tab === 'review'" @click="tab = 'review'">{{ t("Writing notes") }} <span v-if="visibleNotes.length">{{ number(visibleNotes.length) }}</span></button>
       <button type="button" :aria-pressed="tab === 'outline'" @click="tab = 'outline'">{{ t("Outline") }}</button>
     </div>
     <div ref="body" class="companion-body">
@@ -22,8 +22,8 @@
         <article v-if="currentNote && currentContext" :key="currentNote.id" class="writing-note">
           <p class="note-location">{{ currentContext.location }}</p>
           <h3>{{ t(currentNote.title) }}</h3>
-          <button type="button" class="note-passage" :aria-label="`${t('Show passage in')} ${currentContext.location}: ${currentContext.before}${currentNote.quote}${currentContext.after}`" @click="$emit('locate', currentNote)">“{{ currentContext.before }}<mark>{{ currentNote.quote }}</mark>{{ currentContext.after }}” <span aria-hidden="true">↗</span></button>
-          <p>{{ t(currentNote.detail) }}</p>
+          <button type="button" class="note-passage" :aria-label="t('Show passage in {location}: {passage}', { location: currentContext.location, passage: currentContext.before + currentNote.quote + currentContext.after })" @click="$emit('locate', currentNote)">“{{ currentContext.before }}<mark>{{ currentNote.quote }}</mark>{{ currentContext.after }}” <span aria-hidden="true">↗</span></button>
+          <p>{{ t(currentNote.detailMessage?.key ?? currentNote.detail, currentNote.detailMessage?.parameters) }}</p>
         </article>
         <div v-if="!visibleNotes.length" class="writing-prompt">
           <span class="companion-kicker">{{ t("A nudge, if you need one") }}</span>
@@ -73,7 +73,7 @@ const onFocusOut = (event: FocusEvent) => {
 const visibleNotes = computed(() => props.review.notes.filter(note => !props.dismissedNotes.has(note.id)));
 const noteIndex = ref(0);
 const currentNote = computed(() => visibleNotes.value[noteIndex.value]);
-const currentContext = computed(() => currentNote.value && writingNoteContext(currentNote.value, props.review.outline));
+const currentContext = computed(() => currentNote.value && writingNoteContext(currentNote.value, props.review.outline, number => t('Paragraph {number}', { number })));
 watch(() => visibleNotes.value.length, count => { noteIndex.value = Math.max(0, Math.min(noteIndex.value, count - 1)); });
 const scrollToNote = () => {
   if (body.value) body.value.scrollTop = 0;

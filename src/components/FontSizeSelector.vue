@@ -2,7 +2,7 @@
   <div class="font-size-selector">
     <button
       class="font-size-button"
-      :aria-label="`Font size: ${currentSizeLabel}`"
+      :aria-label="t('Font size: {size}', { size: currentSizeName })"
       @click="toggleDropdown"
     >
       <span class="size-icon">{{ currentSizeLabel }}</span>
@@ -74,8 +74,9 @@ const fontSizes: FontSize[] = [
 
 const currentSizeLabel = computed(() => {
   const size = fontSizes.find(s => s.value === props.modelValue)
-  return size ? size.label.charAt(0) : 'N'
+  return t(size?.label ?? 'Normal').charAt(0)
 })
+const currentSizeName = computed(() => t(fontSizes.find(size => size.value === props.modelValue)?.label ?? 'Normal'))
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value

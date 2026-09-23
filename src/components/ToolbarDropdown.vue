@@ -9,8 +9,8 @@
       ref="triggerRef"
       class="dropdown-trigger"
       :class="{ active: hasActiveItem }"
-      :data-tooltip="t(tooltip)"
-      :title="t(tooltip)"
+      :data-tooltip="hint(tooltip, disabled)"
+      :title="hint(tooltip, disabled)"
       :aria-label="t(label)"
       :aria-expanded="isOpen"
       aria-haspopup="menu"
@@ -79,7 +79,10 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t, shortcut } = useEditorLocale();
+const locale = useEditorLocale();
+const { t, shortcut } = locale;
+import { toolbarHint } from '../utils/toolbarHint';
+const hint = (label?: string, disabled = false) => toolbarHint(locale, label, undefined, !disabled);
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 
 interface DropdownItem {

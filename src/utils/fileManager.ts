@@ -6,6 +6,8 @@
  * In production, this should be replaced with actual server-side storage.
  */
 
+import { FileValidationError } from './fileValidationError';
+
 export interface ManagedFile {
   id: string;
   name: string;
@@ -53,16 +55,16 @@ class FileManagerService {
   async uploadFile(file: File): Promise<ManagedFile> {
     // Validate file size
     if (file.size > this.options.maxFileSize) {
-      throw new Error(
+      throw new FileValidationError(
         `File size exceeds maximum allowed size of ${this.formatFileSize(
           this.options.maxFileSize
-        )}`
+        )}`, 'size', this.options.maxFileSize
       );
     }
 
     // Validate file type
     if (!this.isFileTypeAllowed(file.type)) {
-      throw new Error(`File type ${file.type} is not allowed`);
+      throw new FileValidationError(`File type ${file.type} is not allowed`, 'type', file.type);
     }
 
     // Generate unique ID

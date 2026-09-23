@@ -37,7 +37,9 @@ export interface UseSlashCommandsOptions {
   openCodeBlockModal: () => void;
   handleInsertHR: () => void;
   performWithSelection: (callback: (root: HTMLElement) => void) => void;
-  showToast?: (message: string, type?: "success" | "error") => void;
+  showToast?: (message: string, type?: "success" | "error", descriptor?: import('../types/locale').EditorMessageDescriptor) => void;
+  /** Translate built-in UI labels for search; host text falls back unchanged. */
+  translate?: (label: string) => string;
   /**
    * This editor's root element, so the menu is clamped against ITS toolbar and
    * not another editor's further down the page. #R23-7
@@ -352,8 +354,8 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     const matches = query
       ? all.filter(
           (option) =>
-            option.label.toLowerCase().includes(query) ||
-            option.description.toLowerCase().includes(query) ||
+            (options.translate?.(option.label) ?? option.label).toLocaleLowerCase().includes(query) ||
+            (options.translate?.(option.description) ?? option.description).toLocaleLowerCase().includes(query) ||
             option.trigger?.toLowerCase().includes(query)
         )
       : all;
@@ -411,7 +413,7 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     // (Link/Image/Table/Code Block) hasn't applied anything yet — claiming
     // "Table applied" the moment its dialog opens is a lie.
     if (showToast && !option.opensModal) {
-      showToast(`${option.label} applied`, "success");
+      showToast(`${option.label} applied`, "success", { key: '{label} applied', parameters: { label: option.label }, translatedParameters: ['label'] });
     }
   };
 

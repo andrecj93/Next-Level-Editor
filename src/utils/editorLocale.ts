@@ -73,8 +73,16 @@ export function createEditorLocaleFormatter(
     },
     shortcut(keys, platform) {
       const mac = platform === 'mac' || (!platform && typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform));
-      const labels: Record<string, string> = { Mod: mac ? '⌘' : 'Ctrl', ControlOrMeta: mac ? '⌘' : 'Ctrl', Meta: '⌘', Control: 'Ctrl', Alt: mac ? '⌥' : 'Alt', Shift: mac ? '⇧' : 'Shift', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' };
-      return keys.split('+').map(key => t(labels[key] ?? key)).join(mac ? '' : '+');
+      // Legacy registry bindings use Ctrl as the platform modifier; Control
+      // remains available when a host means the physical Control key on macOS.
+      const labels: Record<string, string> = { mod: mac ? '⌘' : 'Ctrl', controlormeta: mac ? '⌘' : 'Ctrl', ctrl: mac ? '⌘' : 'Ctrl', meta: '⌘', cmd: '⌘', command: '⌘', control: 'Ctrl', alt: mac ? '⌥' : 'Alt', shift: mac ? '⇧' : 'Shift', enter: 'Enter', escape: 'Esc', esc: 'Esc', tab: 'Tab', space: 'Space', backspace: 'Backspace', delete: 'Delete', arrowup: '↑', arrowdown: '↓', arrowleft: '←', arrowright: '→' };
+      Object.assign(labels, { home: 'Home', end: 'End', pageup: 'PageUp', pagedown: 'PageDown' });
+      const parts = keys.split('+');
+      if (keys.endsWith('++')) parts.splice(-2, 2, '+');
+      return parts.map(part => {
+        const key = part.trim();
+        return t(labels[key.toLowerCase()] ?? (/^[a-z]$/i.test(key) ? key.toUpperCase() : key));
+      }).join(mac ? '' : '+');
     },
   };
 }

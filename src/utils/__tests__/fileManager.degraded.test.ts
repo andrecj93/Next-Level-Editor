@@ -81,7 +81,8 @@ describe("a content-dropped file is recognisable (#R23-19)", () => {
     expect(editorContent.value.querySelector("img")).toBeNull();
     expect(showToast).toHaveBeenCalledWith(
       expect.stringContaining("photo.png"),
-      "error"
+      "error",
+      { key: '"{name}" lost its content when storage filled up and can\'t be inserted', parameters: { name: 'photo.png' } }
     );
   });
 });

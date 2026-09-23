@@ -3,7 +3,7 @@
     <!-- Timeline Header -->
     <div class="timeline-header">
       <h3 class="timeline-title">
-        {{ title }}
+        {{ t(title) }}
       </h3>
       <div class="timeline-actions">
         <button
@@ -12,7 +12,7 @@
           :aria-label="t(clearButtonLabel)"
           @click="handleClear"
         >
-          {{ clearButtonLabel }}
+          {{ t(clearButtonLabel) }}
         </button>
         <button
           v-if="showExportButton && hasHistory"
@@ -20,7 +20,7 @@
           :aria-label="t(exportButtonLabel)"
           @click="handleExport"
         >
-          {{ exportButtonLabel }}
+          {{ t(exportButtonLabel) }}
         </button>
       </div>
     </div>
@@ -34,7 +34,7 @@
         />
       </div>
       <div class="timeline-progress-text">
-        {{ currentIndex + 1 }} / {{ historySize }}
+        {{ number(currentIndex + 1) }} / {{ number(historySize) }}
       </div>
     </div>
 
@@ -88,7 +88,7 @@
         role="button"
         tabindex="0"
         :aria-current="index === currentIndex ? 'true' : undefined"
-        :aria-label="`Restore ${entry.label || `Version ${index + 1}`}, ${formatTime(entry.timestamp)}`"
+        :aria-label="t('Restore {version}, {time}', { version: entry.label || t('Version {number}', { number: index + 1 }), time: formatTime(entry.timestamp) })"
         @click="handleEntryClick(index)"
         @keydown.enter.prevent="handleEntryClick(index)"
         @keydown.space.prevent="handleEntryClick(index)"
@@ -97,7 +97,7 @@
         <div class="entry-content">
           <div class="entry-header">
             <span class="entry-label">
-              {{ entry.label || `Version ${index + 1}` }}
+              {{ entry.label || t('Version {number}', { number: index + 1 }) }}
             </span>
             <span class="entry-time">
               {{ formatTime(entry.timestamp) }}
@@ -115,14 +115,14 @@
 
     <!-- Empty State -->
     <div v-else class="timeline-empty">
-      <p>{{ emptyMessage }}</p>
+      <p>{{ t(emptyMessage) }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t, date: calendarDate } = useEditorLocale();
+const { t, number, date: calendarDate } = useEditorLocale();
 import { ref } from "vue";
 import type { HistoryEntry } from "../composables/useHistoryTimeline";
 import { smoothScrollIntoView } from "../utils/scroll";

@@ -75,7 +75,7 @@
 
         <!-- Size Indicator -->
         <div class="size-indicator">
-          {{ Math.round(currentWidth) }}×{{ Math.round(currentHeight) }}{{ t("px") }}
+          {{ number(Math.round(currentWidth)) }}×{{ number(Math.round(currentHeight)) }}{{ t("px") }}
         </div>
       </div>
     </div>
@@ -94,7 +94,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, number } = useEditorLocale();
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useResizable } from "../composables/useResizable";
 import { useDraggable } from "../composables/useDraggable";

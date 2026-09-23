@@ -55,6 +55,11 @@ describe('public locale formatting contract', () => {
     expect(f.shortcut('Mod+Shift+ArrowRight', 'other')).toBe('Ctrl+Maiús+→');
     expect(f.shortcut('Mod+Shift+ArrowRight', 'mac')).toBe('⌘⇧→');
     expect(f.shortcut('Space', 'other')).toBe('Espaço');
+    expect(f.shortcut('ctrl+shift+b', 'other')).toBe('Ctrl+Maiús+B');
+    expect(f.shortcut('ctrl+shift+b', 'mac')).toBe('⌘⇧B');
+    expect(f.shortcut('Control+Alt+ArrowDown', 'mac')).toBe('Ctrl⌥↓');
+    expect(f.shortcut('Ctrl++', 'mac')).toBe('⌘+');
+    expect(f.shortcut('.docx', 'other')).toBe('.docx');
   });
 
   it('keeps the existing English/Portuguese runtime usable when legacy Intl lacks plural rules', () => {

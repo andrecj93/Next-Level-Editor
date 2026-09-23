@@ -114,7 +114,7 @@
                     <span v-if="item.icon" class="item-icon" v-html="item.icon" />
                     <span class="item-label">{{ t(item.label) }}</span>
                     <span v-if="item.shortcut" class="item-shortcut">{{
-                      item.shortcut
+                      shortcut(item.shortcut)
                     }}</span>
                   </button>
                 </template>
@@ -133,7 +133,7 @@
             :disabled="action.isDisabled?.()"
             :aria-label="t(action.label)"
             :aria-pressed="action.isActive ? action.isActive() : undefined"
-            :title="t(action.tooltip)"
+            :title="hint(action.tooltip, action.shortcut)"
             @mousedown.prevent="$emit('remember-selection')"
             @click="action.onClick()"
           >
@@ -152,7 +152,7 @@
             :disabled="action.isDisabled?.()"
             :aria-label="t(action.label)"
             :aria-pressed="action.isActive ? action.isActive() : undefined"
-            :title="t(action.tooltip)"
+            :title="hint(action.tooltip, action.shortcut)"
             @mousedown.prevent="$emit('remember-selection')"
             @click="action.onClick()"
           >
@@ -204,8 +204,8 @@
                       class="colors-swatch"
                       :class="{ active: sameColor(selectionTextColor, c) }"
                       :style="{ background: c }"
-                      :aria-label="`Text color ${c}`"
-                      :title="t(c)"
+                      :aria-label="t('Text color {color}', { color: c })"
+                      :title="c"
                       @mousedown.prevent="$emit('remember-selection')"
                       @click="pickTextColor(c)"
                     />
@@ -230,8 +230,8 @@
                       class="colors-swatch"
                       :class="{ active: sameColor(selectionHighlightColor, c) }"
                       :style="{ background: c }"
-                      :aria-label="`Highlight ${c}`"
-                      :title="t(c)"
+                      :aria-label="t('Highlight {color}', { color: c })"
+                      :title="c"
                       @mousedown.prevent="$emit('remember-selection')"
                       @click="pickHighlightColor(c)"
                     />
@@ -289,7 +289,7 @@
                     <span v-if="item.icon" class="item-icon" v-html="item.icon" />
                     <span class="item-label">{{ t(item.label) }}</span>
                     <span v-if="item.shortcut" class="item-shortcut">{{
-                      item.shortcut
+                      shortcut(item.shortcut)
                     }}</span>
                   </button>
                 </template>
@@ -317,7 +317,7 @@
             :disabled="action.isDisabled?.()"
             :aria-label="t(action.label)"
             :aria-pressed="action.isActive ? action.isActive() : undefined"
-            :title="t(action.tooltip)"
+            :title="hint(action.tooltip, action.shortcut)"
             @mousedown.prevent
             @click="action.onClick()"
           >
@@ -332,7 +332,10 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
+const locale = useEditorLocale();
+const { t, shortcut, locale: uiLocale, direction: uiDirection } = locale;
+import { toolbarHint } from '../utils/toolbarHint';
+const hint = (label?: string, keys?: string) => toolbarHint(locale, label, keys);
 import {
   ref,
   computed,

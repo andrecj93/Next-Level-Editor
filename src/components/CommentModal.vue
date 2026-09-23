@@ -92,7 +92,7 @@
                 @keydown="handleKeydown"
               />
               <div v-if="content.trim()" class="character-count">
-                {{ content.length }} {{ t("characters") }}
+                {{ t('{count} characters', { count: content.length }) }}
               </div>
             </div>
 

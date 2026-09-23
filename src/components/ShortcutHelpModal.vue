@@ -149,7 +149,7 @@ const getActiveKeys = (shortcutId: string): string[] => {
 
 // Format key for display
 const formatKey = (key: string): string => {
-  return t(props.registry.getKeyDisplay([key]));
+  return formatShortcut(key);
 };
 
 // Close modal
