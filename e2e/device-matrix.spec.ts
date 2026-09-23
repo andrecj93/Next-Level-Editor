@@ -804,6 +804,13 @@ test('notes, chapter navigation and the caret retain usable space', async ({ pag
 test('source, preview, mixed scripts and structured content preserve the document', async ({ page }) => {
   const text = 'Português: Olá. 日本語: 物語。 العربية: بداية جديدة.';
   await switchView(page, 'Code');
+  // A short source draft still owns the full writing area. Letting the panel
+  // fall back to its intrinsic textarea height leaves an unusable blank page
+  // and moves the toolbar when WebKit scrolls the field into view.
+  await expect.poll(() => page.locator('.code-editor').evaluate(el => {
+    const available = el.closest('.nle-document-workspace')!.getBoundingClientRect();
+    return Math.abs(available.height - el.getBoundingClientRect().height);
+  })).toBeLessThanOrEqual(2);
   await page.locator('.code-editor').fill(`<h1>Across the world</h1><p>${text}</p><p>${'longword'.repeat(40)}</p><table><tbody><tr>${'<td>A table cell</td>'.repeat(8)}</tr></tbody></table>`);
   for (const view of ['Preview', 'Split', 'Editor']) {
     await switchView(page, view);

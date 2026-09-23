@@ -20,7 +20,8 @@
 .editor-content::highlight(nle-find-current) { color: #fff; background-color: #92400e; }
 .is-writing-workspace .editor-content:empty:before { font-style: italic; color: var(--text-secondary); opacity: 1; }
 .is-writing-workspace .editor-container { border-top: 0; }
-.is-writing-workspace .editor-container.view-mode-editor { display: flex; flex-direction: column; overflow: hidden; }
+.is-writing-workspace .editor-container.view-mode-editor,
+.is-writing-workspace .editor-container.view-mode-code { display: flex; flex-direction: column; overflow: hidden; }
 .is-writing-workspace .editor-panel { height: auto; min-height: 0; }
 .is-writing-workspace .nle-resize-grip { display: none; }
 .is-writing-workspace .editor-footer { background: var(--background-color); flex-shrink: 0; }
