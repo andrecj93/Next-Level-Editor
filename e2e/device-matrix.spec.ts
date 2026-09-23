@@ -301,10 +301,13 @@ test('PDF progress and cancellation stay reachable without losing the draft', as
   await page.locator('.code-editor').fill(`<h1>A chapter in progress</h1>${`<p>${paragraph}</p>`.repeat(200)}`);
   await switchView(page, 'Editor');
   const before = await editor.innerHTML();
+  const quickTools = page.getByRole('group', { name: 'Quick formatting', exact: true });
+  const hadQuickTools = await quickTools.isVisible();
   await activate(toolbarFor(page).getByRole('button', { name: 'Export', exact: true }), hasTouch);
   await activate(page.getByRole('menuitem', { name: 'PDF', exact: true }), hasTouch);
   const progress = page.getByRole('group', { name: 'PDF export progress' });
   await expect(progress).toBeVisible();
+  await expect(quickTools).not.toBeVisible();
   const cancel = progress.getByRole('button', { name: 'Cancel PDF export' });
   await cancel.scrollIntoViewIfNeeded();
   // PDF rasterization can keep WebKit's protocol busy for longer than the
@@ -324,6 +327,7 @@ test('PDF progress and cancellation stay reachable without losing the draft', as
   });
   await test.info().attach('pdf-progress', { body: progressScreenshot, contentType: 'image/png' });
   await expect(editor).toBeFocused();
+  if (hadQuickTools) await expect(quickTools).toBeVisible();
   await expect(page.locator('div[style*="-9999px"]')).toHaveCount(0);
   expect(await editor.innerHTML()).toBe(before);
   expect(downloads).toEqual([]);
@@ -377,7 +381,9 @@ test('a blank manuscript stays spacious and offers notes without moving the page
   const width = page.viewportSize()!.width;
   if (width <= 700) {
     const toolbar = await toolbarFor(page).boundingBox();
-    expect(toolbar!.height, 'mobile tools leave room for the manuscript').toBeLessThanOrEqual(width > 350 ? 52 : 96);
+    // Phones deliberately use two balanced rows so labels fit their targets.
+    expect(toolbar!.height, 'mobile tools leave room for the manuscript').toBeLessThanOrEqual(width <= 450 ? 96 : 52);
+    await toolbarLabelsFit(page);
   }
   await activate(editor, hasTouch);
   await page.keyboard.type('She returned in order to find the house.');

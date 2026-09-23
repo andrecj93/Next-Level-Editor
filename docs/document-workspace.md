@@ -102,6 +102,17 @@ Restore saves a checkpoint before changing the document, then saves the restored
 
 Word conversion uses [Mammoth](https://github.com/mwilliamson/mammoth.js/), followed by the editor sanitizer. Central-directory checks are backed by actual streaming decompression counts; a forged declared size cannot bypass the expanded limit. The default limits are 15 MB compressed, 60 MB expanded, 2,000 entries, and 20 seconds. Encryption, macros, external resource fetching, entity declarations, duplicate entries and unsafe paths are rejected. A worker is terminated on cancellation or timeout. Imported endnotes get scoped anchors before sanitization.
 
+The reproducible Word corpus in `e2e/helpers/word-corpus.ts` contains ten benign cases. Five read the original list, table, strict-OOXML and relative/root image relationship fixtures from the lockfile-pinned Mammoth 1.12.3 package (BSD-2-Clause); the other five construct explicit OOXML packages from synthetic content. No private Word documents or binary corpus files ship with the library.
+
+| Corpus area | Verified content |
+| --- | --- |
+| Text and formatting | Heading levels 1–6, Unicode text order, bold/italic, hyperlinks and three-level mixed ordered/unordered lists |
+| Tables | Merged header columns and body rows, nested tables, nested lists in cells and images in cells/lists |
+| Embedded images | PNG, JPEG, GIF and WebP data images, decoded dimensions and explicit Unicode alternative text |
+| Editing and storage | Preview without mutation, downloaded structure counts, replace and paragraph/heading insertion, exact one-step undo/redo, post-import editing, named checkpoint restoration after reload |
+
+Run `npx playwright test e2e/document-word-corpus.spec.ts --workers=2 --retries=0` for 24 Chromium/mobile-WebKit cases. Each conversion attaches its fixture hash, byte count and content-free conversion report; the test also checks that conversion makes no remote requests. Generated image encodings can vary by browser. This is semantic preservation evidence for the supported corpus, not a claim of pixel-identical Word layout or support for every Office extension.
+
 Semantic PDF uses [PDFKit's tagged-document facilities](https://pdfkit.org/docs/accessibility.html) and embedded Noto Sans Latin fonts. Headings, paragraphs, bold/italic/underline text, external links, lists, tables, local PNG/JPEG figures and explicit page breaks have dedicated rendering paths. Nested tables and cell images become text; inline images use alternative text; remote media is not fetched. Non-Latin scripts/symbols produce a font-coverage warning and need visual review or a different export format. Internal HTML note links remain intact in HTML/Word; the PDF text preserves reference labels without claiming working internal link annotations.
 
 Headers/footers are pagination artifacts. The preview and its download share the same Blob. Changing content or settings invalidates the preview; an export finishing against a changed snapshot is rejected. The original export menu retains the image-based page renderer, now with a Unicode text layer, chapter bookmarks and links from the writing-quality branch. Its text can be searched and selected; it does not produce the semantic tags of the document-workspace renderer and is not PDF/UA certification.

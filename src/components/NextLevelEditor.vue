@@ -2186,7 +2186,9 @@ const ownsMobileToolbar = ref(false);
 // The toolbar's Close (X) hides it until this editor is focused/tapped again.
 const mobileToolbarClosed = ref(false);
 const mobileToolbarVisible = computed(
-  () => ownsMobileToolbar.value && !mobileToolbarClosed.value && ownsFixedChrome.value
+  // Export progress owns the short viewport until it completes or is cancelled.
+  // A focus event in the footer must not reopen a dock over its Cancel button.
+  () => ownsMobileToolbar.value && !mobileToolbarClosed.value && ownsFixedChrome.value && !isExportingPdf.value
 );
 
 // Whether the mobile bottom bar is actually ON SCREEN: ownership alone isn't
