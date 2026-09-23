@@ -11,19 +11,19 @@
       }"
     >
       <div class="command-menu-header">
-        Quick Actions
+        {{ t("Quick Actions") }}
       </div>
       <div
         v-if="options.length === 0"
         class="command-menu-empty"
       >
-        No matching commands
+        {{ t("No matching commands") }}
       </div>
       <ul
         v-else
         :id="listboxId"
         role="listbox"
-        aria-label="Quick actions"
+        :aria-label="t('Quick actions')"
       >
         <li
           v-for="(option, index) in options"
@@ -36,10 +36,10 @@
           @click="$emit('select', option)"
         >
           <div class="command-title">
-            {{ option.label }}
+            {{ t(option.label) }}
           </div>
           <div class="command-description">
-            {{ option.description }}
+            {{ t(option.description) }}
           </div>
         </li>
       </ul>
@@ -48,6 +48,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import type { SlashCommandOption } from "../composables/useSlashCommands";
 

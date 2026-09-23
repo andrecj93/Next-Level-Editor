@@ -11,7 +11,7 @@
           left: `${position.left}px`,
         }"
         role="menu"
-        aria-label="Context menu"
+        :aria-label="t('Context menu')"
         tabindex="-1"
         @click.stop
         @contextmenu.prevent
@@ -33,7 +33,7 @@
             @click="handleItemClick(item)"
           >
             <span class="context-menu-icon">{{ item.icon }}</span>
-            <span class="context-menu-label">{{ item.label }}</span>
+            <span class="context-menu-label">{{ t(item.label) }}</span>
             <span
               v-if="item.shortcut"
               class="context-menu-shortcut"
@@ -48,6 +48,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, watch, nextTick, onBeforeUnmount } from "vue";
 import type { ContextMenuItem } from "../types/contextMenu";
 

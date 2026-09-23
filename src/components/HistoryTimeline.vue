@@ -9,7 +9,7 @@
         <button
           v-if="showClearButton && hasHistory"
           class="btn-clear"
-          :aria-label="clearButtonLabel"
+          :aria-label="t(clearButtonLabel)"
           @click="handleClear"
         >
           {{ clearButtonLabel }}
@@ -17,7 +17,7 @@
         <button
           v-if="showExportButton && hasHistory"
           class="btn-export"
-          :aria-label="exportButtonLabel"
+          :aria-label="t(exportButtonLabel)"
           @click="handleExport"
         >
           {{ exportButtonLabel }}
@@ -43,7 +43,7 @@
       <button
         :disabled="!canGoBack"
         class="nav-btn"
-        aria-label="Go to first"
+        :aria-label="t('Go to first')"
         @click="handleGoToFirst"
       >
         ⏮
@@ -51,7 +51,7 @@
       <button
         :disabled="!canGoBack"
         class="nav-btn"
-        aria-label="Go back"
+        :aria-label="t('Go back')"
         @click="handleGoBack"
       >
         ◀
@@ -59,7 +59,7 @@
       <button
         :disabled="!canGoForward"
         class="nav-btn"
-        aria-label="Go forward"
+        :aria-label="t('Go forward')"
         @click="handleGoForward"
       >
         ▶
@@ -67,7 +67,7 @@
       <button
         :disabled="!canGoForward"
         class="nav-btn"
-        aria-label="Go to latest"
+        :aria-label="t('Go to latest')"
         @click="handleGoToLatest"
       >
         ⏭
@@ -121,6 +121,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref } from "vue";
 import type { HistoryEntry } from "../composables/useHistoryTimeline";
 import { smoothScrollIntoView } from "../utils/scroll";

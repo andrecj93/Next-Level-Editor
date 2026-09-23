@@ -1,7 +1,10 @@
-import { computed, ref, watch } from "vue";
+import { computed, ref, shallowRef, watch } from "vue";
 import { useHtmlSanitizer } from "../../composables/useHtmlSanitizer";
 import { getTemplateById } from "../examples/exampleTemplates";
 
+import { defaultDocumentMetadata, type DocumentMetadata } from '../../types/document';
+import { operationId } from '../../utils/documentDiagnostics';
+import { validateDocumentSnapshot } from '../../utils/documentValidation';
 export const PLAYGROUND_DRAFT_KEY = "next-level-editor:playground-draft:v1";
 const MAX_DRAFT_LENGTH = 2_000_000;
 
@@ -10,6 +13,7 @@ export function usePlaygroundDocument(startEmpty: boolean) {
   const { sanitizeHtml } = useHtmlSanitizer();
   const initial = "";
   const content = ref(initial);
+  const documentId=ref(operationId()),metadata=shallowRef<DocumentMetadata>(defaultDocumentMetadata());
   const selectedTemplate = ref("empty");
   const baseline = ref(initial);
   const notice = ref("");
@@ -24,6 +28,8 @@ export function usePlaygroundDocument(startEmpty: boolean) {
             typeof draft.content === "string" && draft.content.length <= MAX_DRAFT_LENGTH &&
             "version" in draft && draft.version === 1) {
           content.value = sanitizeHtml(draft.content);
+          if('documentId' in draft && typeof draft.documentId==='string' && /^nle-[\w-]+$/.test(draft.documentId))documentId.value=draft.documentId;
+          if('metadata' in draft)metadata.value=validateDocumentSnapshot({html:content.value,metadata:draft.metadata},sanitizeHtml).metadata;
           if ("template" in draft && typeof draft.template === "string" && getTemplateById(draft.template)) {
             selectedTemplate.value = draft.template;
             baseline.value = draft.template === "empty" ? "" : sanitizeHtml(getTemplateById(draft.template)!.content);
@@ -46,6 +52,7 @@ export function usePlaygroundDocument(startEmpty: boolean) {
   const applyTemplate = (id: string) => {
     const template = getTemplateById(id);
     if (!template) return;
+    documentId.value=operationId();metadata.value=defaultDocumentMetadata();
     selectedTemplate.value = id;
     content.value = id === "empty" ? "" : sanitizeHtml(template.content);
     baseline.value = content.value;
@@ -59,7 +66,7 @@ export function usePlaygroundDocument(startEmpty: boolean) {
     try {
       if (html.length > MAX_DRAFT_LENGTH) throw new Error("Draft is too large for local storage");
       localStorage.setItem(PLAYGROUND_DRAFT_KEY, JSON.stringify({
-        version: 1,
+        version: 1, documentId:documentId.value, metadata:metadata.value,
         content: html,
         template: selectedTemplate.value,
         savedAt: new Date().toISOString(),
@@ -72,5 +79,6 @@ export function usePlaygroundDocument(startEmpty: boolean) {
     }
   };
 
-  return { content, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft };
+  watch(metadata,()=>{void saveDraft(content.value).catch(()=>{notice.value='Local document details could not be saved. Export a copy.';});});
+  return { documentId, metadata, content, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft };
 }

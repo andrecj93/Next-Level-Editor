@@ -13,10 +13,10 @@
       @click.stop
     >
       <div class="modal-header">
-        <h3 id="link-modal-title">{{ context?.editing ? 'Edit link' : 'Insert link' }}</h3>
+        <h3 id="link-modal-title">{{ t(context?.editing ? 'Edit link' : 'Insert link') }}</h3>
         <button
           class="close-button"
-          aria-label="Close"
+          :aria-label="t('Close')"
           @click="close"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
@@ -25,29 +25,29 @@
 
       <div class="modal-body">
         <div class="input-group">
-          <label for="link-url">URL</label>
+          <label for="link-url">{{ t("URL") }}</label>
           <input
             id="link-url"
             ref="urlInput"
             v-model="url"
             type="url"
-            placeholder="https://example.com"
+            :placeholder="t('https://example.com')"
             @keydown.enter="onEnter"
           >
         </div>
 
         <div class="input-group">
-          <label for="link-text">{{ context?.selectionText ? 'Selected text' : 'Text to display' }} <span v-if="!context?.selectionText" class="optional">(optional)</span></label>
+          <label for="link-text">{{ t(context?.selectionText ? 'Selected text' : 'Text to display') }} <span v-if="!context?.selectionText" class="optional">{{ t("(optional)") }}</span></label>
           <input
             id="link-text"
             v-model="text"
             type="text"
             :readonly="Boolean(context?.selectionText)"
             :aria-describedby="context?.selectionText ? 'link-selection-hint' : undefined"
-            placeholder="Use the URL as the link text"
+            :placeholder="t('Use the URL as the link text')"
             @keydown.enter="onEnter"
           >
-          <p v-if="context?.selectionText" id="link-selection-hint" class="selection-hint">Your selected text and formatting will be kept.</p>
+          <p v-if="context?.selectionText" id="link-selection-hint" class="selection-hint">{{ t("Your selected text and formatting will be kept.") }}</p>
         </div>
       </div>
 
@@ -56,14 +56,14 @@
           class="cancel-button"
           @click="close"
         >
-          Cancel
+          {{ t("Cancel") }}
         </button>
         <button
           class="insert-button"
           :disabled="!isValid"
           @click="submit"
         >
-          {{ context?.editing ? 'Save link' : 'Insert link' }}
+          {{ t(context?.editing ? 'Save link' : 'Insert link') }}
         </button>
       </div>
     </div>
@@ -71,6 +71,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, watch } from "vue";
 import { useModalDialog } from "../composables/useModalDialog";
 

@@ -10,7 +10,7 @@
         class="command-palette"
         role="dialog"
         aria-modal="true"
-        aria-label="Command palette"
+        :aria-label="t('Command palette')"
       >
         <div class="command-palette-header">
           <span class="command-palette-icon">⚡</span>
@@ -22,9 +22,9 @@
             v-model="searchQuery"
             type="text"
             class="command-palette-input"
-            placeholder="Type a command or search..."
+            :placeholder="t('Type a command or search...')"
             role="combobox"
-            aria-label="Search commands"
+            :aria-label="t('Search commands')"
             aria-autocomplete="list"
             :aria-expanded="filteredCommands.length > 0"
             :aria-controls="listboxId"
@@ -36,7 +36,7 @@
             @keydown.enter.prevent="executeSelected"
             @keydown.esc="close"
           >
-          <span class="command-palette-hint">ESC to close</span>
+          <span class="command-palette-hint">{{ t("ESC to close") }}</span>
         </div>
 
         <div
@@ -44,7 +44,7 @@
           :id="listboxId"
           class="command-palette-results"
           role="listbox"
-          aria-label="Command results"
+          :aria-label="t('Command results')"
         >
           <div
             v-for="(command, index) in filteredCommands"
@@ -67,7 +67,7 @@
                 {{ command.name }}
               </div>
               <div class="command-description">
-                {{ command.description }}
+                {{ t(command.description) }}
               </div>
             </div>
             <div
@@ -87,10 +87,10 @@
             🔍
           </div>
           <div class="empty-text">
-            No commands found
+            {{ t("No commands found") }}
           </div>
           <div class="empty-hint">
-            Try a different search term
+            {{ t("Try a different search term") }}
           </div>
         </div>
 
@@ -111,6 +111,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, watch, nextTick } from 'vue'
 import { useModalDialog } from '../composables/useModalDialog'
 import { useStableId } from '../utils/useStableId'

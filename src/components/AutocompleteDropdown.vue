@@ -7,7 +7,7 @@
     class="autocomplete-dropdown"
     :style="dropdownStyle"
     role="listbox"
-    :aria-label="ariaLabel"
+    :aria-label="t(ariaLabel)"
   >
     <!-- aria-activedescendant deliberately NOT here: it belongs on the
          FOCUSED element (the host's editing surface / input), pointing INTO
@@ -25,7 +25,7 @@
       @mouseenter="selectedIndex = index"
     >
       <span class="suggestion-value">{{ suggestion.value }}</span>
-      <span class="suggestion-label">{{ suggestion.label }}</span>
+      <span class="suggestion-label">{{ t(suggestion.label) }}</span>
       <span class="suggestion-type">{{
         getSuggestionTypeLabel(suggestion.type)
       }}</span>
@@ -33,14 +33,16 @@
 
     <div v-if="showHelpText" class="dropdown-footer">
       <span class="help-text">
-        <kbd>↑</kbd><kbd>↓</kbd> Navigate • <kbd>Enter</kbd> Select •
-        <kbd>Esc</kbd> Close
+        <kbd>↑</kbd><kbd>↓</kbd> {{ t("Navigate •") }} <kbd>Enter</kbd> {{ t("Select •") }}
+        <kbd>Esc</kbd> {{ t("Close") }}
       </span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import type { AutocompleteType } from "../composables/useSmartAutocomplete";
 import { smoothScrollIntoView } from "../utils/scroll";

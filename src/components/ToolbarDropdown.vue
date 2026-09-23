@@ -10,8 +10,8 @@
       class="dropdown-trigger"
       :class="{ active: hasActiveItem }"
       :data-tooltip="tooltip"
-      :title="tooltip"
-      :aria-label="label"
+      :title="t(tooltip)"
+      :aria-label="t(label)"
       :aria-expanded="isOpen"
       aria-haspopup="menu"
       :disabled="disabled"
@@ -36,7 +36,7 @@
         :style="menuStyle"
         role="menu"
         tabindex="0"
-        :aria-label="label"
+        :aria-label="t(label)"
         @keydown="onMenuKeydown"
       >
         <div
@@ -54,7 +54,7 @@
             :disabled="isItemDisabled(item)"
             role="menuitem"
             tabindex="-1"
-            :aria-label="item.label"
+            :aria-label="t(item.label)"
             @mousedown.prevent
             @click="!isItemDisabled(item) && handleItemClick(item)"
           >
@@ -63,7 +63,7 @@
               class="item-icon"
               v-html="item.icon"
             />
-            <span class="item-label">{{ item.label }}</span>
+            <span class="item-label">{{ t(item.label) }}</span>
             <span
               v-if="item.shortcut"
               class="item-shortcut"
@@ -78,6 +78,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 
 interface DropdownItem {

@@ -5,7 +5,7 @@
     class="emoji-picker"
     role="dialog"
     aria-modal="true"
-    aria-label="Emoji picker"
+    :aria-label="t('Emoji picker')"
   >
     <div class="emoji-picker-header">
       <input
@@ -13,24 +13,24 @@
         v-model="searchQuery"
         type="text"
         class="emoji-search"
-        placeholder="Search emoji..."
+        :placeholder="t('Search emoji...')"
       >
       <button
         class="close-emoji-btn"
-        aria-label="Close emoji picker"
+        :aria-label="t('Close emoji picker')"
         @click="$emit('close')"
       >
         ✕
       </button>
     </div>
 
-    <div class="emoji-categories" role="group" aria-label="Emoji categories">
+    <div class="emoji-categories" role="group" :aria-label="t('Emoji categories')">
       <button
         v-for="category in categories"
         :key="category.id"
         :class="['category-btn', { active: activeCategory === category.id }]"
-        :title="category.name"
-        :aria-label="category.name"
+        :title="t(category.name)"
+        :aria-label="t(category.name)"
         :aria-pressed="activeCategory === category.id"
         @click="activeCategory = category.id"
       >
@@ -43,21 +43,23 @@
         v-for="emoji in filteredEmojis"
         :key="emoji.code"
         class="emoji-btn"
-        :title="emoji.name"
-        :aria-label="emoji.name"
+        :title="t(emoji.name)"
+        :aria-label="t(emoji.name)"
         @click="selectEmoji(emoji)"
       >
         {{ emoji.emoji }}
       </button>
 
       <div v-if="filteredEmojis.length === 0" class="no-results">
-        No emoji found
+        {{ t("No emoji found") }}
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, watch } from "vue";
 import { useModalDialog } from "../composables/useModalDialog";
 

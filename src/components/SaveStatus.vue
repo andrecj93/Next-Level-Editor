@@ -29,10 +29,10 @@
           stroke-linejoin="round"
         />
       </svg>
-      Couldn't save changes
-      <button type="button" class="save-retry" @click="$emit('retry-save')">Retry</button>
+      {{ t("Couldn't save changes") }}
+      <button type="button" class="save-retry" @click="$emit('retry-save')">{{ t("Retry") }}</button>
     </span>
-    <span v-else-if="saveStatus === 'conflict'" class="save-error">Save conflict — review your changes</span>
+    <span v-else-if="saveStatus === 'conflict'" class="save-error">{{ t("Save conflict — review your changes") }}</span>
     <span v-else-if="isSaving" class="saving">
       <svg
         class="asi-spinner"
@@ -49,9 +49,9 @@
           stroke-linecap="round"
         />
       </svg>
-      {{ persistentSave ? 'Saving…' : 'Updating…' }}
+      {{ t(persistentSave ? 'Saving…' : 'Updating…') }}
     </span>
-    <span v-else-if="hasPendingChanges" class="save-pending">{{ persistentSave ? 'Unsaved changes' : 'Updating…' }}</span>
+    <span v-else-if="hasPendingChanges" class="save-pending">{{ t(persistentSave ? 'Unsaved changes' : 'Updating…') }}</span>
     <span v-else-if="lastSaved" :key="lastSaved.getTime()" class="saved">
       <svg
         width="15"
@@ -68,12 +68,14 @@
           stroke-linejoin="round"
         />
       </svg>
-      {{ persistentSave ? 'Saved' : 'Updated' }} at {{ lastSaved.toLocaleTimeString() }}
+      {{ t(persistentSave ? 'Saved' : 'Updated') }} {{ t("at") }} {{ lastSaved.toLocaleTimeString() }}
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 withDefaults(defineProps<{
   saveStatus?: "saving" | "conflict" | "error" | "saved" | "unsaved";
   ownsFixedChrome?: boolean;

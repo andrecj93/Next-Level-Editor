@@ -7,22 +7,22 @@
     <div class="stats-header">
       <h3 class="stats-title">
         <span class="stats-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" x2="18" y1="20" y2="10" /><line x1="12" x2="12" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="14" /></svg></span>
-        Writing Statistics
+        {{ t("Writing Statistics") }}
       </h3>
       <div class="stats-header-actions">
         <button
           class="collapse-btn"
-          :aria-label="isCollapsed ? 'Expand panel' : 'Collapse panel'"
+          :aria-label="t(isCollapsed ? 'Expand panel' : 'Collapse panel')"
           @click="isCollapsed = !isCollapsed"
         >
-          {{ isCollapsed ? "▶" : "▼" }}
+          {{ t(isCollapsed ? "▶" : "▼") }}
         </button>
         <!-- Close is essential on mobile: the panel reflows to a bottom sheet
              that covers its own toggle FAB, so without this (and Escape) it
              would be an undismissable trap. -->
         <button
           class="close-btn"
-          aria-label="Close writing statistics"
+          :aria-label="t('Close writing statistics')"
           @click="emit('close')"
         >
           ✕
@@ -36,39 +36,40 @@
       class="stats-content"
     >
       <!-- Basic Stats -->
+      <p v-if="languageSupported === false" role="status">{{ t('English prose checks are unavailable for this document language.') }}</p>
       <div
         v-if="stats"
         class="stats-section"
       >
         <h4 class="section-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /><path d="M14 2v5h5" /><line x1="8" x2="16" y1="13" y2="13" /><line x1="8" x2="16" y1="17" y2="17" /></svg> Basic Stats
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /><path d="M14 2v5h5" /><line x1="8" x2="16" y1="13" y2="13" /><line x1="8" x2="16" y1="17" y2="17" /></svg> {{ t("Basic Stats") }}
         </h4>
         <div class="stats-grid">
           <div class="stat-item">
-            <span class="stat-label" title="Total number of words in the document.">Words</span>
+            <span class="stat-label" :title="t('Total number of words in the document.')">{{ t("Words") }}</span>
             <span class="stat-value">{{ stats.words.toLocaleString() }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Total characters, including spaces.">Characters</span>
+            <span class="stat-label" :title="t('Total characters, including spaces.')">{{ t("Characters") }}</span>
             <span class="stat-value">{{
               stats.characters.toLocaleString()
             }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Number of sentences detected.">Sentences</span>
+            <span class="stat-label" :title="t('Number of sentences detected.')">{{ t("Sentences") }}</span>
             <span class="stat-value">{{ stats.sentences }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Number of paragraphs — blocks separated by blank lines.">Paragraphs</span>
+            <span class="stat-label" :title="t('Number of paragraphs — blocks separated by blank lines.')">{{ t("Paragraphs") }}</span>
             <span class="stat-value">{{ stats.paragraphs }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Estimated silent reading time at ~200 words per minute.">Reading Time</span>
-            <span class="stat-value">{{ stats.readingTime }} min</span>
+            <span class="stat-label" :title="t('Estimated silent reading time at ~200 words per minute.')">{{ t("Reading Time") }}</span>
+            <span class="stat-value">{{ stats.readingTime }} {{ t("min") }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Estimated time to read aloud at ~130 words per minute.">Speaking Time</span>
-            <span class="stat-value">{{ stats.speakingTime }} min</span>
+            <span class="stat-label" :title="t('Estimated time to read aloud at ~130 words per minute.')">{{ t("Speaking Time") }}</span>
+            <span class="stat-value">{{ stats.speakingTime }} {{ t("min") }}</span>
           </div>
         </div>
       </div>
@@ -79,7 +80,7 @@
         class="stats-section"
       >
         <h4 class="section-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg> Readability
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg> {{ t("Readability") }}
         </h4>
 
         <div class="readability-main">
@@ -90,8 +91,8 @@
             <div class="score-value">
               {{ readability.fleschReadingEase.toFixed(1) }}
             </div>
-            <div class="score-label" title="How easy the text is to read, 0–100. Higher is easier; 60–70 is plain English.">
-              Flesch Reading Ease
+            <div class="score-label" :title="t('How easy the text is to read, 0–100. Higher is easier; 60–70 is plain English.')">
+              {{ t("Flesch Reading Ease") }}
             </div>
             <div class="score-description">
               {{ getReadabilityDescription(readability.fleschReadingEase) }}
@@ -101,28 +102,28 @@
             <div class="grade-value">
               {{ Math.round(readability.averageGradeLevel) }}
             </div>
-            <div class="grade-label" title="US school grade needed to understand the text, averaged across formulas.">
-              Grade Level
+            <div class="grade-label" :title="t('US school grade needed to understand the text, averaged across formulas.')">
+              {{ t("Grade Level") }}
             </div>
           </div>
         </div>
 
         <div class="readability-details">
           <div class="detail-item">
-            <span title="US grade level from sentence length and syllables per word.">Flesch-Kincaid:</span>
-            <strong>Grade {{ readability.fleschKincaidGrade.toFixed(1) }}</strong>
+            <span :title="t('US grade level from sentence length and syllables per word.')">{{ t("Flesch-Kincaid:") }}</span>
+            <strong>{{ t("Grade") }} {{ readability.fleschKincaidGrade.toFixed(1) }}</strong>
           </div>
           <div class="detail-item">
-            <span title="Years of schooling needed to read it on the first try. Aim below 12.">Gunning Fog:</span>
+            <span :title="t('Years of schooling needed to read it on the first try. Aim below 12.')">{{ t("Gunning Fog:") }}</span>
             <strong>{{ readability.gunningFog.toFixed(1) }}</strong>
           </div>
           <div class="detail-item">
-            <span title="US grade level based on letters per word instead of syllables.">Coleman-Liau:</span>
-            <strong>Grade {{ readability.colemanLiauIndex.toFixed(1) }}</strong>
+            <span :title="t('US grade level based on letters per word instead of syllables.')">{{ t("Coleman-Liau:") }}</span>
+            <strong>{{ t("Grade") }} {{ readability.colemanLiauIndex.toFixed(1) }}</strong>
           </div>
           <div class="detail-item">
-            <span title="Automated Readability Index — grade level from letters, words and sentences.">ARI:</span>
-            <strong>Grade
+            <span :title="t('Automated Readability Index — grade level from letters, words and sentences.')">{{ t("ARI:") }}</span>
+            <strong>{{ t("Grade") }}
               {{ readability.automatedReadabilityIndex.toFixed(1) }}</strong>
           </div>
         </div>
@@ -134,7 +135,7 @@
         class="stats-section"
       >
         <h4 class="section-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="3" y1="6" y2="6" /><line x1="15" x2="3" y1="12" y2="12" /><line x1="17" x2="3" y1="18" y2="18" /></svg> Sentences
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="3" y1="6" y2="6" /><line x1="15" x2="3" y1="12" y2="12" /><line x1="17" x2="3" y1="18" y2="18" /></svg> {{ t("Sentences") }}
         </h4>
         <div class="sentence-distribution">
           <div class="distribution-bar">
@@ -157,28 +158,28 @@
           <div class="distribution-legend">
             <span class="legend-item">
               <span class="legend-color short" />
-              Short (&lt;15): {{ sentenceAnalysis.shortSentences }}
+              {{ t("Short (<15):") }} {{ sentenceAnalysis.shortSentences }}
             </span>
             <span class="legend-item">
               <span class="legend-color medium" />
-              Medium (15-25): {{ sentenceAnalysis.mediumSentences }}
+              {{ t("Medium (15-25):") }} {{ sentenceAnalysis.mediumSentences }}
             </span>
             <span class="legend-item">
               <span class="legend-color long" />
-              Long (&gt;25): {{ sentenceAnalysis.longSentences }}
+              {{ t("Long (>25):") }} {{ sentenceAnalysis.longSentences }}
             </span>
           </div>
         </div>
         <div class="stats-grid">
           <div class="stat-item">
-            <span class="stat-label" title="Average sentence length. 15–20 words reads smoothly.">Avg Words/Sentence</span>
+            <span class="stat-label" :title="t('Average sentence length. 15–20 words reads smoothly.')">{{ t("Avg Words/Sentence") }}</span>
             <span class="stat-value">{{
               sentenceAnalysis.averageWordsPerSentence.toFixed(1)
             }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Length of the longest sentence — watch for run-ons.">Longest Sentence</span>
-            <span class="stat-value">{{ sentenceAnalysis.longestSentence }} words</span>
+            <span class="stat-label" :title="t('Length of the longest sentence — watch for run-ons.')">{{ t("Longest Sentence") }}</span>
+            <span class="stat-value">{{ sentenceAnalysis.longestSentence }} {{ t("words") }}</span>
           </div>
         </div>
       </div>
@@ -189,27 +190,27 @@
         class="stats-section"
       >
         <h4 class="section-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" /></svg> Words
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" /></svg> {{ t("Words") }}
         </h4>
         <div class="stats-grid">
           <div class="stat-item">
-            <span class="stat-label" title="Count of distinct words — your vocabulary variety.">Unique Words</span>
+            <span class="stat-label" :title="t('Count of distinct words — your vocabulary variety.')">{{ t("Unique Words") }}</span>
             <span class="stat-value">{{
               wordAnalysis.uniqueWords.toLocaleString()
             }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Average characters per word. Higher reads as denser.">Avg Word Length</span>
+            <span class="stat-label" :title="t('Average characters per word. Higher reads as denser.')">{{ t("Avg Word Length") }}</span>
             <span class="stat-value">{{
               wordAnalysis.averageWordLength.toFixed(1)
             }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Words longer than 6 characters.">Long Words (&gt;6)</span>
+            <span class="stat-label" :title="t('Words longer than 6 characters.')">{{ t("Long Words (>6)") }}</span>
             <span class="stat-value">{{ wordAnalysis.longWords }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Words longer than 12 characters — often harder to read.">Very Long (&gt;12)</span>
+            <span class="stat-label" :title="t('Words longer than 12 characters — often harder to read.')">{{ t("Very Long (>12)") }}</span>
             <span class="stat-value">{{ wordAnalysis.veryLongWords }}</span>
           </div>
         </div>
@@ -220,7 +221,7 @@
           class="common-words"
         >
           <div class="common-words-title">
-            Most Common:
+            {{ t("Most Common:") }}
           </div>
           <div class="word-tags">
             <span
@@ -240,7 +241,7 @@
         class="stats-section issues-section"
       >
         <h4 class="section-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg> Issues
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg> {{ t("Issues") }}
         </h4>
 
         <div
@@ -249,10 +250,10 @@
         >
           <div class="issue-header">
             <span class="issue-icon">🔄</span>
-            <span class="issue-title">Passive Voice ({{ issues.passiveVoice.length }})</span>
+            <span class="issue-title">{{ t("Passive Voice (") }}{{ issues.passiveVoice.length }})</span>
           </div>
           <div class="issue-hint">
-            Consider using active voice for clearer writing
+            {{ t("Consider using active voice for clearer writing") }}
           </div>
         </div>
 
@@ -262,10 +263,10 @@
         >
           <div class="issue-header">
             <span class="issue-icon">💭</span>
-            <span class="issue-title">Weak Adverbs ({{ issues.adverbs.length }})</span>
+            <span class="issue-title">{{ t("Weak Adverbs (") }}{{ issues.adverbs.length }})</span>
           </div>
           <div class="issue-hint">
-            Remove or replace with stronger verbs
+            {{ t("Remove or replace with stronger verbs") }}
           </div>
         </div>
 
@@ -275,10 +276,10 @@
         >
           <div class="issue-header">
             <span class="issue-icon">📖</span>
-            <span class="issue-title">Complex Words ({{ issues.complexWords.length }})</span>
+            <span class="issue-title">{{ t("Complex Words (") }}{{ issues.complexWords.length }})</span>
           </div>
           <div class="issue-hint">
-            Consider simpler alternatives
+            {{ t("Consider simpler alternatives") }}
           </div>
         </div>
 
@@ -288,7 +289,7 @@
         >
           <div class="issue-header">
             <span class="issue-icon">🔁</span>
-            <span class="issue-title">Repeated Words ({{ issues.repeatedWords.length }})</span>
+            <span class="issue-title">{{ t("Repeated Words (") }}{{ issues.repeatedWords.length }})</span>
           </div>
           <div class="repeated-words">
             <span
@@ -307,10 +308,10 @@
         >
           <div class="issue-header">
             <span class="issue-icon">🎭</span>
-            <span class="issue-title">Clichés ({{ issues.cliches.length }})</span>
+            <span class="issue-title">{{ t("Clichés (") }}{{ issues.cliches.length }})</span>
           </div>
           <div class="issue-hint">
-            Find more original expressions
+            {{ t("Find more original expressions") }}
           </div>
         </div>
 
@@ -318,7 +319,7 @@
           v-if="getTotalIssues() === 0"
           class="no-issues"
         >
-          ✅ No major writing issues detected
+          {{ t("✅ No major writing issues detected") }}
         </div>
       </div>
 
@@ -328,7 +329,7 @@
         class="stats-section seo-section"
       >
         <h4 class="section-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg> SEO
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg> {{ t("SEO") }}
         </h4>
 
         <div class="seo-score">
@@ -362,8 +363,8 @@
               </text>
             </svg>
           </div>
-          <div class="seo-label" title="Overall on-page SEO health, 0–100, from headings, length and keywords.">
-            SEO Score
+          <div class="seo-label" :title="t('Overall on-page SEO health, 0–100, from headings, length and keywords.')">
+            {{ t("SEO Score") }}
           </div>
         </div>
 
@@ -372,19 +373,19 @@
             class="seo-item"
             :class="{ success: seo.headingStructure.h1Count === 1 }"
           >
-            <span title="Number of H1 headings. Best practice is exactly one per page.">H1 Headings:</span>
+            <span :title="t('Number of H1 headings. Best practice is exactly one per page.')">{{ t("H1 Headings:") }}</span>
             <strong>{{ seo.headingStructure.h1Count }}</strong>
           </div>
           <div
             class="seo-item"
             :class="{ success: seo.headingStructure.h2Count > 0 }"
           >
-            <span title="Number of H2 subheadings that structure the content.">H2 Headings:</span>
+            <span :title="t('Number of H2 subheadings that structure the content.')">{{ t("H2 Headings:") }}</span>
             <strong>{{ seo.headingStructure.h2Count }}</strong>
           </div>
           <div class="seo-item">
-            <span title="Length of the meta description. Aim for 120–160 characters.">Meta Length:</span>
-            <strong>{{ seo.metaDescriptionLength }} chars</strong>
+            <span :title="t('Length of the meta description. Aim for 120–160 characters.')">{{ t("Meta Length:") }}</span>
+            <strong>{{ seo.metaDescriptionLength }} {{ t("chars") }}</strong>
           </div>
         </div>
 
@@ -393,7 +394,7 @@
           class="keywords"
         >
           <div class="keywords-title">
-            Top Keywords:
+            {{ t("Top Keywords:") }}
           </div>
           <div class="keyword-tags">
             <span
@@ -411,6 +412,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref } from "vue";
 import type {
   TextStats,
@@ -422,6 +425,7 @@ import type {
 } from "../composables/useWritingAssistant";
 
 interface Props {
+  languageSupported?: boolean;
   stats?: TextStats | null;
   readability?: ReadabilityScores | null;
   sentenceAnalysis?: SentenceAnalysis | null;
@@ -430,7 +434,15 @@ interface Props {
   seo?: SEOAnalysis | null;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  languageSupported: true,
+  stats: null,
+  readability: null,
+  sentenceAnalysis: null,
+  wordAnalysis: null,
+  issues: null,
+  seo: null,
+});
 
 const emit = defineEmits<{ close: [] }>();
 

@@ -131,3 +131,15 @@ export default {
     app.component("NextLevelEditor", NextLevelEditor);
   },
 };
+
+export type * from './types/document';
+export type * from './types/collaboration';
+export { defaultDocumentMetadata, defaultPageSettings } from './types/document';
+export { createIndexedDbVersionStore, createMemoryVersionStore, RevisionConflictError } from './utils/versionStore';
+export { createMemoryCollaborationProvider } from './utils/memoryCollaboration';
+export { createWebSocketCollaborationProvider } from './utils/webSocketCollaboration';
+export { createSemanticPdf } from './utils/semanticPdf';
+export { importDocx } from './utils/docxImport';
+export { renderDocumentTemplate } from './utils/documentTemplates';
+export { portugueseMessages } from './composables/useEditorLocale';
+export { loadCitationFormatter } from './utils/citationFormatter';

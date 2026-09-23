@@ -14,7 +14,7 @@ function noteKeys(notes: WritingNote[]): Map<string, string> {
   }));
 }
 
-export function useWritingWorkspace(html: Ref<string>, enabled: Ref<boolean>) {
+export function useWritingWorkspace(html: Ref<string>, enabled: Ref<boolean>, language?: Ref<string>) {
   const review = ref<WritingReview>({ words: 0, paragraphs: 0, readingMinutes: 1, outline: [], notes: [] });
   const dismissedNotes = ref(new Set<string>());
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -22,6 +22,7 @@ export function useWritingWorkspace(html: Ref<string>, enabled: Ref<boolean>) {
     clearTimeout(timer);
     if (!enabled.value || typeof DOMParser === 'undefined') return;
     const next = reviewWriting(html.value);
+    if (language && !/^en(?:-|$)/i.test(language.value)) next.notes = [];
     if (dismissedNotes.value.size) {
       const previousKeys = noteKeys(review.value.notes);
       const kept = new Set([...dismissedNotes.value].map(id => previousKeys.get(id)));
@@ -37,7 +38,7 @@ export function useWritingWorkspace(html: Ref<string>, enabled: Ref<boolean>) {
     dismissedNotes.value.add(note.id);
     return true;
   };
-  watch([html, enabled], () => {
+  watch([html, enabled, () => language?.value], () => {
     clearTimeout(timer);
     if (enabled.value && typeof DOMParser !== 'undefined') timer = setTimeout(refresh, 650);
   }, { immediate: true });

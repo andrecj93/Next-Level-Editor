@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    # Stacked feature PRs must pass the same checks before they reach main.
   release:
     types: [created]
 

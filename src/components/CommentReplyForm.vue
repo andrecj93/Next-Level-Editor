@@ -5,7 +5,7 @@
       ref="textareaRef"
       v-model="content"
       class="comment-reply-textarea"
-      placeholder="Write a reply... (use @ to mention)"
+      :placeholder="t('Write a reply... (use @ to mention)')"
       rows="3"
       @input="handleInput"
       @keydown="handleKeydown"
@@ -49,7 +49,7 @@
     <!-- Actions -->
     <div class="comment-reply-actions">
       <button class="comment-reply-cancel" type="button" @click="handleCancel">
-        Cancel
+        {{ t("Cancel") }}
       </button>
       <button
         class="comment-reply-submit"
@@ -57,13 +57,15 @@
         :disabled="!content.trim()"
         @click="handleSubmit"
       >
-        Reply
+        {{ t("Reply") }}
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, nextTick, onBeforeUnmount } from "vue";
 import type { MentionSuggestion } from "../composables/useComments";
 

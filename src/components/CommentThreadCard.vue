@@ -29,7 +29,7 @@
             :alt="thread.comments[0]?.author.name"
           />
           <span v-else>
-            {{ getInitials(thread.comments[0]?.author.name || "") }}
+            {{ t(getInitials(thread.comments[0]?.author.name || "")) }}
           </span>
         </div>
       </div>
@@ -49,8 +49,8 @@
             <button
               v-if="thread.status === 'open'"
               class="comment-action-btn"
-              aria-label="Resolve thread"
-              title="Mark as resolved"
+              :aria-label="t('Resolve thread')"
+              :title="t('Mark as resolved')"
               @click="emit('resolve', thread.id)"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -66,8 +66,8 @@
             <button
               v-else
               class="comment-action-btn"
-              aria-label="Reopen thread"
-              title="Reopen thread"
+              :aria-label="t('Reopen thread')"
+              :title="t('Reopen thread')"
               @click="emit('reopen', thread.id)"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -81,8 +81,8 @@
             </button>
             <button
               class="comment-action-btn comment-action-delete"
-              aria-label="Delete thread"
-              title="Delete thread"
+              :aria-label="t('Delete thread')"
+              :title="t('Delete thread')"
               @click="handleDelete"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -113,7 +113,7 @@
               stroke-linejoin="round"
             />
           </svg>
-          Resolved
+          {{ t("Resolved") }}
         </div>
       </div>
     </div>
@@ -133,8 +133,8 @@
           stroke-linejoin="round"
         />
       </svg>
-      View {{ thread.comments.length - 1 }}
-      {{ thread.comments.length === 2 ? "reply" : "replies" }}
+      {{ t("View") }} {{ thread.comments.length - 1 }}
+      {{ t(thread.comments.length === 2 ? "reply" : "replies") }}
     </button>
 
     <!-- Add Reply Button (always visible when not showing form) -->
@@ -151,7 +151,7 @@
           stroke-linecap="round"
         />
       </svg>
-      Write a reply
+      {{ t("Write a reply") }}
     </button>
 
     <!-- Reply Form (when active) -->
@@ -215,7 +215,7 @@
             />
 
             <span v-if="comment.isEdited" class="comment-edited">
-              (edited)
+              {{ t("(edited)") }}
             </span>
           </div>
         </div>
@@ -231,7 +231,7 @@
               stroke-linejoin="round"
             />
           </svg>
-          Hide replies
+          {{ t("Hide replies") }}
         </button>
       </div>
     </Transition>
@@ -239,6 +239,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref } from "vue";
 import type {
   CommentThread,

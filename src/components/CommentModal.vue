@@ -35,17 +35,17 @@
               </div>
               <div>
                 <h3 id="comment-modal-title" class="comment-modal-title">
-                  Add Comment
+                  {{ t("Add Comment") }}
                 </h3>
                 <p class="comment-modal-subtitle">
-                  Share your thoughts on the selected text
+                  {{ t("Share your thoughts on the selected text") }}
                 </p>
               </div>
             </div>
             <button
               class="comment-modal-close"
               type="button"
-              aria-label="Close comment modal"
+              :aria-label="t('Close comment modal')"
               @click="handleCancel"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -71,7 +71,7 @@
                   stroke-linejoin="round"
                 />
               </svg>
-              <span class="selected-text-label">Selected Text</span>
+              <span class="selected-text-label">{{ t("Selected Text") }}</span>
             </div>
             <div class="selected-text-content">
               {{ selectedText }}
@@ -85,14 +85,14 @@
                 ref="textareaRef"
                 v-model="content"
                 class="comment-modal-textarea"
-                placeholder="Write your comment... Type @ to mention someone"
+                :placeholder="t('Write your comment... Type @ to mention someone')"
                 rows="5"
                 autofocus
                 @input="handleInput"
                 @keydown="handleKeydown"
               />
               <div v-if="content.trim()" class="character-count">
-                {{ content.length }} characters
+                {{ content.length }} {{ t("characters") }}
               </div>
             </div>
 
@@ -118,7 +118,7 @@
                       stroke-linecap="round"
                     />
                   </svg>
-                  <span>Mention someone</span>
+                  <span>{{ t("Mention someone") }}</span>
                 </div>
                 <div
                   v-for="(suggestion, index) in mentionSuggestions"
@@ -185,11 +185,11 @@
                       stroke-linecap="round"
                     />
                   </svg>
-                  Use @ to mention
+                  {{ t("Use @ to mention") }}
                 </span>
               </div>
               <span class="helper-shortcut">
-                <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to submit
+                <kbd>Ctrl</kbd> + <kbd>Enter</kbd> {{ t("to submit") }}
               </span>
             </div>
           </div>
@@ -201,7 +201,7 @@
               type="button"
               @click="handleCancel"
             >
-              Cancel
+              {{ t("Cancel") }}
             </button>
             <button
               class="comment-modal-submit"
@@ -218,7 +218,7 @@
                   stroke-linejoin="round"
                 />
               </svg>
-              Add Comment
+              {{ t("Add Comment") }}
             </button>
           </div>
         </div>
@@ -228,6 +228,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, watch, nextTick, onBeforeUnmount } from "vue";
 import type { MentionSuggestion } from "../composables/useComments";
 import { useModalDialog } from "../composables/useModalDialog";

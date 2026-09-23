@@ -3,7 +3,7 @@
   <ToolbarDropdown
     v-if="type === 'dropdown'"
     :class="{ 'toolbar-section-disabled': !visible }"
-    :label="label"
+    :label="t(label)"
     :icon="icon"
     :tooltip="
       visible ? tooltip : `${tooltip} (not available for current selection)`
@@ -31,7 +31,7 @@
           ? action.tooltip
           : `${action.tooltip} (not available for current selection)`
       "
-      :aria-label="action.label"
+      :aria-label="t(action.label)"
       :aria-pressed="action.isActive ? action.isActive() : undefined"
       :disabled="!visible || action.isDisabled?.()"
       @mousedown.prevent="$emit('remember-selection')"
@@ -51,6 +51,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import ToolbarDropdown from "./ToolbarDropdown.vue";
 import type { ToolbarAction } from "../types/toolbar";
 

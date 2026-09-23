@@ -17,15 +17,15 @@
           :key="action.id"
           class="floating-btn"
           :class="{ active: action.isActive?.() }"
-          :aria-label="action.label"
-          :title="action.tooltip"
+          :aria-label="t(action.label)"
+          :title="t(action.tooltip)"
           @click="action.onClick"
         >
           <span
             v-if="action.icon"
             v-html="action.icon"
           />
-          <span v-else>{{ action.label }}</span>
+          <span v-else>{{ t(action.label) }}</span>
         </button>
       </div>
     </transition>
@@ -33,6 +33,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 // Positioning math lives in utils/ (pure + unit-testable; a second plain
 // <script> block exporting it from this SFC tripped TS4082 in vue-tsc's

@@ -1,31 +1,31 @@
 <template>
-  <nav v-if="writingMode" ref="rootEl" class="editor-toolbar-modern writing-toolbar" role="toolbar" aria-label="Text formatting toolbar" @keydown="onRovingKeydown" @focusin="onRovingFocusin">
+  <nav v-if="writingMode" ref="rootEl" class="editor-toolbar-modern writing-toolbar" role="toolbar" :aria-label="t('Text formatting toolbar')" @keydown="onRovingKeydown" @focusin="onRovingFocusin">
     <div class="writing-toolbar-row">
-      <div class="writing-history" role="group" aria-label="History">
-        <button type="button" class="toolbar-btn-modern" aria-label="Undo" title="Undo (Ctrl+Z)" :disabled="historyIndex <= 0" @mousedown.prevent="$emit('remember-selection')" @click="$emit('undo')">↶</button>
-        <button type="button" class="toolbar-btn-modern" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" :disabled="historyIndex >= historyLength - 1" @mousedown.prevent="$emit('remember-selection')" @click="$emit('redo')">↷</button>
+      <div class="writing-history" role="group" :aria-label="t('History')">
+        <button type="button" class="toolbar-btn-modern" :aria-label="t('Undo')" :title="t('Undo (Ctrl+Z)')" :disabled="historyIndex <= 0" @mousedown.prevent="$emit('remember-selection')" @click="$emit('undo')">↶</button>
+        <button type="button" class="toolbar-btn-modern" :aria-label="t('Redo')" :title="t('Redo (Ctrl+Shift+Z)')" :disabled="historyIndex >= historyLength - 1" @mousedown.prevent="$emit('remember-selection')" @click="$emit('redo')">↷</button>
       </div>
       <span class="writing-toolbar-divider" />
       <ToolbarSection class="writing-paragraph-format" type="dropdown" label="Format" tooltip="Paragraph style" :items="formatDropdownItems" :visible="isToolbarSectionVisible('format')" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection class="writing-inline" type="buttons" :items="inlineFormatActions.filter(item => ['bold', 'italic', 'underline'].includes(item.id))" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
       <span class="writing-toolbar-divider" />
       <ToolbarSection type="dropdown" label="Insert" preserve-label tooltip="Add a link, image, list, or other content" :items="writingInsertItems" :visible="isToolbarSectionVisible('insert')" @remember-selection="$emit('remember-selection')" />
-      <button type="button" class="writing-more-format" aria-label="More formatting" title="Text style, alignment, and colors" :aria-expanded="writingFormattingOpen" @mousedown.prevent="$emit('remember-selection')" @click="toggleWritingFormatting">Style <span class="dropdown-arrow" aria-hidden="true">▾</span></button>
+      <button type="button" class="writing-more-format" :aria-label="t('More formatting')" :title="t('Text style, alignment, and colors')" :aria-expanded="writingFormattingOpen" @mousedown.prevent="$emit('remember-selection')" @click="toggleWritingFormatting">{{ t('Style') }} <span class="dropdown-arrow" aria-hidden="true">▾</span></button>
       <div class="writing-toolbar-spacer" />
       <ToolbarSection type="dropdown" label="Tools" preserve-label tooltip="Find, history, and document tools" :items="writingToolItems" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection type="dropdown" label="View" preserve-label tooltip="Editor, source, preview, and focus" :items="writingViewItems" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection class="writing-export" type="dropdown" label="Export" preserve-label tooltip="Download your document" :items="exportDropdownItems" @remember-selection="$emit('remember-selection')" />
-      <button type="button" class="toolbar-btn-modern writing-theme" aria-label="Toggle dark/light theme" :aria-pressed="theme === 'dark'" title="Toggle theme" @click="$emit('toggle-theme')">◐</button>
+      <button type="button" class="toolbar-btn-modern writing-theme" :aria-label="t('Toggle dark/light theme')" :aria-pressed="theme === 'dark'" :title="t('Toggle theme')" @click="$emit('toggle-theme')">◐</button>
     </div>
-    <div v-if="writingFormattingOpen" class="writing-format-row" role="group" aria-label="More formatting options">
+    <div v-if="writingFormattingOpen" class="writing-format-row" role="group" :aria-label="t('More formatting options')">
       <ToolbarSection type="buttons" :items="inlineFormatActions" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
       <span class="writing-toolbar-divider" />
       <ToolbarSection type="dropdown" label="Align" preserve-label tooltip="Text alignment" :items="alignmentDropdownItems" :visible="isToolbarSectionVisible('alignment')" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection type="dropdown" label="Size" preserve-label tooltip="Text size" :items="fontSizeDropdownItems" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection type="buttons" :items="listActions" :visible="isToolbarSectionVisible('lists')" @remember-selection="$emit('remember-selection')" />
-      <label class="writing-color" @mousedown="$emit('remember-selection')">Text <input type="color" aria-label="Text color" :disabled="!isToolbarSectionVisible('colors')" :value="textColor || '#333333'" @input="$emit('text-color-change', ($event.target as HTMLInputElement).value)"></label>
-      <label class="writing-color" @mousedown="$emit('remember-selection')">Highlight <input type="color" aria-label="Highlight color" :disabled="!isToolbarSectionVisible('colors')" :value="backgroundColor === 'transparent' ? '#fff1a8' : backgroundColor" @input="$emit('background-color-change', ($event.target as HTMLInputElement).value)"></label>
-      <button type="button" class="toolbar-btn-modern" aria-label="Close more formatting" @click="closeWritingFormatting">×</button>
+      <label class="writing-color" @mousedown="$emit('remember-selection')">{{ t("Text") }} <input type="color" :aria-label="t('Text color')" :disabled="!isToolbarSectionVisible('colors')" :value="textColor || '#333333'" @input="$emit('text-color-change', ($event.target as HTMLInputElement).value)"></label>
+      <label class="writing-color" @mousedown="$emit('remember-selection')">{{ t("Highlight") }} <input type="color" :aria-label="t('Highlight color')" :disabled="!isToolbarSectionVisible('colors')" :value="backgroundColor === 'transparent' ? '#fff1a8' : backgroundColor" @input="$emit('background-color-change', ($event.target as HTMLInputElement).value)"></label>
+      <button type="button" class="toolbar-btn-modern" :aria-label="t('Close more formatting')" @click="closeWritingFormatting">×</button>
     </div>
   </nav>
   <nav
@@ -43,7 +43,7 @@
       },
     ]"
     role="toolbar"
-    aria-label="Text formatting toolbar"
+    :aria-label="t('Text formatting toolbar')"
     @keydown="onRovingKeydown"
     @focusin="onRovingFocusin"
   >
@@ -63,13 +63,13 @@
       v-show="!isMini"
       class="toolbar-section-group toolbar-history-group"
       role="group"
-      aria-label="History"
+      :aria-label="t('History')"
     >
-      <div class="toolbar-group" role="group" aria-label="Undo and redo">
+      <div class="toolbar-group" role="group" :aria-label="t('Undo and redo')">
         <button
           class="toolbar-btn-modern"
           data-tooltip="Undo (Ctrl+Z)"
-          aria-label="Undo"
+          :aria-label="t('Undo')"
           :disabled="historyIndex <= 0"
           @click="$emit('undo')"
         >
@@ -91,7 +91,7 @@
         <button
           class="toolbar-btn-modern"
           data-tooltip="Redo (Ctrl+Shift+Z)"
-          aria-label="Redo"
+          :aria-label="t('Redo')"
           :disabled="historyIndex >= historyLength - 1"
           @click="$emit('redo')"
         >
@@ -117,7 +117,7 @@
     <div
       class="toolbar-section-group"
       role="group"
-      aria-label="Text formatting"
+      :aria-label="t('Text formatting')"
     >
       <!-- Format Dropdown — .format-dropdown scopes the masthead's serif
            trigger label (the class falls through ToolbarSection onto
@@ -195,7 +195,7 @@
       class="toolbar-section-group nle-unfold"
       :style="{ '--nle-group-i': 1 }"
       role="group"
-      aria-label="Insert and styling"
+      :aria-label="t('Insert and styling')"
     >
       <!-- Colors Dropdown -->
       <div
@@ -213,7 +213,7 @@
               ? 'Text & background colors'
               : 'Text & background colors (not available for current selection)'
           "
-          aria-label="Colors"
+          :aria-label="t('Colors')"
           :aria-expanded="showColorsDropdown"
           :disabled="!isToolbarSectionVisible('colors')"
           @mousedown.prevent="$emit('remember-selection')"
@@ -225,7 +225,7 @@
         >
           <span class="dropdown-icon"
             ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3s6 5.5 6 10a6 6 0 0 1-12 0c0-4.5 6-10 6-10Z" /><path d="M5 21h14" /></svg></span>
-          <span class="dropdown-label">Colors</span>
+          <span class="dropdown-label">{{ t("Colors") }}</span>
           <span class="dropdown-arrow" aria-hidden="true">▼</span>
         </button>
         <transition name="dropdown-fade">
@@ -235,12 +235,12 @@
             class="dropdown-menu colors-menu"
             :style="colorsMenuLeft !== 0 ? { left: `${colorsMenuLeft}px` } : {}"
             role="group"
-            aria-label="Colors"
+            :aria-label="t('Colors')"
             @click.stop
           >
             <!-- Text color -->
             <div class="colors-section">
-              <div class="colors-section-label">Text color</div>
+              <div class="colors-section-label">{{ t("Text color") }}</div>
               <div class="colors-swatches">
                 <button
                   v-for="c in textColorPresets"
@@ -250,7 +250,7 @@
                   :class="{ active: sameColor(selectionTextColor, c) }"
                   :style="{ background: c }"
                   :aria-label="`Text color ${c}`"
-                  :title="c"
+                  :title="t(c)"
                   @mousedown.prevent="$emit('remember-selection')"
                   @click="pickTextColor(c)"
                 />
@@ -262,20 +262,20 @@
                   icon="+"
                   @update:model-value="pickTextColor($event)"
                 />
-                <span class="colors-custom-label">Custom…</span>
+                <span class="colors-custom-label">{{ t("Custom…") }}</span>
               </div>
             </div>
 
             <!-- Highlight -->
             <div class="colors-section">
-              <div class="colors-section-label">Highlight</div>
+              <div class="colors-section-label">{{ t("Highlight") }}</div>
               <div class="colors-swatches">
                 <button
                   type="button"
                   class="colors-swatch colors-swatch-none"
                   :class="{ active: noHighlightActive }"
-                  aria-label="No highlight"
-                  title="None"
+                  :aria-label="t('No highlight')"
+                  :title="t('None')"
                   @mousedown.prevent="$emit('remember-selection')"
                   @click="pickHighlightColor('transparent')"
                 />
@@ -287,7 +287,7 @@
                   :class="{ active: sameColor(selectionHighlightColor, c) }"
                   :style="{ background: c }"
                   :aria-label="`Highlight ${c}`"
-                  :title="c"
+                  :title="t(c)"
                   @mousedown.prevent="$emit('remember-selection')"
                   @click="pickHighlightColor(c)"
                 />
@@ -299,7 +299,7 @@
                   icon="+"
                   @update:model-value="pickHighlightColor($event)"
                 />
-                <span class="colors-custom-label">Custom…</span>
+                <span class="colors-custom-label">{{ t("Custom…") }}</span>
               </div>
             </div>
           </div>
@@ -323,7 +323,7 @@
       class="toolbar-section-group nle-unfold"
       :style="{ '--nle-group-i': 2 }"
       role="group"
-      aria-label="Tools"
+      :aria-label="t('Tools')"
     >
       <div class="toolbar-divider" />
 
@@ -356,7 +356,7 @@
       class="toolbar-section-group nle-unfold toolbar-view-group"
       :style="{ '--nle-group-i': 3 }"
       role="group"
-      aria-label="View and display controls"
+      :aria-label="t('View and display controls')"
     >
       <div class="toolbar-divider" />
 
@@ -365,7 +365,7 @@
         v-if="toolbarLayout !== 'compact'"
         class="view-mode-group"
         role="group"
-        aria-label="View mode selection"
+        :aria-label="t('View mode selection')"
       >
         <button
           :class="[
@@ -374,12 +374,12 @@
             { active: viewMode === 'editor' },
           ]"
           data-tooltip="WYSIWYG Editor - Edit with visual formatting"
-          aria-label="Editor view"
+          :aria-label="t('Editor view')"
           :aria-pressed="viewMode === 'editor'"
           @click="$emit('view-mode-change', 'editor')"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-          <span class="btn-label">Editor</span>
+          <span class="btn-label">{{ t("Editor") }}</span>
         </button>
         <button
           :class="[
@@ -388,12 +388,12 @@
             { active: viewMode === 'code' },
           ]"
           data-tooltip="HTML Source Code - Edit raw HTML"
-          aria-label="Code view"
+          :aria-label="t('Code view')"
           :aria-pressed="viewMode === 'code'"
           @click="$emit('view-mode-change', 'code')"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
-          <span class="btn-label">Code</span>
+          <span class="btn-label">{{ t("Code") }}</span>
         </button>
         <button
           :class="[
@@ -402,12 +402,12 @@
             { active: viewMode === 'split' },
           ]"
           data-tooltip="Split View - Editor and code side by side"
-          aria-label="Split view"
+          :aria-label="t('Split view')"
           :aria-pressed="viewMode === 'split'"
           @click="$emit('view-mode-change', 'split')"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M12 3v18" /></svg>
-          <span class="btn-label">Split</span>
+          <span class="btn-label">{{ t("Split") }}</span>
         </button>
         <button
           :class="[
@@ -416,12 +416,12 @@
             { active: viewMode === 'preview' },
           ]"
           data-tooltip="Preview - View final output without editing"
-          aria-label="Preview view"
+          :aria-label="t('Preview view')"
           :aria-pressed="viewMode === 'preview'"
           @click="$emit('view-mode-change', 'preview')"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
-          <span class="btn-label">Preview</span>
+          <span class="btn-label">{{ t("Preview") }}</span>
         </button>
       </div>
 
@@ -430,7 +430,7 @@
         v-if="viewMode === 'code' || viewMode === 'split'"
         class="toolbar-btn-modern"
         data-tooltip="Format HTML (pretty-print)"
-        aria-label="Format HTML"
+        :aria-label="t('Format HTML')"
         @click="$emit('format-html')"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1" /><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" /></svg>
@@ -475,7 +475,7 @@
         :data-tooltip="
           isFocusMode ? 'Exit focus mode (Esc)' : 'Focus mode — fill the window'
         "
-        :aria-label="isFocusMode ? 'Exit focus mode' : 'Enter focus mode'"
+        :aria-label="t(isFocusMode ? 'Exit focus mode' : 'Enter focus mode')"
         :aria-pressed="isFocusMode"
         @click="$emit('toggle-focus')"
       >
@@ -488,7 +488,7 @@
         v-if="toolbarLayout !== 'compact'"
         class="toolbar-btn-modern fullscreen-toggle"
         data-tooltip="Toggle fullscreen mode"
-        aria-label="Toggle fullscreen mode"
+        :aria-label="t('Toggle fullscreen mode')"
         :aria-pressed="isFullScreen"
         @click="$emit('toggle-fullscreen')"
       >
@@ -500,7 +500,7 @@
       <button
         class="toolbar-btn-modern theme-toggle"
         data-tooltip="Toggle theme"
-        aria-label="Toggle dark/light theme"
+        :aria-label="t('Toggle dark/light theme')"
         :aria-pressed="theme === 'dark'"
         @click="$emit('toggle-theme')"
       >
@@ -520,7 +520,7 @@
       class="toolbar-btn-modern toolbar-expand-toggle"
       :class="{ 'is-open': expanded }"
       :data-tooltip="expanded ? 'Show fewer tools' : 'Show all tools'"
-      :aria-label="expanded ? 'Collapse toolbar' : 'Expand toolbar'"
+      :aria-label="t(expanded ? 'Collapse toolbar' : 'Expand toolbar')"
       :aria-expanded="expanded"
       @click="toggleExpanded"
     >
@@ -530,6 +530,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import type { ToolbarAction } from "../types/toolbar";
 import type { ToolbarConfig } from "../composables/useSmartToolbar";

@@ -1,5 +1,5 @@
 <template>
-  <nav class="skip-links" :aria-label="navLabel">
+  <nav class="skip-links" :aria-label="t(navLabel)">
     <a
       v-for="link in links"
       :key="link.id"
@@ -7,12 +7,14 @@
       class="skip-link"
       @click="handleSkip(link.target, link.label)"
     >
-      {{ link.label }}
+      {{ t(link.label) }}
     </a>
   </nav>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { computed } from "vue";
 import { useAccessibility } from "../composables/useAccessibility";
 import { smoothScrollIntoView } from "../utils/scroll";

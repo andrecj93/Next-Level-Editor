@@ -13,10 +13,10 @@
         aria-modal="true"
       >
         <div class="modal-header">
-          <h3 id="template-modal-title">📄 Choose a Template</h3>
+          <h3 id="template-modal-title">{{ t("📄 Choose a Template") }}</h3>
           <button
             class="close-btn"
-            aria-label="Close"
+            :aria-label="t('Close')"
             @click="$emit('close')"
           >
             ✕
@@ -32,7 +32,7 @@
               :class="['category-btn', { active: selectedCategory === cat.value }]"
               @click="selectedCategory = cat.value"
             >
-              {{ cat.icon }} {{ cat.label }}
+              {{ cat.icon }} {{ t(cat.label) }}
             </button>
           </div>
 
@@ -54,7 +54,7 @@
               </div>
               <div class="template-info">
                 <h4>{{ template.name }}</h4>
-                <p>{{ template.description }}</p>
+                <p>{{ t(template.description) }}</p>
               </div>
             </div>
           </div>
@@ -65,6 +65,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed } from 'vue'
 import { getTemplates, type Template } from '../utils/templates'
 import { useModalDialog } from '../composables/useModalDialog'

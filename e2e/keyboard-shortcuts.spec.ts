@@ -51,7 +51,7 @@ test.describe("Advanced keyboard shortcuts", () => {
   test("the help modal opens from Tools and lists only wired shortcuts", async ({
     page,
   }) => {
-    await page.getByRole("button", { name: "Tools" }).first().click();
+    await page.getByRole("button", { name: "Tools", exact: true }).first().click();
     await page
       .locator(".dropdown-menu")
       .getByRole("menuitem", { name: "Keyboard Shortcuts" })

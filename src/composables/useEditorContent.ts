@@ -18,6 +18,8 @@ interface UseEditorContentOptions {
   triggerAutoSave?: (content: string) => void;
   /** Cancel saves for the previous document when the host replaces its model. */
   onExternalUpdate?: () => void;
+  /** Structured hosts can consume model changes without replacing their live DOM. */
+  interceptExternalUpdate?: (html: string) => boolean;
   /**
    * Called after the editor's innerHTML has been replaced wholesale, for
    * subsystems that bind listeners to live nodes and must re-attach them.
@@ -200,6 +202,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
     modelValue,
     (newValue) => {
       if (isApplyingHistory.value) return;
+      if (options.interceptExternalUpdate?.(sanitizeHtml(newValue))) return;
       if (!editorContent.value) {
         // No editable surface mounted (Preview view, including a DIRECT mount
         // via defaultViewMode="preview"): the string is still the document —

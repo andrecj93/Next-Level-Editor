@@ -10,11 +10,11 @@
       @click.stop
     >
       <div class="modal-header">
-        <h3 id="modal-title">📁 File Manager</h3>
+        <h3 id="modal-title">{{ t("📁 File Manager") }}</h3>
         <button
           class="close-button"
-          aria-label="Close modal"
-          title="Close File Manager"
+          :aria-label="t('Close modal')"
+          :title="t('Close File Manager')"
           @click="close"
         >
           ✕
@@ -38,7 +38,7 @@
                 class="btn btn-primary"
                 @click="fileInput?.click()"
               >
-                ⬆️ Upload Files
+                {{ t("⬆️ Upload Files") }}
               </button>
             </label>
             <button
@@ -47,14 +47,14 @@
               class="btn btn-danger"
               @click="deleteSelected"
             >
-              🗑️ Delete ({{ selectedFiles.length }})
+              {{ t("🗑️ Delete (") }}{{ selectedFiles.length }})
             </button>
           </div>
           <div class="toolbar-right">
             <button
               type="button"
               :class="['view-toggle', { active: viewMode === 'grid' }]"
-              aria-label="Grid view"
+              :aria-label="t('Grid view')"
               @click="viewMode = 'grid'"
             >
               ▦
@@ -62,7 +62,7 @@
             <button
               type="button"
               :class="['view-toggle', { active: viewMode === 'list' }]"
-              aria-label="List view"
+              :aria-label="t('List view')"
               @click="viewMode = 'list'"
             >
               ☰
@@ -81,9 +81,9 @@
         >
           <div class="drop-zone-content">
             <div class="drop-icon">📁</div>
-            <p class="drop-text">Drag and drop files here</p>
-            <p class="drop-subtext">or click "Upload Files" to browse</p>
-            <p class="drop-info">Max file size: {{ maxFileSizeFormatted }}</p>
+            <p class="drop-text">{{ t("Drag and drop files here") }}</p>
+            <p class="drop-subtext">{{ t("or click \"Upload Files\" to browse") }}</p>
+            <p class="drop-info">{{ t("Max file size:") }} {{ maxFileSizeFormatted }}</p>
           </div>
         </div>
 
@@ -126,7 +126,7 @@
                 </div>
               </div>
               <div class="file-info">
-                <div class="file-name" :title="file.name">
+                <div class="file-name" :title="t(file.name)">
                   {{ file.name }}
                 </div>
                 <div class="file-meta">
@@ -139,7 +139,7 @@
                   v-if="!isContentAvailable(file)"
                   class="file-unavailable"
                 >
-                  Content unavailable — storage was full
+                  {{ t("Content unavailable — storage was full") }}
                 </div>
               </div>
               <div class="file-actions">
@@ -149,7 +149,7 @@
                 <button
                   class="btn-icon"
                   :aria-label="`Insert ${file.name} into editor`"
-                  title="Insert into editor"
+                  :title="t('Insert into editor')"
                   @click.stop="insertFile(file)"
                 >
                   ✓
@@ -157,7 +157,7 @@
                 <button
                   class="btn-icon btn-danger"
                   :aria-label="`Delete ${file.name}`"
-                  title="Delete"
+                  :title="t('Delete')"
                   @click.stop="deleteFile(file.id)"
                 >
                   🗑️
@@ -178,10 +178,10 @@
                       @change="toggleSelectAll"
                     />
                   </th>
-                  <th>Name</th>
-                  <th style="width: 100px">Size</th>
-                  <th style="width: 150px">Uploaded</th>
-                  <th style="width: 120px">Actions</th>
+                  <th>{{ t("Name") }}</th>
+                  <th style="width: 100px">{{ t("Size") }}</th>
+                  <th style="width: 150px">{{ t("Uploaded") }}</th>
+                  <th style="width: 120px">{{ t("Actions") }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -203,21 +203,21 @@
                     <span class="file-icon-inline">{{
                       getFileIcon(file.type)
                     }}</span>
-                    <span :title="file.name">{{ file.name }}</span>
+                    <span :title="t(file.name)">{{ file.name }}</span>
                   </td>
                   <td>{{ formatFileSize(file.size) }}</td>
                   <td>{{ formatDate(file.uploadedAt) }}</td>
                   <td class="actions-cell">
                     <button
                       class="btn-icon"
-                      title="Insert into editor"
+                      :title="t('Insert into editor')"
                       @click.stop="insertFile(file)"
                     >
                       ✓
                     </button>
                     <button
                       class="btn-icon btn-danger"
-                      title="Delete"
+                      :title="t('Delete')"
                       @click.stop="deleteFile(file.id)"
                     >
                       🗑️
@@ -232,8 +232,8 @@
         <!-- Storage Info -->
         <div v-if="files.length > 0" class="storage-info">
           <span
-            >{{ files.length }} file(s) •
-            {{ formatFileSize(totalSize) }} used</span
+            >{{ files.length }} {{ t("file(s) •") }}
+            {{ formatFileSize(totalSize) }} {{ t("used") }}</span
           >
         </div>
 
@@ -244,12 +244,14 @@
       </div>
 
       <div class="modal-footer">
-        <button class="cancel-button" @click="close">Close</button>
+        <button class="cancel-button" @click="close">{{ t("Close") }}</button>
       </div>
     </dialog>
   </div>
 </template>
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, watch } from "vue";
 import { fileManager, type ManagedFile } from "../utils/fileManager";
 import { useModalDialog } from "../composables/useModalDialog";

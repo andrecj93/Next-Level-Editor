@@ -11,6 +11,15 @@ import type { EditorPlugin } from "../types/plugin";
  * declaration cleanly, and gives consumers an importable prop type.
  */
 export interface NextLevelEditorProps {
+  /** Durable document tools, optional adapters and document identity. */
+  documentOptions?: import('../types/document').DocumentOptions;
+  documentTools?: boolean;
+  locale?: import('../types/document').EditorLocale;
+  messages?: Record<string, string>;
+  contentLanguage?: string;
+  contentDirection?: 'ltr' | 'rtl' | 'auto';
+  /** Structured coauthoring is opt-in. The provider must authorize document access. */
+  collaboration?: import('../types/collaboration').CollaborationOptions;
   /** The editor's HTML content (v-model). */
   modelValue?: string;
   placeholder?: string;
@@ -174,6 +183,8 @@ export interface NextLevelEditorProps {
  * (the props type, `NextLevelEditorProps`, is exported alongside it).
  */
 export interface NextLevelEditorEmits {
+  /** Persist this snapshot alongside HTML to retain references, review and page settings. */
+  (e: 'document-change', value: import('../types/document').DocumentSnapshot): void;
   /** Fired on every content change; the payload is the sanitized HTML string. */
   (e: "update:modelValue", value: string): void;
   /** The editing surface gained focus. */

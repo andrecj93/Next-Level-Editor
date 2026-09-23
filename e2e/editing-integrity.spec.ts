@@ -283,7 +283,10 @@ test.describe('Editing integrity — view sync', () => {
     await page.locator(`${MAIN_TOOLBAR} button[aria-label="Code view"]`).click()
     const codeArea = page.locator('.code-editor')
     await expect(codeArea).toBeVisible()
-    await expect(codeArea).toHaveValue('seed')
+    // The document workspace gives even unformatted text a stable block identity.
+    await expect.poll(() => codeArea.evaluate((element) =>
+      new DOMParser().parseFromString((element as HTMLTextAreaElement).value, 'text/html').body.textContent,
+    )).toBe('seed')
     await codeArea.click()
     await page.keyboard.press('Control+A')
     await page.keyboard.press('Delete')

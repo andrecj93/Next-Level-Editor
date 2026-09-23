@@ -1,59 +1,62 @@
 <template>
-  <aside ref="panel" class="writing-companion" aria-label="Writing companion" @keydown.esc.stop="$emit('close')" @focusout="onFocusOut">
+  <aside ref="panel" class="writing-companion" :aria-label="t('Writing companion')" @keydown.esc.stop="$emit('close')" @focusout="onFocusOut">
     <header class="companion-header">
-      <span class="companion-title">In the margins</span>
-      <nav v-if="tab === 'review' && visibleNotes.length > 1" class="note-pagination" aria-label="Writing note navigation">
-        <button type="button" aria-label="Previous note" :disabled="noteIndex === 0" @click="changeNote(-1)">←</button>
-        <span>{{ noteIndex + 1 }} of {{ visibleNotes.length }}</span>
-        <button type="button" aria-label="Next note" :disabled="noteIndex === visibleNotes.length - 1" @click="changeNote(1)">→</button>
+      <span class="companion-title">{{ t("In the margins") }}</span>
+      <nav v-if="tab === 'review' && visibleNotes.length > 1" class="note-pagination" :aria-label="t('Writing note navigation')">
+        <button type="button" :aria-label="t('Previous note')" :disabled="noteIndex === 0" @click="changeNote(-1)">←</button>
+        <span>{{ noteIndex + 1 }} {{ t('of') }} {{ visibleNotes.length }}</span>
+        <button type="button" :aria-label="t('Next note')" :disabled="noteIndex === visibleNotes.length - 1" @click="changeNote(1)">→</button>
       </nav>
-      <button type="button" aria-label="Close writing companion" @click="$emit('close')">×</button>
+      <button type="button" :aria-label="t('Close writing companion')" @click="$emit('close')">×</button>
     </header>
-    <div class="companion-tabs" role="group" aria-label="Writing companion views">
-      <button ref="reviewButton" type="button" :aria-pressed="tab === 'review'" @click="tab = 'review'">Writing notes <span v-if="visibleNotes.length">{{ visibleNotes.length }}</span></button>
-      <button type="button" :aria-pressed="tab === 'outline'" @click="tab = 'outline'">Outline</button>
+    <div class="companion-tabs" role="group" :aria-label="t('Writing companion views')">
+      <button ref="reviewButton" type="button" :aria-pressed="tab === 'review'" @click="tab = 'review'">{{ t("Writing notes") }} <span v-if="visibleNotes.length">{{ visibleNotes.length }}</span></button>
+      <button type="button" :aria-pressed="tab === 'outline'" @click="tab = 'outline'">{{ t("Outline") }}</button>
     </div>
     <div ref="body" class="companion-body">
       <template v-if="tab === 'review'">
-        <p v-if="!visibleNotes.length" class="companion-intro">A second pair of eyes.<br><span>Your words, your decisions.</span></p>
-        <p v-if="!review.words" class="companion-empty">Start with a sentence. When you pause, I’ll point out a few places you might want to revisit.</p>
-        <p v-else-if="!visibleNotes.length" class="companion-empty">{{ review.notes.length ? 'You’ve considered every note. Keep your voice.' : 'No notes for now. Keep going — there’s room for your next thought.' }}</p>
+        <p v-if="languageSupported === false" role="status">{{ t('English prose checks are unavailable for this document language.') }}</p>
+        <p v-if="!visibleNotes.length" class="companion-intro">{{ t("A second pair of eyes.") }}<br><span>{{ t("Your words, your decisions.") }}</span></p>
+        <p v-if="!review.words" class="companion-empty">{{ t("Start with a sentence. When you pause, I’ll point out a few places you might want to revisit.") }}</p>
+        <p v-else-if="languageSupported !== false && !visibleNotes.length" class="companion-empty">{{ t(review.notes.length ? 'You’ve considered every note. Keep your voice.' : 'No notes for now. Keep going — there’s room for your next thought.') }}</p>
         <article v-if="currentNote && currentContext" :key="currentNote.id" class="writing-note">
           <p class="note-location">{{ currentContext.location }}</p>
-          <h3>{{ currentNote.title }}</h3>
-          <button type="button" class="note-passage" :aria-label="`Show passage in ${currentContext.location}: ${currentContext.before}${currentNote.quote}${currentContext.after}`" @click="$emit('locate', currentNote)">“{{ currentContext.before }}<mark>{{ currentNote.quote }}</mark>{{ currentContext.after }}” <span aria-hidden="true">↗</span></button>
-          <p>{{ currentNote.detail }}</p>
+          <h3>{{ t(currentNote.title) }}</h3>
+          <button type="button" class="note-passage" :aria-label="`${t('Show passage in')} ${currentContext.location}: ${currentContext.before}${currentNote.quote}${currentContext.after}`" @click="$emit('locate', currentNote)">“{{ currentContext.before }}<mark>{{ currentNote.quote }}</mark>{{ currentContext.after }}” <span aria-hidden="true">↗</span></button>
+          <p>{{ t(currentNote.detail) }}</p>
         </article>
         <div v-if="!visibleNotes.length" class="writing-prompt">
-          <span class="companion-kicker">A nudge, if you need one</span>
-          <p>{{ prompts[promptIndex] }}</p>
-          <button type="button" @click="promptIndex = (promptIndex + 1) % prompts.length">Another prompt <span aria-hidden="true">↻</span></button>
+          <span class="companion-kicker">{{ t("A nudge, if you need one") }}</span>
+          <p>{{ t(prompts[promptIndex]) }}</p>
+          <button type="button" @click="promptIndex = (promptIndex + 1) % prompts.length">{{ t('Another prompt') }} <span aria-hidden="true">↻</span></button>
         </div>
       </template>
       <template v-else>
-        <p class="companion-intro">Find your way through.</p>
-        <p v-if="!review.outline.length" class="companion-empty">Turn a line into a heading with the paragraph menu or type # followed by a space. Your chapters will appear here.</p>
-        <nav v-else aria-label="Document outline" class="writing-outline">
+        <p class="companion-intro">{{ t("Find your way through.") }}</p>
+        <p v-if="!review.outline.length" class="companion-empty">{{ t("Turn a line into a heading with the paragraph menu or type # followed by a space. Your chapters will appear here.") }}</p>
+        <nav v-else :aria-label="t('Document outline')" class="writing-outline">
           <button v-for="heading in review.outline" :key="heading.block" type="button" :style="{ paddingLeft: `${12 + Math.min(heading.level - 1, 3) * 12}px` }" @click="$emit('navigate', heading.block)">{{ heading.text }}</button>
         </nav>
       </template>
     </div>
     <div v-if="tab === 'review' && currentNote" :key="currentNote.id" class="note-actions">
-      <button v-if="currentNote.replacement" type="button" class="note-apply" :disabled="readonly" @click="$emit('apply', currentNote)">Use “{{ currentNote.replacement }}”</button>
-      <button v-else type="button" @click="$emit('locate', currentNote)">Go to sentence</button>
-      <button type="button" :aria-label="`Dismiss note: ${currentNote.title}`" @click="dismiss(currentNote, $event)">Keep as is</button>
+      <button v-if="currentNote.replacement" type="button" class="note-apply" :disabled="readonly" @click="$emit('apply', currentNote)">{{ t('Use') }} “{{ currentNote.replacement }}”</button>
+      <button v-else type="button" @click="$emit('locate', currentNote)">{{ t('Go to sentence') }}</button>
+      <button type="button" :aria-label="t('Dismiss note') + ': ' + t(currentNote.title)" @click="dismiss(currentNote, $event)">{{ t('Keep as is') }}</button>
     </div>
     <footer class="companion-footer">
-      <span>{{ review.words.toLocaleString() }} words<span v-if="review.words"> · {{ review.readingMinutes }} min read</span></span>
-      <small>Private, on-device checks · English prose</small>
+      <span>{{ review.words.toLocaleString(locale) }} {{ t("words") }}<span v-if="review.words"> · {{ review.readingMinutes }} {{ t("min read") }}</span></span>
+      <small>{{ t("Private, on-device checks · English prose") }}</small>
     </footer>
   </aside>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, locale } = useEditorLocale();
 import { computed, nextTick, ref, watch } from 'vue';
 import { writingNoteContext, type WritingReview, type WritingNote } from '../utils/writingReview';
-const props = defineProps<{ review: WritingReview; dismissedNotes: ReadonlySet<string>; readonly?: boolean; startNoteId?: string }>();
+const props = withDefaults(defineProps<{ review: WritingReview; dismissedNotes: ReadonlySet<string>; readonly?: boolean; startNoteId?: string; languageSupported?: boolean }>(), { readonly: false, startNoteId: undefined, languageSupported: true });
 const emit = defineEmits<{ close: []; leave: []; locate: [note: WritingNote]; apply: [note: WritingNote]; dismiss: [note: WritingNote]; navigate: [block: number] }>();
 const panel = ref<HTMLElement | null>(null);
 const body = ref<HTMLElement | null>(null);

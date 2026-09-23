@@ -24,13 +24,14 @@
         : undefined
     "
   >
+    <DocumentTools v-if="documentTools && documentWorkspace" :workspace="documentWorkspace" :options="effectiveDocumentOptions" :collaborative="Boolean(collaboration)" :connection="collaborationState" :participants="collaborators" />
     <!-- Accessibility: Skip Links -->
     <SkipLinks
-      :label="skipLinksLabel"
+      :label="t(skipLinksLabel)"
       :main-target-id="mainLandmarkId"
       :toolbar-target-id="toolbarLandmarkId"
       :footer-target-id="footerLandmarkId"
-      :has-toolbar="showToolbar && !readonly && !isPillMode"
+      :has-toolbar="showToolbar && !effectiveReadonly && !isPillMode"
       :has-footer="effectiveToolbarPosition !== 'bottom'"
     />
 
@@ -44,7 +45,7 @@
          the sticky positioning the toolbar previously had — sticky inside a
          tight wrapper would otherwise pin to the wrapper's own bounds. -->
     <div
-      v-if="showToolbar && !readonly && !isPillMode"
+      v-if="showToolbar && !effectiveReadonly && !isPillMode"
       ref="toolbarShellEl"
       class="nle-toolbar-shell"
       :data-adaptive="effectiveAdaptiveChrome"
@@ -68,8 +69,8 @@
       :text-color="textColor"
       :background-color="backgroundColor"
       :font-size-dropdown-items="fontSizeDropdownItems"
-      :history-index="historyIndex"
-      :history-length="history.length"
+      :history-index="activeHistory.undo"
+      :history-length="activeHistory.undo + activeHistory.redo + 1"
       :productivity-dropdown-items="productivityDropdownItems"
       :tool-actions="toolActions"
       :export-dropdown-items="exportDropdownItems"
@@ -100,7 +101,7 @@
     <div
       v-if="effectiveAdaptiveChrome === 'letterbox'"
       class="nle-letterbox"
-      :title="'Click to show the toolbar'"
+      :title="t('Click to show the toolbar')"
       @click="restoreChrome"
     >
       <span class="nle-letterbox-format">{{ letterboxFormatLabel }}</span>
@@ -115,7 +116,7 @@
         :class="{ 'is-pulsing': letterboxSavePulse }"
         aria-hidden="true"
       />
-      <span class="nle-letterbox-count">{{ wordCount }} words</span>
+      <span class="nle-letterbox-count">{{ wordCount }} {{ t("words") }}</span>
     </div>
     </div>
 
@@ -140,11 +141,12 @@
       :id="mainLandmarkId"
       ref="editorPanelsRef"
       :view-mode="viewMode"
-      :editable="!readonly"
+      :editable="!effectiveReadonly && (!collaboration || Boolean(collaborationBinding))"
+      :lang="contentLanguage" :dir="contentDirection"
       :command-menu-open="surfacePopup.open"
       :command-listbox-id="surfacePopup.listboxId"
       :command-active-option-id="surfacePopup.activeOptionId"
-      :placeholder="placeholder"
+      :placeholder="t(placeholder)"
       :code-content="codeContent"
       :html-content="htmlContent"
       :split-right-mode="splitRightMode"
@@ -168,7 +170,8 @@
       :review="writingReview"
       :dismissed-notes="dismissedWritingNotes"
       :start-note-id="writingReviewStart"
-      :readonly="readonly"
+      :readonly="effectiveReadonly"
+      :language-supported="writingLanguageSupported"
       @close="closeCompanion"
       @leave="companionOpen = false"
       @locate="locateWritingNote"
@@ -191,7 +194,7 @@
       :companion-open="companionOpen && viewMode === 'editor'"
       :writing-note-count="writingReview.notes.filter(note => !dismissedWritingNotes.has(note.id)).length"
       :enable-comments="enableComments"
-      :enable-variables="enableVariables && !readonly"
+      :enable-variables="enableVariables && !effectiveReadonly"
       :comments-open="showCommentsSidebar"
       :variables-open="showVariablesPanel"
       @toggle-companion="toggleCompanion"
@@ -211,8 +214,8 @@
       v-if="!isFullScreen && !isFocusMode && !isPillMode"
       class="nle-resize-grip"
       type="button"
-      aria-label="Resize editor (drag, or use arrow keys)"
-      title="Drag to resize · double-click to reset"
+      :aria-label="t('Resize editor (drag, or use arrow keys)')"
+      :title="t('Drag to resize · double-click to reset')"
       @pointerdown="onResizeGripPointerdown"
       @keydown="onResizeGripKeydown"
       @dblclick="resetEditorSize"
@@ -229,13 +232,13 @@
     </button>
 
     <!-- Floating Toolbar -->
-    <!-- Selection toolbar (bubble over selected text) — never in readonly,
+    <!-- Selection toolbar (bubble over selected text) — never in effectiveReadonly,
          and suppressed while the mobile bottom toolbar owns the screen:
          two stacked formatting surfaces on a phone is duplicated, cramped
          UI (the bottom bar already carries the same actions). -->
     <FloatingToolbar
       :show="
-        showFloatingToolbar && !readonly && !mobileBarOnScreen && !isPillMode
+        showFloatingToolbar && !effectiveReadonly && !mobileBarOnScreen && !isPillMode
       "
       :actions="floatingActions"
     />
@@ -275,13 +278,13 @@
     />
 
     <!-- Mobile bottom toolbar (self-hides on non-touch/desktop; off in
-         readonly). Because it teleports to <body>, `visible` is driven by
+         effectiveReadonly). Because it teleports to <body>, `visible` is driven by
          focus/last-interaction ownership: only the instance the user is
          working in shows a toolbar, so multi-editor pages never stack N
          identical fixed bars. -->
     <MobileToolbar
       :writing-mode="writingMode"
-      :visible="mobileToolbarVisible && !readonly"
+      :visible="mobileToolbarVisible && !effectiveReadonly"
       :is-active="mobileIsActive"
       :editor-root="rootEl"
       @action="handleMobileAction"
@@ -299,7 +302,7 @@
       ref="historyPanelRef"
       class="history-timeline-panel"
       role="region"
-      aria-label="History timeline"
+      :aria-label="t('History timeline')"
       tabindex="-1"
     >
       <HistoryTimeline
@@ -421,10 +424,11 @@
       v-if="showWritingStats && writingAssistant && showWritingStatsPanel"
       v-show="ownsFixedChrome"
       :stats="writingAssistant.stats.value"
-      :readability="writingAssistant.readability.value"
+      :readability="writingLanguageSupported ? writingAssistant.readability.value : null"
       :sentence-analysis="writingAssistant.sentenceAnalysis.value"
       :word-analysis="writingAssistant.wordAnalysis.value"
-      :issues="writingAssistant.issues.value"
+      :issues="writingLanguageSupported ? writingAssistant.issues.value : null"
+      :language-supported="writingLanguageSupported"
       :seo="writingAssistant.seo.value"
       @close="showWritingStatsPanel = false"
     />
@@ -448,7 +452,7 @@
     <!-- Shared confirmation for destructive actions -->
     <ConfirmDialog
       :is-open="confirmDialogOpen"
-      :title="confirmDialogOptions.title"
+      :title="t(confirmDialogOptions.title)"
       :message="confirmDialogOptions.message"
       :confirm-label="confirmDialogOptions.confirmLabel"
       :cancel-label="confirmDialogOptions.cancelLabel"
@@ -486,8 +490,8 @@
       <button
         v-if="!writingMode && enableComments && !showCommentsSidebar && comments && ownsFixedChrome"
         class="comments-toggle-fab"
-        aria-label="Open comments"
-        title="Open comments"
+        :aria-label="t('Open comments')"
+        :title="t('Open comments')"
         @click="showCommentsSidebar = true"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -513,17 +517,17 @@
       <button
         v-if="!writingMode && showWritingStats && writingAssistant && ownsFixedChrome"
         class="writing-stats-toggle-fab"
-        :aria-label="
+        :aria-label="t(
           showWritingStatsPanel
             ? 'Hide writing statistics'
             : 'Show writing statistics'
-        "
+        )"
         :aria-expanded="showWritingStatsPanel"
-        :title="
+        :title="t(
           showWritingStatsPanel
             ? 'Hide writing statistics'
             : 'Show writing statistics'
-        "
+        )"
         @click="showWritingStatsPanel = !showWritingStatsPanel"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -541,14 +545,14 @@
     <!-- Variables Toggle FAB (opt-in feature) -->
     <Transition name="fab-fade">
       <button
-        v-if="!writingMode && enableVariables && variablesComposable && !readonly && ownsFixedChrome"
+        v-if="!writingMode && enableVariables && variablesComposable && !effectiveReadonly && ownsFixedChrome"
         class="variables-toggle-fab"
         :style="{
           bottom: `calc(${variablesFabBottom}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
         }"
-        aria-label="Toggle variables panel"
+        :aria-label="t('Toggle variables panel')"
         :aria-expanded="showVariablesPanel"
-        :title="showVariablesPanel ? 'Hide variables' : 'Show variables'"
+        :title="t(showVariablesPanel ? 'Hide variables' : 'Show variables')"
         @click="showVariablesPanel = !showVariablesPanel"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -571,7 +575,7 @@
           enableVariables &&
           variablesComposable &&
           showVariablesPanel &&
-          !readonly &&
+          !effectiveReadonly &&
           ownsFixedChrome
         "
         class="variables-panel"
@@ -579,13 +583,13 @@
           bottom: `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
         }"
         role="region"
-        aria-label="Template variables"
+        :aria-label="t('Template variables')"
       >
         <div class="variables-panel-header">
-          <span class="variables-panel-title">Variables</span>
+          <span class="variables-panel-title">{{ t("Variables") }}</span>
           <button
             class="variables-panel-close"
-            aria-label="Close variables panel"
+            :aria-label="t('Close variables panel')"
             @click="showVariablesPanel = false"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -617,7 +621,7 @@
               )"
               :key="variable.id"
               class="variables-panel-item"
-              :title="variable.description"
+              :title="t(variable.description)"
               @mousedown.prevent
               @click="handlePanelInsert(variable)"
             >
@@ -632,12 +636,12 @@
             </button>
           </template>
           <template v-if="uncategorizedVariables.length">
-            <div class="variables-panel-category">Other</div>
+            <div class="variables-panel-category">{{ t("Other") }}</div>
             <button
               v-for="variable in uncategorizedVariables"
               :key="variable.id"
               class="variables-panel-item"
-              :title="variable.description"
+              :title="t(variable.description)"
               @mousedown.prevent
               @click="handlePanelInsert(variable)"
             >
@@ -653,7 +657,7 @@
           </template>
         </div>
         <div class="variables-panel-footer">
-          Click a variable to insert it at the cursor
+          {{ t("Click a variable to insert it at the cursor") }}
         </div>
       </div>
     </Transition>
@@ -673,6 +677,14 @@ import {
   watch,
   watchEffect,
 } from "vue";
+import DocumentTools from './DocumentTools.vue';
+import { useDocumentWorkspace } from '../composables/useDocumentWorkspace';
+import { provideEditorLocale } from '../composables/useEditorLocale';
+import { assignBlockIds } from '../utils/documentOperations';
+import type { CollaborationBinding } from '../utils/collaborationBinding';
+import { defaultDocumentMetadata } from '../types/document';
+import type { ConnectionState } from '../types/collaboration';
+import { getCaretOffsets, setCaretOffsets } from '../utils/caretOffset';
 import { useStableId } from "../utils/useStableId";
 import WritingCompanion from './WritingCompanion.vue';
 import SaveStatus from './SaveStatus.vue';
@@ -789,6 +801,10 @@ import type {
 
 const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   modelValue: "",
+  documentTools: false,
+  locale: "en",
+  contentLanguage: "en",
+  contentDirection: "auto",
   placeholder: "Start typing...",
   width: undefined,
   height: undefined,
@@ -811,6 +827,23 @@ const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   autofocus: false,
 });
 
+const effectiveReadonly = computed(() => props.readonly || props.documentOptions?.role === 'viewer' ||
+  Boolean(props.collaboration && props.documentOptions?.role === 'reviewer'));
+const writingLanguageSupported = computed(() => /^en(?:-|$)/i.test(props.contentLanguage));
+const { t } = provideEditorLocale(() => props.locale, () => props.messages ?? {});
+const ephemeralDocumentId=useStableId();
+const effectiveDocumentOptions = computed(() => {
+  const options=props.documentOptions ?? (props.documentTools ? {id:'ephemeral-'+ephemeralDocumentId} : undefined);
+  if(!options)return undefined;
+  const metadata=options.metadata ?? defaultDocumentMetadata();
+  if(!options.metadata)metadata.page.language=props.contentLanguage;
+  return {...options, metadata, role:effectiveReadonly.value?'viewer' as const:options.role};
+});
+let collaborationBinding: CollaborationBinding | undefined;
+const collaborationState = ref<ConnectionState>('connecting');
+const collaborators = ref<string[]>([]);
+let collaborationController: AbortController | undefined;
+let syncingRemote = false;
 const emit = defineEmits<NextLevelEditorEmits>();
 
 // Whole-editor theme preset → root class (composes with the light/dark class).
@@ -932,7 +965,7 @@ const isPillMode = computed(
   () =>
     effectiveToolbarMode.value === "pill" &&
     props.showToolbar &&
-    !props.readonly &&
+    !effectiveReadonly.value &&
     (viewMode.value === "editor" || viewMode.value === "split")
 );
 const isZen = computed(() => effectiveToolbarPosition.value === "zen");
@@ -1222,7 +1255,7 @@ const {
   historyIndex,
   isApplyingHistory,
   applySanitizedContent,
-  captureAndEmit: captureSnapshot,
+  captureAndEmit: captureSnapshotBase,
   undo: undoBase,
   redo: redoBase,
   jumpToHistory,
@@ -1230,6 +1263,7 @@ const {
   sanitizeHtml,
 } = useEditorContent({
   onExternalUpdate: resetSaveState,
+  interceptExternalUpdate: html => { if (!collaborationBinding) return false; if (html !== collaborationBinding.readHtml()) collaborationBinding.applyHtml(html); return true; },
   editorContent,
   modelValue: toRef(props, "modelValue"),
   onUpdate: (value) => emit("update:modelValue", value),
@@ -1244,6 +1278,43 @@ const {
   },
 });
 
+const documentWorkspace = useDocumentWorkspace({
+  options: effectiveDocumentOptions, html: htmlContent, root: editorContent, sanitize: sanitizeHtml,
+  locale: () => props.locale,
+  selection:{read:()=>editorContent.value?getCaretOffsets(editorContent.value):null,write:value=>{if(editorContent.value)setCaretOffsets(editorContent.value,value);}},
+  comments: comments ? { read: () => comments.exportThreads(), write: json => { comments.importThreads(json); } } : undefined,
+  apply(html) {
+    if (collaborationBinding) { collaborationBinding.applySnapshot({html,metadata:documentWorkspace.session.snapshot().metadata}); return; }
+    applySanitizedContent(html); codeContent.value = html; captureSnapshotBase();
+  },
+});
+
+function captureSnapshot(...args: Parameters<typeof captureSnapshotBase>) {
+  if (syncingRemote) return;
+  const root = editorContent.value;
+  if (effectiveReadonly.value) return;
+  // ProseMirror observes native DOM edits and emits its own model transactions.
+  // Re-parsing each input here trims a just-typed space and races its caret mapping.
+  if (collaborationBinding) return;
+  documentWorkspace.session.setInputKind(args[1]);
+  if (root && effectiveDocumentOptions.value) {
+    if (Array.from(root.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())) {
+      const caret = getCaretOffsets(root);
+      const run:Node[]=[];
+      const flush=()=>{if(!run.length)return;const paragraph=document.createElement('p');root.insertBefore(paragraph,run[0]);paragraph.append(...run);run.length=0;};
+      for(const node of Array.from(root.childNodes)){if(node.nodeType===Node.TEXT_NODE || node instanceof HTMLElement && /^(SPAN|B|STRONG|I|EM|U|A|S|SUB|SUP|BR)$/.test(node.tagName))run.push(node);else flush();}flush();
+      setCaretOffsets(root,caret);
+    }
+    assignBlockIds(root);
+    for (const block of Array.from(root.children)) { if (!block.hasAttribute('lang')) block.setAttribute('lang',props.contentLanguage); if (!block.hasAttribute('dir')) block.setAttribute('dir',props.contentDirection); }
+    const reviewed = documentWorkspace?.captureSuggestedEdit(htmlContent.value, root.innerHTML);
+    if (reviewed !== undefined && reviewed !== root.innerHTML) {
+      const caret = getCaretOffsets(root); root.innerHTML = reviewed; setCaretOffsets(root, caret);
+    }
+  }
+  captureSnapshotBase(...args);
+}
+
 usePendingSaveGuard(
   () => Boolean(props.saveHandler) && isDirty.value,
   () => forceSave(sanitizeHtml(htmlContent.value))
@@ -1252,7 +1323,7 @@ usePendingSaveGuard(
 const {
   review: writingReview, refresh: refreshWritingReview,
   dismissedNotes: dismissedWritingNotes, dismissNote,
-} = useWritingWorkspace(htmlContent, toRef(props, 'writingMode'));
+} = useWritingWorkspace(htmlContent, toRef(props, 'writingMode'), toRef(props, 'contentLanguage'));
 useWritingReflow(editorContent, toRef(props, 'writingMode'));
 const dismissWritingNote = (note: WritingNote) => {
   if (!dismissNote(note)) return;
@@ -1339,7 +1410,7 @@ const locateWritingNote = (note: WritingNote) => {
   return true;
 };
 const applyWritingNote = (note: WritingNote) => {
-  if (props.readonly || note.replacement === undefined || !locateWritingNote(note)) return;
+  if (effectiveReadonly.value || note.replacement === undefined || !locateWritingNote(note)) return;
   captureSnapshot();
   if (document.execCommand('insertText', false, note.replacement)) {
     onInput();
@@ -1371,14 +1442,20 @@ const navigateWritingBlock = (index: number) => {
 // Announce undo/redo to screen readers, whatever the trigger (toolbar button,
 // Ctrl+Z/Y, command palette, or an advanced shortcut) — they all call these.
 const undo = () => {
-  undoBase();
-  announce("Undone");
+  if (collaborationBinding) collaborationBinding.undo();
+  else if (effectiveDocumentOptions.value) documentWorkspace.session.undo();
+  else undoBase();
+  historyTick.value++; announce(t("Undone"));
 };
 const redo = () => {
-  redoBase();
-  announce("Redone");
+  if (collaborationBinding) collaborationBinding.redo();
+  else if (effectiveDocumentOptions.value) documentWorkspace.session.redo();
+  else redoBase();
+  historyTick.value++; announce(t("Redone"));
 };
 
+const historyTick=ref(0);
+const activeHistory=computed(()=>{void historyTick.value;void htmlContent.value;void collaborationState.value;return collaborationBinding?.history() ?? (effectiveDocumentOptions.value?{undo:documentWorkspace.session.undoStack.value.length,redo:documentWorkspace.session.redoStack.value.length}:{undo:historyIndex.value,redo:history.value.length-historyIndex.value-1});});
 // History Timeline adapters: map the live undo/redo history (the single source
 // of truth) onto the HistoryTimeline component's entry shape. [#14]
 const timelineEntries = computed(() =>
@@ -1990,7 +2067,7 @@ const {
   spellCheckEnabled,
   captureSnapshot,
   toggleHistoryTimeline: () => {
-    showHistoryTimeline.value = !showHistoryTimeline.value;
+    if(effectiveDocumentOptions.value){documentWorkspace.open.value=true;documentWorkspace.tab.value='Versions';}else showHistoryTimeline.value = !showHistoryTimeline.value;
   },
   // Adds the Tools > Keyboard Shortcuts item (the item only renders when this
   // handler is provided). Opens the registry-backed help modal.
@@ -2129,7 +2206,7 @@ onMounted(() => {
 
   // autofocus: place the caret in the editing surface on mount so the user can
   // type immediately. Meaningless (and skipped) when readonly.
-  if (props.autofocus && !props.readonly) {
+  if (props.autofocus && !effectiveReadonly.value) {
     nextTick(() => {
       const surface = editorContent.value;
       if (surface) {
@@ -2384,7 +2461,7 @@ const onMouseUp = () => {
 // the toggle mutates data-checked in place and captures a history snapshot so it
 // persists (undoable) and round-trips through the sanitizer.
 const onEditorMousedown = (event: MouseEvent) => {
-  if (props.readonly) return;
+  if (effectiveReadonly.value) return;
   const li = checklistItemForCheckboxClick(event.target, event.clientX);
   if (!li) return;
   event.preventDefault();
@@ -2424,7 +2501,7 @@ const insertImageFromFile = async (file: File) => {
 };
 
 const onPaste = (event: ClipboardEvent) => {
-  if (props.readonly) return;
+  if (effectiveReadonly.value) return;
   const clipboard = event.clipboardData;
   if (!clipboard) return;
 
@@ -2563,7 +2640,7 @@ const onDragEnd = () => {
 };
 
 const onDrop = (event: DragEvent) => {
-  if (props.readonly) return;
+  if (effectiveReadonly.value) return;
   const data = event.dataTransfer;
   if (!data) return;
 
@@ -2650,6 +2727,8 @@ const onDrop = (event: DragEvent) => {
 };
 
 const onInput = (event?: Event) => {
+  // The structured editor owns input/composition and its inline decorations.
+  if (collaborationBinding) return;
   // IME guard: while a composition is live the browser fires input events
   // (inputType "insertCompositionText"); running the mutating passes below
   // (autocomplete's deleteContents/addRange, variable wrapping, model sync)
@@ -2846,12 +2925,15 @@ const advancedKeyboard = useAdvancedKeyboardShortcuts(editorContent, {
 // NOT consume the event do we offer it to the advanced registry, so the two
 // systems never double-handle a key.
 function onEditorKeydown(event: KeyboardEvent) {
-  if (event.altKey && event.key === 'F10' && props.showToolbar && !props.readonly) {
+  if (event.altKey && event.key === 'F10' && props.showToolbar && !effectiveReadonly.value) {
     if (editorToolbarRef.value?.focusToolbar()) {
       event.preventDefault();
       return;
     }
   }
+  // ProseMirror handles cursor movement, paragraph/list splitting and deletion.
+  // The legacy DOM merge handlers must not mutate a structured transaction.
+  if (collaborationBinding && !event.ctrlKey && !event.metaKey) return;
   if (variableAutocompleteRef.value?.handleEditorKeydown(event)) return;
 
   // Backspace after a pill unwraps it to editable token text. Model synced
@@ -2860,7 +2942,7 @@ function onEditorKeydown(event: KeyboardEvent) {
   // pass separately skips tokens the caret is INSIDE, so the user can then
   // edit freely and the token re-wraps when the caret leaves. #R23-63
   if (
-    !props.readonly &&
+    !effectiveReadonly.value &&
     variablesComposable?.unwrapPillBeforeCaret(editorContent.value, event)
   ) {
     captureSnapshot();
@@ -2872,7 +2954,7 @@ function onEditorKeydown(event: KeyboardEvent) {
   // gutter. The plain-Enter handler explicitly ignores ctrl/meta, so there's no
   // collision with paragraph splitting.
   if (
-    !props.readonly &&
+    !effectiveReadonly.value &&
     event.key === "Enter" &&
     (event.ctrlKey || event.metaKey) &&
     !event.shiftKey &&
@@ -3110,7 +3192,7 @@ function handlePanelInsert(variable: Variable) {
   // and panel are hidden in readonly, but guard the mutation itself too — this
   // path inserted a pill into the locked content and emitted it to the host.
   // #r21-2
-  if (props.readonly) return;
+  if (effectiveReadonly.value) return;
   if (!variablesComposable || !editorContent.value) return;
   const editor = editorContent.value;
   const selection = window.getSelection();
@@ -3343,7 +3425,7 @@ const chromeSuppressed = computed(
 const adaptiveChromeEnabled = computed(
   () =>
     props.showToolbar &&
-    !props.readonly &&
+    !effectiveReadonly.value &&
     viewMode.value !== "code" &&
     (isPillMode.value ||
       (effectiveAdaptiveChrome.value !== "off" &&
@@ -3519,13 +3601,14 @@ onMounted(() => {
     },
     getContent: () => editorContent.value?.innerHTML ?? "",
     setContent: (html: string) => {
-      if (!editorContent.value) return;
+      if (effectiveReadonly.value || !editorContent.value) return;
       // Host/plugin HTML is an ingestion path like any other — sanitize it.
       editorContent.value.innerHTML = sanitizeHtml(html);
       handleContentReplaced();
       captureSnapshot();
     },
     execCommand: (command: string, value?: string) => {
+      if (effectiveReadonly.value) return;
       document.execCommand(command, false, value);
       onInput();
     },
@@ -3633,13 +3716,13 @@ const pillOverflowItems = computed(() => [
   {
     id: "pill-undo",
     label: "Undo",
-    isDisabled: () => historyIndex.value <= 0,
+    isDisabled: () => activeHistory.value.undo <= 0,
     onClick: undo,
   },
   {
     id: "pill-redo",
     label: "Redo",
-    isDisabled: () => historyIndex.value >= history.value.length - 1,
+    isDisabled: () => activeHistory.value.redo <= 0,
     onClick: redo,
   },
   { divider: true },
@@ -3806,12 +3889,63 @@ watch(lastSaved, () => {
 onUnmounted(() => {
   if (savePulseTimer) clearTimeout(savePulseTimer);
 });
+watch(() => props.documentOptions?.role, role => { documentWorkspace.suggesting.value = role === 'reviewer'; }, { immediate: true });
+watch([() => props.contentLanguage, () => props.contentDirection], ([language,direction], [previousLanguage,previousDirection]) => {
+  if (effectiveReadonly.value || !effectiveDocumentOptions.value) return;
+  void documentWorkspace.run(() => documentWorkspace.mutate((root,value) => {
+    value.metadata.page.language=language;
+    for (const block of Array.from(root.children)) {
+      if (!block.hasAttribute('lang') || block.getAttribute('lang') === previousLanguage) block.setAttribute('lang',language);
+      if (!block.hasAttribute('dir') || block.getAttribute('dir') === previousDirection) block.setAttribute('dir',direction);
+    }
+  }));
+});
+watch([htmlContent, documentWorkspace.session.metadata], () => { if (effectiveDocumentOptions.value) emit('document-change', documentWorkspace.session.snapshot()); });
+let initializedDocumentId:string|undefined;
+watch([editorContent, () => effectiveDocumentOptions.value?.id], async ([root,id]) => {
+  await nextTick();
+  if (root && root===editorContent.value && id && id===effectiveDocumentOptions.value?.id && initializedDocumentId!==id && !props.collaboration) {
+    if(!root.innerHTML && htmlContent.value)root.innerHTML=sanitizeHtml(htmlContent.value);
+    assignBlockIds(root);
+    for(const block of Array.from(root.children)){if(!block.hasAttribute('lang'))block.setAttribute('lang',props.contentLanguage);if(!block.hasAttribute('dir'))block.setAttribute('dir',props.contentDirection);}
+    captureSnapshotBase();
+    documentWorkspace.session.resetBaseline();initializedDocumentId=id;
+  }
+}, { flush: 'post' });
+watch([() => props.collaboration, () => props.documentOptions?.id, editorContent], async ([configuration, documentId, root], _old, onCleanup) => {
+  collaborationController?.abort(); collaborationBinding?.destroy(); collaborationBinding = undefined;
+  if (!configuration || !root || !documentId) return;
+  const controller = new AbortController(); collaborationController = controller;
+  onCleanup(() => controller.abort());
+  collaborationState.value = 'connecting';
+  try {
+    const { bindCollaborativeEditor } = await import('../utils/collaborationBinding');
+    if (controller.signal.aborted) return;
+    collaborationBinding = await bindCollaborativeEditor({ root, documentId, html: htmlContent.value, configuration,
+      metadata: documentWorkspace.session.snapshot().metadata,
+      onMetadata: metadata => { syncingRemote = true; documentWorkspace.session.applyRemoteMetadata(metadata); syncingRemote = false; historyTick.value++; },
+      readonly: () => effectiveReadonly.value, sanitize: sanitizeHtml, signal: controller.signal,
+      onState: state => { collaborationState.value = state; }, onPresence: users => { collaborators.value = users; },
+      onUpdate: html => { syncingRemote = true; htmlContent.value = html; codeContent.value = html; emit('update:modelValue', html); syncingRemote = false; },
+    });
+  } catch (error) { if (!controller.signal.aborted) { collaborationState.value = 'error'; documentWorkspace.error.value = error instanceof Error ? error.message : 'Unable to connect.'; } }
+}, { flush: 'post' });
+watch(viewMode, mode => { if ((props.collaboration || props.documentOptions?.role === 'reviewer') && mode !== 'editor') viewMode.value = 'editor'; }, {immediate:true});
+if(comments)watch(()=>comments.exportThreads(),json=>{
+  if(syncingRemote || !effectiveDocumentOptions.value || effectiveReadonly.value || json===documentWorkspace.session.metadata.value.comments)return;
+  const before=documentWorkspace.session.metadata.value;
+  documentWorkspace.session.transact(value=>{value.metadata.comments=json;});
+  collaborationBinding?.applyMetadata(before,documentWorkspace.session.snapshot().metadata);
+},{flush:'post'});
+onUnmounted(() => { collaborationController?.abort(); collaborationBinding?.destroy(); });
+defineExpose({ document: documentWorkspace, undo, redo });
 </script>
 
 <style src="../styles/NextLevelEditor.css"></style>
 <style src="../styles/editor-variables.css"></style>
 <style src="../styles/gap-fallback.css"></style>
 <style src="../styles/writing-workspace.css"></style>
+<style src="../styles/document-collaboration.css"></style>
 
 <style scoped>
 /* History Timeline floating panel (toggled from the Tools dropdown) */

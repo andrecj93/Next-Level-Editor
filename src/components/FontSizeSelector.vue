@@ -16,7 +16,7 @@
         @click.stop
       >
         <div class="dropdown-header">
-          Font Size
+          {{ t("Font Size") }}
         </div>
         <button
           v-for="size in fontSizes"
@@ -25,11 +25,11 @@
           :class="{ active: modelValue === size.value }"
           @click="selectSize(size.value)"
         >
-          <span class="size-label">{{ size.label }}</span>
+          <span class="size-label">{{ t(size.label) }}</span>
           <span
             class="size-preview"
             :style="{ fontSize: size.preview }"
-          >Aa</span>
+          >{{ t("Aa") }}</span>
         </button>
       </div>
     </transition>
@@ -37,6 +37,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 type FontSizeValue = 'small' | 'normal' | 'large' | 'huge'

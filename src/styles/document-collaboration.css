@@ -1,0 +1,7 @@
+.next-level-editor .ProseMirror{white-space:pre-wrap;overflow-wrap:break-word;position:relative}
+.next-level-editor .nle-remote-cursor{position:relative;border-inline-start:2px solid;pointer-events:none;margin-inline-start:-1px;margin-inline-end:-1px}
+.next-level-editor .nle-remote-cursor>span{position:absolute;inset-block-end:100%;inset-inline-start:-2px;color:white;font:11px/1.4 system-ui,sans-serif;padding:2px 5px;border-radius:3px;white-space:nowrap;user-select:none}
+.next-level-editor .ProseMirror-yjs-selection{background:rgba(75,120,240,.2)}
+.next-level-editor [data-nle-suggestion]{border-inline-start:3px solid var(--color-primary,#2563eb);padding-inline-start:.5rem}
+.next-level-editor [data-nle-deletion=true]{text-decoration:line-through;opacity:.65}
+@media print{.nle-remote-cursor{display:none}}

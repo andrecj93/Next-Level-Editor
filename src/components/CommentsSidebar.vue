@@ -14,7 +14,7 @@
       ref="sidebarContentRef"
       class="comments-sidebar-content"
       role="complementary"
-      aria-label="Comments"
+      :aria-label="t('Comments')"
       :inert="!isOpen ? true : undefined"
       :aria-hidden="!isOpen ? 'true' : undefined"
     >
@@ -32,11 +32,11 @@
               />
             </svg>
           </div>
-          <h3 class="comments-sidebar-title">Comments</h3>
+          <h3 class="comments-sidebar-title">{{ t("Comments") }}</h3>
           <button
             ref="closeButtonRef"
             class="comments-sidebar-close"
-            aria-label="Close comments sidebar"
+            :aria-label="t('Close comments sidebar')"
             @click="closeSidebar"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -51,7 +51,7 @@
         </div>
 
         <!-- Tabs -->
-        <div class="comments-tabs" role="tablist" aria-label="Comment threads">
+        <div class="comments-tabs" role="tablist" :aria-label="t('Comment threads')">
           <button
             class="comments-tab"
             role="tab"
@@ -59,7 +59,7 @@
             :class="{ active: activeTab === 'open' }"
             @click="activeTab = 'open'"
           >
-            <span class="comments-tab-label">Open</span>
+            <span class="comments-tab-label">{{ t("Open") }}</span>
             <span class="comments-tab-badge">{{ openThreads.length }}</span>
           </button>
           <button
@@ -69,7 +69,7 @@
             :class="{ active: activeTab === 'resolved' }"
             @click="activeTab = 'resolved'"
           >
-            <span class="comments-tab-label">Resolved</span>
+            <span class="comments-tab-label">{{ t("Resolved") }}</span>
             <span class="comments-tab-badge">{{ resolvedThreads.length }}</span>
           </button>
         </div>
@@ -103,13 +103,13 @@
             </div>
             <p class="comments-empty-text">
               {{
-                activeTab === "open"
+                t(activeTab === "open"
                   ? "No comments yet"
-                  : "No resolved comments"
+                  : "No resolved comments")
               }}
             </p>
             <p class="comments-empty-hint">
-              Select text and add your first comment to start a conversation
+              {{ t("Select text and add your first comment to start a conversation") }}
             </p>
           </div>
         </template>
@@ -135,8 +135,8 @@
       <button
         v-if="activeTab === 'open'"
         class="comments-fab"
-        aria-label="Add new comment"
-        title="Add new comment"
+        :aria-label="t('Add new comment')"
+        :title="t('Add new comment')"
         @click="createNewComment"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -153,6 +153,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, watch, nextTick } from "vue";
 import type {
   CommentThread,
