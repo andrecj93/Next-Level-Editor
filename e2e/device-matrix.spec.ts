@@ -841,6 +841,28 @@ test('light and dark interfaces remain accessible with reduced motion', async ({
     }
     const viewMenu = page.getByRole('menu', { name: 'View', exact: true });
     await expect(viewMenu).not.toBeVisible();
+    // Include the settled save status: scanning immediately after typing only
+    // sees the pending label and misses the success text's theme contrast.
+    const saved = page.locator('.auto-save-indicator');
+    await expect(saved).toContainText('Saved at');
+    await saved.scrollIntoViewIfNeeded();
+    const saveContrast = await saved.locator('.saved').evaluate(el => {
+      const foreground = getComputedStyle(el).color;
+      const background = getComputedStyle(el.closest('.editor-footer')!).backgroundColor;
+      const luminance = (color: string) => {
+        const channels = color.match(/[\d.]+/g)!.map(Number);
+        if (channels.length === 4 && channels[3] !== 1) throw new Error('Expected an opaque save-status color');
+        const [r, g, b] = channels.slice(0, 3).map(channel => {
+          const value = channel / 255;
+          return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+      return { foreground, background, ratio: (values[0] + 0.05) / (values[1] + 0.05) };
+    });
+    expect(saveContrast.ratio, JSON.stringify(saveContrast)).toBeGreaterThanOrEqual(4.5);
+    await scan('.auto-save-indicator');
     await scan();
     const prompt = page.getByRole('button', { name: /Another prompt/ });
     if (await prompt.isVisible()) {
