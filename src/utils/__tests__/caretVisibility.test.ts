@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { keepCaretAboveToolbar, keepSelectionVisible, preserveVisibleSelection } from "../caretVisibility";
+import { keepCaretAboveToolbar, keepRangeVisible, keepSelectionVisible, preserveVisibleSelection } from "../caretVisibility";
 
 afterEach(() => { document.body.innerHTML = ""; vi.restoreAllMocks(); });
 
@@ -47,6 +47,17 @@ describe("caret visibility above fixed mobile controls", () => {
 });
 
 describe('selection scrolling after formatting', () => {
+  it('reveals a search result above the visible mobile toolbar without changing its range', () => {
+    const { root, range, scroll } = setup();
+    root.style.setProperty('--nle-mobile-toolbar-clearance', '64px');
+    vi.spyOn(Range.prototype, 'getClientRects').mockReturnValue([
+      { top: innerHeight - 40, bottom: innerHeight - 20, height: 20, left: 10, right: 150 },
+    ] as unknown as DOMRectList);
+    keepRangeVisible(root, range);
+    expect(scroll).toHaveBeenCalledWith({ top: 52, left: 0, behavior: 'instant' });
+    expect(window.getSelection()!.focusOffset).toBe(1);
+  });
+
   it('reveals an off-screen passage without inserting nodes or changing its range', () => {
     const { root, range, scroll } = setup();
     range.selectNodeContents(root.firstChild!);

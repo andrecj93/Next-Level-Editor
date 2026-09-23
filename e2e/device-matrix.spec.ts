@@ -161,7 +161,8 @@ test('search keeps prose visible through navigation, replacement, undo and conti
         const rect = range?.getClientRects()[0];
         const box = root.getBoundingClientRect();
         const viewport = window.visualViewport;
-        return { text: range?.toString(), top: rect?.top ?? -1, bottom: rect?.bottom ?? -1, low: Math.max(box.top, viewport?.offsetTop ?? 0), high: Math.min(box.bottom, (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight)) };
+        const dock = Number.parseFloat(getComputedStyle(root).getPropertyValue('--nle-mobile-toolbar-clearance')) || 0;
+        return { text: range?.toString(), top: rect?.top ?? -1, bottom: rect?.bottom ?? -1, low: Math.max(box.top, viewport?.offsetTop ?? 0), high: Math.min(box.bottom, (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight) - dock) };
       });
       expect(position.text).toBe('Celia');
       expect(position.top, JSON.stringify(position)).toBeGreaterThanOrEqual(position.low);

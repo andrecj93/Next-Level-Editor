@@ -55,7 +55,7 @@ const props = defineProps<{
   replaceAll: (data: ReplaceRequest) => void;
   clear: () => void;
 }>();
-const emit = defineEmits<{ close: [range?: Range] }>();
+const emit = defineEmits<{ close: [range?: Range]; 'match-revealed': [] }>();
 const panel = ref<HTMLElement | null>(null);
 const queryInput = ref<HTMLInputElement | null>(null);
 const replacementInput = ref<HTMLInputElement | null>(null);
@@ -80,7 +80,14 @@ const revealMatch = (range: Range) => {
   const box = root.getBoundingClientRect();
   root.scrollTop += rect.top - box.top - (box.height - rect.height) / 2;
   keepRangeVisible(root, range, 24);
+  // Native focus can leave a host's smooth scroll queued after this measurement.
+  // Finish at the revealed position instead of drifting back to the old field.
+  const view = root.ownerDocument.defaultView;
+  view?.scrollTo({ top: view.scrollY, left: view.scrollX, behavior: 'instant' });
   rememberMatchPosition();
+  // The manuscript also preserves its reading position during layout changes.
+  // Replace that snapshot after navigation so it cannot undo this reveal.
+  emit('match-revealed');
 };
 const rememberMatchPosition = useWritingReflow(toRef(props, 'editor'), toRef(props, 'show'), {
   hasFocus: root => Boolean(panel.value?.contains(root.ownerDocument.activeElement)),
@@ -142,7 +149,10 @@ const focusSearch = async (replace = false) => {
   const field = replace ? replacementInput.value : queryInput.value;
   field?.focus({ preventScroll: true });
   field?.select();
-  field?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  // Reveal the panel's edges as well as its input. On short viewports the
+  // input alone can be visible while the surrounding controls are clipped.
+  panel.value?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+  field?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
 };
 watch(() => props.show, async show => {
   stopPending();

@@ -148,6 +148,7 @@
       :replace="handleReplace"
       :replace-all="handleReplaceAll"
       :clear="clearFindHighlight"
+      @match-revealed="rememberWritingPosition"
       @close="closeWritingSearch"
     />
     <!-- Editor and Preview Panels -->
@@ -1342,7 +1343,7 @@ const {
   review: writingReview, refresh: refreshWritingReview,
   dismissedNotes: dismissedWritingNotes, dismissNote,
 } = useWritingWorkspace(htmlContent, toRef(props, 'writingMode'), toRef(props, 'contentLanguage'));
-useWritingReflow(editorContent, toRef(props, 'writingMode'));
+const rememberWritingPosition = useWritingReflow(editorContent, toRef(props, 'writingMode'));
 const dismissWritingNote = (note: WritingNote) => {
   if (!dismissNote(note)) return;
   announce('Note dismissed. Your words are unchanged.');
