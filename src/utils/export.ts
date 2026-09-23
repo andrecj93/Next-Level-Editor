@@ -1042,10 +1042,11 @@ export async function exportAsPdf(element: HTMLElement, filename: string = 'docu
 
     try {
       // Snapshot before waiting for converters so writing can continue safely.
-      const [{ default: html2canvas }, { default: jsPDF }, { measurePdfPages, waitForPdfResources }] = await Promise.all([
+      const [{ default: html2canvas }, { default: jsPDF }, { measurePdfPages, waitForPdfResources }, { preparePdfDocumentContent, createPdfDocumentContent }] = await Promise.all([
         import('html2canvas'),
         import('jspdf'),
         import('./pdfPagination'),
+        import('./pdfDocumentContent'),
       ]);
       checkCancelled();
       await waitForPdfResources(tempDiv, options.signal);
@@ -1058,7 +1059,11 @@ export async function exportAsPdf(element: HTMLElement, filename: string = 'docu
       const pages = measurePdfPages(tempDiv, pageHeight);
       console.debug('[NextLevelEditor] PDF pages planned', { pages: pages.length, width, pageHeight });
       options.onProgress?.(0, pages.length);
+      const textStarted = performance.now();
+      const text = await preparePdfDocumentContent(tempDiv, pages, options.signal);
+      console.debug('[NextLevelEditor] PDF text prepared', { glyphs: text.reduce((count, page) => count + page.length, 0), durationMs: Math.round(performance.now() - textStarted) });
       const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+      const content = createPdfDocumentContent(pdf, tempDiv, pages, text, imageWidth / width, margin);
       for (const [index, page] of pages.entries()) {
         await yieldPdfRendering();
         checkCancelled();
@@ -1077,6 +1082,7 @@ export async function exportAsPdf(element: HTMLElement, filename: string = 'docu
           if (image === 'data:,' || !canvas.width || !canvas.height) throw new Error('PDF page rendering returned an empty image');
           if (index) pdf.addPage();
           pdf.addImage(image, 'PNG', margin, margin, imageWidth, canvas.height * imageWidth / canvas.width, undefined, 'FAST');
+          content.addPage(index);
           pdf.setFontSize(9);
           pdf.setTextColor(100);
           pdf.text(String(index + 1), 105, 291, { align: 'center' });

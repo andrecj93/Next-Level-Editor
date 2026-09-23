@@ -90,6 +90,7 @@
     "happy-dom": "^20.0.10",
     "jsdom": "^27.1.0",
     "markdown-it": "^14.1.1",
+    "pdfjs-dist": "^5.4.624",
     "postcss": "^8.5.6",
     "prismjs": "^1.30.0",
     "typescript": "^5.3.0",

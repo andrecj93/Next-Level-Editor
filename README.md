@@ -74,8 +74,9 @@ your tables, checklists, page breaks, code blocks and embeds. Videos that no
 static format can render degrade to a labelled link instead of vanishing —
 because silently losing content is worse than admitting the format's limits.
 PDF export prepares numbered A4 pages with progress and cancellation, including
-long manuscripts and explicit page breaks. Its document text is rendered as
-images; use HTML, Markdown or Word when you need selectable text.
+long manuscripts and explicit page breaks. A Unicode text layer makes prose
+searchable and selectable, with chapter bookmarks and working document links.
+Page appearance is rendered as images; this is not a tagged PDF/UA export.
 
 **You only download what you use.** Syntax
 highlighting, the colour picker and both exporters are separate chunks your
@@ -282,16 +283,16 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 909.3 KB | **219.7 KB** | On import |
+| **Core (ES)** | 909.7 KB | **219.8 KB** | On import |
 | **CSS** | 258.6 KB | **41.7 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
-| PDF export (html2canvas + jsPDF) | 803.1 KB | 196.3 KB | First PDF export |
-| **UMD** | 1,650.2 KB | 490.6 KB | On import (no splitting) |
+| PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
+| **UMD** | 1,662.2 KB | 495.5 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **261.4 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **261.5 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 
@@ -791,7 +792,7 @@ The editor uses CSS custom properties (variables) for easy theming and customiza
 The project maintains high quality standards with comprehensive testing:
 
 ```bash
-# Run unit tests (4,646 tests)
+# Run unit tests
 npm test
 
 # Run unit tests with interactive UI
@@ -800,7 +801,10 @@ npm run test:ui
 # Generate coverage report (thresholds enforced in vitest.config.ts)
 npm run test:coverage
 
-# Run end-to-end tests (239 passing across chromium + mobile-safari)
+# Install the independent PDF reader used by export browser tests
+python -m pip install -r scripts/pdf-test-requirements.txt
+
+# Run end-to-end tests across Chromium and mobile WebKit
 npm run test:e2e
 
 # Run E2E tests with UI (interactive)
