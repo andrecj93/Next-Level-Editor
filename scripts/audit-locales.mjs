@@ -18,6 +18,7 @@ const keys = new Map();
 const dynamicCalls = [];
 const unwrappedText = [];
 const untranslatedAttributes = [];
+const embeddedHtmlMessages = [];
 const errors = new Map();
 // These bundled definitions feed t(variable), so auditing calls alone misses
 // them. Host text, document content, command IDs and HTML remain outside this
@@ -73,6 +74,16 @@ function template(node, file, offset) {
   for (const prop of node.props ?? []) {
     if (prop.type === 6 && ['ToolbarSection', 'ToolbarDropdown', 'ColorPicker', 'SkipLinks'].includes(node.tag) && ['label', 'tooltip'].includes(prop.name) && prop.value) add(keys, prop.value.content, location);
     if (prop.type === 7 && prop.exp) scan(`(${prop.exp.content})`, file, offset + prop.loc.start.line - 1);
+    if (prop.type === 7 && prop.name === 'html' && prop.exp) {
+      const ast = ts.createSourceFile(file, `(${prop.exp.content})`, ts.ScriptTarget.Latest, true);
+      function inspect(expression) {
+        if (ts.isStringLiteralLike(expression) && /[A-Za-z]{2}/.test(expression.text.replace(/<[^>]*>/g, ''))) {
+          embeddedHtmlMessages.push({ text: expression.text, location });
+        }
+        ts.forEachChild(expression, inspect);
+      }
+      inspect(ast);
+    }
     const attribute = prop.type === 6 ? prop.name : prop.arg?.content;
     const isUiAttribute = ['title', 'aria-label', 'aria-description', 'data-tooltip'].includes(attribute);
     if (prop.type === 6 && ['title', 'aria-label', 'placeholder', 'alt', 'data-tooltip', 'aria-description'].includes(prop.name) && /[A-Za-z]{2}/.test(prop.value?.content || '')) {
@@ -114,11 +125,11 @@ function visit(directory) {
 }
 visit(join(root, 'src'));
 const absent = map => [...map].filter(([key]) => key && !Object.hasOwn(catalog, key)).map(([key, locations]) => ({ key, locations: [...locations] }));
-const report = { timestamp: new Date().toISOString(), catalogEntries: Object.keys(catalog).length, staticKeys: keys.size, missingStaticKeys: absent(keys), dynamicCalls, unwrappedText, untranslatedAttributes, untranslatedInternalErrors: absent(errors), limitations: 'Source audit: dynamic labels, host/provider messages, generated prose, and source-mode strings require contextual review. This report does not establish complete localization.' };
+const report = { timestamp: new Date().toISOString(), catalogEntries: Object.keys(catalog).length, staticKeys: keys.size, missingStaticKeys: absent(keys), dynamicCalls, unwrappedText, untranslatedAttributes, embeddedHtmlMessages, untranslatedInternalErrors: absent(errors), limitations: 'Source audit: dynamic labels, host/provider messages, generated prose, and source-mode strings require contextual review. This report does not establish complete localization.' };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, JSON.stringify(report, null, 2));
-console.log(JSON.stringify({ event: 'locale.audit_completed', output, catalogEntries: report.catalogEntries, staticKeys: report.staticKeys, missingStaticKeys: report.missingStaticKeys.length, dynamicCalls: dynamicCalls.length, unwrappedText: unwrappedText.length, untranslatedAttributes: untranslatedAttributes.length, untranslatedInternalErrors: report.untranslatedInternalErrors.length }));
-process.exitCode = report.missingStaticKeys.length || report.untranslatedInternalErrors.length || untranslatedAttributes.length ? 1 : 0;
+console.log(JSON.stringify({ event: 'locale.audit_completed', output, catalogEntries: report.catalogEntries, staticKeys: report.staticKeys, missingStaticKeys: report.missingStaticKeys.length, dynamicCalls: dynamicCalls.length, unwrappedText: unwrappedText.length, untranslatedAttributes: untranslatedAttributes.length, embeddedHtmlMessages: embeddedHtmlMessages.length, untranslatedInternalErrors: report.untranslatedInternalErrors.length }));
+process.exitCode = report.missingStaticKeys.length || report.untranslatedInternalErrors.length || untranslatedAttributes.length || embeddedHtmlMessages.length ? 1 : 0;
 } catch (error) {
   console.error(JSON.stringify({ event: 'locale.audit_failed', timestamp: new Date().toISOString(), message: String(error) }));
   process.exitCode = 1;

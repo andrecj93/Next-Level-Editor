@@ -82,3 +82,40 @@ test('localized comments preserve writing focus and survive a document checkpoin
   await expect(card.locator('.comment-reply')).toContainText('Agreed. Keep the original wording.');
   expect(await editor.textContent()).toBe(originalText);
 });
+
+test('viewer permissions keep discussion readable while blocking edits and replies', async ({ page }, info) => {
+  await page.goto('/?lab=documents');
+  const root = page.getByTestId('primary');
+  const editor = root.locator('.editor-content');
+  await expect(editor).toContainText('A better document');
+  await ensureToolbarExpanded(page);
+  await selectBackwards(editor, 'clear story');
+  await root.getByRole('button', { name: 'Insert', exact: true }).click();
+  await root.getByRole('menuitem', { name: 'Comment', exact: true }).click();
+  const modal = page.locator('.comment-modal');
+  await modal.locator('textarea').fill('Keep this passage.');
+  await modal.locator('.comment-modal-submit').click();
+  const sidebar = root.locator('.comments-sidebar-content');
+  const card = sidebar.locator('.comment-thread-card');
+  await card.getByRole('button', { name: 'Write a reply', exact: true }).click();
+  await card.getByRole('textbox', { name: 'Write a reply', exact: true }).fill('A reply for every reader.');
+  await card.getByRole('button', { name: 'Reply', exact: true }).click();
+  await sidebar.getByRole('button', { name: 'Close comments sidebar', exact: true }).click();
+  await page.getByLabel('Role', { exact: true }).selectOption('viewer');
+  const saved = await editor.innerHTML();
+  await expect(editor).toHaveAttribute('contenteditable', 'false');
+  await editor.focus();
+  await page.keyboard.insertText('Forbidden edit');
+  await editor.dispatchEvent('paste', { clipboardData: await page.evaluateHandle(() => {
+    const clipboard = new DataTransfer(); clipboard.setData('text/plain', 'Forbidden paste'); return clipboard;
+  }) });
+  expect(await editor.innerHTML()).toBe(saved);
+  await editor.locator('.comment-highlight').click();
+  await expect(sidebar.getByRole('status')).toHaveText('Comments are read-only.');
+  await expect(card.locator('.comment-text').first()).toHaveText('Keep this passage.');
+  await expect(card.locator('.comment-reply')).toContainText('A reply for every reader.');
+  await expect(sidebar.locator('.comments-fab, .comment-actions, .comment-add-reply-btn, textarea')).toHaveCount(0);
+  await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
+  await expect(sidebar.getByRole('status')).toHaveText('Os comentários são apenas de leitura.');
+  await info.attach('viewer-discussion', { body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png' });
+});

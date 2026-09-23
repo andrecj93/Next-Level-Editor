@@ -92,8 +92,9 @@ export interface DocumentVersion extends DocumentSnapshot {
   createdAt: string;
 }
 export interface VersionStore {
+  /** A remote adapter must authorize reads for the authenticated caller. */
   list(documentId: string): Promise<DocumentVersion[]>;
-  /** Compare-and-swap. Reject stale expectedRevision; never silently overwrite. */
+  /** Authorize and compare expectedRevision atomically with the persisted write. Reject stale revisions. */
   create(
     documentId: string,
     value: DocumentSnapshot,
@@ -126,6 +127,7 @@ export interface DocumentOptions {
   id: string;
   store?: VersionStore;
   metadata?: DocumentMetadata;
+  /** Browser interaction policy. Remote storage must enforce authorization independently. */
   role?: DocumentRole;
   author?: string;
   ai?: AiAdapter;

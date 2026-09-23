@@ -2,6 +2,7 @@
 <template>
   <div
     class="comment-thread-card"
+    :data-thread-id="thread.id"
     :class="{ 'comment-thread-card-expanded': isExpanded }"
   >
     <!-- Selected Text Quote -->
@@ -45,7 +46,7 @@
             </span>
           </div>
 
-          <div class="comment-actions" @click.stop>
+          <div v-if="!readonly" class="comment-actions" @click.stop>
             <button
               v-if="thread.status === 'open'"
               class="comment-action-btn"
@@ -138,7 +139,7 @@
 
     <!-- Add Reply Button (always visible when not showing form) -->
     <button
-      v-if="!showReplyForm"
+      v-if="!readonly && !showReplyForm"
       ref="replyButtonRef"
       class="comment-add-reply-btn"
       @click.stop="showReplyForm = true"
@@ -155,7 +156,7 @@
     </button>
 
     <!-- Reply Form (when active) -->
-    <div v-if="showReplyForm" class="comment-reply-standalone">
+    <div v-if="!readonly && showReplyForm" class="comment-reply-standalone">
       <div class="comment-avatar-wrapper">
         <div class="comment-avatar comment-avatar-small">
           <span>U</span>
@@ -241,7 +242,7 @@
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
 const { t, date: calendarDate } = useEditorLocale();
-import { nextTick, ref } from "vue";
+import { nextTick, ref, watch } from "vue";
 import type {
   CommentThread,
   MentionSuggestion,
@@ -252,6 +253,7 @@ interface Props {
   thread: CommentThread;
   isActive: boolean;
   isExpanded?: boolean;
+  readonly?: boolean;
   /** Host-supplied @mention provider, passed through to the reply form. */
   mentionSearch?: (
     query: string
@@ -269,6 +271,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   isExpanded: false,
+  readonly: false,
   mentionSearch: undefined,
 });
 
@@ -277,6 +280,9 @@ const emit = defineEmits<Emits>();
 // State
 const showReplyForm = ref(false);
 const replyButtonRef = ref<HTMLButtonElement | null>(null);
+watch(() => props.readonly, readonly => {
+  if (readonly) showReplyForm.value = false;
+});
 
 // Methods
 function handleToggle() {
@@ -284,12 +290,14 @@ function handleToggle() {
 }
 
 function handleDelete() {
+  if (props.readonly) return;
   if (confirm(t("Are you sure you want to delete this thread?"))) {
     emit("delete", props.thread.id);
   }
 }
 
 function handleReplySubmit(content: string, mentions: string[]) {
+  if (props.readonly) return;
   emit("add-reply", props.thread.id, content, mentions);
   closeReplyForm();
 }

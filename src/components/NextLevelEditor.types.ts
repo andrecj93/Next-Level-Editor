@@ -33,6 +33,13 @@ export interface NextLevelEditorProps {
   showWritingStats?: boolean;
   /** Enable inline comment threads and @mentions. */
   enableComments?: boolean;
+  /**
+   * Serialized comment threads, including replies and dates (v-model:comment-threads).
+   * Persist this JSON alongside modelValue. Thread changes also trigger saveHandler,
+   * including replies that do not alter the document HTML. Use a new component key
+   * when switching documents so history and pending saves belong to one document.
+   */
+  commentThreads?: string;
   /** Enable `{{ variable }}` template tokens. */
   enableVariables?: boolean;
   /**
@@ -189,6 +196,8 @@ export interface NextLevelEditorEmits {
   (e: 'document-change', value: import('../types/document').DocumentSnapshot): void;
   /** Fired on every content change; the payload is the sanitized HTML string. */
   (e: "update:modelValue", value: string): void;
+  /** Fired when a thread, reply or resolution changes; excludes DOM references. */
+  (e: "update:commentThreads", value: string): void;
   /** The editing surface gained focus. */
   (e: "focus"): void;
   /** The editing surface lost focus. */

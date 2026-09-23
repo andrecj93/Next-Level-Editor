@@ -341,7 +341,7 @@ describe("useEditorComputed", () => {
   });
 
   describe("auto-save watcher", () => {
-    it("triggers auto-save when the editorContent ref changes to an element with new innerHTML", async () => {
+    it("does not auto-save when a restored editing surface mounts", async () => {
       const ctx = makeCtx();
       // editorContent starts null (immediate modelValue watch early-returns).
       const { wrapper } = mountHost(ctx.options);
@@ -349,8 +349,7 @@ describe("useEditorComputed", () => {
 
       ctx.editorContent.value = el("<p>autosave me</p>");
       await nextTick();
-      expect(ctx.triggerAutoSave).toHaveBeenCalledTimes(1);
-      expect(ctx.triggerAutoSave).toHaveBeenCalledWith("<p>autosave me</p>");
+      expect(ctx.triggerAutoSave).not.toHaveBeenCalled();
       wrapper.unmount();
     });
 

@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { ensureToolbarExpanded } from './helpers/toolbar';
+import { ensureToolbarExpanded, switchViewMode } from './helpers/toolbar';
 import { readFile } from 'node:fs/promises';
 
 async function selectText(editor: Locator, needle: string) {
@@ -27,6 +27,19 @@ async function load(page: Page, query = '') {
   await expect(editor).toContainText('A better document');
   return { root, editor };
 }
+
+test('empty preview and split states follow the active UI language', async ({ page }) => {
+  const { root } = await load(page);
+  await switchViewMode(page, 'Code');
+  await root.getByRole('textbox', { name: 'HTML source code', exact: true }).fill('');
+  for (const mode of ['Preview', 'Split'] as const) {
+    await switchViewMode(page, mode);
+    await expect(root.locator('.empty-preview')).toHaveText('Start typing to see preview...');
+    await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
+    await expect(root.locator('.empty-preview')).toHaveText('Comece a escrever para ver a pré-visualização...');
+    await page.getByLabel('Interface', { exact: true }).selectOption('en');
+  }
+});
 
 test('file names, localized sizes, errors and dialog actions survive a live language switch', async ({ page }, info) => {
   const { root, editor } = await load(page);

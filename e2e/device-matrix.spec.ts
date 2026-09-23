@@ -217,6 +217,11 @@ test('comments stay usable by touch and keyboard from selection back to writing'
   await activate(writeReply, hasTouch);
   await reply.pressSequentially('Let the next visit stay unwritten.');
   await activate(card.getByRole('button', { name: 'Reply', exact: true }), hasTouch);
+  const toast = page.locator('.toast-notification');
+  await expect(toast).toHaveText('Reply added successfully');
+  await insideViewport(toast);
+  expect(Number(await toast.evaluate(el => getComputedStyle(el).zIndex))).toBeGreaterThan(Number(await sidebar.evaluate(el => getComputedStyle(el.closest('.comments-sidebar')!).zIndex)));
+  await expect(toast).toHaveCSS('pointer-events', 'none');
   await expect(card.locator('.comment-reply')).toContainText('Let the next visit stay unwritten.');
   await expect(card.locator('.comment-replies')).toHaveCSS('opacity', '1');
   await expect(card.locator('.comment-reply')).toBeVisible();
@@ -273,6 +278,37 @@ test('comments stay usable by touch and keyboard from selection back to writing'
   await expect(highlight).toHaveText(quoted);
   await expect(highlight).toHaveAttribute('data-thread-id', threadId!);
   await noHorizontalOverflow(page);
+
+  await expect(page.locator('.auto-save-indicator')).toContainText('Saved at');
+  // Remove the explicit empty-start query before performing a real reload.
+  await page.goto('/#playground');
+  await expect(editor).toHaveText('At last, ' + originalText.replace(/\n/g, ''));
+  await expect(highlight).toHaveAttribute('data-thread-id', threadId!);
+  await activate(page.getByRole('button', { name: 'Comments', exact: true }), hasTouch);
+  await expect(card.locator('.comment-text').first()).toHaveText('Keep the ending quiet.');
+  await activate(card.getByRole('button', { name: 'View 1 reply', exact: true }), hasTouch);
+  await expect(card.locator('.comment-reply')).toContainText('Let the next visit stay unwritten.');
+  await activate(sidebar.getByRole('button', { name: 'Close comments sidebar', exact: true }), hasTouch);
+  await activate(highlight, hasTouch);
+  await expect(sidebar).toBeVisible();
+  await expect(card.locator('.comment-reply')).toContainText('Let the next visit stay unwritten.');
+  await card.getByRole('button', { name: 'Resolve thread', exact: true }).press('Enter');
+  await expect(page.locator('.auto-save-indicator')).toContainText('Saved at');
+  await page.reload();
+  await activate(highlight, hasTouch);
+  await expect(sidebar.getByRole('tab', { name: /^Resolved/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(card.locator('.comment-status-badge')).toHaveText('Resolved');
+  await expect(card.locator('.comment-reply')).toContainText('Let the next visit stay unwritten.');
+  await expect(highlight).toHaveClass(/comment-highlight-resolved/);
+  await activate(sidebar.getByRole('button', { name: 'Close comments sidebar', exact: true }), hasTouch);
+  await activate(page.getByRole('button', { name: 'New document', exact: true }), hasTouch);
+  await activate(page.getByRole('button', { name: 'Replace document', exact: true }), hasTouch);
+  await expect(page.getByText('Your document is saved in this browser.', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(editor).toBeEmpty();
+  await activate(page.getByRole('button', { name: 'Comments', exact: true }), hasTouch);
+  await expect(sidebar.getByRole('tab', { name: /^Open/ })).toHaveText('Open0');
+  await expect(sidebar.getByRole('tab', { name: /^Resolved/ })).toHaveText('Resolved0');
 });
 
 test('writing notes follow the current paragraph and keep every decision reachable', async ({ page, hasTouch }) => {

@@ -1,6 +1,22 @@
 import type { EditorMessages } from '../types/locale';
 /** European Portuguese for the existing editor chrome. Document text is never translated. */
 export const editorPortuguese: Record<string, string> = {
+  "Start typing to see preview...": "Comece a escrever para ver a pré-visualização...",
+  "Comments are read-only.": "Os comentários são apenas de leitura.",
+  "Comment data is too large": "Os dados dos comentários são demasiado grandes",
+  "Invalid comment threads": "Discussões de comentários inválidas",
+  "Invalid comment record": "Registo de comentário inválido",
+  "Invalid comment text": "Texto do comentário inválido",
+  "Invalid comment identifier": "Identificador do comentário inválido",
+  "Invalid comment position": "Posição do comentário inválida",
+  "Invalid comment path": "Caminho do comentário inválido",
+  "Invalid comment date": "Data do comentário inválida",
+  "Duplicate comment thread": "Discussão de comentários duplicada",
+  "Invalid comment status": "Estado do comentário inválido",
+  "Invalid thread comments": "Comentários da discussão inválidos",
+  "Duplicate comment": "Comentário duplicado",
+  "Mismatched comment thread": "O comentário não corresponde à discussão",
+  "Invalid mentions": "Menções inválidas",
   "Save a checkpoint to compare drafts or return to an earlier version.": "Guarde uma versão para comparar rascunhos ou recuperar uma versão anterior.",
   "Preview a Word document before adding it to your draft.": "Pré-visualize um documento Word antes de o adicionar ao rascunho.",
   "Set up your pages, preview the result, and download your document.": "Configure as páginas, pré-visualize o resultado e transfira o documento.",

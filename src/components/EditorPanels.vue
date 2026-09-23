@@ -132,12 +132,13 @@
       <!-- Preview mode -->
       <div v-if="splitRightMode === 'preview'" class="preview-panel">
         <div
+          v-if="htmlContent"
           class="preview-content-wrapper"
-          v-html="
-            htmlContent ||
-            '<p class=\'empty-preview\'>Start typing to see preview...</p>'
-          "
+          v-html="htmlContent"
         />
+        <div v-else class="preview-content-wrapper">
+          <p class="empty-preview">{{ t("Start typing to see preview...") }}</p>
+        </div>
       </div>
 
       <!-- Editor mode -->
@@ -173,12 +174,13 @@
     <div v-if="viewMode === 'preview'" class="preview-panel">
       <div class="preview-header">{{ t("Preview") }}</div>
       <div
+        v-if="htmlContent"
         class="preview-content-wrapper"
-        v-html="
-          htmlContent ||
-          '<p class=\'empty-preview\'>Start typing to see preview...</p>'
-        "
+        v-html="htmlContent"
       />
+      <div v-else class="preview-content-wrapper">
+        <p class="empty-preview">{{ t("Start typing to see preview...") }}</p>
+      </div>
     </div>
   </div>
 </template>

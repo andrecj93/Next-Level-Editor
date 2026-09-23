@@ -103,6 +103,121 @@ describe("NextLevelEditor — comment highlights reach the model", () => {
     expect(saved).toContain("comment-highlight");
   });
 
+  it('saves reply-only changes and restores their bodies and resolution on remount', async () => {
+    const saveHandler = vi.fn<(content: string) => boolean>(() => true);
+    const editor = await mountEditor(saveHandler);
+    selectBrave(editor);
+    await submitComment('An opening note');
+    const threadId = editor.querySelector<HTMLElement>('.comment-highlight')!.dataset.threadId!;
+    vi.advanceTimersByTime(2500);
+    await flushPromises();
+    saveHandler.mockClear();
+    const htmlBeforeReply = editor.innerHTML;
+    wrapper!.findComponent(CommentsSidebar).vm.$emit('add-reply', threadId, 'A reply worth keeping', []);
+    await nextTick();
+    expect(editor.innerHTML).toBe(htmlBeforeReply);
+    expect(wrapper!.find('.auto-save-indicator').text()).toContain('Unsaved changes');
+    vi.advanceTimersByTime(2500);
+    await flushPromises();
+    expect(saveHandler).toHaveBeenCalledOnce();
+    const emitted = wrapper!.emitted('update:commentThreads')!;
+    const threads = JSON.parse(String(emitted.at(-1)![0]));
+    expect(threads[0].comments.map((comment: { content: string }) => comment.content)).toEqual(['An opening note', 'A reply worth keeping']);
+    expect(threads[0]).not.toHaveProperty('highlightElement');
+    wrapper!.findComponent(CommentsSidebar).vm.$emit('resolve-thread', threadId);
+    await nextTick();
+    const persistedThreads = String(wrapper!.emitted('update:commentThreads')!.at(-1)![0]);
+    const persistedHtml = editor.innerHTML;
+    wrapper!.unmount();
+    saveHandler.mockClear();
+    wrapper = mount(NextLevelEditor, { props: { modelValue: persistedHtml, commentThreads: persistedThreads, enableComments: true, saveHandler }, attachTo: document.body });
+    await nextTick();
+    const restored = wrapper.findComponent(CommentsSidebar).props('threads');
+    expect(restored).toHaveLength(1);
+    expect(restored[0].status).toBe('resolved');
+    expect(restored[0].comments[1].content).toBe('A reply worth keeping');
+    expect(restored[0].comments[1].createdAt).toBeInstanceOf(Date);
+    expect(wrapper.find('.comment-highlight').text()).toBe('brave');
+    vi.advanceTimersByTime(2500);
+    await flushPromises();
+    expect(wrapper.emitted('update:commentThreads')).toBeUndefined();
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(saveHandler).not.toHaveBeenCalled();
+  });
+
+  it('keeps the live anchor and caret when the host echoes the comment model', async () => {
+    const editor = await mountEditor();
+    selectBrave(editor);
+    await submitComment('Keep the word');
+    const anchor = editor.querySelector('.comment-highlight')!;
+    const selection = window.getSelection()!;
+    const range = document.createRange();
+    range.setStart(anchor.firstChild!, 2);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const snapshot = String(wrapper!.emitted('update:commentThreads')!.at(-1)![0]);
+    await wrapper!.setProps({ commentThreads: snapshot });
+    expect(editor.querySelector('.comment-highlight')).toBe(anchor);
+    expect(selection.anchorNode).toBe(anchor.firstChild);
+    expect(selection.anchorOffset).toBe(2);
+  });
+
+  it('offers Retry for a failed reply-only save and includes the latest discussion', async () => {
+    const saveHandler = vi.fn<(content: string) => boolean>(() => true);
+    const editor = await mountEditor(saveHandler);
+    selectBrave(editor);
+    await submitComment('Keep the word');
+    vi.advanceTimersByTime(2500);
+    await flushPromises();
+    saveHandler.mockReturnValue(false);
+    const threadId = editor.querySelector<HTMLElement>('.comment-highlight')!.dataset.threadId!;
+    wrapper!.findComponent(CommentsSidebar).vm.$emit('add-reply', threadId, 'Unsaved reply', []);
+    await nextTick();
+    vi.advanceTimersByTime(2500);
+    await flushPromises();
+    expect(wrapper!.find('.auto-save-indicator').text()).toContain("Couldn't save changes");
+    saveHandler.mockReturnValue(true);
+    await wrapper!.find('.save-retry').trigger('click');
+    await flushPromises();
+    expect(wrapper!.find('.auto-save-indicator').text()).toContain('Saved');
+    expect(String(wrapper!.emitted('update:commentThreads')!.at(-1)![0])).toContain('Unsaved reply');
+  });
+
+  it('ignores invalid host metadata without replacing the current thread', async () => {
+    const editor = await mountEditor();
+    selectBrave(editor);
+    await submitComment('Keep this discussion');
+    const anchor = editor.querySelector('.comment-highlight');
+    await wrapper!.setProps({ commentThreads: '[{"id":"incomplete"}]' });
+    expect(editor.querySelector('.comment-highlight')).toBe(anchor);
+    expect(wrapper!.findComponent(CommentsSidebar).props('threads')[0].comments[0].content).toBe('Keep this discussion');
+  });
+
+  it('opens an inline discussion repeatedly and reveals resolved replies in the right tab', async () => {
+    const editor = await mountEditor();
+    selectBrave(editor);
+    await submitComment('Keep this passage');
+    const sidebar = wrapper!.findComponent(CommentsSidebar);
+    const threadId = editor.querySelector<HTMLElement>('.comment-highlight')!.dataset.threadId!;
+    sidebar.vm.$emit('add-reply', threadId, 'A useful reply', []);
+    sidebar.vm.$emit('resolve-thread', threadId);
+    await nextTick();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      sidebar.vm.$emit('close');
+      await nextTick();
+      await nextTick();
+      expect(sidebar.props('isOpen')).toBe(false);
+      (editor.querySelector('.comment-highlight') as HTMLElement).click();
+      await nextTick();
+      await nextTick();
+      expect(sidebar.props('isOpen')).toBe(true);
+      expect(sidebar.find('[role="tab"][aria-selected="true"]').text()).toBe('Resolved1');
+      expect(sidebar.find('.comment-reply').text()).toContain('A useful reply');
+    }
+    expect(editor.textContent).toBe('Hello brave new world');
+  });
+
   it("emits when a thread is deleted (highlight unwrapped)", async () => {
     const editor = await mountEditor();
     selectBrave(editor);

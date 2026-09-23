@@ -49,6 +49,45 @@ test.describe("Writing workspace", () => {
     await expect(page.getByLabel("Template", { exact: true })).toHaveValue("empty");
   });
 
+  test('a failed reply-only save retains the prior draft and Retry recovers the discussion', async ({ page }) => {
+    await page.goto('/#playground');
+    const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+    await editor.fill('Leave room for the reader.');
+    await editor.press('ControlOrMeta+a');
+    await page.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true }).getByRole('button', { name: 'Insert', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Comment', exact: true }).click();
+    const modal = page.locator('.comment-modal');
+    await modal.locator('textarea').fill('Keep this ending.');
+    await modal.locator('.comment-modal-submit').click();
+    const sidebar = page.getByRole('complementary', { name: 'Comments', exact: true });
+    await expect(page.locator('.auto-save-indicator')).toContainText('Saved at');
+    const savedBeforeReply = await page.evaluate(() => localStorage.getItem('next-level-editor:playground-draft:v1'));
+    await page.evaluate(() => {
+      const setItem = Storage.prototype.setItem;
+      document.documentElement.dataset.rejectDraftWrites = 'true';
+      Storage.prototype.setItem = function(key, value) {
+        if (key === 'next-level-editor:playground-draft:v1' && document.documentElement.dataset.rejectDraftWrites) {
+          throw new DOMException('Storage quota reached', 'QuotaExceededError');
+        }
+        setItem.call(this, key, value);
+      };
+    });
+    await sidebar.getByRole('button', { name: 'Write a reply', exact: true }).click();
+    await sidebar.getByRole('textbox', { name: 'Write a reply', exact: true }).fill('This reply needs to survive.');
+    await sidebar.getByRole('button', { name: 'Reply', exact: true }).click();
+    await expect(page.locator('.auto-save-indicator')).toContainText("Couldn't save changes");
+    expect(await page.evaluate(() => localStorage.getItem('next-level-editor:playground-draft:v1'))).toBe(savedBeforeReply);
+    await sidebar.getByRole('button', { name: 'Close comments sidebar', exact: true }).click();
+    await page.evaluate(() => { delete document.documentElement.dataset.rejectDraftWrites; });
+    await page.getByRole('button', { name: 'Retry', exact: true }).click();
+    await expect(page.locator('.auto-save-indicator')).toContainText('Saved at');
+    await page.reload();
+    await expect(editor).toHaveText('Leave room for the reader.');
+    await page.getByRole('button', { name: 'Comments', exact: true }).click();
+    await sidebar.getByRole('button', { name: 'View 1 reply', exact: true }).click();
+    await expect(sidebar.locator('.comment-reply')).toContainText('This reply needs to survive.');
+  });
+
   test("template selection protects edits and cancellation keeps the selection", async ({ page }) => {
     await page.goto("/?empty=true");
     const editor = page.getByRole("textbox", { name: "Rich text editor", exact: true });

@@ -50,6 +50,13 @@ export function useDocumentSession(ctx: SessionContext) {
     return result;
   }
   const canEdit = () => ctx.options.value?.role !== "viewer";
+  function requireEdit(event: string) {
+    if (canEdit()) return;
+    diagnostic(ctx.options.value?.onDiagnostic, event, ctx.options.value?.id, {
+      reason: "read_only",
+    });
+    throw new Error("This document is read-only.");
+  }
   function scheduleCheckpoint() {
     const opts = ctx.options.value;
     if (!canEdit() || !opts?.autoCheckpointMs || !opts.store || timer) return;
@@ -83,7 +90,7 @@ export function useDocumentSession(ctx: SessionContext) {
     scheduleCheckpoint();
   }
   function commit(value: DocumentSnapshot) {
-    if (!canEdit()) throw new Error("This document is read-only.");
+    requireEdit("document.operation_denied");
     value = validateDocumentSnapshot(value, ctx.sanitize);
     if (JSON.stringify(current) !== JSON.stringify(value)) remember(current);
     apply(value);
@@ -94,6 +101,7 @@ export function useDocumentSession(ctx: SessionContext) {
     );
   }
   function transact(change: (value: DocumentSnapshot) => void) {
+    requireEdit("document.operation_denied");
     const value = snapshot();
     change(value);
     commit(value);
@@ -172,11 +180,16 @@ export function useDocumentSession(ctx: SessionContext) {
       g = generation;
     if (!opts?.store)
       throw new Error("Configure a document version store first.");
-    if (!canEdit()) throw new Error("This document is read-only.");
-    if (inFlight) {
+    requireEdit("version.create_denied");
+    // A later request must also wait for any writer that acquired the slot
+    // while it was suspended, otherwise three clicks race the same revision.
+    while (inFlight) {
       await inFlight;
-      if (g !== generation) return;
+      if (disposed || g !== generation) return;
     }
+    if (disposed || g !== generation) return;
+    // Roles can change while the preceding checkpoint is being persisted.
+    requireEdit("version.create_denied");
     const value = snapshot(),
       expected = revision.value;
     status.value = "saving";

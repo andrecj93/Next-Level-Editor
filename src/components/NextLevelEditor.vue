@@ -462,9 +462,11 @@
     <!-- Comments Sidebar (opt-in feature) -->
     <CommentsSidebar
       v-if="enableComments && comments"
+      ref="commentsSidebarRef"
       :threads="comments.threads.value"
       :active-thread-id="comments.activeThread.value?.id ?? null"
       :is-open="showCommentsSidebar"
+      :readonly="effectiveReadonly"
       :mention-search="mentionSearch"
       @close="closeCommentsSidebar"
       @select-thread="handleSelectThread"
@@ -1174,11 +1176,13 @@ const comments = props.enableComments
       onMentionTriggered: props.mentionSearch
         ? async (query: string) => props.mentionSearch!(query)
         : undefined,
+      onThreadActivated: handleThreadActivation,
     })
   : (null as ReturnType<typeof useComments> | null);
 
 // Comments UI state
 const showCommentsSidebar = ref(false);
+const commentsSidebarRef = ref<InstanceType<typeof CommentsSidebar> | null>(null);
 const showCommentModal = ref(false);
 const selectedTextForComment = ref("");
 let commentsReturnSelection: {
@@ -1312,8 +1316,11 @@ const uncategorizedVariables = computed(() => {
 });
 
 // Auto-save
-const { isSaving, isDirty, lastSaved, saveStatus, triggerAutoSave, forceSave, clearHistory: resetSaveState } = useAutoSave(
+const { isSaving, isDirty, lastSaved, saveStatus, triggerAutoSave: queueAutoSave, forceSave: saveImmediately, clearHistory: resetSaveState } = useAutoSave(
   async (content: string, version: number) => {
+    // A permission change can happen after a save was queued, or while a
+    // previous request was in flight. Recheck before calling host persistence.
+    if (effectiveReadonly.value) throw new Error("This document is read-only.");
     // With a host-provided saveHandler the "Saved" signal is TRUTHFUL: it
     // asserts real persistence and reports real failures. Without one, the
     // v-model emission IS the handoff — the host owns the content the moment
@@ -1330,6 +1337,12 @@ const { isSaving, isDirty, lastSaved, saveStatus, triggerAutoSave, forceSave, cl
   },
   { delay: 2000 } // 2 second delay
 );
+function triggerAutoSave(content: string) {
+  if (!effectiveReadonly.value) queueAutoSave(content);
+}
+async function forceSave(content: string) {
+  if (!effectiveReadonly.value) await saveImmediately(content);
+}
 
 // Editor Content Management (replaces inline sanitization, history, and content sync)
 const {
@@ -2273,14 +2286,31 @@ const mobileBarOnScreen = computed(
   () => mobileToolbarVisible.value && deviceShowsMobileToolbar.value
 );
 
+let pendingToolbarPointer = false;
 const updateMobileToolbarOwnership = (event: Event) => {
+  if (event.type === 'pointercancel') {
+    pendingToolbarPointer = false;
+    return;
+  }
+  if (event.type === 'pointerdown') pendingToolbarPointer = true;
+  if (event.type === 'click') pendingToolbarPointer = false;
   const target = event.target;
   if (!(target instanceof Node)) return;
   if (rootEl.value?.contains(target)) {
-    // Interaction inside this editor claims ownership (and re-opens a
-    // toolbar previously dismissed with the X).
-    ownsMobileToolbar.value = true;
-    mobileToolbarClosed.value = false;
+    // Only entering the writing surface opens the dock. A first touch on a
+    // footer/panel control must not insert a fixed toolbar under that finger
+    // between pointerdown and click (Comments could become Underline).
+    if (target === rootEl.value || editorContent.value?.contains(target)) {
+      // The same rule applies to text near the bottom of a short viewport.
+      // Focus arrives between pointerdown and click; revealing the dock then
+      // can redirect the pending touch to a formatting button. Keyboard focus
+      // opens it immediately, while pointer activation waits for the click.
+      if (pendingToolbarPointer) return;
+      const element = target instanceof Element ? target : target.parentElement;
+      if (element?.closest('.comment-highlight[data-thread-id]')) return;
+      ownsMobileToolbar.value = true;
+      mobileToolbarClosed.value = false;
+    }
     return;
   }
   const el = target instanceof Element ? target : target.parentElement;
@@ -2336,6 +2366,8 @@ const onBeforePrint = () => {
 onMounted(() => {
   // Capture phase so stopPropagation inside widgets can't desync ownership.
   document.addEventListener("pointerdown", updateMobileToolbarOwnership, true);
+  document.addEventListener("pointercancel", updateMobileToolbarOwnership, true);
+  document.addEventListener("click", updateMobileToolbarOwnership, true);
   document.addEventListener("focusin", updateMobileToolbarOwnership, true);
   window.addEventListener("beforeprint", onBeforePrint);
 
@@ -2366,6 +2398,8 @@ onUnmounted(() => {
     updateMobileToolbarOwnership,
     true
   );
+  document.removeEventListener("pointercancel", updateMobileToolbarOwnership, true);
+  document.removeEventListener("click", updateMobileToolbarOwnership, true);
   document.removeEventListener("focusin", updateMobileToolbarOwnership, true);
   window.removeEventListener("beforeprint", onBeforePrint);
 });
@@ -3140,6 +3174,13 @@ const CARET_MOVE_KEYS = new Set([
 ]);
 
 // Comments handlers
+function handleThreadActivation(threadId: string) {
+  rememberCommentsPosition();
+  showCommentsSidebar.value = true;
+  nextTick(() => commentsSidebarRef.value?.revealThread(threadId));
+  console.debug('[NextLevelEditor comments] Discussion opened');
+}
+
 function handleSelectThread(threadId: string) {
   if (!comments) return;
   comments.setActiveThread(threadId);
@@ -3166,25 +3207,25 @@ function handleSelectThread(threadId: string) {
 // round-trips), and it's mutated outside Vue — so, like every other such
 // mutation, it has to go through the snapshot path or the host never sees it.
 function handleResolveThread(threadId: string) {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
   comments.resolveThread(threadId);
   captureSnapshot();
 }
 
 function handleReopenThread(threadId: string) {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
   comments.reopenThread(threadId);
   captureSnapshot();
 }
 
 function handleDeleteThread(threadId: string) {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
   comments.deleteThread(threadId);
   captureSnapshot();
 }
 
 function handleAddReply(threadId: string, content: string, mentions: string[]) {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
   const reply = comments.addReply(threadId, content, mentions);
   if (reply) {
     showToastNotification("Reply added successfully", "success");
@@ -3192,7 +3233,7 @@ function handleAddReply(threadId: string, content: string, mentions: string[]) {
 }
 
 function handleCreateComment() {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
 
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed) {
@@ -3217,7 +3258,7 @@ function handleCreateComment() {
 }
 
 function handleCommentSubmit(content: string, mentions: string[]) {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
 
   // Add the thread with the captured selection
   const thread = comments.addThread(content, mentions);
@@ -3249,6 +3290,10 @@ function handleCommentCancel() {
   showCommentModal.value = false;
   selectedTextForComment.value = "";
 }
+
+watch(effectiveReadonly, readonly => {
+  if (readonly) handleCommentCancel();
+}, { flush: 'sync' });
 
 // Variable handlers
 function detectVariableSyntax() {
@@ -3518,6 +3563,32 @@ useEditorSetup({
   handleEscape: handleGlobalEscape,
   onSelectionChange,
 });
+
+// Keep discussion metadata in the same save lifecycle as the manuscript. The
+// serialized watch tracks data only, never live ranges/elements. Host echoes must
+// not re-import highlights: replacing their nodes would disturb a writing caret.
+if (comments) {
+  let ready = false;
+  let synchronizedThreads: string | undefined;
+  const restoreCommentModel = (value: string | undefined) => {
+    if (value === undefined || value === synchronizedThreads) return;
+    if (comments.importThreads(value)) {
+      synchronizedThreads = comments.exportThreads();
+      captureSnapshotBase(false);
+    }
+  };
+  onMounted(() => {
+    restoreCommentModel(props.commentThreads);
+    ready = true;
+  });
+  watch(() => props.commentThreads, restoreCommentModel, { flush: "post" });
+  watch(() => comments.exportThreads(), (value) => {
+    if (!ready || value === synchronizedThreads) return;
+    synchronizedThreads = value;
+    emit("update:commentThreads", value);
+    triggerAutoSave(sanitizeHtml(htmlContent.value));
+  }, { flush: "post" });
+}
 
 // ---------------------------------------------------------------------------
 // Cinematic adaptive chrome ("Letterbox") — typing dissolves the toolbar into
@@ -4050,7 +4121,7 @@ watch([editorContent, () => effectiveDocumentOptions.value?.id], async ([root,id
     if(!root.innerHTML && htmlContent.value)root.innerHTML=sanitizeHtml(htmlContent.value);
     assignBlockIds(root);
     for(const block of Array.from(root.children)){if(!block.hasAttribute('lang'))block.setAttribute('lang',props.contentLanguage);if(!block.hasAttribute('dir'))block.setAttribute('dir',props.contentDirection);}
-    captureSnapshotBase();
+    captureSnapshotBase(false);
     documentWorkspace.session.resetBaseline();initializedDocumentId=id;
   }
 }, { flush: 'post' });

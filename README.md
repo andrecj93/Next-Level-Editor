@@ -105,8 +105,8 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,902 unit tests
-across 384 files, plus end-to-end checks on Chromium and mobile Safari. Both
+**It is tested like something you'd put in production.** 4,933 unit tests
+across 390 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
 ---
@@ -229,7 +229,7 @@ readable — click any section to open it.
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **4,902 Unit Checks** - Across 386 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
+- **4,933 Unit Checks** - Across 390 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
 - **Browser Gates** - Playwright on Chromium and mobile WebKit, plus the same writing scenarios on 18 desktop, tablet, phone, landscape, and reflow profiles
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
@@ -260,7 +260,7 @@ Comment threads anchored to selected text. Shared storage, synchronization, and 
 - **Status Management** - Mark threads as open or resolved
 - **Visual Highlights** - Color-coded text highlighting (yellow for open, green for resolved)
 - **Sidebar UI** - Dedicated sidebar with tabs for open/resolved comments
-- **Persistence API** - Export/import threads as JSON alongside the document HTML. Saving the document's `v-model` alone does not save comment bodies; the playground's local draft stores document HTML only. Opt-in document workspace checkpoints include both the HTML and comment metadata.
+- **Persistence API** - Bind `v-model:comment-threads` to receive and restore thread JSON alongside the document HTML. Replies also trigger auto-save, including failure and Retry. The playground saves both together in its local draft; document workspace checkpoints also include the discussion metadata.
 - **Auto-restore** - Automatically re-anchor comments after content changes
 
 #### ♿ Accessibility
@@ -292,17 +292,17 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 1,402.15 KB | **344.16 KB** | On import |
-| **CSS** | 272.39 KB | **44.13 KB** | On import |
+| **Core (ES)** | 1,409.55 KB | **345.92 KB** | On import |
+| **CSS** | 272.99 KB | **44.25 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
 | PDF page preview module and worker assets | 1,467.53 KB | 409.50 KB | First page preview (ES and UMD) |
-| **UMD** | 3,442.92 KB | 1,107.06 KB | On import (no splitting) |
+| **UMD** | 3,449.31 KB | 1,108.75 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **388.29 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **390.17 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 DOCX conversion, semantic PDF and its fonts, citation formatting, and the
@@ -494,17 +494,31 @@ The Writing Stats Panel will appear and show:
 
 #### Comments & Collaboration
 
-Enable the comments system for collaborative editing:
+Enable comments and persist their JSON alongside the manuscript:
 
 ```vue
+<script setup>
+import { ref } from 'vue';
+import { NextLevelEditor } from 'next-level-editor';
+
+const content = ref('');
+const commentThreads = ref('[]');
+const save = async (html) => {
+  localStorage.setItem('my-draft', JSON.stringify({ html, commentThreads: commentThreads.value }));
+  return true;
+};
+</script>
+
 <template>
-  <NextLevelEditor v-model="content" :enable-comments="true" />
+  <NextLevelEditor v-model="content" v-model:comment-threads="commentThreads"
+    enable-comments :save-handler="save" />
 </template>
 ```
 
 Users can:
 
 - Select text and add comments
+- Open a thread and its replies directly from the highlighted passage
 - Reply to comments with @ mentions
 - Resolve/reopen comment threads
 - View comments in a dedicated sidebar
@@ -639,7 +653,8 @@ to its own instance.
 | `defaultViewMode`  | `string`  | `'editor'`          | Initial view: `editor` \| `code` \| `split` \| `preview`     |
 | `autofocus`        | `boolean` | `false`             | Focus the editing surface on mount                           |
 | `showWritingStats` | `boolean` | `false`             | Enable Writing Assistant & Analytics panel                   |
-| `enableComments`   | `boolean` | `false`             | Enable Comments & Collaboration system                       |
+| `enableComments`   | `boolean` | `false`             | Enable inline comments and replies. |
+| `commentThreads` | `string` | `undefined` | Thread JSON (`v-model:comment-threads`). Persist alongside HTML; replies also trigger `saveHandler`. Use a fresh component key when switching documents. |
 | `enableVariables`  | `boolean` | `false`             | Enable `{{ variable }}` template tokens                      |
 | `variables`        | `Variable[]` | built-in demo set | Your own variable set (replaces the demo fixtures)        |
 | `plugins`          | `EditorPlugin[]` | `[]`          | Editor plugins (slash commands, Tools buttons, palette)   |
@@ -839,13 +854,13 @@ npm run test:e2e:debug
 
 | File Type   | Statements | Branches | Functions | Lines   |
 | ----------- | ---------- | -------- | --------- | ------- |
-| **Overall** | **83.02%** | **74.34%** | **78.15%** | **85.27%** |
+| **Overall** | **83.44%** | **75.04%** | **78.64%** | **85.60%** |
 
 Measured on 2026-09-23. The CI coverage artifact includes per-file results.
 
 ### Test Suites Overview
 
-Verified on 2026-09-23: 4,902 unit tests passed; 85.27% line coverage.
+Verified on 2026-09-23: 4,933 unit tests passed; 85.60% line coverage.
 Browser suites cover Chromium and mobile WebKit; duplicate desktop flows have
 explicit mobile exclusions. A separate 18-profile device matrix exercises all
 three browser engines. Current run counts and retained reports are available in
@@ -888,17 +903,17 @@ See the [document workspace](docs/document-workspace.md) for supported features 
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.mjs` (core 1,402.15 KB, 344.16 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs` (core 1,409.55 KB, 345.92 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Syntax highlighting, the colour picker and both exporters are separate
     chunks, fetched the first time you use them
   - Recommended for Vite, Webpack 5+, Rollup
-- **UMD** - `dist/next-level-editor.umd.js` (3,440.37 KB, 1,106.47 KB gzipped)
+- **UMD** - `dist/next-level-editor.umd.js` (3,449.31 KB, 1,108.75 KB gzipped)
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
   - Editor and feature code is bundled together, including features you may never use.
     The PDF preview additionally loads the packaged browser module and worker assets.
-- **CSS** - `dist/next-level-editor.css` (272.39 KB, 44.13 KB gzipped)
+- **CSS** - `dist/next-level-editor.css` (272.99 KB, 44.25 KB gzipped)
   - Minified styles with CSS variables
   - Includes light and dark themes, all four theme presets
   - Responsive design utilities

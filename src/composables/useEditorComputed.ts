@@ -31,7 +31,6 @@ export function useEditorComputed(options: EditorComputedOptions) {
     isApplyingHistory,
     applySanitizedContent,
     captureSnapshot,
-    triggerAutoSave,
   } = options;
 
   const { sanitizeHtml } = useHtmlSanitizer();
@@ -104,17 +103,9 @@ export function useEditorComputed(options: EditorComputedOptions) {
     { immediate: true }
   );
 
-  /**
-   * Watch for content changes and trigger auto-save
-   */
-  watch(
-    () => editorContent.value?.innerHTML,
-    (newContent) => {
-      if (newContent && !isApplyingHistory.value) {
-        triggerAutoSave(newContent);
-      }
-    }
-  );
+  // Saving belongs to useEditorContent's edit paths. innerHTML is not reactive:
+  // watching it here only observed surface mount/recreation and incorrectly
+  // marked a restored document as edited (including restored comments).
 
   return {
     themeClass,

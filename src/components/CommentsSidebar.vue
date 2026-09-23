@@ -34,7 +34,7 @@
           </div>
           <h3 class="comments-sidebar-title">{{ t("Comments") }}</h3>
           <button
-            v-if="activeTab === 'open'"
+            v-if="activeTab === 'open' && !readonly"
             class="comments-fab"
             type="button"
             :aria-label="t('Add new comment')"
@@ -89,6 +89,7 @@
 
       <!-- Thread List -->
       <div class="comments-thread-list">
+        <p v-if="readonly" class="comments-readonly-notice" role="status">{{ t("Comments are read-only.") }}</p>
         <template v-if="currentThreads.length === 0">
           <div class="comments-empty-state">
             <div class="comments-empty-icon">
@@ -120,7 +121,7 @@
                   : "No resolved comments")
               }}
             </p>
-            <p class="comments-empty-hint">
+            <p v-if="!readonly" class="comments-empty-hint">
               {{ t("Select text and add your first comment to start a conversation") }}
             </p>
           </div>
@@ -133,6 +134,7 @@
             :is-active="activeThreadId === thread.id"
             :is-expanded="expandedThreads.has(thread.id)"
             :mention-search="mentionSearch"
+            :readonly="readonly"
             @select="selectThread"
             @toggle="toggleThread"
             @resolve="resolveThread"
@@ -160,6 +162,7 @@ interface Props {
   threads: CommentThread[];
   activeThreadId: string | null;
   isOpen?: boolean;
+  readonly?: boolean;
   /** Host-supplied @mention provider, passed through to the reply forms. */
   mentionSearch?: (
     query: string
@@ -178,6 +181,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   isOpen: true,
+  readonly: false,
   mentionSearch: undefined,
 });
 
@@ -240,11 +244,13 @@ function toggleThread(threadId: string) {
 }
 
 function resolveThread(threadId: string) {
+  if (props.readonly) return;
   emit("resolve-thread", threadId);
   focusActiveTab();
 }
 
 function reopenThread(threadId: string) {
+  if (props.readonly) return;
   emit("reopen-thread", threadId);
   focusActiveTab();
 }
@@ -258,10 +264,12 @@ function focusActiveTab() {
 }
 
 function deleteThread(threadId: string) {
+  if (props.readonly) return;
   emit("delete-thread", threadId);
 }
 
 function addReply(threadId: string, content: string, mentions: string[]) {
+  if (props.readonly) return;
   emit("add-reply", threadId, content, mentions);
   // Ensure thread stays expanded after adding reply
   if (!expandedThreads.value.has(threadId)) {
@@ -271,11 +279,38 @@ function addReply(threadId: string, content: string, mentions: string[]) {
 }
 
 function createNewComment() {
+  if (props.readonly) return;
   emit("create-comment");
 }
+
+/** Reveal the passage's discussion, even when its thread is already selected. */
+function revealThread(threadId: string) {
+  const thread = props.threads.find(item => item.id === threadId);
+  if (!thread) return;
+  activeTab.value = thread.status;
+  expandedThreads.value = new Set([...expandedThreads.value, threadId]);
+  nextTick(() => {
+    const cards = sidebarContentRef.value?.querySelectorAll<HTMLElement>('.comment-thread-card');
+    const card = cards && Array.from(cards).find(item => item.dataset.threadId === threadId);
+    card?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  });
+}
+
+defineExpose({ revealThread });
 </script>
 
 <style scoped>
+.comments-readonly-notice {
+  margin: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: var(--background-alt, #f8fafc);
+  color: var(--text-secondary, #64748b);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* Sidebar Container */
 .comments-sidebar {
   position: fixed;
