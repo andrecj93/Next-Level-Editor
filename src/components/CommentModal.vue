@@ -189,7 +189,7 @@
                 </span>
               </div>
               <span class="helper-shortcut">
-                <kbd>Ctrl</kbd> + <kbd>Enter</kbd> {{ t("to submit") }}
+                <kbd>{{ shortcut('Mod+Enter') }}</kbd> {{ t("to submit") }}
               </span>
             </div>
           </div>
@@ -229,7 +229,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, shortcut } = useEditorLocale();
 import { ref, watch, nextTick, onBeforeUnmount } from "vue";
 import type { MentionSuggestion } from "../composables/useComments";
 import { useModalDialog } from "../composables/useModalDialog";

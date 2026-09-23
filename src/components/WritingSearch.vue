@@ -9,10 +9,10 @@
             autocomplete="off" autocapitalize="off" autocorrect="off" :spellcheck="false"
             @compositionstart="composing = true" @compositionend="finishComposition" @keydown.enter="navigateFromInput">
         </label>
-        <span :id="statusId" class="search-count" role="status" aria-live="polite" aria-atomic="true">{{ pending ? t('Searching…') : query ? result.total ? `${result.current.toLocaleString(locale)} ${t('of')} ${result.total.toLocaleString(locale)}` : t('No matches') : t('Find a passage') }}</span>
-        <button type="button" :aria-label="t('Previous match')" :title="t('Previous match') + ' (Shift+Enter)'" :disabled="!result.total" @click="search('previous')">↑</button>
-        <button type="button" :aria-label="t('Next match')" :title="t('Next match') + ' (Enter)'" :disabled="!result.total" @click="search('next')">↓</button>
-        <button type="button" :aria-label="t('Close search')" :title="t('Close search') + ' (Escape)'" @click="closeSearch">×</button>
+        <span :id="statusId" class="search-count" role="status" aria-live="polite" aria-atomic="true">{{ pending ? t('Searching…') : query ? result.total ? t('{current} of {total}', { current: result.current, total: result.total }) : t('No matches') : t('Find a passage') }}</span>
+        <button type="button" :aria-label="t('Previous match')" :title="t('Previous match') + ' (' + shortcut('Shift+Enter') + ')'" :disabled="!result.total" @click="search('previous')">↑</button>
+        <button type="button" :aria-label="t('Next match')" :title="t('Next match') + ' (' + shortcut('Enter') + ')'" :disabled="!result.total" @click="search('next')">↓</button>
+        <button type="button" :aria-label="t('Close search')" :title="t('Close search') + ' (' + shortcut('Escape') + ')'" @click="closeSearch">×</button>
       </div>
       <div class="search-options">
         <label><input v-model="caseSensitive" type="checkbox"> {{ t('Match case') }}</label>
@@ -29,7 +29,7 @@
       </div>
     </div>
     <div class="search-context">
-      <button v-if="result.passage" type="button" class="search-passage" :aria-label="t('Edit passage in {heading}: {excerpt}').replace('{heading}', passageHeading).replace('{excerpt}', result.passage.before + result.passage.match + result.passage.after)" @click="editPassage">
+      <button v-if="result.passage" type="button" class="search-passage" :aria-label="t('Edit passage in {heading}: {excerpt}', { heading: passageHeading, excerpt: result.passage.before + result.passage.match + result.passage.after })" @click="editPassage">
         <span class="search-location">{{ passageHeading }}</span>
         <span>{{ result.passage.before }}<mark>{{ result.passage.match }}</mark>{{ result.passage.after }}</span>
       </button>
@@ -67,9 +67,9 @@ const replaceOpen = ref(false);
 const composing = ref(false);
 const pending = ref(false);
 const notice = ref('');
-const { t, locale } = useEditorLocale();
+const { t, shortcut } = useEditorLocale();
 const noticeCount = ref(0);
-const noticeText = computed(() => t(notice.value).replace('{count}', noticeCount.value.toLocaleString(locale.value)));
+const noticeText = computed(() => t(notice.value, { count: noticeCount.value }));
 const result = shallowRef<FindResult>({ current: 0, total: 0 });
 const passageHeading = computed(() => result.value.passage?.heading === 'Matching passage' ? t('Matching passage') : result.value.passage?.heading ?? '');
 const revealMatch = (range: Range) => {

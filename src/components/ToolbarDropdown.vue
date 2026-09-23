@@ -9,7 +9,7 @@
       ref="triggerRef"
       class="dropdown-trigger"
       :class="{ active: hasActiveItem }"
-      :data-tooltip="tooltip"
+      :data-tooltip="t(tooltip)"
       :title="t(tooltip)"
       :aria-label="t(label)"
       :aria-expanded="isOpen"
@@ -24,7 +24,7 @@
         class="dropdown-icon"
         v-html="icon"
       />
-      <span class="dropdown-label">{{ displayLabel }}</span>
+      <span class="dropdown-label">{{ t(displayLabel) }}</span>
       <span class="dropdown-arrow">▼</span>
     </button>
 
@@ -68,7 +68,7 @@
               v-if="item.shortcut"
               class="item-shortcut"
             >{{
-              item.shortcut
+              shortcut(item.shortcut)
             }}</span>
           </button>
         </div>
@@ -79,7 +79,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, shortcut } = useEditorLocale();
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 
 interface DropdownItem {

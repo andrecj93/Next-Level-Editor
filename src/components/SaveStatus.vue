@@ -68,14 +68,14 @@
           stroke-linejoin="round"
         />
       </svg>
-      {{ t(persistentSave ? 'Saved' : 'Updated') }} {{ t("at") }} {{ lastSaved.toLocaleTimeString() }}
+      {{ t(persistentSave ? 'Saved' : 'Updated') }} {{ t("at") }} {{ date(lastSaved, { hour: 'numeric', minute: '2-digit', second: '2-digit' }) }}
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, date } = useEditorLocale();
 withDefaults(defineProps<{
   saveStatus?: "saving" | "conflict" | "error" | "saved" | "unsaved";
   ownsFixedChrome?: boolean;

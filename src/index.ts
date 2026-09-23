@@ -142,4 +142,8 @@ export { createSemanticPdf } from './utils/semanticPdf';
 export { importDocx } from './utils/docxImport';
 export { renderDocumentTemplate } from './utils/documentTemplates';
 export { portugueseMessages } from './composables/useEditorLocale';
+export { englishMessages } from './locales/en';
+export { createEditorLocaleFormatter } from './utils/editorLocale';
+export { useEditorLocale } from './composables/useEditorLocale';
+export type * from './types/locale';
 export { loadCitationFormatter } from './utils/citationFormatter';

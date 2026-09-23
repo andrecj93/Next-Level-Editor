@@ -20,7 +20,7 @@ const props = defineProps<{
   collaborative?: boolean;
 }>();
 const w = props.workspace;
-const { t, locale } = useEditorLocale();
+const { t, locale, date, direction: uiDirection } = useEditorLocale();
 const id = useStableId();
 const trigger = ref<HTMLButtonElement>();
 const tabs = [
@@ -151,9 +151,10 @@ function close() {
 }
 function tabKey(event: KeyboardEvent, index: number) {
   let next = index;
-  if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
-  else if (event.key === "ArrowLeft")
-    next = (index + tabs.length - 1) % tabs.length;
+  if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+    const delta = (event.key === 'ArrowRight' ? 1 : -1) * (uiDirection.value === 'rtl' ? -1 : 1);
+    next = (index + delta + tabs.length) % tabs.length;
+  }
   else if (event.key === "Home") next = 0;
   else if (event.key === "End") next = tabs.length - 1;
   else return;
@@ -367,7 +368,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
               >
                 <strong>{{ version.label }}</strong>
                 <time :datetime="version.createdAt">
-                  {{ new Date(version.createdAt).toLocaleString(locale) }}
+                  {{ date(version.createdAt) }}
                 </time>
                 <div class="document-actions">
                   <button @click="compare(version.html)">
@@ -420,12 +421,10 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
             <h3>{{ t("Conversion report") }}</h3>
             <p>{{ w.importReport.value.converter }}</p>
             <p>
-              {{ w.importReport.value.structures.paragraphs }}
-              {{ t("Paragraphs") }} ·
-              {{ w.importReport.value.structures.headings }}
-              {{ t("Headings") }} ·
-              {{ w.importReport.value.structures.tables }} {{ t("Tables") }} ·
-              {{ w.importReport.value.structures.images }} {{ t("Images") }}
+              {{ t('{count} paragraphs', { count: w.importReport.value.structures.paragraphs }) }} ·
+              {{ t('{count} headings', { count: w.importReport.value.structures.headings }) }} ·
+              {{ t('{count} tables', { count: w.importReport.value.structures.tables }) }} ·
+              {{ t('{count} images', { count: w.importReport.value.structures.images }) }}
             </p>
             <button type="button" @click="w.run(w.downloadImportReport)">
               {{ t("Download conversion report") }}
@@ -435,7 +434,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
                 v-for="warning in w.importReport.value.warnings"
                 :key="warning"
               >
-                {{ warning }}
+                {{ t(warning) }}
               </li>
             </ul>
             <div class="document-preview" v-html="w.importReport.value.html" />
@@ -541,7 +540,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
             </h3>
             <ul>
               <li v-for="warning in w.pdf.value.warnings" :key="warning">
-                {{ warning }}
+                {{ t(warning) }}
               </li>
             </ul>
             <iframe
@@ -653,7 +652,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
               </label>
               <strong>{{ suggestion.author }}</strong>
               <time :datetime="suggestion.createdAt">
-                {{ new Date(suggestion.createdAt).toLocaleString(locale) }}
+                {{ date(suggestion.createdAt) }}
               </time>
               <div class="document-diff">
                 <del>{{ htmlText(suggestion.before) }}</del>
@@ -740,7 +739,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
                 </button>
               </div>
             </form>
-            <p v-if="w.ai.error.value" role="alert">{{ w.ai.error.value }}</p>
+            <p v-if="w.ai.error.value" role="alert">{{ t(w.ai.error.value) }}</p>
             <pre v-if="w.ai.preview.value && !w.ai.proposal.value">{{
               w.ai.preview.value
             }}</pre>

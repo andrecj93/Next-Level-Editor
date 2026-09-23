@@ -407,11 +407,11 @@ describe("CommentThreadCard", () => {
       expect(timeFor(2 * 24 * 60 * 60 * 1000)).toBe("2d ago");
     });
 
-    it("falls back to a locale date string for timestamps a week or older", () => {
+    it("uses the editor's default English locale for timestamps a week or older", () => {
       const old = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
       const w = mountCard({ createdAt: old });
       expect(w.get(".comment-main .comment-time").text()).toBe(
-        old.toLocaleDateString()
+        old.toLocaleDateString('en')
       );
       w.unmount();
     });

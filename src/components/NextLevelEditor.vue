@@ -1,6 +1,8 @@
 <template>
   <div
     ref="rootEl"
+    :lang="resolvedUiLocale"
+    :dir="resolvedUiDirection"
     :class="[
       'next-level-editor',
       themeClass,
@@ -117,13 +119,15 @@
         :class="{ 'is-pulsing': letterboxSavePulse }"
         aria-hidden="true"
       />
-      <span class="nle-letterbox-count">{{ wordCount }} {{ t("words") }}</span>
+      <span class="nle-letterbox-count">{{ t('{count} words', { count: wordCount }) }}</span>
     </div>
     </div>
 
     <Teleport to="body">
     <CommandMenu
       class="nle-chrome"
+      :lang="resolvedUiLocale"
+      :dir="resolvedUiDirection"
       :class="teleportThemeClass"
       :show="showCommandMenu"
       :position="commandMenuPosition"
@@ -162,7 +166,7 @@
       :command-menu-open="surfacePopup.open"
       :command-listbox-id="surfacePopup.listboxId"
       :command-active-option-id="surfacePopup.activeOptionId"
-      :placeholder="t(placeholder)"
+      :placeholder="placeholder"
       :code-content="codeContent"
       :html-content="htmlContent"
       :split-right-mode="splitRightMode"
@@ -470,7 +474,7 @@
     <!-- Shared confirmation for destructive actions -->
     <ConfirmDialog
       :is-open="confirmDialogOpen"
-      :title="t(confirmDialogOptions.title)"
+      :title="confirmDialogOptions.title"
       :message="confirmDialogOptions.message"
       :confirm-label="confirmDialogOptions.confirmLabel"
       :cancel-label="confirmDialogOptions.cancelLabel"
@@ -849,7 +853,7 @@ const props = withDefaults(defineProps<NextLevelEditorProps>(), {
 const effectiveReadonly = computed(() => props.readonly || props.documentOptions?.role === 'viewer' ||
   Boolean(props.collaboration && props.documentOptions?.role === 'reviewer'));
 const writingLanguageSupported = computed(() => /^en(?:-|$)/i.test(props.contentLanguage));
-const { t } = provideEditorLocale(() => props.locale, () => props.messages ?? {});
+const { t, locale: resolvedUiLocale, direction: resolvedUiDirection } = provideEditorLocale(() => props.locale, () => props.messages ?? {}, () => props.uiDirection ?? 'auto', () => props.documentOptions);
 const ephemeralDocumentId=useStableId();
 const effectiveDocumentOptions = computed(() => {
   const options=props.documentOptions ?? (props.documentTools ? {id:'ephemeral-'+ephemeralDocumentId} : undefined);
@@ -1687,7 +1691,7 @@ const {
 // spoken. Passed to the composables below in place of the bare toast fn.
 const notify = (message: string, type?: "success" | "error") => {
   showToastNotification(message, type);
-  announce(message, { priority: type === "error" ? "assertive" : "polite" });
+  announce(t(message), { priority: type === "error" ? "assertive" : "polite" });
 };
 
 // Table state

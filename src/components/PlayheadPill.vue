@@ -4,6 +4,8 @@
       v-if="targetPoint"
       ref="rootEl"
       class="playhead nle-chrome"
+      :lang="uiLocale"
+      :dir="uiDirection"
       :class="[
         theme,
         {
@@ -330,7 +332,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import {
   ref,
   computed,
@@ -636,7 +638,7 @@ const layerAttrs = (active: boolean): Record<string, unknown> => ({
 
 const wordCountLabel = computed(
   () =>
-    `${props.wordCount.toLocaleString()} ${props.wordCount === 1 ? "word" : "words"}`
+    t('{count} words', { count: props.wordCount })
 );
 
 // --- Menus (Format / colors / insert / overflow) -----------------------------

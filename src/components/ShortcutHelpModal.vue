@@ -43,7 +43,7 @@
           class="category-section"
         >
           <h3 class="category-title">
-            {{ category.name }}
+            {{ t(category.name) }}
           </h3>
           <div class="shortcuts-grid">
             <div
@@ -76,7 +76,7 @@
       <!-- Footer -->
       <div class="modal-footer">
         <p class="footer-hint">
-          {{ t("Press") }} <kbd>Ctrl</kbd> + <kbd>/</kbd> {{ t("in the editor to open this help") }}
+          {{ t("Press") }} <kbd>{{ formatShortcut('Mod+/') }}</kbd> {{ t("in the editor to open this help") }}
         </p>
       </div>
     </div>
@@ -85,7 +85,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, shortcut: formatShortcut } = useEditorLocale();
 import { ref, computed } from "vue";
 import { useModalDialog } from "../composables/useModalDialog";
 
@@ -133,7 +133,7 @@ const getCategoryShortcuts = (categoryId: string) => {
     const query = searchQuery.value.toLowerCase();
     shortcuts = shortcuts.filter(
       (s) =>
-        s.description.toLowerCase().includes(query) ||
+        t(s.description).toLocaleLowerCase().includes(query) ||
         s.id.toLowerCase().includes(query) ||
         getActiveKeys(s.id)?.some((k) => k.toLowerCase().includes(query))
     );
@@ -149,7 +149,7 @@ const getActiveKeys = (shortcutId: string): string[] => {
 
 // Format key for display
 const formatKey = (key: string): string => {
-  return props.registry.getKeyDisplay([key]);
+  return t(props.registry.getKeyDisplay([key]));
 };
 
 // Close modal

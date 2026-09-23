@@ -78,7 +78,7 @@
 
     <div class="variable-autocomplete-footer">
       <span class="variable-autocomplete-hint">
-        <kbd>↑↓</kbd> {{ t("Navigate") }} <kbd>Enter</kbd> {{ t("Insert") }} <kbd>Esc</kbd> {{ t("Close") }}
+        <kbd>↑↓</kbd> {{ t("Navigate") }} <kbd>{{ shortcut('Enter') }}</kbd> {{ t("Insert") }} <kbd>{{ shortcut('Esc') }}</kbd> {{ t("Close") }}
       </span>
     </div>
   </div>
@@ -86,7 +86,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, shortcut } = useEditorLocale();
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import type { Variable, VariableCategory } from "../composables/useVariables";
 import { nextInstanceToken } from "../utils/instanceToken";

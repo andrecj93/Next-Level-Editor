@@ -240,7 +240,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, date: calendarDate } = useEditorLocale();
 import { ref } from "vue";
 import type {
   CommentThread,
@@ -283,7 +283,7 @@ function handleToggle() {
 }
 
 function handleDelete() {
-  if (confirm("Are you sure you want to delete this thread?")) {
+  if (confirm(t("Are you sure you want to delete this thread?"))) {
     emit("delete", props.thread.id);
   }
 }
@@ -300,11 +300,11 @@ function formatTime(date: Date): string {
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
 
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
+  if (minutes < 1) return t("just now");
+  if (minutes < 60) return t('{count}m ago', { count: minutes });
+  if (hours < 24) return t('{count}h ago', { count: hours });
+  if (days < 7) return t('{count}d ago', { count: days });
+  return calendarDate(date, { year: 'numeric', month: 'numeric', day: 'numeric' });
 }
 
 function getInitials(name: string): string {

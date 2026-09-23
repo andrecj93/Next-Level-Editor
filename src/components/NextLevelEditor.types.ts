@@ -15,7 +15,9 @@ export interface NextLevelEditorProps {
   documentOptions?: import('../types/document').DocumentOptions;
   documentTools?: boolean;
   locale?: import('../types/document').EditorLocale;
-  messages?: Record<string, string>;
+  messages?: import('../types/locale').EditorMessages;
+  /** UI direction is independent of document direction; auto follows the UI locale. */
+  uiDirection?: import('../types/locale').EditorUiDirection;
   contentLanguage?: string;
   contentDirection?: 'ltr' | 'rtl' | 'auto';
   /** Structured coauthoring is opt-in. The provider must authorize document access. */

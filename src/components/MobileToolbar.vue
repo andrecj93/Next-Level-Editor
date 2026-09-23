@@ -4,6 +4,8 @@
       v-if="showToolbar"
       ref="toolbarEl"
       class="mobile-toolbar nle-chrome"
+      :lang="uiLocale"
+      :dir="uiDirection"
       :class="[
         presetClass,
         {
@@ -208,7 +210,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { keepCaretAboveToolbar } from "../utils/caretVisibility";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useDeviceDetection } from "../composables/useDeviceDetection";

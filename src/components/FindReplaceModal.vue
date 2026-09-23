@@ -5,6 +5,8 @@
       <div
         v-if="show"
         class="modal-overlay nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="theme"
         @click="handleOverlayClick"
       >
@@ -38,7 +40,7 @@
               />
               <div :id="searchInfoId" class="search-info" role="status" aria-live="polite" aria-atomic="true">
                 <span v-if="matches > 0"
-                  >{{ currentMatch }} {{ t("of") }} {{ matches }}</span
+                  >{{ t('{current} of {total}', { current: currentMatch, total: matches }) }}</span
                 >
                 <span v-else-if="findText && matches === 0" class="no-matches"
                   >{{ t("No matches") }}</span
@@ -114,7 +116,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { useModalDialog } from "../composables/useModalDialog";
 import { countMatchesInHtml } from "../composables/useFindReplace";

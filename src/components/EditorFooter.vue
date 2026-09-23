@@ -1,7 +1,7 @@
 <template>
   <div class="editor-footer">
     <div v-if="writingMode" class="writing-footer-actions">
-      <button type="button" class="width-toggle" :aria-label="t('Writing companion')" :aria-description="writingNoteCount ? `${writingNoteCount} writing ${writingNoteCount === 1 ? 'note' : 'notes'} ready to review` : undefined" :aria-expanded="companionOpen" @click="$emit('toggle-companion')">{{ t("Writing companion") }} <span v-if="writingNoteCount" class="writing-note-count" aria-hidden="true">{{ writingNoteCount }}</span></button>
+      <button type="button" class="width-toggle" :aria-label="t('Writing companion')" :aria-description="writingNoteCount ? t('{count} writing notes ready to review', { count: writingNoteCount }) : undefined" :aria-expanded="companionOpen" @click="$emit('toggle-companion')">{{ t("Writing companion") }} <span v-if="writingNoteCount" class="writing-note-count" aria-hidden="true">{{ number(writingNoteCount) }}</span></button>
       <button v-if="enableComments" type="button" class="width-toggle" :aria-expanded="commentsOpen" @click="$emit('open-comments')">{{ t("Comments") }}</button>
       <button v-if="enableVariables" type="button" class="width-toggle" :aria-expanded="variablesOpen" @click="$emit('open-variables')">{{ t("Variables") }}</button>
     </div>
@@ -42,15 +42,15 @@
 
     <div class="footer-counts">
       <slot />
-      <span class="word-count">{{ wordCount.toLocaleString(locale) }} {{ t(wordCount === 1 ? 'word' : 'words') }}</span>
-      <span class="char-count">{{ characterCount.toLocaleString(locale) }} {{ t(characterCount === 1 ? 'character' : 'characters') }}</span>
+      <span class="word-count">{{ t('{count} words', { count: wordCount }) }}</span>
+      <span class="char-count">{{ t('{count} characters', { count: characterCount }) }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t, locale } = useEditorLocale();
+const { t, number } = useEditorLocale();
 defineProps<{
   wordCount: number;
   characterCount: number;

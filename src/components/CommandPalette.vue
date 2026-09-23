@@ -64,7 +64,7 @@
             </div>
             <div class="command-info">
               <div class="command-name">
-                {{ command.name }}
+                {{ t(command.name) }}
               </div>
               <div class="command-description">
                 {{ t(command.description) }}
@@ -74,7 +74,7 @@
               v-if="command.shortcut"
               class="command-shortcut"
             >
-              {{ command.shortcut }}
+              {{ shortcut(command.shortcut) }}
             </div>
           </div>
         </div>
@@ -101,7 +101,7 @@
               :key="category"
               class="category-badge"
             >
-              {{ category }}
+              {{ t(category) }}
             </span>
           </div>
         </div>
@@ -112,7 +112,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, shortcut } = useEditorLocale();
 import { ref, computed, watch, nextTick } from 'vue'
 import { useModalDialog } from '../composables/useModalDialog'
 import { useStableId } from '../utils/useStableId'
@@ -188,9 +188,9 @@ const filteredCommands = computed(() => {
   return props.commands
     .filter((cmd) => {
       return (
-        cmd.name.toLowerCase().includes(query) ||
-        cmd.description.toLowerCase().includes(query) ||
-        cmd.category.toLowerCase().includes(query)
+        t(cmd.name).toLowerCase().includes(query) ||
+        t(cmd.description).toLowerCase().includes(query) ||
+        t(cmd.category).toLowerCase().includes(query)
       )
     })
     .slice(0, 10) // Limit to 10 results

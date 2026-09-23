@@ -58,6 +58,38 @@ The playground persists its document ID and metadata with its local draft. `?lab
 | F11 / #143 | Chapter-scope preview, stable block/chapter move, duplicate/delete, reference renumbering, one undo | Duplicating blocks with attached notes/citations/comments is refused until references are resolved; pending review blocks cannot be rearranged. |
 | F12 / #144 | Typed/required/default fields, formatting, named datasets, conditions/repeats, validation locations, separate resolved exports | Generated exports preserve the template source. No executable expressions, networking, or arbitrary property access. |
 
+## Locale packs and host integration
+
+`locale` selects interface language and locale-aware plural forms, numbers and dates. `messages` overrides individual source-string keys, scoped to one editor. `contentLanguage` and `contentDirection` describe the author's document independently. `uiDirection` accepts `auto`, `ltr` or `rtl`; automatic direction follows the UI locale's language/script, including teleported controls. The Arabic host-dictionary example at `src/demo/examples/arabicMessages.ts` demonstrates plural forms and mixed-script editing, with English fallback for unspecified labels.
+
+```ts
+import portuguese from 'next-level-editor/locales/pt-PT'
+import english from 'next-level-editor/locales/en'
+import { createEditorLocaleFormatter } from 'next-level-editor/locale'
+import type { EditorMessages } from 'next-level-editor'
+
+const messages: EditorMessages = {
+  ...portuguese,
+  'Save': 'Guardar rascunho',
+  '{count} words': { one: '{count} palavra', other: '{count} palavras' },
+}
+const ui = createEditorLocaleFormatter(() => 'pt-PT', () => messages)
+ui.t('{count} words', { count: 2 }) // '2 palavras'
+ui.number(1234.5)
+ui.date(new Date(), { dateStyle: 'short' })
+ui.shortcut('Mod+Enter', 'mac')
+// English source strings are the final fallback; English plural forms are explicit.
+createEditorLocaleFormatter(() => 'en', () => english)
+```
+
+These three subpaths have independent ESM/CommonJS runtime exports and declarations; they do not import Vue or the editor. The main entry retains its Portuguese catalog export for compatibility and includes the built-in English/Portuguese defaults. Host locale packs can be dynamically imported before updating `messages` and `locale`. Text interpolation is rendered as text, never evaluated as HTML. Plural catalogs require `other`; optional categories are `zero`, `one`, `two`, `few` and `many`. Full locale plural rules require `Intl.PluralRules`; older environments without it fall back to the existing English/Portuguese one/other behavior. Invalid language tags fall back to English.
+
+`locale.loaded` and `locale.failed` diagnostics contain locale, direction and counts, never translation keys or document text. Private-use language subtags are removed from logs. Missing-message counts are deduplicated, batched and capped at 256; `missingKeysCapped` indicates truncation. Unknown host/provider strings retain their original text. Source-string interpolation in older dynamic messages still needs contextual review; the static audit alone does not establish complete localization.
+
+Run `npm run audit:locales` for a persisted source report. It gates missing literal translation keys and internal Error literals in pt-PT, and inventories dynamic call sites and unwrapped template text for review. Run `npm run build` followed by `npx playwright install chromium` and `npm run verify:package` to pack and install the library into an isolated Vue 3.3.0 consumer. This verifies ESM/CommonJS, SSR, plugin registration, strict NodeNext declarations, catalogs without Vue, production bundling, and browser editing/version/read-only behavior. Evidence remains under `node_modules/.cache/package-verification/` or the supplied `--evidence-dir`; failed temporary consumers are retained for diagnosis.
+
+Declaration generation targets the advertised minimum Vue peer through the build-only `vue-minimum` alias. `.d.mts` and `.d.cts` exports preserve default imports under NodeNext; legacy `.d.ts` files remain available. The verifier installs a tarball and never publishes it to npm.
+
 ## Durable versions and diagnostics
 
 `VersionStore` has `list`, `create(documentId, snapshot, label, expectedRevision)` and `deleteDocument`. A successful create must perform an atomic compare-and-swap. Throw `RevisionConflictError` for a stale revision. `createMemoryVersionStore` is useful in tests; `createIndexedDbVersionStore` uses a single read-write transaction and bounded retention (100 versions by default). Export the draft or refresh the version list after a conflict; never silently replace another writer's version.
@@ -72,7 +104,7 @@ Word conversion uses [Mammoth](https://github.com/mwilliamson/mammoth.js/), foll
 
 Semantic PDF uses [PDFKit's tagged-document facilities](https://pdfkit.org/docs/accessibility.html) and embedded Noto Sans Latin fonts. Headings, paragraphs, bold/italic/underline text, external links, lists, tables, local PNG/JPEG figures and explicit page breaks have dedicated rendering paths. Nested tables and cell images become text; inline images use alternative text; remote media is not fetched. Non-Latin scripts/symbols produce a font-coverage warning and need visual review or a different export format. Internal HTML note links remain intact in HTML/Word; the PDF text preserves reference labels without claiming working internal link annotations.
 
-Headers/footers are pagination artifacts. The preview and its download share the same Blob. Changing content or settings invalidates the preview; an export finishing against a changed snapshot is rejected. Existing raster PDF export remains available in the original export menu for visual-layout use cases. Do not describe that renderer as searchable or accessible PDF.
+Headers/footers are pagination artifacts. The preview and its download share the same Blob. Changing content or settings invalidates the preview; an export finishing against a changed snapshot is rejected. The original export menu retains the image-based page renderer, now with a Unicode text layer, chapter bookmarks and links from the writing-quality branch. Its text can be searched and selected; it does not produce the semantic tags of the document-workspace renderer and is not PDF/UA certification.
 
 | Output | References | Pagination and accessibility |
 | --- | --- | --- |
@@ -132,7 +164,7 @@ For collaboration only, an adapter mounts ProseMirror and binds its transactions
 | Licensing | Existing dependencies remain. | Yjs, ProseMirror and their binding use MIT licenses. Mammoth uses BSD-2-Clause, PDFKit/fflate MIT, and embedded Noto fonts OFL-1.1. No third-party CSL processor is bundled. |
 | Cost | No collaboration transport or service is required. | Adds CRDT state, document conversion, presence and transport work. Payload/queue bounds prevent unbounded client buffering; they are not a production capacity claim. |
 
-The complete feature build measured on 2026-09-23 with Node 24.14.1 on Windows has a 318.4 KiB gzip ES core and 42.7 KiB gzip CSS (361.1 KiB combined). The base writing branch reports 261.4 KiB combined. These totals include all document features, so they do not isolate the collaboration adapter's cost. The unsplit UMD bundle is 1,075.1 KiB gzip. Prefer the ES build for deferred heavy features.
+The complete feature build measured on 2026-09-23 with Node 24.14.1 on Windows has a 325.63 KiB gzip ES core and 42.75 KiB gzip CSS (368.38 KiB combined). The base writing branch reports 261.5 KiB combined. These totals include all document features, so they do not isolate the collaboration adapter's cost. The unsplit UMD bundle is 1,086.82 KiB gzip. Prefer the ES build for deferred heavy features.
 
 Reproduce the deterministic operation, sanitization, duplicate/reordered update, undo and metadata checks with `npx vitest run src/utils/__tests__/documentIntegrity.test.ts src/utils/__tests__/collaboration.test.ts src/utils/__tests__/collaborationTransport.test.mjs`. Run `npx playwright test e2e/document-collaboration.spec.ts --workers=1 --retries=0` for two independent browsers editing the same paragraph during a real WebSocket partition, then reconnecting and reloading persisted state. The browser experiment checks insert/delete convergence and local undo. It is not a load or latency benchmark. Browser offline emulation did not reliably suspend existing WebKit WebSockets; the final experiment partitions connections at the server instead.
 

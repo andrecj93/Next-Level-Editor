@@ -27,14 +27,14 @@
       <span class="suggestion-value">{{ suggestion.value }}</span>
       <span class="suggestion-label">{{ t(suggestion.label) }}</span>
       <span class="suggestion-type">{{
-        getSuggestionTypeLabel(suggestion.type)
+        t(getSuggestionTypeLabel(suggestion.type))
       }}</span>
     </div>
 
     <div v-if="showHelpText" class="dropdown-footer">
       <span class="help-text">
-        <kbd>↑</kbd><kbd>↓</kbd> {{ t("Navigate •") }} <kbd>Enter</kbd> {{ t("Select •") }}
-        <kbd>Esc</kbd> {{ t("Close") }}
+        <kbd>↑</kbd><kbd>↓</kbd> {{ t("Navigate •") }} <kbd>{{ shortcut('Enter') }}</kbd> {{ t("Select •") }}
+        <kbd>{{ shortcut('Esc') }}</kbd> {{ t("Close") }}
       </span>
     </div>
   </div>
@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, shortcut } = useEditorLocale();
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import type { AutocompleteType } from "../composables/useSmartAutocomplete";
 import { smoothScrollIntoView } from "../utils/scroll";

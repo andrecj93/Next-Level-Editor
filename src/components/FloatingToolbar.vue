@@ -5,6 +5,8 @@
         v-if="show && position"
         ref="toolbarEl"
         class="floating-toolbar nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="{ 'is-below': position.below }"
         :style="{
           top: `${position.top}px`,
@@ -34,7 +36,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 // Positioning math lives in utils/ (pure + unit-testable; a second plain
 // <script> block exporting it from this SFC tripped TS4082 in vue-tsc's

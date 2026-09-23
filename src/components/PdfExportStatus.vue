@@ -2,14 +2,14 @@
   <div class="pdf-export-status" role="group" :aria-label="t('PDF export progress')">
     <span role="status">{{ t(cancelling ? 'Cancelling PDF…' : 'Preparing PDF') }}</span>
     <progress v-if="!cancelling" :value="total ? completed : undefined" :max="total || 1" :aria-label="t('PDF pages prepared')" />
-    <span v-if="total && !cancelling" class="pdf-page-count" :style="{ minWidth: `${String(total).length * 2 + 1}ch` }" aria-hidden="true">{{ completed }}/{{ total }}</span>
+    <span v-if="total && !cancelling" class="pdf-page-count" :style="{ minWidth: `${number(total).length * 2 + 1}ch` }" aria-hidden="true">{{ number(completed) }}/{{ number(total) }}</span>
     <button type="button" :disabled="cancelling" :aria-label="t('Cancel PDF export')" @click="$emit('cancel')">{{ t("Cancel") }}</button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, number } = useEditorLocale();
 defineProps<{ completed: number; total: number; cancelling: boolean }>();
 defineEmits<{ (event: 'cancel'): void }>();
 </script>

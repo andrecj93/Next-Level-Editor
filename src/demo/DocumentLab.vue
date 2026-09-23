@@ -4,6 +4,7 @@ import NextLevelEditor from "../components/NextLevelEditor.vue";
 import { createIndexedDbVersionStore } from "../utils/versionStore";
 import { createMemoryCollaborationProvider } from "../utils/memoryCollaboration";
 import { createWebSocketCollaborationProvider } from "../utils/webSocketCollaboration";
+import { arabicMessages } from './examples/arabicMessages';
 import {
   defaultDocumentMetadata,
   type AiAdapter,
@@ -15,11 +16,12 @@ const initial =
   '<h1 data-nle-id="nle-heading">A better document</h1><p data-nle-id="nle-intro">Write, review, and share a clear story.</p><h2 data-nle-id="nle-plan">A practical plan</h2><ul data-nle-id="nle-list"><li>Keep your versions.</li><li>Make every word count.</li></ul><table data-nle-id="nle-table"><tbody><tr><th>Chapter</th><th>Status</th></tr><tr><td>Introduction</td><td>Ready</td></tr></tbody></table>';
 const content = ref(initial),
   peerContent = ref(initial),
-  locale = ref("en"),
+  locale = ref(params.get('locale') || 'en'),
   language = ref("en"),
   direction = ref<"auto" | "ltr" | "rtl">("auto");
 const collaborative = ref(params.get("collaboration") === "true"),
   role = ref<DocumentRole>("author");
+const messages = computed(() => locale.value.startsWith('ar') ? arabicMessages : undefined);
 const id = ref(params.get("document") || "document-lab");
 const metadata = shallowRef<DocumentMetadata>(defaultDocumentMetadata());
 const store = createIndexedDbVersionStore({ database: "nle-document-lab" }),
@@ -109,6 +111,7 @@ const peerCollaboration = {
         <select v-model="locale" aria-label="Interface">
           <option value="en">English</option>
           <option value="pt-PT">Português</option>
+          <option value="ar-EG-u-nu-arab">العربية · host dictionary</option>
         </select>
       </label>
       <label>
@@ -147,6 +150,7 @@ const peerCollaboration = {
           :document-options="options"
           :collaboration="collaboration"
           :locale="locale"
+          :messages="messages"
           :content-language="language"
           :content-direction="direction"
           height="650px"

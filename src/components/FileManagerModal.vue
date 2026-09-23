@@ -251,7 +251,7 @@
 </template>
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, date: calendarDate } = useEditorLocale();
 import { ref, computed, watch } from "vue";
 import { fileManager, type ManagedFile } from "../utils/fileManager";
 import { useModalDialog } from "../composables/useModalDialog";
@@ -432,11 +432,11 @@ function formatDate(date: Date): string {
   const diff = now.getTime() - date.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
+  if (days === 0) return t("Today");
+  if (days === 1) return t("Yesterday");
+  if (days < 7) return t('{count} days ago', { count: days });
 
-  return date.toLocaleDateString();
+  return calendarDate(date, { year: 'numeric', month: 'numeric', day: 'numeric' });
 }
 
 function handleOverlayClick() {

@@ -3,7 +3,7 @@
   <ToolbarDropdown
     v-if="type === 'dropdown'"
     :class="{ 'toolbar-section-disabled': !visible }"
-    :label="t(label)"
+    :label="label"
     :icon="icon"
     :tooltip="
       visible ? tooltip : `${tooltip} (not available for current selection)`

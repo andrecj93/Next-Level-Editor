@@ -122,7 +122,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, date: calendarDate } = useEditorLocale();
 import { ref } from "vue";
 import type { HistoryEntry } from "../composables/useHistoryTimeline";
 import { smoothScrollIntoView } from "../utils/scroll";
@@ -215,15 +215,15 @@ const formatTime = (timestamp: number): string => {
   const diffDays = Math.floor(diffMs / 86400000);
 
   if (diffMins < 1) {
-    return "Just now";
+    return t("Just now");
   } else if (diffMins < 60) {
-    return `${diffMins}m ago`;
+    return t('{count}m ago', { count: diffMins });
   } else if (diffHours < 24) {
-    return `${diffHours}h ago`;
+    return t('{count}h ago', { count: diffHours });
   } else if (diffDays < 7) {
-    return `${diffDays}d ago`;
+    return t('{count}d ago', { count: diffDays });
   } else {
-    return date.toLocaleDateString();
+    return calendarDate(date, { year: 'numeric', month: 'numeric', day: 'numeric' });
   }
 };
 

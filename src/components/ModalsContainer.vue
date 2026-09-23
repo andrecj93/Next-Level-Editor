@@ -134,12 +134,14 @@
   <!-- Toast Notification -->
   <transition name="toast-fade">
     <div v-if="showToast" :class="['toast-notification', toastType]">
-      {{ toastMessage }}
+      {{ t(toastMessage) }}
     </div>
   </transition>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import SaveStatus from "./SaveStatus.vue";
 import TableModal from "./TableModal.vue";
 import FindReplaceModal from "./FindReplaceModal.vue";

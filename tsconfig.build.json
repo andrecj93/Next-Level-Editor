@@ -17,11 +17,13 @@
     "declarationMap": false,
     "outDir": "./dist",
     "rootDir": "./src",
+    "paths": { "vue": ["./node_modules/vue-minimum"] },
 
     /* Emitting is decoupled from the strict lint-only flags used for checking. */
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
+  "vueCompilerOptions": { "target": 3.3 },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
   "exclude": [
     "src/demo/**",

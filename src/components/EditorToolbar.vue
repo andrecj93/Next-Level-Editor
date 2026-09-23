@@ -531,7 +531,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, direction: uiDirection } = useEditorLocale();
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import type { ToolbarAction } from "../types/toolbar";
 import type { ToolbarConfig } from "../composables/useSmartToolbar";
@@ -787,7 +787,7 @@ const onRovingKeydown = (event: KeyboardEvent) => {
   } else if (event.key === "End") {
     next = controls.length - 1;
   } else {
-    const delta = event.key === "ArrowRight" ? 1 : -1;
+    const delta = (event.key === "ArrowRight" ? 1 : -1) * (uiDirection.value === 'rtl' ? -1 : 1);
     const from = current === -1 ? (delta === 1 ? -1 : 0) : current;
     next = (from + delta + controls.length) % controls.length;
   }

@@ -5,6 +5,8 @@
         v-if="show"
         ref="menuRef"
         class="context-menu nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="theme"
         :style="{
           top: `${position.top}px`,
@@ -49,7 +51,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, watch, nextTick, onBeforeUnmount } from "vue";
 import type { ContextMenuItem } from "../types/contextMenu";
 

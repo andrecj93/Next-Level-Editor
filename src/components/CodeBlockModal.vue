@@ -4,6 +4,8 @@
       <div
         v-if="show"
         class="modal-overlay nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="theme"
         @click="handleOverlayClick"
       >
@@ -96,7 +98,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, shallowRef, computed, nextTick, watch } from 'vue'
 import { useModalDialog } from '../composables/useModalDialog'
 

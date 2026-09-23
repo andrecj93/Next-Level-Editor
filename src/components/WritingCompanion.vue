@@ -45,7 +45,7 @@
       <button type="button" :aria-label="t('Dismiss note') + ': ' + t(currentNote.title)" @click="dismiss(currentNote, $event)">{{ t('Keep as is') }}</button>
     </div>
     <footer class="companion-footer">
-      <span>{{ review.words.toLocaleString(locale) }} {{ t("words") }}<span v-if="review.words"> · {{ review.readingMinutes }} {{ t("min read") }}</span></span>
+      <span>{{ t('{count} words', { count: review.words }) }}<span v-if="review.words"> · {{ number(review.readingMinutes) }} {{ t("min read") }}</span></span>
       <small>{{ t("Private, on-device checks · English prose") }}</small>
     </footer>
   </aside>
@@ -53,7 +53,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t, locale } = useEditorLocale();
+const { t, number } = useEditorLocale();
 import { computed, nextTick, ref, watch } from 'vue';
 import { writingNoteContext, type WritingReview, type WritingNote } from '../utils/writingReview';
 const props = withDefaults(defineProps<{ review: WritingReview; dismissedNotes: ReadonlySet<string>; readonly?: boolean; startNoteId?: string; languageSupported?: boolean }>(), { readonly: false, startNoteId: undefined, languageSupported: true });

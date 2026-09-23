@@ -1,0 +1,2 @@
+# Native PDFium 153: test-only second reader for exported documents.
+pypdfium2==5.13.0

@@ -47,12 +47,12 @@
         <div class="stats-grid">
           <div class="stat-item">
             <span class="stat-label" :title="t('Total number of words in the document.')">{{ t("Words") }}</span>
-            <span class="stat-value">{{ stats.words.toLocaleString() }}</span>
+            <span class="stat-value">{{ number(stats.words) }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label" :title="t('Total characters, including spaces.')">{{ t("Characters") }}</span>
             <span class="stat-value">{{
-              stats.characters.toLocaleString()
+              number(stats.characters)
             }}</span>
           </div>
           <div class="stat-item">
@@ -196,7 +196,7 @@
           <div class="stat-item">
             <span class="stat-label" :title="t('Count of distinct words — your vocabulary variety.')">{{ t("Unique Words") }}</span>
             <span class="stat-value">{{
-              wordAnalysis.uniqueWords.toLocaleString()
+              number(wordAnalysis.uniqueWords)
             }}</span>
           </div>
           <div class="stat-item">
@@ -413,7 +413,7 @@
 
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
-const { t } = useEditorLocale();
+const { t, number } = useEditorLocale();
 import { ref } from "vue";
 import type {
   TextStats,
