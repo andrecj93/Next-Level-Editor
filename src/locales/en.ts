@@ -3,6 +3,7 @@ import type { EditorMessages } from '../types/locale';
 export const englishMessages: EditorMessages = {
   '{count} suggestions available. Use arrow keys to review, {shortcut} to insert.': { one: '{count} suggestion available. Use arrow keys to review, {shortcut} to insert.', other: '{count} suggestions available. Use arrow keys to review, {shortcut} to insert.' },
   'View {count} replies': { one: 'View {count} reply', other: 'View {count} replies' },
+  'Review {count} kept notes': { one: 'Review {count} kept note', other: 'Review {count} kept notes' },
   '{count} files': { one: '{count} file', other: '{count} files' },
   'Delete {count} files?': { one: 'Delete {count} file?', other: 'Delete {count} files?' },
   '{count} files uploaded, {failed} failed': { one: '{count} file uploaded, {failed} failed', other: '{count} files uploaded, {failed} failed' },

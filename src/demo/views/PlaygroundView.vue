@@ -170,6 +170,7 @@
           :key="documentRevision"
           v-model="content"
           v-model:comment-threads="commentThreads"
+          v-model:kept-writing-notes="keptWritingNotes"
           document-tools
           :document-options="documentOptions"
           :locale="uiLocale"
@@ -275,7 +276,7 @@ const documentOptions = computed<DocumentOptions>(() => ({ id: documentId.value,
 
 const urlParams = new URLSearchParams(window.location.search);
 const startEmpty = urlParams.get("empty") === "true";
-const { documentId, metadata:documentMetadata, content, commentThreads, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft } = usePlaygroundDocument(startEmpty);
+const { documentId, metadata:documentMetadata, content, commentThreads, keptWritingNotes, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft } = usePlaygroundDocument(startEmpty);
 const { isOpen: confirmOpen, options: confirmOptions, requestConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 const documentName = computed(() => {
   const doc = new DOMParser().parseFromString(content.value, 'text/html');

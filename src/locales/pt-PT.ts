@@ -1245,5 +1245,14 @@ export const portugueseMessages: EditorMessages = {
   "This passage was removed. The discussion is still available.":
     "Esta passagem foi removida. A discussão continua disponível.",
   "Invalid comment anchor mode": "Modo de âncora de comentário inválido",
+  "Review {count} kept notes": { one: "Rever {count} nota mantida", other: "Rever {count} notas mantidas" },
+  "Kept notes are ready to review again. Your words are unchanged.":
+    "As notas mantidas estão disponíveis para revisão. O seu texto não foi alterado.",
+  "Writing decisions are too large": "As decisões de escrita excedem o tamanho permitido",
+  "Invalid writing decisions": "Decisões de escrita inválidas",
+  "Invalid writing decision": "Decisão de escrita inválida",
+  "Invalid writing decision occurrence": "Ocorrência de decisão de escrita inválida",
+  "Invalid writing decision signature": "Assinatura de decisão de escrita inválida",
+  "Invalid writing decision passage": "Passagem de decisão de escrita inválida",
 };
 export default portugueseMessages;

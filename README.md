@@ -105,9 +105,11 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,953 unit tests
-across 390 files, plus end-to-end checks on Chromium and mobile Safari. Both
-suites gate the npm publish; neither is decoration.
+**Verification includes real editing workflows.** The latest full unit run has
+4,978 passing checks and two failing structural concurrency regressions. The
+failures remain release gates; coauthoring is experimental. Unit and browser
+suites on Chromium and mobile Safari gate npm publication. See the
+[known collaboration failure](docs/document-workspace.md#r00-architecture-decision).
 
 ---
 
@@ -292,17 +294,17 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 1,411.98 KB | **346.59 KB** | On import |
-| **CSS** | 273.33 KB | **44.30 KB** | On import |
+| **Core (ES)** | 1,416.15 KB | **347.71 KB** | On import |
+| **CSS** | 273.46 KB | **44.33 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
 | PDF page preview module and worker assets | 1,467.53 KB | 409.50 KB | First page preview (ES and UMD) |
-| **UMD** | 3,454.34 KB | 1,110.34 KB | On import (no splitting) |
+| **UMD** | 3,457.84 KB | 1,111.13 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **390.89 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **392.04 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 DOCX conversion, semantic PDF and its fonts, citation formatting, and the
@@ -387,6 +389,8 @@ For a long-form writing workspace, add `writing-mode`:
 ```
 
 This gives the manuscript a readable column, a small formatting toolbar, a chapter outline, and writing notes beside the page. Notes identify repeated words, a few wordy phrases, and long sentences. Review one note at a time, with chapter context and the exact wording highlighted inside an excerpt; previous and next controls reach every note. Feedback starts near the paragraph being written, and its accept/keep actions stay visible on small screens. Jumping to a passage reveals the selected words, including in a long paragraph, and closes an overlay that would cover them. Edits are undoable. These are private, on-device English checks and optional writing prompts, not an AI generation service. Press **Alt+F10** to reach the toolbar and **Escape** to return to the manuscript.
+
+The playground remembers **Keep as is** when reopening a saved draft. **Review kept notes** brings those suggestions back whenever you want to reconsider. For your own recovery flow, bind `v-model:kept-writing-notes` to a string initialized as `'[]'` and persist that JSON with the HTML in `saveHandler`. A decision-only change also triggers save status and Retry. These private keys contain exact passage text; keep them with the document, not in analytics. Decisions survive formatting and edits elsewhere, and are discarded when their paragraph changes. Use a fresh component key and empty decisions for a new document.
 
 The playground opens in this workspace and saves its draft to the current browser. **Configure → Writing workspace** switches to the library's other toolbar layouts.
 
@@ -638,6 +642,7 @@ to its own instance.
 | `height`           | `string`  | `undefined`         | Custom height for the editor (e.g., '500px', '80vh', '30em') |
 | `themePreset`      | `string`  | `'default'`         | Whole-editor theme: `default` \| `classic` \| `minimal` \| `midnight` \| `warm` |
 | `writingMode`      | `boolean` | `false`             | Manuscript typography, a focused toolbar, chapter outline and private writing notes. Uses a stable top toolbar and a small mobile formatting dock; takes precedence over toolbar layout, position, mode and adaptive chrome |
+| `keptWritingNotes` | `string` | `undefined` | Private kept-note JSON (`v-model:kept-writing-notes`). Persist with HTML to remember "Keep as is" after recovery. Changes trigger `saveHandler` without changing prose. |
 | `toolbarLayout`    | `string`  | `'comfortable'`     | Toolbar density: `comfortable` (labelled) \| `compact` (mini bar + expand toggle). Below 640px the toolbar auto-compacts to the mini bar regardless |
 | `adaptiveChrome`   | `string`  | `'off'`             | What the toolbar does while you write: `off` (default — a rock-solid static bar that never moves or reshuffles) \| `letterbox` (buttons dissolve into an ambient band — block format, position filament, save pulse, word count) \| `recede` (toolbar fades to a whisper). For `letterbox`/`recede`, returns instantly on pointer/Escape/toolbar focus; desktop-only; honors reduced motion |
 | `toolbarPosition`  | `string`  | `'top'`             | Where the toolbar lives: `top` \| `left` (slim margin rail) \| `bottom` (dock, menus open upward) \| `zen` (no persistent toolbar — the ambient band is the only chrome; intent peeks the full bar). All fall back to `top` below 640px |
@@ -856,11 +861,14 @@ npm run test:e2e:debug
 | ----------- | ---------- | -------- | --------- | ------- |
 | **Overall** | **83.58%** | **75.25%** | **78.83%** | **85.75%** |
 
-Measured on 2026-09-23. The CI coverage artifact includes per-file results.
+Last complete coverage run: `4cb0867`, measured on 2026-09-23. The CI coverage artifact includes per-file results.
 
 ### Test Suites Overview
 
-Verified on 2026-09-23: 4,953 unit tests passed; 85.75% line coverage.
+The latest full unit run on 2026-09-23 passed 4,978 checks and failed two new
+structural concurrency regressions; no tests were skipped. The earlier complete
+coverage run measured 85.75% line coverage. The new failures are retained as
+release gates, with reproduction details in the document workspace guide.
 Browser suites cover Chromium and mobile WebKit; duplicate desktop flows have
 explicit mobile exclusions. A separate 18-profile device matrix exercises all
 three browser engines. Current run counts and retained reports are available in

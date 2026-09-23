@@ -196,6 +196,7 @@
       :start-note-id="writingReviewStart"
       :readonly="effectiveReadonly"
       :language-supported="writingLanguageSupported"
+      @review-kept="reviewKeptWritingNotes"
       @close="closeCompanion"
       @leave="companionOpen = false"
       @locate="locateWritingNote"
@@ -1438,12 +1439,20 @@ usePendingSaveGuard(
 const {
   review: writingReview, refresh: refreshWritingReview,
   dismissedNotes: dismissedWritingNotes, dismissNote,
+  serializedDecisions: keptWritingDecisions, importDecisions: importWritingDecisions,
+  revisitKeptNotes,
 } = useWritingWorkspace(htmlContent, toRef(props, 'writingMode'), toRef(props, 'contentLanguage'));
 const rememberWritingPosition = useWritingReflow(editorContent, toRef(props, 'writingMode'));
 const dismissWritingNote = (note: WritingNote) => {
   if (!dismissNote(note)) return;
   announce(() => t('Note dismissed. Your words are unchanged.'));
   console.debug('[NextLevelEditor] Writing note dismissed', { kind: note.title });
+};
+const reviewKeptWritingNotes = () => {
+  const count = revisitKeptNotes();
+  if (!count) return;
+  announce(() => t('Kept notes are ready to review again. Your words are unchanged.'));
+  console.debug('[NextLevelEditor] Kept writing notes reopened', { count });
 };
 const companionOpen = ref(false);
 const writingSearchRef = ref<InstanceType<typeof WritingSearch> | null>(null);
@@ -1477,9 +1486,6 @@ watch(writingReview, () => {
 });
 onMounted(() => {
   refreshWritingReview();
-  // Start a blank page with room to write. Existing notes can introduce the
-  // companion on a wide screen; new notes never move the page while typing.
-  companionOpen.value = window.innerWidth >= 1000 && writingReview.value.notes.length > 0;
 });
 watch(rootWidth, (width, previousWidth) => {
   // A small resize must not dismiss notes the writer deliberately opened.
@@ -2615,7 +2621,7 @@ const {
   onMouseUp: onMouseUpBase,
   onSelectionChange,
   onCodeInput: onCodeInputBase,
-  onCodeBlur,
+  onCodeBlur: onCodeBlurBase,
 } = useEditorEvents({
   editorContent,
   codeContent,
@@ -2971,6 +2977,17 @@ const onInput = (event?: Event) => {
   if (writingAssistant && editorContent.value) {
     writingAssistant.scheduleContentUpdate(editorContent.value.innerHTML);
   }
+};
+
+const onCodeBlur = () => {
+  if (effectiveDocumentOptions.value && editorContent.value) {
+    // Source input already passed through sanitization and snapshot capture,
+    // which assigns stable block IDs and inherited language attributes. The
+    // textarea stays raw while typing; do not replay that older representation
+    // over the canonical document when focus leaves it.
+    codeContent.value = sanitizeHtml(editorContent.value.innerHTML);
+  }
+  onCodeBlurBase();
 };
 
 // Wrap onCodeInput to sync with split editor in editor mode
@@ -3583,6 +3600,29 @@ useEditorSetup({
   handleEscape: handleGlobalEscape,
   onSelectionChange,
 });
+
+// A kept note changes the writer's decisions, not the manuscript or its undo
+// history. Save it with the document; hydration and host echoes stay passive.
+let writingDecisionsReady = false;
+let synchronizedWritingDecisions: string | undefined;
+const restoreWritingDecisions = (value: string | undefined) => {
+  if (value === undefined || value === synchronizedWritingDecisions) return;
+  if (importWritingDecisions(value)) synchronizedWritingDecisions = keptWritingDecisions.value;
+};
+onMounted(() => {
+  restoreWritingDecisions(props.keptWritingNotes);
+  writingDecisionsReady = true;
+  // Restore editorial choices before deciding whether to introduce the panel.
+  // New notes never move the page while typing, and kept notes stay quiet.
+  companionOpen.value = window.innerWidth >= 1000 && writingReview.value.notes.some(note => !dismissedWritingNotes.value.has(note.id));
+});
+watch(() => props.keptWritingNotes, restoreWritingDecisions, { flush: 'post' });
+watch(keptWritingDecisions, value => {
+  if (!writingDecisionsReady || value === synchronizedWritingDecisions) return;
+  synchronizedWritingDecisions = value;
+  emit('update:keptWritingNotes', value);
+  triggerAutoSave(sanitizeHtml(htmlContent.value));
+}, { flush: 'post' });
 
 // Keep discussion metadata in the same save lifecycle as the manuscript. The
 // serialized watch tracks data only, never live ranges/elements. Host echoes must

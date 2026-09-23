@@ -88,6 +88,40 @@ test.describe("Writing workspace", () => {
     await expect(sidebar.locator('.comment-reply')).toContainText('This reply needs to survive.');
   });
 
+  test('a kept-note save can fail and retry without changing the manuscript', async ({ page }) => {
+    await page.goto('/#playground');
+    const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+    const prose = 'She returned in order to find the house.';
+    await editor.fill(prose);
+    await expect(page.locator('.auto-save-indicator')).toContainText('Saved at');
+    const original = await page.evaluate(() => localStorage.getItem('next-level-editor:playground-draft:v1'));
+    await page.evaluate(() => {
+      const setItem = Storage.prototype.setItem;
+      document.documentElement.dataset.rejectDraftWrites = 'true';
+      Storage.prototype.setItem = function(key, value) {
+        if (key === 'next-level-editor:playground-draft:v1' && document.documentElement.dataset.rejectDraftWrites) {
+          throw new DOMException('Storage quota reached', 'QuotaExceededError');
+        }
+        setItem.call(this, key, value);
+      };
+    });
+    const companion = page.getByRole('complementary', { name: 'Writing companion' });
+    if (!(await companion.isVisible())) await page.getByRole('button', { name: 'Writing companion', exact: true }).click();
+    await companion.getByRole('button', { name: 'Dismiss note: A little more direct', exact: true }).click();
+    await expect(companion).toContainText('You’ve considered every note.');
+    await expect(page.locator('.auto-save-indicator')).toContainText("Couldn't save changes");
+    expect(await page.evaluate(() => localStorage.getItem('next-level-editor:playground-draft:v1'))).toBe(original);
+    await companion.getByRole('button', { name: 'Close writing companion' }).click();
+    await expect(editor).toHaveText(prose);
+    await page.evaluate(() => { delete document.documentElement.dataset.rejectDraftWrites; });
+    await page.getByRole('button', { name: 'Retry', exact: true }).click();
+    await expect(page.locator('.auto-save-indicator')).toContainText('Saved at');
+    await page.reload();
+    await expect(editor).toHaveText(prose);
+    if (!(await companion.isVisible())) await page.getByRole('button', { name: 'Writing companion', exact: true }).click();
+    await expect(companion).toContainText('You’ve considered every note.');
+  });
+
   test("template selection protects edits and cancellation keeps the selection", async ({ page }) => {
     await page.goto("/?empty=true");
     const editor = page.getByRole("textbox", { name: "Rich text editor", exact: true });

@@ -68,6 +68,35 @@ function change(binding: CollaborationBinding, mutate: (root: HTMLElement) => vo
 }
 
 describe("rich-content concurrent editing corpus", () => {
+  // Open release gates tracked in #139: equal replicas can still omit an
+  // author's text. Keep the intended-content and undo assertions active.
+  it.each(['move', 'merge'])('preserves a remote comment edit through a concurrent paragraph %s', async operation => {
+    const r = await room('<p data-nle-id="nle-opening">Opening </p><p data-nle-id="nle-passage"><span class="comment-highlight" data-thread-id="thread-one">Commented passage</span></p><p data-nle-id="nle-closing">Closing</p>');
+    r.partition();
+    change(r.a, root => {
+      const passage = root.children[1];
+      if (operation === 'move') root.prepend(passage);
+      else {
+        root.firstElementChild!.append(...passage.childNodes);
+        passage.remove();
+      }
+    });
+    change(r.b, root => { root.querySelector('[data-thread-id]')!.textContent = 'Commented passage by B'; });
+    r.reconnect();
+    const result = documentRoot(r.a.readHtml());
+    expect(result.querySelectorAll('[data-thread-id="thread-one"]')).toHaveLength(1);
+    expect(result.querySelector('[data-thread-id="thread-one"]')!.textContent).toBe('Commented passage by B');
+    expect(result.children).toHaveLength(operation === 'move' ? 3 : 2);
+    expect(result.firstElementChild!.textContent).toBe(operation === 'move' ? 'Commented passage by B' : 'Opening Commented passage by B');
+    r.a.undo();
+    const restored = documentRoot(r.b.readHtml());
+    expect(restored.children).toHaveLength(3);
+    expect(restored.children[1].getAttribute('data-nle-id')).toBe('nle-passage');
+    expect(restored.children[1].textContent).toBe('Commented passage by B');
+    r.a.redo();
+    expect((await r.connect('Reload')).readHtml()).toBe(r.a.readHtml());
+  });
+
   it.each(['block', 'text'])('restores a deleted comment %s while retaining a concurrent reply', async target => {
     const metadata = defaultDocumentMetadata();
     const date = new Date().toISOString();

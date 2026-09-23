@@ -107,4 +107,67 @@ describe('writing workspace decisions', () => {
     await vi.runAllTimersAsync();
     expect(state.review.value.notes).toHaveLength(0);
   });
+
+  it('restores exact kept passages after remount without hiding another occurrence', () => {
+    const duplicate = passage + passage;
+    const original = workspace(duplicate);
+    original.dismissNote(original.review.value.notes[1]);
+    const stored = original.serializedDecisions.value;
+    const restored = workspace('<p>An earlier memory.</p>' + duplicate);
+    expect(restored.importDecisions(stored)).toBe(true);
+    expect(restored.review.value.notes.map(note => restored.dismissedNotes.value.has(note.id))).toEqual([false, true]);
+    expect(restored.serializedDecisions.value).toBe(stored);
+    expect(restored.html.value).toBe('<p>An earlier memory.</p>' + duplicate);
+  });
+
+  it('does not revive a kept decision for a changed passage on recovery', () => {
+    const original = workspace();
+    original.dismissNote(original.review.value.notes[0]);
+    const restored = workspace(passage.replace('house', 'harbor'));
+    expect(restored.importDecisions(original.serializedDecisions.value)).toBe(true);
+    expect(restored.dismissedNotes.value.size).toBe(0);
+    expect(restored.serializedDecisions.value).toBe('[]');
+  });
+
+  it('rejects invalid external decisions without clearing the current choice', () => {
+    const state = workspace();
+    state.dismissNote(state.review.value.notes[0]);
+    const stored = state.serializedDecisions.value;
+    expect(state.importDecisions('["broken"]')).toBe(false);
+    expect(state.serializedDecisions.value).toBe(stored);
+    expect(state.dismissedNotes.value.size).toBe(1);
+  });
+
+  it('retains imported decisions while writing mode is disabled', () => {
+    const original = workspace();
+    original.dismissNote(original.review.value.notes[0]);
+    const restored = workspace();
+    restored.enabled.value = false;
+    expect(restored.importDecisions(original.serializedDecisions.value)).toBe(true);
+    restored.enabled.value = true;
+    restored.refresh();
+    expect(restored.dismissedNotes.value.size).toBe(1);
+  });
+
+  it('retains private decisions while a different document language hides English checks', () => {
+    const language = ref('en');
+    const html = ref(passage);
+    const scope = effectScope();
+    scopes.push(scope);
+    const state = scope.run(() => useWritingWorkspace(html, ref(true), language))!;
+    state.refresh();
+    state.dismissNote(state.review.value.notes[0]);
+    const saved = state.serializedDecisions.value;
+    language.value = 'pt-PT';
+    state.refresh();
+    expect(state.review.value.notes).toEqual([]);
+    expect(state.serializedDecisions.value).toBe(saved);
+    language.value = 'en-GB';
+    state.refresh();
+    expect(state.dismissedNotes.value.size).toBe(1);
+    language.value = 'pt-PT';
+    html.value = passage.replace('house', 'harbor');
+    state.refresh();
+    expect(state.serializedDecisions.value).toBe('[]');
+  });
 });

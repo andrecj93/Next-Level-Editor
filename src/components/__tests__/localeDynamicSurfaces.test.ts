@@ -25,6 +25,23 @@ function localized(render: () => VNode) {
 }
 
 describe('live localization of dynamic editor controls', () => {
+  it('localizes kept-note counts while preserving the decisions and quoted prose', async () => {
+    const review = reviewWriting('<p>She returned in order to find the house.</p><p>He waited in order to speak.</p>');
+    const dismissed = ref(new Set([review.notes[0].id]));
+    const change = localized(() => h(WritingCompanion, { review, dismissedNotes: dismissed.value }));
+    expect(wrapper.get('.review-kept').text()).toBe('Review 1 kept note');
+    const quotation = wrapper.get('.note-passage').text();
+    await change('pt-PT');
+    expect(wrapper.get('.review-kept').text()).toBe('Rever 1 nota mantida');
+    expect(wrapper.get('.note-passage').text()).toBe(quotation);
+    dismissed.value = new Set(review.notes.map(note => note.id));
+    await nextTick();
+    expect(wrapper.get('.review-kept').text()).toBe('Rever 2 notas mantidas');
+    await change('en');
+    expect(wrapper.get('.review-kept').text()).toBe('Review 2 kept notes');
+    expect(dismissed.value.size).toBe(2);
+  });
+
   it('searches translated emoji names and preserves the inserted emoji', async () => {
     const change = localized(() => h(EmojiPicker, { show: true }));
     await change('pt-PT');

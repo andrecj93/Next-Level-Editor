@@ -96,6 +96,13 @@ export interface NextLevelEditorProps {
   /** Manuscript typography, a focused toolbar, chapter outline and private English writing notes. */
   writingMode?: boolean;
   /**
+   * Private kept-note JSON (v-model:kept-writing-notes). Persist alongside HTML
+   * to remember "Keep as is" after recovery. Decisions contain exact passage
+   * text and are discarded when that paragraph changes. Changes trigger
+   * saveHandler even when HTML is unchanged. Use a new key for another document.
+   */
+  keptWritingNotes?: string;
+  /**
    * Cinematic adaptive chrome — what the main toolbar does while you WRITE.
    *
    * - `"off"` (default): a rock-solid static toolbar — it never moves,
@@ -198,6 +205,8 @@ export interface NextLevelEditorEmits {
   (e: "update:modelValue", value: string): void;
   /** Fired when a thread, reply or resolution changes; excludes DOM references. */
   (e: "update:commentThreads", value: string): void;
+  /** Fired when kept writing decisions change; persist privately with the HTML. */
+  (e: "update:keptWritingNotes", value: string): void;
   /** The editing surface gained focus. */
   (e: "focus"): void;
   /** The editing surface lost focus. */
