@@ -2987,17 +2987,30 @@
 /* Toast Notification Styles */
 .toast-notification {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  text-align: center;
+  pointer-events: none;
   padding: 12px 22px;
   border-radius: var(--radius-full, 999px);
   font-size: 14px;
   font-weight: 500;
   box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.35),
     0 2px 6px rgba(15, 23, 42, 0.14);
-  z-index: 10000;
+  /* Above sidebars and the phone dock, below modal dialogs (10050). */
+  z-index: 10010;
   transition: all var(--transition-fast);
+}
+
+@media (max-width: 640px) {
+  .toast-notification {
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .toast-notification.success {

@@ -128,4 +128,20 @@ describe("NextLevelEditor - mobile toolbar ownership", () => {
     await nextTick();
     expect(visibleToolbars()).toBe(0);
   });
+
+  it('does not insert a dock under a first tap on Comments or another footer action', async () => {
+    const editor = mount(NextLevelEditor, { props: { modelValue: '<p>Saved writing.</p>', writingMode: true, enableComments: true }, attachTo: document.body });
+    wrappers.push(editor);
+    await nextTick();
+    const footerButtons = editor.findAll('.writing-footer-actions button');
+    for (const button of footerButtons) {
+      pointerdownOn(button.element);
+      (button.element as HTMLButtonElement).focus();
+      await nextTick();
+      expect(visibleToolbars()).toBe(0);
+    }
+    await footerButtons.find(button => button.text() === 'Comments')!.trigger('click');
+    expect(editor.find('.comments-sidebar-open').exists()).toBe(true);
+    expect(visibleToolbars()).toBe(0);
+  });
 });

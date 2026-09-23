@@ -73,7 +73,7 @@
         <ul class="feat-list">
           <li><strong>writingMode</strong> — manuscript typography, a focused toolbar, chapter navigation and private English writing notes. Review specific passages, apply a suggestion, undo it, or keep your wording. Alt+F10 moves to the toolbar; Escape returns to the manuscript.</li>
           <li><strong>showWritingStats</strong> — live word count, reading time, readability &amp; SEO panel.</li>
-          <li><strong>enableComments</strong> — inline comment threads, a sidebar, and <code>@mention</code> support.</li>
+          <li><strong>enableComments</strong> — inline comment threads, a sidebar, and <code>@mention</code> support. Bind <code>v-model:comment-threads</code> and save its JSON alongside the HTML. Replies also trigger your save handler. The playground stores both in its local draft.</li>
           <li>
 <strong>enableVariables</strong> — <code v-pre>{{ mustache }}</code> template tokens rendered as pills.
             Pass <strong>variables</strong> to supply your own set instead of the demo fixtures.
@@ -173,6 +173,7 @@ const props = [
   { name: "autofocus", type: "boolean", def: "false", desc: "Focus the editing surface on mount." },
   { name: "showWritingStats", type: "boolean", def: "false", desc: "Enable the writing-stats panel." },
   { name: "enableComments", type: "boolean", def: "false", desc: "Enable inline comments & mentions." },
+  { name: "commentThreads", type: "string", def: "undefined", desc: "Thread JSON (v-model:comment-threads), including replies, dates and resolved status. Persist together with HTML; use a new editor key when switching documents." },
   { name: "enableVariables", type: "boolean", def: "false", desc: "Enable {{ variable }} tokens." },
   { name: "variables", type: "Variable[]", def: "built-in demo set", desc: "Your own variable set; replaces the demo fixtures. Reactive." },
   { name: "plugins", type: "EditorPlugin[]", def: "[]", desc: "Editor plugins: slash commands, Tools buttons, palette commands." },

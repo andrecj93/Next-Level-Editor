@@ -56,4 +56,63 @@ describe("playground draft recovery", () => {
     expect(draft.notice.value).toBe("");
     expect(draft.restoreFailed.value).toBe(false);
   });
+
+  const discussion = JSON.stringify([{
+    id: 'thread', status: 'resolved',
+    rangeData: { startContainerPath: [0, 0], startOffset: 0, endContainerPath: [0, 0], endOffset: 5, text: 'Saved' },
+    createdAt: '2026-09-23T10:00:00Z', updatedAt: '2026-09-23T10:01:00Z',
+    comments: [
+      { id: 'first', author: { id: 'writer', name: 'Writer' }, content: 'An opening note.' },
+      { id: 'reply', author: { id: 'writer', name: 'Writer' }, content: 'A reply worth keeping.' },
+    ],
+  }]);
+
+  it('saves and restores discussion bodies, replies, status and anchors atomically', async () => {
+    const draft = usePlaygroundDocument(true);
+    draft.commentThreads.value = discussion;
+    await draft.saveDraft('<p><span class="comment-highlight comment-highlight-resolved" data-thread-id="thread">Saved</span> text.</p>');
+    const restored = usePlaygroundDocument(false);
+    expect(restored.content.value).toContain('data-thread-id="thread"');
+    const threads = JSON.parse(restored.commentThreads.value);
+    expect(threads[0].status).toBe('resolved');
+    expect(threads[0].comments.map((comment: { content: string }) => comment.content)).toEqual(['An opening note.', 'A reply worth keeping.']);
+    expect(threads[0].createdAt).toBe('2026-09-23T10:00:00.000Z');
+    expect(restored.restoreFailed.value).toBe(false);
+  });
+
+  it('starts a new document without carrying the old discussion into storage', async () => {
+    const draft = usePlaygroundDocument(true);
+    draft.commentThreads.value = discussion;
+    expect(draft.hasEdits.value).toBe(true);
+    await draft.saveDraft('<p>Saved text.</p>');
+    draft.applyTemplate('empty');
+    await draft.saveDraft(draft.content.value);
+    const restored = usePlaygroundDocument(false);
+    expect(restored.content.value).toBe('');
+    expect(restored.commentThreads.value).toBe('[]');
+    expect(restored.hasEdits.value).toBe(false);
+  });
+
+  it('recovers prose and reports invalid discussion without rendering partial threads', () => {
+    localStorage.setItem(PLAYGROUND_DRAFT_KEY, JSON.stringify({ version: 2, content: '<p>Recover me.</p>', commentThreads: '[{"id":"broken"}]' }));
+    const draft = usePlaygroundDocument(false);
+    expect(draft.content.value).toBe('<p>Recover me.</p>');
+    expect(draft.commentThreads.value).toBe('[]');
+    expect(draft.notice.value).toContain('comments could not be recovered');
+    expect(draft.restoreFailed.value).toBe(true);
+  });
+
+  it('retains the prior saved record when a reply-only save fails, then retries the whole snapshot', async () => {
+    const draft = usePlaygroundDocument(true);
+    await draft.saveDraft('<p>Saved text.</p>');
+    const original = localStorage.getItem(PLAYGROUND_DRAFT_KEY);
+    draft.commentThreads.value = discussion;
+    const storage = localStorage;
+    vi.stubGlobal('localStorage', { getItem: storage.getItem.bind(storage), setItem: () => { throw new Error('Quota'); } });
+    await expect(draft.saveDraft('<p>Saved text.</p>')).rejects.toThrow('could not be saved');
+    expect(localStorage.getItem(PLAYGROUND_DRAFT_KEY)).toBe(original);
+    vi.unstubAllGlobals();
+    await draft.saveDraft('<p>Saved text.</p>');
+    expect(usePlaygroundDocument(false).commentThreads.value).toContain('A reply worth keeping.');
+  });
 });

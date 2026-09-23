@@ -49,6 +49,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
 
   const htmlContent = ref("");
   const codeContent = ref("");
+  let lastPassiveSnapshot: string | undefined;
 
   // Re-bind interactivity to embedded media (images/videos) after any innerHTML
   // reset. Setting innerHTML discards the JS listeners attached at insert time,
@@ -89,6 +90,9 @@ export function useEditorContent(options: UseEditorContentOptions) {
     if (!editorContent.value || isApplyingHistory.value) return;
 
     const html = editorContent.value.innerHTML;
+    // Hydrating a host snapshot (including comment anchors) is not an edit.
+    // The htmlContent watcher must not turn captureAndEmit(false) into a save.
+    if (!emitUpdate) lastPassiveSnapshot = html;
     htmlContent.value = html;
 
     // Record the caret alongside the snapshot so undo/redo can restore it
@@ -250,7 +254,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
   // Watch for content changes and trigger auto-save
   if (triggerAutoSave) {
     watch(htmlContent, (newContent) => {
-      if (newContent && !isApplyingHistory.value) {
+      if (newContent && newContent !== lastPassiveSnapshot && !isApplyingHistory.value) {
         triggerAutoSave(newContent);
       }
     });

@@ -1,15 +1,18 @@
 import { computed, ref, watch } from "vue";
 import { useHtmlSanitizer } from "../../composables/useHtmlSanitizer";
 import { getTemplateById } from "../examples/exampleTemplates";
+import { MAX_COMMENT_DATA_LENGTH, parseCommentThreads, serializeCommentThreads } from "../../composables/useComments";
 
 export const PLAYGROUND_DRAFT_KEY = "next-level-editor:playground-draft:v1";
 const MAX_DRAFT_LENGTH = 2_000_000;
+const MAX_STORED_LENGTH = MAX_DRAFT_LENGTH * 2 + MAX_COMMENT_DATA_LENGTH * 2 + 2000;
 
 /** One local draft, bounded in size. No document content is sent to a server. */
 export function usePlaygroundDocument(startEmpty: boolean) {
   const { sanitizeHtml } = useHtmlSanitizer();
   const initial = "";
   const content = ref(initial);
+  const commentThreads = ref("[]");
   const selectedTemplate = ref("empty");
   const baseline = ref(initial);
   const notice = ref("");
@@ -18,19 +21,30 @@ export function usePlaygroundDocument(startEmpty: boolean) {
   if (!startEmpty) {
     try {
       const stored = localStorage.getItem(PLAYGROUND_DRAFT_KEY);
-      if (stored && stored.length <= MAX_DRAFT_LENGTH + 1000) {
+      if (stored) {
+        if (stored.length > MAX_STORED_LENGTH) throw new Error("Draft is too large");
         const draft: unknown = JSON.parse(stored);
         if (draft && typeof draft === "object" && "content" in draft &&
             typeof draft.content === "string" && draft.content.length <= MAX_DRAFT_LENGTH &&
-            "version" in draft && draft.version === 1) {
+            "version" in draft && (draft.version === 1 || draft.version === 2)) {
           content.value = sanitizeHtml(draft.content);
           if ("template" in draft && typeof draft.template === "string" && getTemplateById(draft.template)) {
             selectedTemplate.value = draft.template;
             baseline.value = draft.template === "empty" ? "" : sanitizeHtml(getTemplateById(draft.template)!.content);
           }
           if (content.value !== initial) notice.value = "Draft restored.";
+          if ("commentThreads" in draft) {
+            try {
+              if (typeof draft.commentThreads !== "string") throw new Error("Invalid comments");
+              commentThreads.value = serializeCommentThreads(parseCommentThreads(draft.commentThreads));
+            } catch {
+              restoreFailed.value = true;
+              notice.value = "Your writing was restored, but its comments could not be recovered.";
+              console.warn("[NextLevelEditor playground] Comment recovery unavailable");
+            }
+          }
           console.debug("[NextLevelEditor playground] Draft restored", { characters: content.value.length });
-        }
+        } else throw new Error("Invalid draft");
       }
     } catch {
       restoreFailed.value = true;
@@ -39,8 +53,8 @@ export function usePlaygroundDocument(startEmpty: boolean) {
     }
   }
 
-  const hasEdits = computed(() => content.value !== baseline.value);
-  watch(content, () => {
+  const hasEdits = computed(() => content.value !== baseline.value || commentThreads.value !== "[]");
+  watch([content, commentThreads], () => {
     if (hasEdits.value && !restoreFailed.value) notice.value = "";
   });
   const applyTemplate = (id: string) => {
@@ -48,6 +62,7 @@ export function usePlaygroundDocument(startEmpty: boolean) {
     if (!template) return;
     selectedTemplate.value = id;
     content.value = id === "empty" ? "" : sanitizeHtml(template.content);
+    commentThreads.value = "[]";
     baseline.value = content.value;
     notice.value = "";
     restoreFailed.value = false;
@@ -58,9 +73,11 @@ export function usePlaygroundDocument(startEmpty: boolean) {
     console.debug("[NextLevelEditor playground] Saving local draft", { characters: html.length });
     try {
       if (html.length > MAX_DRAFT_LENGTH) throw new Error("Draft is too large for local storage");
+      const discussion = serializeCommentThreads(parseCommentThreads(commentThreads.value));
       localStorage.setItem(PLAYGROUND_DRAFT_KEY, JSON.stringify({
-        version: 1,
+        version: 2,
         content: html,
+        commentThreads: discussion,
         template: selectedTemplate.value,
         savedAt: new Date().toISOString(),
       }));
@@ -72,5 +89,5 @@ export function usePlaygroundDocument(startEmpty: boolean) {
     }
   };
 
-  return { content, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft };
+  return { content, commentThreads, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft };
 }

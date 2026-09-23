@@ -50,6 +50,96 @@ export interface SerializedRange {
   text: string;
 }
 
+export const MAX_COMMENT_DATA_LENGTH = 2_000_000;
+
+/** Validate the entire snapshot before replacing live discussion state. */
+export function parseCommentThreads(json: string): CommentThread[] {
+  if (json.length > MAX_COMMENT_DATA_LENGTH) throw new TypeError("Comment data is too large");
+  const value: unknown = JSON.parse(json);
+  if (!Array.isArray(value) || value.length > 10_000) throw new TypeError("Invalid comment threads");
+  const object = (item: unknown): Record<string, unknown> => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new TypeError("Invalid comment record");
+    return item as Record<string, unknown>;
+  };
+  const text = (item: unknown): string => {
+    if (typeof item !== "string") throw new TypeError("Invalid comment text");
+    return item;
+  };
+  const id = (item: unknown): string => {
+    const result = text(item);
+    if (!result || result.length > 256) throw new TypeError("Invalid comment identifier");
+    return result;
+  };
+  const integer = (item: unknown): number => {
+    if (typeof item !== "number" || !Number.isSafeInteger(item) || item < 0) throw new TypeError("Invalid comment position");
+    return item;
+  };
+  const path = (item: unknown): number[] => {
+    if (item === undefined) return []; // Legacy hand-built snapshots omitted paths.
+    if (!Array.isArray(item) || item.length > 256) throw new TypeError("Invalid comment path");
+    return item.map(integer);
+  };
+  const date = (item: unknown, fallback: Date): Date => {
+    if (item === undefined) return fallback;
+    const result = new Date(text(item));
+    if (!Number.isFinite(result.getTime())) throw new TypeError("Invalid comment date");
+    return result;
+  };
+  const threadIds = new Set<string>();
+  return value.map((item) => {
+    const data = object(item);
+    const threadId = id(data.id);
+    if (threadIds.has(threadId)) throw new TypeError("Duplicate comment thread");
+    threadIds.add(threadId);
+    if (data.status !== "open" && data.status !== "resolved") throw new TypeError("Invalid comment status");
+    const range = object(data.rangeData);
+    const createdAt = date(data.createdAt, new Date());
+    if (!Array.isArray(data.comments)) throw new TypeError("Invalid thread comments");
+    const commentIds = new Set<string>();
+    const comments = data.comments.map((entry): Comment => {
+      const comment = object(entry);
+      const commentId = id(comment.id);
+      if (commentIds.has(commentId)) throw new TypeError("Duplicate comment");
+      commentIds.add(commentId);
+      const author = typeof comment.author === "string"
+        ? { id: comment.author, name: comment.author }
+        : object(comment.author);
+      if (comment.threadId !== undefined && comment.threadId !== threadId) throw new TypeError("Mismatched comment thread");
+      const mentions = comment.mentions ?? [];
+      if (!Array.isArray(mentions)) throw new TypeError("Invalid mentions");
+      return {
+        id: commentId, threadId,
+        author: {
+          id: id(author.id), name: text(author.name),
+          ...(author.email !== undefined ? { email: text(author.email) } : {}),
+          ...(author.avatarUrl !== undefined ? { avatarUrl: text(author.avatarUrl) } : {}),
+          ...(author.color !== undefined ? { color: text(author.color) } : {}),
+        },
+        content: text(comment.content ?? comment.text),
+        mentions: mentions.map(text),
+        createdAt: date(comment.createdAt, createdAt),
+        ...(comment.updatedAt !== undefined ? { updatedAt: date(comment.updatedAt, createdAt) } : {}),
+        isEdited: comment.isEdited === true,
+      };
+    });
+    return {
+      id: threadId, status: data.status, comments, createdAt,
+      updatedAt: date(data.updatedAt, createdAt),
+      rangeData: {
+        startContainerPath: path(range.startContainerPath), startOffset: integer(range.startOffset),
+        endContainerPath: path(range.endContainerPath), endOffset: integer(range.endOffset), text: text(range.text),
+      },
+    };
+  });
+}
+
+/** DOM references are deliberately excluded from the persisted snapshot. */
+export function serializeCommentThreads(threads: CommentThread[]): string {
+  return JSON.stringify(threads.map(({ id, rangeData, comments, status, createdAt, updatedAt }) => ({
+    id, rangeData, comments, status, createdAt, updatedAt,
+  })), null, 2);
+}
+
 /**
  * Mention suggestion interface
  */
@@ -281,10 +371,8 @@ export function useComments(options: UseCommentsOptions = {}) {
     const editor = editorElement?.value;
     if (!editor) return [];
     return Array.from(
-      editor.querySelectorAll<HTMLElement>(
-        `.comment-highlight[data-thread-id="${threadId}"]`
-      )
-    );
+      editor.querySelectorAll<HTMLElement>(".comment-highlight[data-thread-id]")
+    ).filter((span) => span.dataset.threadId === threadId);
   }
 
   /** Unwrap every live highlight span of a thread (handles cross-block spans). */
@@ -704,7 +792,7 @@ export function useComments(options: UseCommentsOptions = {}) {
   /**
    * Restore threads after content update
    */
-  function restoreThreads(): void {
+  function restoreThreads(preferModel = false): void {
     const editor = editorElement?.value;
     if (!editor) return;
 
@@ -727,7 +815,7 @@ export function useComments(options: UseCommentsOptions = {}) {
         const orphaned =
           !id ||
           deletedThreadIds.has(id) ||
-          (liveThreadIds.size > 0 && !liveThreadIds.has(id));
+          ((preferModel || liveThreadIds.size > 0) && !liveThreadIds.has(id));
         if (orphaned) {
           removeHighlightInternal(span);
         }
@@ -744,11 +832,13 @@ export function useComments(options: UseCommentsOptions = {}) {
         // NOT part of undo history, so after an undo/redo sync the model FROM
         // the span's class instead of forcing the span to match a stale status
         // (which made resolve/unresolve impossible to undo). #13
-        thread.status = existing.some((span) =>
-          span.classList.contains("comment-highlight-resolved")
-        )
-          ? "resolved"
-          : "open";
+        if (preferModel) {
+          existing.forEach((span) => span.classList.toggle("comment-highlight-resolved", thread.status === "resolved"));
+        } else {
+          thread.status = existing.some((span) =>
+            span.classList.contains("comment-highlight-resolved")
+          ) ? "resolved" : "open";
+        }
         const rebound = existing.map((span) => {
           const clone = span.cloneNode(true) as HTMLElement;
           clone.addEventListener("click", (e) => {
@@ -788,16 +878,7 @@ export function useComments(options: UseCommentsOptions = {}) {
    * Export threads to JSON
    */
   function exportThreads(): string {
-    const exportData = threads.value.map((thread) => ({
-      id: thread.id,
-      rangeData: thread.rangeData,
-      comments: thread.comments,
-      status: thread.status,
-      createdAt: thread.createdAt.toISOString(),
-      updatedAt: thread.updatedAt.toISOString(),
-    }));
-
-    return JSON.stringify(exportData, null, 2);
+    return serializeCommentThreads(threads.value);
   }
 
   /**
@@ -805,49 +886,24 @@ export function useComments(options: UseCommentsOptions = {}) {
    */
   function importThreads(json: string): boolean {
     try {
-      const importData = JSON.parse(json);
-
-      if (!Array.isArray(importData)) {
-        throw new TypeError("Invalid import data format");
-      }
-
-      threads.value = importData.map((data) => {
-        // Guard the thread-level timestamps the same way as the comment-level
-        // ones below: a partial/hand-built payload may omit them, and an
-        // unconditional `new Date(undefined)` renders as "Invalid Date" in the
-        // thread card. Default an absent createdAt to now, and updatedAt to it.
-        // #r20-3
-        const createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
-        return {
-        ...data,
-        createdAt,
-        updatedAt: data.updatedAt ? new Date(data.updatedAt) : createdAt,
-        // Rehydrate each comment's dates too — JSON.parse leaves them as
-        // strings, so any `.toLocaleString()`/date math downstream showed
-        // "Invalid Date" after an export → import round-trip. Only convert
-        // fields that are actually present so we never inject an Invalid Date
-        // for an optional/absent timestamp (comments carry createdAt; updatedAt
-        // is optional).
-        comments: Array.isArray(data.comments)
-          ? data.comments.map((comment: Record<string, unknown>) => ({
-              ...comment,
-              ...(comment.createdAt
-                ? { createdAt: new Date(comment.createdAt as string) }
-                : {}),
-              ...(comment.updatedAt
-                ? { updatedAt: new Date(comment.updatedAt as string) }
-                : {}),
-            }))
-          : [],
-        };
+      const imported = parseCommentThreads(json);
+      const importedIds = new Set(imported.map((thread) => thread.id));
+      threads.value.forEach((thread) => {
+        if (!importedIds.has(thread.id)) {
+          removeThreadHighlights(thread.id, thread.highlightElement);
+          deletedThreadIds.add(thread.id);
+        }
       });
-
+      importedIds.forEach((id) => deletedThreadIds.delete(id));
+      threads.value = imported;
+      if (activeThreadId.value && !importedIds.has(activeThreadId.value)) activeThreadId.value = null;
       // Restore highlights
-      restoreThreads();
-
+      restoreThreads(true);
+      console.debug("[NextLevelEditor comments] Threads restored", { threads: imported.length });
       return true;
-    } catch (error) {
-      console.error("Failed to import threads:", error);
+    } catch {
+      // Invalid JSON may contain private discussion text: never log its payload.
+      console.error("Failed to import threads: invalid comment data");
       return false;
     }
   }

@@ -97,7 +97,7 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,791 unit checks
+**It is tested like something you'd put in production.** 4,807 unit checks
 across 372 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
@@ -221,7 +221,7 @@ readable — click any section to open it.
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **4,791 Unit Checks** - Across 372 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
+- **4,807 Unit Checks** - Across 372 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
 - **Browser Gates** - Playwright on Chromium and mobile WebKit, plus the same writing scenarios on 18 desktop, tablet, phone, landscape, and reflow profiles
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
@@ -252,7 +252,7 @@ Comment threads anchored to selected text. Shared storage, synchronization, and 
 - **Status Management** - Mark threads as open or resolved
 - **Visual Highlights** - Color-coded text highlighting (yellow for open, green for resolved)
 - **Sidebar UI** - Dedicated sidebar with tabs for open/resolved comments
-- **Persistence API** - Export/import threads as JSON alongside the document HTML. Saving the document's `v-model` alone does not save comment bodies; the playground's local draft stores document HTML only.
+- **Persistence API** - Bind `v-model:comment-threads` to receive and restore thread JSON alongside the document HTML. Replies also trigger auto-save, including failure and Retry. The playground saves both together in its local draft.
 - **Auto-restore** - Automatically re-anchor comments after content changes
 
 #### ♿ Accessibility
@@ -482,11 +482,24 @@ The Writing Stats Panel will appear and show:
 
 #### Comments & Collaboration
 
-Enable the comments system for collaborative editing:
+Enable comments and persist their JSON alongside the manuscript:
 
 ```vue
+<script setup>
+import { ref } from 'vue';
+import { NextLevelEditor } from 'next-level-editor';
+
+const content = ref('');
+const commentThreads = ref('[]');
+const save = async (html) => {
+  localStorage.setItem('my-draft', JSON.stringify({ html, commentThreads: commentThreads.value }));
+  return true;
+};
+</script>
+
 <template>
-  <NextLevelEditor v-model="content" :enable-comments="true" />
+  <NextLevelEditor v-model="content" v-model:comment-threads="commentThreads"
+    enable-comments :save-handler="save" />
 </template>
 ```
 
@@ -622,7 +635,8 @@ to its own instance.
 | `defaultViewMode`  | `string`  | `'editor'`          | Initial view: `editor` \| `code` \| `split` \| `preview`     |
 | `autofocus`        | `boolean` | `false`             | Focus the editing surface on mount                           |
 | `showWritingStats` | `boolean` | `false`             | Enable Writing Assistant & Analytics panel                   |
-| `enableComments`   | `boolean` | `false`             | Enable Comments & Collaboration system                       |
+| `enableComments`   | `boolean` | `false`             | Enable inline comments and replies. |
+| `commentThreads` | `string` | `undefined` | Thread JSON (`v-model:comment-threads`). Persist alongside HTML; replies also trigger `saveHandler`. Use a fresh component key when switching documents. |
 | `enableVariables`  | `boolean` | `false`             | Enable `{{ variable }}` template tokens                      |
 | `variables`        | `Variable[]` | built-in demo set | Your own variable set (replaces the demo fixtures)        |
 | `plugins`          | `EditorPlugin[]` | `[]`          | Editor plugins (slash commands, Tools buttons, palette)   |

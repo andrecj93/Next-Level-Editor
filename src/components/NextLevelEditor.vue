@@ -2175,10 +2175,13 @@ const updateMobileToolbarOwnership = (event: Event) => {
   const target = event.target;
   if (!(target instanceof Node)) return;
   if (rootEl.value?.contains(target)) {
-    // Interaction inside this editor claims ownership (and re-opens a
-    // toolbar previously dismissed with the X).
-    ownsMobileToolbar.value = true;
-    mobileToolbarClosed.value = false;
+    // Only entering the writing surface opens the dock. A first touch on a
+    // footer/panel control must not insert a fixed toolbar under that finger
+    // between pointerdown and click (Comments could become Underline).
+    if (target === rootEl.value || editorContent.value?.contains(target)) {
+      ownsMobileToolbar.value = true;
+      mobileToolbarClosed.value = false;
+    }
     return;
   }
   const el = target instanceof Element ? target : target.parentElement;
@@ -3404,6 +3407,32 @@ useEditorSetup({
   handleEscape: handleGlobalEscape,
   onSelectionChange,
 });
+
+// Keep discussion metadata in the same save lifecycle as the manuscript. The
+// serialized watch tracks data only, never live ranges/elements. Host echoes must
+// not re-import highlights: replacing their nodes would disturb a writing caret.
+if (comments) {
+  let ready = false;
+  let synchronizedThreads: string | undefined;
+  const restoreCommentModel = (value: string | undefined) => {
+    if (value === undefined || value === synchronizedThreads) return;
+    if (comments.importThreads(value)) {
+      synchronizedThreads = comments.exportThreads();
+      captureSnapshot(false);
+    }
+  };
+  onMounted(() => {
+    restoreCommentModel(props.commentThreads);
+    ready = true;
+  });
+  watch(() => props.commentThreads, restoreCommentModel, { flush: "post" });
+  watch(() => comments.exportThreads(), (value) => {
+    if (!ready || value === synchronizedThreads) return;
+    synchronizedThreads = value;
+    emit("update:commentThreads", value);
+    triggerAutoSave(sanitizeHtml(htmlContent.value));
+  }, { flush: "post" });
+}
 
 // ---------------------------------------------------------------------------
 // Cinematic adaptive chrome ("Letterbox") — typing dissolves the toolbar into
