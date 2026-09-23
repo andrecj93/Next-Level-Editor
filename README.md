@@ -282,16 +282,16 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 905.8 KB | **218.8 KB** | On import |
+| **Core (ES)** | 907.3 KB | **219.1 KB** | On import |
 | **CSS** | 258.6 KB | **41.7 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (html2canvas + jsPDF) | 803.1 KB | 196.3 KB | First PDF export |
-| **UMD** | 1,647.6 KB | 489.8 KB | On import (no splitting) |
+| **UMD** | 1,648.8 KB | 490.1 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **260.5 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **260.8 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 
@@ -864,12 +864,12 @@ See the [quality review](docs/reports/QUALITY_REVIEW_2026-09-20.md) for evidence
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.mjs` (core 905.8 KB, 218.8 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs` (core 907.3 KB, 219.1 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Syntax highlighting, the colour picker and both exporters are separate
     chunks, fetched the first time you use them
   - Recommended for Vite, Webpack 5+, Rollup
-- **UMD** - `dist/next-level-editor.umd.js` (1,647.6 KB, 489.8 KB gzipped)
+- **UMD** - `dist/next-level-editor.umd.js` (1,648.8 KB, 490.1 KB gzipped)
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
   - Everything in one file — UMD cannot code-split, so this is the whole
