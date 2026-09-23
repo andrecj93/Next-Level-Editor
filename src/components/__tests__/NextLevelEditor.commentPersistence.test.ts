@@ -124,4 +124,41 @@ describe("NextLevelEditor — comment highlights reach the model", () => {
     expect(emitted.length).toBeGreaterThan(0);
     expect(emitted[emitted.length - 1]).not.toContain("comment-highlight");
   });
+
+  it('returns to the commented passage after thread changes replace its DOM nodes', async () => {
+    const editor = await mountEditor();
+    editor.focus();
+    selectBrave(editor);
+    await submitComment('Keep this word');
+    const sidebar = wrapper!.findComponent(CommentsSidebar);
+    const threadId = editor.querySelector<HTMLElement>('.comment-highlight')!.dataset.threadId!;
+    sidebar.vm.$emit('resolve-thread', threadId);
+    await nextTick();
+    sidebar.vm.$emit('reopen-thread', threadId);
+    await nextTick();
+    // Autosave/source round-trips may replace every node while the author is
+    // reading the discussion. An old DOM Range can no longer identify 'brave'.
+    const savedHtml = editor.innerHTML;
+    editor.innerHTML = savedHtml;
+    (sidebar.find('.comments-sidebar-close').element as HTMLButtonElement).focus();
+    sidebar.vm.$emit('close');
+    await nextTick();
+    await nextTick();
+    expect(document.activeElement).toBe(editor);
+    expect(window.getSelection()!.toString()).toBe('brave');
+  });
+
+  it('does not apply a prior comment selection to a replaced document', async () => {
+    const editor = await mountEditor();
+    selectBrave(editor);
+    await submitComment('Keep this word');
+    await wrapper!.setProps({ modelValue: '<p>An entirely different document.</p>' });
+    const sidebar = wrapper!.findComponent(CommentsSidebar);
+    (sidebar.find('.comments-sidebar-close').element as HTMLButtonElement).focus();
+    sidebar.vm.$emit('close');
+    await nextTick();
+    await nextTick();
+    expect(editor.textContent).toBe('An entirely different document.');
+    expect(window.getSelection()!.isCollapsed).toBe(true);
+  });
 });

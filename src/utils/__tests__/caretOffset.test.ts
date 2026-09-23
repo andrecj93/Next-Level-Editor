@@ -87,6 +87,19 @@ describe("caretOffset capture/restore", () => {
     outside.remove();
   });
 
+  it.each([
+    '<p>Hello</p><p>World</p>',
+    '<p>Hello<strong>World</strong></p>',
+  ])('starts a restored non-collapsed selection inside the next text node: %s', html => {
+    const r = mount(html);
+    expect(setCaretOffsets(r, { start: 5, end: 10 })).toBe(true);
+    const range = window.getSelection()!.getRangeAt(0);
+    expect(range.startContainer.textContent).toBe('World');
+    expect(range.startOffset).toBe(0);
+    expect(range.endContainer).toBe(range.startContainer);
+    expect(range.endOffset).toBe(5);
+  });
+
   it("clamps an offset past the end to the last position", () => {
     const r = mount("<p>Hi</p>");
     // Ask to restore offset 99 (beyond the 2 chars) -> lands at end.

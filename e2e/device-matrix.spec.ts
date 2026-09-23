@@ -238,6 +238,13 @@ test('comments stay usable by touch and keyboard from selection back to writing'
   await expect(card).toHaveCount(1);
   await activate(sidebar.getByRole('button', { name: 'Close comments sidebar', exact: true }), hasTouch);
   await expect(editor).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe(quoted);
+  const direction = await editor.evaluate(() => {
+    const selected = window.getSelection()!;
+    const range = selected.getRangeAt(0);
+    return selected.anchorNode === range.endContainer && selected.anchorOffset === range.endOffset;
+  });
+  expect(direction, 'Closing comments restores the backwards selection before any cursor movement').toBe(true);
   await editor.press('ControlOrMeta+Home');
   await editor.pressSequentially('At last, ');
   await expect(editor).toHaveText('At last, ' + originalText.replace(/\n/g, ''));

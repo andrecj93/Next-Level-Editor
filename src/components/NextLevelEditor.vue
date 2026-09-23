@@ -797,6 +797,7 @@ import ConfirmDialog from "./ConfirmDialog.vue";
 import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
+import { getCaretOffsets, setCaretOffsets, type CaretOffsets } from "../utils/caretOffset";
 import { useVariables, type Variable } from "../composables/useVariables";
 import { usePlugin } from "../composables/usePlugin";
 import { useSmartAutocomplete } from "../composables/useSmartAutocomplete";
@@ -1131,15 +1132,46 @@ const comments = props.enableComments
 
 // Comments UI state
 const showCommentsSidebar = ref(false);
+const showCommentModal = ref(false);
+const selectedTextForComment = ref("");
+let commentsReturnSelection: { offsets: CaretOffsets; text: string; backwards: boolean } | null = null;
+function rememberCommentsPosition() {
+  const root = editorContent.value;
+  const offsets = root && getCaretOffsets(root);
+  const selection = root?.ownerDocument.getSelection();
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  commentsReturnSelection = root && offsets && range ? {
+    offsets,
+    text: root.textContent || '',
+    backwards: !range.collapsed && selection?.anchorNode === range.endContainer
+      && selection.anchorOffset === range.endOffset,
+  } : null;
+}
+watch(showCommentsSidebar, open => {
+  // A newly submitted comment already saved its position before opening the
+  // modal. Its highlight/sanitization can invalidate the original DOM Range.
+  if (open && !showCommentModal.value) rememberCommentsPosition();
+}, { flush: 'sync' });
 function closeCommentsSidebar() {
+  const position = commentsReturnSelection;
+  commentsReturnSelection = null;
   showCommentsSidebar.value = false;
   nextTick(() => {
-    performWithSelection(() => {});
+    performWithSelection(root => {
+      // Comment metadata changes preserve text. A different document, or prose
+      // edited while the panel was open, must not receive an old text offset.
+      if (!position || root.textContent !== position.text) return;
+      if (setCaretOffsets(root, position.offsets) && position.backwards) {
+        const selection = root.ownerDocument.getSelection();
+        const range = selection?.getRangeAt(0);
+        if (range && selection?.setBaseAndExtent) selection.setBaseAndExtent(
+          range.endContainer, range.endOffset, range.startContainer, range.startOffset,
+        );
+      }
+    });
     keepSelectionVisible(editorContent.value, 24);
   });
 }
-const showCommentModal = ref(false);
-const selectedTextForComment = ref("");
 
 // Variables System (opt-in feature)
 /**
@@ -3046,6 +3078,8 @@ function handleCreateComment() {
     showToastNotification("Failed to capture selection", "error");
     return;
   }
+
+  rememberCommentsPosition();
 
   // Store the selected text for display in modal
   selectedTextForComment.value = selection.toString();
