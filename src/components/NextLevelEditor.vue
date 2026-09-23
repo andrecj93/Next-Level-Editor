@@ -1312,6 +1312,7 @@ function captureSnapshot(...args: Parameters<typeof captureSnapshotBase>) {
       const caret = getCaretOffsets(root); root.innerHTML = reviewed; setCaretOffsets(root, caret);
     }
   }
+  if (root && effectiveDocumentOptions.value) documentWorkspace.session.captureSelection(root.innerHTML);
   captureSnapshotBase(...args);
 }
 

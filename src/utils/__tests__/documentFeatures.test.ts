@@ -41,7 +41,7 @@ const snapshot = (
   html = '<p data-nle-id="nle-first">First draft</p>',
 ): DocumentSnapshot => ({ html, metadata: defaultDocumentMetadata() });
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
-function session(id = "a", store = createMemoryVersionStore()) {
+function session(id = "a", store = createMemoryVersionStore(), selection?: Parameters<typeof useDocumentSession>[0]["selection"]) {
   const scope = effectScope();
   const html = ref(snapshot().html);
   const options = shallowRef<DocumentOptions>({ id, store });
@@ -53,11 +53,29 @@ function session(id = "a", store = createMemoryVersionStore()) {
         html.value = v;
       },
       sanitize: sanitizeHtml,
+      selection,
     }),
   )!;
   return { scope, options, html, value };
 }
 describe("durable document versions", () => {
+  it("refreshes an unchanged checkpoint selection before a command and preserves it through undo", async () => {
+    let caret = { start: 0, end: 0 };
+    const write = vi.fn();
+    const s = session("caret", createMemoryVersionStore(), { read: () => caret, write });
+    await tick();
+    caret = { start: 6, end: 11 };
+    s.value.captureSelection(s.html.value);
+    caret = { start: 7, end: 7 };
+    const replacement = s.html.value.replace("draft", "text");
+    // A capture after the DOM mutation must not replace the original selection.
+    s.value.captureSelection(replacement);
+    s.html.value = replacement;
+    s.value.undo();
+    expect(write).toHaveBeenLastCalledWith({ start: 6, end: 11 });
+    expect(s.html.value).toContain("First draft");
+    s.scope.stop();
+  });
   it("automatically checkpoints a metadata-only edit without requiring typing", async () => {
     const s = session("metadata-only");
     await tick();

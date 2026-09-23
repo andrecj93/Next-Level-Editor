@@ -326,6 +326,13 @@ export function useDocumentSession(ctx: SessionContext) {
     if (!kind || kind !== inputKind) lastTyping = 0;
     inputKind = kind;
   }
+  function captureSelection(html: string) {
+    // Commands may move the selection without changing HTML before applying.
+    // Refresh that existing snapshot, but never attach an after-edit caret to it.
+    if (html !== current.html) return;
+    const selection = ctx.selection?.read();
+    if (selection) selections.set(current, selection);
+  }
   function resetBaseline() {
     current = snapshot();
     undoStack.value = [];
@@ -342,6 +349,7 @@ export function useDocumentSession(ctx: SessionContext) {
     undoStack,
     redoStack,
     snapshot,
+    captureSelection,
     commit,
     transact,
     undo,

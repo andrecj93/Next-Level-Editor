@@ -285,13 +285,13 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 1,286.4 KB | **312.1 KB** | On import |
+| **Core (ES)** | 1,286.7 KB | **312.1 KB** | On import |
 | **CSS** | 259.9 KB | **42.2 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (html2canvas + jsPDF) | 803.1 KB | 196.3 KB | First PDF export |
-| **UMD** | 3,327.7 KB | 1,070.9 KB | On import (no splitting) |
+| **UMD** | 3,327.9 KB | 1,071.0 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
 exports pays **354.3 KB gzipped** for the library's JS + CSS. Vue is an external
@@ -829,12 +829,12 @@ npm run test:e2e:debug
 
 ### Test Suites Overview
 
-Verified on 2026-09-23: 4,775 unit tests passed; 84.88% line coverage.
+Verified on 2026-09-23: 4,776 unit tests passed; 84.88% line coverage.
 The full browser run passed 284 checks, with 132 explicitly skipped project cases
 (mainly duplicate desktop flows under mobile WebKit), zero failures, and zero retries.
 See the [document workspace](docs/document-workspace.md) for supported features and qualification limits, and the [earlier quality review](docs/reports/QUALITY_REVIEW_2026-09-20.md) for the writing baseline.
 
-#### Unit Tests (4,775 tests across 368 files, with Vitest)
+#### Unit Tests (4,776 tests across 368 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
@@ -870,12 +870,12 @@ See the [document workspace](docs/document-workspace.md) for supported features 
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.mjs` (core 1,286.4 KB, 312.1 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs` (core 1,286.7 KB, 312.1 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Syntax highlighting, the colour picker and both exporters are separate
     chunks, fetched the first time you use them
   - Recommended for Vite, Webpack 5+, Rollup
-- **UMD** - `dist/next-level-editor.umd.js` (3,327.7 KB, 1,070.9 KB gzipped)
+- **UMD** - `dist/next-level-editor.umd.js` (3,327.9 KB, 1,071.0 KB gzipped)
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
   - Everything in one file — UMD cannot code-split, so this is the whole

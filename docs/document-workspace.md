@@ -74,6 +74,15 @@ Semantic PDF uses [PDFKit's tagged-document facilities](https://pdfkit.org/docs/
 
 Headers/footers are pagination artifacts. The preview and its download share the same Blob. Changing content or settings invalidates the preview; an export finishing against a changed snapshot is rejected. Existing raster PDF export remains available in the original export menu for visual-layout use cases. Do not describe that renderer as searchable or accessible PDF.
 
+| Output | References | Pagination and accessibility |
+| --- | --- | --- |
+| HTML | Citation text, endnotes and internal backlinks | Browser layout; semantic HTML remains available to the host. |
+| Markdown | Readable citation/note text and converted links | Appearance and internal-link behavior depend on the Markdown renderer. |
+| Word | Citation text and endnotes through the HTML-based Word converter | Not native Word footnote fields; PDF page settings and pagination are not reproduced. |
+| Semantic PDF | Citation/note text, external clickable links; no internal note-link annotation contract | A4/Letter flow, page settings, embedded Latin fonts, document tags and bookmarks. Manual assistive-technology qualification remains required. |
+
+A seven-page Portuguese fixture was independently checked with pypdf: 64 numbered passages retain reading order, accents and the euro sign extract correctly, three bookmarks and an external link are present, fonts are embedded, and list/table/image-alternative tags are present. A4 geometry, explicit page breaks, repeated headers/footers and page totals match the renderer result. Pages 1, 4 and 7 were also rendered with Poppler and inspected. This is fixture evidence, not PDF/UA certification. Paragraphs may split between pages; per-page footnote placement and general widow/orphan control are outside this renderer's contract.
+
 ## AI adapter
 
 ```ts
@@ -123,7 +132,7 @@ For collaboration only, an adapter mounts ProseMirror and binds its transactions
 | Licensing | Existing dependencies remain. | Yjs, ProseMirror and their binding use MIT licenses. Mammoth uses BSD-2-Clause, PDFKit/fflate MIT, and embedded Noto fonts OFL-1.1. No third-party CSL processor is bundled. |
 | Cost | No collaboration transport or service is required. | Adds CRDT state, document conversion, presence and transport work. Payload/queue bounds prevent unbounded client buffering; they are not a production capacity claim. |
 
-The complete feature build measured on 2026-09-23 with Node 24.14.1 on Windows has a 312.1 KiB gzip ES core and 42.2 KiB gzip CSS (354.3 KiB combined). The base writing branch measured 249.3 KiB combined. These totals include all document features, so they do not isolate the collaboration adapter's cost. The unsplit UMD bundle is 1,070.9 KiB gzip. Prefer the ES build for deferred heavy features.
+The complete feature build measured on 2026-09-23 with Node 24.14.1 on Windows has a 312.1 KiB gzip ES core and 42.2 KiB gzip CSS (354.3 KiB combined). The base writing branch measured 249.3 KiB combined. These totals include all document features, so they do not isolate the collaboration adapter's cost. The unsplit UMD bundle is 1,071.0 KiB gzip. Prefer the ES build for deferred heavy features.
 
 Reproduce the deterministic operation, sanitization, duplicate/reordered update, undo and metadata checks with `npx vitest run src/utils/__tests__/documentIntegrity.test.ts src/utils/__tests__/collaboration.test.ts src/utils/__tests__/collaborationTransport.test.mjs`. Run `npx playwright test e2e/document-collaboration.spec.ts --workers=1 --retries=0` for two independent browsers editing the same paragraph during a real WebSocket partition, then reconnecting and reloading persisted state. The browser experiment checks insert/delete convergence and local undo. It is not a load or latency benchmark. Browser offline emulation did not reliably suspend existing WebKit WebSockets; the final experiment partitions connections at the server instead.
 
