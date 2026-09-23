@@ -63,7 +63,10 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(async ({ page }, info) => {
   expect((page as Page & { deviceErrors?: string[] }).deviceErrors).toEqual([]);
-  if (info.status === info.expectedStatus) await info.attach('device-state', { body: await page.screenshot(), contentType: 'image/png' });
+  if (info.status === info.expectedStatus) {
+    await settle(page);
+    await info.attach('device-state', { body: await page.screenshot(), contentType: 'image/png' });
+  }
 });
 
 test('heading and list changes preserve the caret for continued writing', async ({ page, hasTouch }) => {
@@ -121,6 +124,7 @@ test('heading and list changes preserve the caret for continued writing', async 
   await page.keyboard.type('Z');
   await expect(editor.locator('p').last()).toHaveText('KZeep this sentence.');
   await expect(editor.locator('p').first()).toHaveText('A quiet arrival.');
+  await expect(page.getByRole('menu')).toHaveCount(0);
   await noHorizontalOverflow(page);
 });
 
