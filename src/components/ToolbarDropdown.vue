@@ -195,6 +195,9 @@ const menuStyle = computed(() => {
 });
 
 const toggle = () => {
+  // Mousedown preserves the text selection. Once it is captured, hand focus
+  // to this trigger so the next arrow key cannot reopen a previous menu.
+  triggerRef.value?.focus({ preventScroll: true });
   isOpen.value = !isOpen.value;
   emit("update:modelValue", isOpen.value);
 };

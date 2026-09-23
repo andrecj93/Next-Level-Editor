@@ -8,6 +8,8 @@ import { keepSelectionVisible } from "../utils/caretVisibility";
 export function useSelection(editorContent: Ref<HTMLElement | null>) {
   const savedRange = ref<Range | null>(null);
   const lastValidRange = ref<Range | null>(null); // Track last known good position
+  let savedBackwards = false;
+  let lastValidBackwards = false;
   let keyupDebounceTimer: number | null = null;
   let isTrackingEnabled = true; // Flag to temporarily disable tracking during operations
 
@@ -15,8 +17,27 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
     return saveSelectionUtil();
   };
 
+  // A Range keeps ordered endpoints, but does not retain which end the user
+  // started from. Preserve direction separately when focus leaves the editor.
+  const isBackwards = (range: Range | null) => {
+    const selection = globalThis.getSelection();
+    return Boolean(range && !range.collapsed &&
+      selection?.anchorNode === range.endContainer &&
+      selection.anchorOffset === range.endOffset);
+  };
+
+  const restoreDirectedRange = (range: Range, backwards: boolean) => {
+    restoreSelection(range);
+    const selection = globalThis.getSelection();
+    if (backwards && typeof selection?.setBaseAndExtent === "function") {
+      selection.setBaseAndExtent(range.endContainer, range.endOffset,
+        range.startContainer, range.startOffset);
+    }
+  };
+
   const rememberSelection = () => {
     let range = saveSelection();
+    let backwards = isBackwards(range);
     const root = editorContent.value;
 
     // If the live selection has been lost or collapsed because focus left the
@@ -35,12 +56,15 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
       // even when collapsed, since the live collapsed selection here is the
       // focus artifact (e.g. collapsed to offset 0), not the user's caret.
       range = fallback.cloneRange();
+      backwards = lastValidBackwards;
     }
 
     savedRange.value = range;
+    savedBackwards = backwards;
     // Also update last valid range if we got a good selection
     if (range) {
       lastValidRange.value = range;
+      lastValidBackwards = backwards;
     }
   };
 
@@ -80,6 +104,7 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
     ) {
       const range = selection.getRangeAt(0);
       lastValidRange.value = range.cloneRange();
+      lastValidBackwards = isBackwards(range);
     }
   };
 
@@ -295,8 +320,7 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
         root.contains(lastValidRange.value.startContainer)
       ) {
         try {
-          selection.removeAllRanges();
-          selection.addRange(lastValidRange.value.cloneRange());
+          restoreDirectedRange(lastValidRange.value.cloneRange(), lastValidBackwards);
           return;
         } catch (error) {
           console.warn("Could not restore last valid range", error);
@@ -311,6 +335,7 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
 
       // Update last valid range
       lastValidRange.value = range.cloneRange();
+      lastValidBackwards = false;
     } finally {
       // Always resume tracking
       resumeTracking();
@@ -423,7 +448,7 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
       }
       // Priority 2: Restore saved range
       else if (hasSavedRange && saved) {
-        restoreSelection(saved);
+        restoreDirectedRange(saved, savedBackwards);
         executeAction(root, action);
       }
       // Priority 3 & 4: Smart fallback
@@ -435,8 +460,10 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
       // Update both saved and last valid ranges after action
       const newRange = saveSelection();
       savedRange.value = newRange;
+      savedBackwards = isBackwards(newRange);
       if (newRange) {
         lastValidRange.value = newRange;
+        lastValidBackwards = savedBackwards;
       }
 
       // Ensure cursor is visible after action (Word/CKEditor behavior)

@@ -59,6 +59,25 @@ const pressInMenu = async (key: string) => {
 };
 
 describe("ToolbarDropdown fulfils the menu contract it claims (#R23-23)", () => {
+  it("hands pointer focus to the chosen trigger before keyboard navigation", async () => {
+    const previousControl = document.createElement("button");
+    document.body.appendChild(previousControl);
+    mountDropdown();
+    previousControl.focus();
+
+    await wrapper!.find("button.dropdown-trigger").trigger("mousedown");
+    expect(wrapper!.emitted("remember-selection")).toHaveLength(1);
+    expect(document.activeElement).toBe(previousControl);
+
+    await wrapper!.find("button.dropdown-trigger").trigger("click");
+    expect(document.activeElement).toBe(trigger());
+
+    await pressInMenu("ArrowDown");
+    expect(document.activeElement).toBe(items()[0]);
+    await pressInMenu("Escape");
+    expect(document.activeElement).toBe(trigger());
+  });
+
   it("marks the popup as a menu with menuitem children", async () => {
     mountDropdown();
     await wrapper!.find("button.dropdown-trigger").trigger("click");
