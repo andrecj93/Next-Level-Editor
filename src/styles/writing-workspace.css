@@ -35,6 +35,7 @@
 .writing-toolbar-row .dropdown-arrow { font-size: 8px; opacity: .6; }
 /* Native titles provide the supplementary hint without invisible pseudo
    elements widening the page when a menu must escape the editor's edge. */
+.writing-toolbar .dropdown-trigger[data-tooltip]::before,
 .writing-toolbar .dropdown-trigger[data-tooltip]::after { display: none; }
 .writing-toolbar-row .toolbar-btn-modern { width: 34px; height: 36px; min-width: 34px; padding: 6px; font-size: 22px; }
 .writing-toolbar-divider { width: 1px; height: 19px; background: var(--border-color); margin: 0 5px; flex-shrink: 0; }
