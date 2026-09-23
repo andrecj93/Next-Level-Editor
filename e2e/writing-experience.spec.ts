@@ -74,7 +74,19 @@ test.describe('Manuscript writing workspace', () => {
     await expect(page.getByRole('button', { name: 'More formatting', exact: true })).toBeFocused();
     await page.getByRole('button', { name: 'Tools', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Find & Replace', exact: true }).click();
-    await expect(page.getByRole('search', { name: 'Find & Replace' })).toBeVisible();
+    const search = page.getByRole('search', { name: 'Find & Replace' });
+    await expect(search).toBeVisible();
+    await search.getByRole('textbox', { name: 'Find', exact: true }).fill('sentence');
+    await expect(search.locator('.search-count')).toHaveText('1 of 1');
+    await page.getByRole('button', { name: 'View', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Code view', exact: true }).click();
+    await expect(page.locator('.code-editor')).toBeVisible();
+    await expect(search).toHaveCount(0);
+    expect(await page.evaluate(() => CSS.highlights.has('nle-find-current'))).toBe(false);
+    await page.getByRole('button', { name: 'Tools', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Find & Replace', exact: true }).click();
+    await expect(editor).toBeVisible();
+    await expect(search.getByRole('textbox', { name: 'Find', exact: true })).toBeFocused();
   });
 
   test('the companion opens from source or preview and returns keyboard focus on dismissal', async ({ page }) => {

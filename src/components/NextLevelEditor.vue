@@ -1574,6 +1574,9 @@ const openFindReplaceModal = (replace = false) => {
 watch(showFindReplaceModal, open => {
   if (open && props.writingMode) viewMode.value = 'editor';
 }, { flush: 'sync' });
+watch(viewMode, mode => {
+  if (props.writingMode && mode !== 'editor' && showFindReplaceModal.value) closeFindReplaceModal();
+}, { flush: 'sync' });
 
 // Editor UI State using composable
 const {
