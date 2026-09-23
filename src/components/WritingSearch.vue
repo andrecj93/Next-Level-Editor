@@ -137,6 +137,9 @@ const focusSearch = async (replace = false) => {
   const field = replace ? replacementInput.value : queryInput.value;
   field?.focus({ preventScroll: true });
   field?.select();
+  // Reveal the panel's edges as well as its input. On short viewports the
+  // input alone can be visible while the surrounding controls are clipped.
+  panel.value?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   field?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 };
 watch(() => props.show, async show => {
