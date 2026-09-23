@@ -164,6 +164,117 @@ test('heading and list changes preserve the caret for continued writing', async 
   await noHorizontalOverflow(page);
 });
 
+test('comments stay usable by touch and keyboard from selection back to writing', async ({ page, hasTouch }) => {
+  const editor = editorFor(page);
+  const quoted = 'There was room.';
+  await editor.pressSequentially('Mara closed the notebook.');
+  await editor.press('Enter');
+  await editor.pressSequentially(quoted);
+  const originalText = await editor.innerText();
+  for (let index = 0; index < quoted.length; index++) await editor.press('Shift+ArrowLeft');
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe(quoted);
+  await activate(toolbarFor(page).getByRole('button', { name: 'Insert', exact: true }), hasTouch);
+  await activate(page.getByRole('menuitem', { name: 'Comment', exact: true }), hasTouch);
+  const modal = page.locator('.comment-modal');
+  await expect(modal.locator('.selected-text-content')).toHaveText(quoted);
+  await modal.locator('textarea').fill('Keep the ending quiet.');
+  await activate(modal.locator('.comment-modal-submit'), hasTouch);
+  await expect(modal).toBeHidden();
+
+  const sidebar = page.getByRole('complementary', { name: 'Comments', exact: true });
+  const card = sidebar.locator('.comment-thread-card');
+  const highlight = editor.locator('.comment-highlight');
+  await expect(highlight).toHaveText(quoted);
+  const threadId = await highlight.getAttribute('data-thread-id');
+  expect(threadId).toBeTruthy();
+  await expect(card.locator('.comment-text').first()).toHaveText('Keep the ending quiet.');
+  await expect(card.locator('.comment-actions')).toHaveCSS('opacity', '1');
+  const addComment = sidebar.getByRole('button', { name: 'Add new comment', exact: true });
+  const addBounds = await addComment.boundingBox();
+  const listBounds = await sidebar.locator('.comments-thread-list').boundingBox();
+  expect(addBounds!.y + addBounds!.height, 'New comment must not cover any thread or reply').toBeLessThanOrEqual(listBounds!.y + 1);
+  await expect(sidebar.getByRole('tab').first()).toHaveCSS('font-family', await sidebar.evaluate(el => getComputedStyle(el).fontFamily));
+  for (const name of ['Resolve thread', 'Delete thread']) {
+    const action = card.getByRole('button', { name, exact: true });
+    const size = await action.boundingBox();
+    const minimum = hasTouch || page.viewportSize()!.width <= 640 ? 44 : 32;
+    // Translated panel geometry can differ by a floating-point fraction.
+    expect(size!.width).toBeGreaterThanOrEqual(minimum - 0.01);
+    expect(size!.height).toBeGreaterThanOrEqual(minimum - 0.01);
+  }
+  // Keyboard focus must remain visible even when the pointer is elsewhere.
+  await card.getByRole('button', { name: 'Resolve thread', exact: true }).press('Tab');
+  const remove = card.getByRole('button', { name: 'Delete thread', exact: true });
+  await expect(remove).toBeFocused();
+  await expect(remove).toHaveCSS('outline-style', 'solid');
+
+  const writeReply = card.getByRole('button', { name: 'Write a reply', exact: true });
+  await activate(writeReply, hasTouch);
+  const reply = card.getByRole('textbox', { name: 'Write a reply', exact: true });
+  await expect(reply).toBeFocused();
+  await activate(card.getByRole('button', { name: 'Cancel', exact: true }), hasTouch);
+  await expect(writeReply).toBeFocused();
+  await activate(writeReply, hasTouch);
+  await reply.pressSequentially('Let the next visit stay unwritten.');
+  await activate(card.getByRole('button', { name: 'Reply', exact: true }), hasTouch);
+  await expect(card.locator('.comment-reply')).toContainText('Let the next visit stay unwritten.');
+  await expect(card.locator('.comment-replies')).toHaveCSS('opacity', '1');
+  await expect(card.locator('.comment-reply')).toBeVisible();
+  await expect(writeReply).toBeFocused();
+  await noHorizontalOverflow(page);
+  await settle(page);
+  await test.info().attach('comment-thread', { body: await page.screenshot(), contentType: 'image/png' });
+
+  await card.getByRole('button', { name: 'Resolve thread', exact: true }).press('Enter');
+  const open = sidebar.getByRole('tab', { name: /^Open/ });
+  const resolved = sidebar.getByRole('tab', { name: /^Resolved/ });
+  await expect(open).toBeFocused();
+  await expect(open).toHaveText('Open0');
+  await activate(resolved, hasTouch);
+  await expect(card.locator('.comment-status-badge')).toHaveText('Resolved');
+  await card.getByRole('button', { name: 'Reopen thread', exact: true }).press('Enter');
+  await expect(resolved).toBeFocused();
+  await activate(open, hasTouch);
+  await expect(card).toHaveCount(1);
+  await activate(sidebar.getByRole('button', { name: 'Close comments sidebar', exact: true }), hasTouch);
+  await expect(editor).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe(quoted);
+  const direction = await editor.evaluate(() => {
+    const selected = window.getSelection()!;
+    const range = selected.getRangeAt(0);
+    return selected.anchorNode === range.endContainer && selected.anchorOffset === range.endOffset;
+  });
+  expect(direction, 'Closing comments restores the backwards selection before any cursor movement').toBe(true);
+  // A blank next paragraph has the same text offset as the preceding sentence.
+  // Reading the discussion must not pull the author back into that sentence.
+  await editor.press('ControlOrMeta+End');
+  await editor.press('Enter');
+  await activate(page.getByRole('button', { name: 'Comments', exact: true }), hasTouch);
+  await activate(sidebar.getByRole('button', { name: 'Close comments sidebar', exact: true }), hasTouch);
+  await expect(editor).toBeFocused();
+  await expect.poll(() => editor.evaluate(root => {
+    const selection = window.getSelection()!;
+    return selection.isCollapsed && root.lastElementChild?.contains(selection.anchorNode);
+  })).toBe(true);
+  await editor.pressSequentially('She opened a fresh page.');
+  await expect(editor.locator('p').last()).toHaveText('She opened a fresh page.');
+  await editor.press('ControlOrMeta+z');
+  await editor.press('ControlOrMeta+z');
+  await expect(editor).toHaveText(originalText.replace(/\n/g, ''));
+  await editor.press('ControlOrMeta+Home');
+  await editor.pressSequentially('At last, ');
+  await expect(editor).toHaveText('At last, ' + originalText.replace(/\n/g, ''));
+
+  // The code view round-trip sanitizes/replaces the DOM. The anchor must still
+  // identify the same thread after it, not merely exist on initial creation.
+  await switchView(page, 'Code');
+  await expect(page.locator('.code-editor')).toHaveValue(new RegExp(threadId!));
+  await switchView(page, 'Editor');
+  await expect(highlight).toHaveText(quoted);
+  await expect(highlight).toHaveAttribute('data-thread-id', threadId!);
+  await noHorizontalOverflow(page);
+});
+
 test('writing notes follow the current paragraph and keep every decision reachable', async ({ page, hasTouch }) => {
   const editor = editorFor(page);
   const companion = page.getByRole('complementary', { name: 'Writing companion' });

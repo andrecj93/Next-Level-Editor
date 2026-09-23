@@ -34,6 +34,18 @@
           </div>
           <h3 class="comments-sidebar-title">{{ t("Comments") }}</h3>
           <button
+            v-if="activeTab === 'open'"
+            class="comments-fab"
+            type="button"
+            :aria-label="t('Add new comment')"
+            :title="t('Add new comment')"
+            @click="createNewComment"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
+          <button
             ref="closeButtonRef"
             class="comments-sidebar-close"
             :aria-label="t('Close comments sidebar')"
@@ -130,24 +142,6 @@
           />
         </template>
       </div>
-
-      <!-- New Comment FAB -->
-      <button
-        v-if="activeTab === 'open'"
-        class="comments-fab"
-        :aria-label="t('Add new comment')"
-        :title="t('Add new comment')"
-        @click="createNewComment"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 5v14m-7-7h14"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-          />
-        </svg>
-      </button>
     </div>
   </div>
 </template>
@@ -247,10 +241,20 @@ function toggleThread(threadId: string) {
 
 function resolveThread(threadId: string) {
   emit("resolve-thread", threadId);
+  focusActiveTab();
 }
 
 function reopenThread(threadId: string) {
   emit("reopen-thread", threadId);
+  focusActiveTab();
+}
+
+// Resolving or reopening removes the focused card from the current list.
+// Keep the next keyboard action inside the panel instead of losing it to body.
+function focusActiveTab() {
+  nextTick(() => sidebarContentRef.value
+    ?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')
+    ?.focus());
 }
 
 function deleteThread(threadId: string) {
@@ -309,6 +313,10 @@ function createNewComment() {
 
 .comments-sidebar-open .comments-sidebar-content {
   transform: translateX(0);
+}
+
+.comments-sidebar-content :deep(button) {
+  font-family: inherit;
 }
 
 /* Backdrop */
@@ -508,15 +516,13 @@ function createNewComment() {
   max-width: 280px;
 }
 
-/* FAB */
+/* Keep the new-comment action in the header, clear of the scrollable replies. */
 .comments-fab {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  width: 56px;
-  height: 56px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 16px;
+  border-radius: 8px;
   background: var(--toolbar-accent, #3b82f6);
   color: white;
   cursor: pointer;
@@ -600,11 +606,8 @@ function createNewComment() {
   }
 
   .comments-fab {
-    bottom: 16px;
-    right: 16px;
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
   }
 }
 </style>

@@ -58,7 +58,8 @@ export function getCaretOffsets(root: HTMLElement): CaretOffsets | null {
 /** Map a text-offset back to a concrete (textNode, offset) position. */
 function locate(
   root: HTMLElement,
-  target: number
+  target: number,
+  preferNext = false
 ): { node: Node; offset: number } {
   const walker = root.ownerDocument.createTreeWalker(
     root,
@@ -71,7 +72,7 @@ function locate(
   while ((node = walker.nextNode())) {
     const len = node.textContent?.length ?? 0;
     last = node;
-    if (remaining <= len) {
+    if (remaining < len || (remaining === len && !preferNext)) {
       return { node, offset: remaining };
     }
     remaining -= len;
@@ -95,7 +96,9 @@ export function setCaretOffsets(
   const sel = view.getSelection?.();
   if (!sel) return false;
 
-  const startPos = locate(root, offsets.start);
+  // At a boundary, a selection starts in the next text node, not at the end
+  // of the previous paragraph (which would also select its rendered newline).
+  const startPos = locate(root, offsets.start, offsets.start !== offsets.end);
   const endPos = locate(root, offsets.end);
 
   const range = root.ownerDocument.createRange();

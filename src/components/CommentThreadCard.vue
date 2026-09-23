@@ -139,6 +139,7 @@
     <!-- Add Reply Button (always visible when not showing form) -->
     <button
       v-if="!showReplyForm"
+      ref="replyButtonRef"
       class="comment-add-reply-btn"
       @click.stop="showReplyForm = true"
     >
@@ -164,7 +165,7 @@
         <CommentReplyForm
           :mention-search="mentionSearch"
           @submit="handleReplySubmit"
-          @cancel="showReplyForm = false"
+          @cancel="closeReplyForm"
         />
       </div>
     </div>
@@ -240,7 +241,7 @@
 <script setup lang="ts">
 import { useEditorLocale } from "../composables/useEditorLocale";
 const { t, date: calendarDate } = useEditorLocale();
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import type {
   CommentThread,
   MentionSuggestion,
@@ -275,6 +276,7 @@ const emit = defineEmits<Emits>();
 
 // State
 const showReplyForm = ref(false);
+const replyButtonRef = ref<HTMLButtonElement | null>(null);
 
 // Methods
 function handleToggle() {
@@ -289,7 +291,12 @@ function handleDelete() {
 
 function handleReplySubmit(content: string, mentions: string[]) {
   emit("add-reply", props.thread.id, content, mentions);
+  closeReplyForm();
+}
+
+function closeReplyForm() {
   showReplyForm.value = false;
+  nextTick(() => replyButtonRef.value?.focus());
 }
 
 function formatTime(date: Date): string {
@@ -482,6 +489,7 @@ function renderCommentContent(content: string): string {
 /* Comment Header */
 .comment-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 6px;
@@ -490,12 +498,14 @@ function renderCommentContent(content: string): string {
 
 .comment-meta {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
 .comment-author {
+  overflow-wrap: anywhere;
   font-size: 14px;
   font-weight: 700;
   color: var(--text-color, #111827);
@@ -509,19 +519,13 @@ function renderCommentContent(content: string): string {
 
 .comment-actions {
   display: flex;
+  flex-shrink: 0;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.comment-thread-card:hover .comment-actions,
-.comment-thread-card-expanded .comment-actions {
-  opacity: 1;
 }
 
 .comment-action-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: none;
   background: transparent;
   border-radius: 6px;
@@ -536,6 +540,18 @@ function renderCommentContent(content: string): string {
 .comment-action-btn:hover {
   background: var(--hover-bg, #f3f4f6);
   color: var(--text-color, #1f2937);
+}
+
+.comment-action-btn:focus-visible {
+  outline: 2px solid var(--toolbar-accent, #3b82f6);
+  outline-offset: 2px;
+}
+
+@media (any-pointer: coarse), (max-width: 640px) {
+  .comment-action-btn {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 .comment-action-delete:hover {

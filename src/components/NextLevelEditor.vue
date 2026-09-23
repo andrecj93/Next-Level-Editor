@@ -464,7 +464,7 @@
       :active-thread-id="comments.activeThread.value?.id ?? null"
       :is-open="showCommentsSidebar"
       :mention-search="mentionSearch"
-      @close="showCommentsSidebar = false"
+      @close="closeCommentsSidebar"
       @select-thread="handleSelectThread"
       @resolve-thread="handleResolveThread"
       @reopen-thread="handleReopenThread"
@@ -712,7 +712,6 @@ import { assignBlockIds } from '../utils/documentOperations';
 import type { CollaborationBinding } from '../utils/collaborationBinding';
 import { defaultDocumentMetadata } from '../types/document';
 import type { ConnectionState } from '../types/collaboration';
-import { getCaretOffsets, setCaretOffsets } from '../utils/caretOffset';
 import { useStableId } from "../utils/useStableId";
 import WritingCompanion from './WritingCompanion.vue';
 import WritingSearch from './WritingSearch.vue';
@@ -820,6 +819,8 @@ import ConfirmDialog from "./ConfirmDialog.vue";
 import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
+import { getCaretOffsets, setCaretOffsets, type CaretOffsets } from "../utils/caretOffset";
+import { captureSelectionBookmark } from "../utils/selectionBookmark";
 import { useVariables, type Variable } from "../composables/useVariables";
 import { usePlugin } from "../composables/usePlugin";
 import { useSmartAutocomplete } from "../composables/useSmartAutocomplete";
@@ -1178,6 +1179,57 @@ const comments = props.enableComments
 const showCommentsSidebar = ref(false);
 const showCommentModal = ref(false);
 const selectedTextForComment = ref("");
+let commentsReturnSelection: {
+  offsets: CaretOffsets;
+  text: string;
+  backwards: boolean;
+  bookmark: ReturnType<typeof captureSelectionBookmark>;
+} | null = null;
+function rememberCommentsPosition() {
+  const root = editorContent.value;
+  const offsets = root && getCaretOffsets(root);
+  const selection = root?.ownerDocument.getSelection();
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  commentsReturnSelection = root && offsets && range ? {
+    offsets,
+    bookmark: captureSelectionBookmark(root),
+    text: root.textContent || '',
+    backwards: !range.collapsed && selection?.anchorNode === range.endContainer
+      && selection.anchorOffset === range.endOffset,
+  } : null;
+}
+watch(showCommentsSidebar, open => {
+  // A newly submitted comment already saved its position before opening the
+  // modal. Its highlight/sanitization can invalidate the original DOM Range.
+  if (open && !showCommentModal.value) rememberCommentsPosition();
+}, { flush: 'sync' });
+function closeCommentsSidebar() {
+  const position = commentsReturnSelection;
+  commentsReturnSelection = null;
+  showCommentsSidebar.value = false;
+  nextTick(() => {
+    performWithSelection(root => {
+      // Comment metadata changes preserve text. A different document, or prose
+      // edited while the panel was open, must not receive an old text offset.
+      if (!position || root.textContent !== position.text) return;
+      // Text offsets cannot distinguish an empty paragraph or a boundary
+      // outside emphasis. Prefer surviving DOM points, but reject clamped
+      // points when comment markup has split their original text nodes.
+      if (position.bookmark?.restore()) {
+        const restored = getCaretOffsets(root);
+        if (restored?.start === position.offsets.start && restored.end === position.offsets.end) return;
+      }
+      if (setCaretOffsets(root, position.offsets) && position.backwards) {
+        const selection = root.ownerDocument.getSelection();
+        const range = selection?.getRangeAt(0);
+        if (range && selection?.setBaseAndExtent) selection.setBaseAndExtent(
+          range.endContainer, range.endOffset, range.startContainer, range.startOffset,
+        );
+      }
+    });
+    keepSelectionVisible(editorContent.value, 24);
+  });
+}
 
 // Variables System (opt-in feature)
 /**
@@ -2090,7 +2142,7 @@ const {
   alignmentDropdownItems,
   fontSizeDropdownItems,
   listActions,
-  insertDropdownItems,
+  insertDropdownItems: baseInsertDropdownItems,
   toolActions,
   exportDropdownItems,
   productivityDropdownItems,
@@ -2138,6 +2190,18 @@ const {
   // Adds the Tools > Keyboard Shortcuts item (the item only renders when this
   // handler is provided). Opens the registry-backed help modal.
   openShortcutHelpModal,
+});
+
+// The phone dock replaces the selection bubble, so commenting also needs a
+// permanent toolbar entry. Restore the selected passage before opening its form.
+const insertDropdownItems = computed(() => {
+  const items = baseInsertDropdownItems.value;
+  const comment = floatingActions.value.find(action => action.id === 'comment');
+  if (!comment) return items;
+  return [items[0], {
+    ...comment,
+    onClick: () => performWithSelection(() => handleCreateComment()),
+  }, ...items.slice(1)];
 });
 
 // Command Palette Commands using composable
@@ -3141,6 +3205,8 @@ function handleCreateComment() {
     showToastNotification("Failed to capture selection", "error");
     return;
   }
+
+  rememberCommentsPosition();
 
   // Store the selected text for display in modal
   selectedTextForComment.value = selection.toString();

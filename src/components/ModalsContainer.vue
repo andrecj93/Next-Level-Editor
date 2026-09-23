@@ -216,6 +216,7 @@ interface Props {
 // declared rather than inferred from "prop omitted".
 withDefaults(defineProps<Props>(), {
   ownsFixedChrome: true,
+  toastDescriptor: undefined,
   theme: undefined,
   linkContext: undefined,
   recentCommandIds: undefined,

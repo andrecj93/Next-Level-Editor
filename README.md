@@ -18,7 +18,7 @@ template variables, and PDF / Word / Markdown / HTML export — in one `v-model`
 [![CI/CD](https://github.com/andrecj93/Next-Level-Editor/actions/workflows/ci.yml/badge.svg)](https://github.com/andrecj93/Next-Level-Editor/actions/workflows/ci.yml)
 [![Playwright Tests](https://img.shields.io/badge/Playwright-browser%20checks-45ba4b?logo=playwright)](https://github.com/andrecj93/Next-Level-Editor/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/next-level-editor.svg)](https://www.npmjs.com/package/next-level-editor)
-[![WCAG 2.2 AA](https://img.shields.io/badge/WCAG_2.2_AA-0_violations-45ba4b)](#why-this-one)
+[![Accessibility checks](https://img.shields.io/badge/axe--core-A%2FAA_checks-45ba4b)](#why-this-one)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://www.typescriptlang.org/)
 [![Vue 3](https://img.shields.io/badge/Vue-3.3%2B-4FC08D.svg)](https://vuejs.org/)
@@ -105,8 +105,8 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,882 unit tests
-across 383 files, plus end-to-end checks on Chromium and mobile Safari. Both
+**It is tested like something you'd put in production.** 4,895 unit tests
+across 384 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
 ---
@@ -160,7 +160,7 @@ readable — click any section to open it.
 <details>
 <summary><b>✨ Every feature, in detail</b></summary>
 
-> **Why Next Level Editor?** Built with modern web standards, best practices, and a focus on developer experience. Every feature is thoroughly tested, accessible, and performant.
+> **Why Next Level Editor?** A writing workspace with contextual feedback, selection-preserving controls, and automated browser checks. The verification scope and remaining limits are described below.
 
 ### 🎨 Modern UI & Experience
 
@@ -222,20 +222,20 @@ readable — click any section to open it.
 - **Table of Contents** - Auto-generate clickable TOC from document headings (H1-H6) with smooth scrolling
 - **Table Designer** - Advanced table editing with properties modal for customization
 - **Spell Checker** - Browser-based spell checking with enable/disable toggle
-- **Virtual Scrolling** - Performance-optimized rendering for large documents
+- **Long Documents** - Chapter navigation, deferred analysis, and large-document writing/export checks. The editable document remains in the DOM; it is not virtualized.
 
 ### 🔐 Security & Quality
 
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **4,646 Unit Tests** - Across 357 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches)
-- **239 Passing E2E Checks** - Playwright across Chromium and mobile Safari, both gating the release
+- **4,895 Unit Checks** - Across 384 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
+- **Browser Gates** - Playwright on Chromium and mobile WebKit, plus the same writing scenarios on 18 desktop, tablet, phone, landscape, and reflow profiles
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
-- **Keyboard & screen readers** - Full keyboard operability, ARIA live regions, skip links, focus management, and 44×44px touch targets
+- **Keyboard & screen readers** - Tested keyboard workflows, ARIA live regions, skip links, and focus management
 - **Plugin System** - Register plugins with the `plugins` prop: slash commands, Tools-menu buttons and palette commands
-- **Mobile Gestures** - Touch-friendly interface with 10 gesture types
+- **Mobile Gestures (integration helper)** - Exported `useMobileGestures` composable recognizes 10 gesture types. Hosts must opt in and provide callbacks; the editor does not install these gestures automatically.
 
 ### 🎯 Advanced Features (Opt-in)
 
@@ -252,15 +252,15 @@ Professional text analysis powered by industry-standard readability algorithms:
 
 #### 💬 Comments & Collaboration
 
-Full-featured commenting system for collaborative editing:
+Comment threads anchored to selected text. Shared storage, synchronization, and mention lookup are supplied by the host application:
 
 - **Comment Threads** - Add comments to any selected text with Range API anchoring
 - **Replies** - Thread-based conversation with nested replies
-- **@ Mentions** - Tag team members with autocomplete dropdown
+- **@ Mentions** - Autocomplete using a host-supplied mention provider
 - **Status Management** - Mark threads as open or resolved
 - **Visual Highlights** - Color-coded text highlighting (yellow for open, green for resolved)
 - **Sidebar UI** - Dedicated sidebar with tabs for open/resolved comments
-- **Persistence** - Export/import threads as JSON for storage
+- **Persistence API** - Export/import threads as JSON alongside the document HTML. Saving the document's `v-model` alone does not save comment bodies; the playground's local draft stores document HTML only. Opt-in document workspace checkpoints include both the HTML and comment metadata.
 - **Auto-restore** - Automatically re-anchor comments after content changes
 
 #### ♿ Accessibility
@@ -271,17 +271,16 @@ open dialogs, an open toolbar menu, the colour popup, a mobile viewport, and
 320px reflow. **Zero violations**, and `e2e/accessibility.spec.ts` re-runs the
 scan on every CI build so it stays that way.
 
-That audit is automated, and automated scanning catches roughly a third of
-real accessibility problems — keyboard order, focus management and screen
-reader announcements have their own dedicated tests, but no third-party human
-audit has been done, so this is a tested conformance claim rather than a
-certified one. What is implemented:
+Automated scans cover only the tested states. Keyboard order, focus management,
+and announcement markup have separate tests. Physical devices, assistive
+technology sessions, and an independent human accessibility audit remain
+unverified; these checks do not establish full WCAG conformance. Implemented support:
 
-- **Keyboard Navigation** - 80+ keyboard shortcuts, full keyboard operability
+- **Keyboard Navigation** - Shortcut help, toolbar navigation, and tested editing workflows
 - **Screen Reader Support** - ARIA live regions, proper labels, semantic HTML
 - **Skip Links** - Skip to main content, toolbar, and footer
 - **Focus Management** - Visible focus indicators, focus trap for modals
-- **Touch Targets** - 44x44px, which meets the AAA criterion (2.5.5), not just the AA minimum
+- **Touch Targets** - Responsive controls with larger targets in the touch dock and comment thread actions. Sizes vary by control; there is no blanket 44×44px or AAA claim.
 - **Announcements** - Live region for status updates
 - **Landmark Regions** - Proper ARIA landmarks for navigation
 
@@ -293,17 +292,17 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 1,396.30 KB | **342.59 KB** | On import |
-| **CSS** | 272.29 KB | **44.08 KB** | On import |
+| **Core (ES)** | 1,398.67 KB | **343.23 KB** | On import |
+| **CSS** | 272.39 KB | **44.13 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
 | PDF page preview module and worker assets | 1,467.53 KB | 409.50 KB | First page preview (ES and UMD) |
-| **UMD** | 3,438.82 KB | 1,106.12 KB | On import (no splitting) |
+| **UMD** | 3,440.37 KB | 1,106.47 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **386.67 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **387.36 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 DOCX conversion, semantic PDF and its fonts, citation formatting, and the
@@ -840,20 +839,20 @@ npm run test:e2e:debug
 
 | File Type   | Statements | Branches | Functions | Lines   |
 | ----------- | ---------- | -------- | --------- | ------- |
-| **Overall** | **82.99%** | **74.24%** | **78.12%** | **85.28%** |
+| **Overall** | **83.01%** | **74.29%** | **78.19%** | **85.26%** |
 
 Measured on 2026-09-23. The CI coverage artifact includes per-file results.
 
 ### Test Suites Overview
 
-Verified on 2026-09-23: 4,882 unit tests passed; 85.28% line coverage.
+Verified on 2026-09-23: 4,895 unit tests passed; 85.26% line coverage.
 Browser suites cover Chromium and mobile WebKit; duplicate desktop flows have
 explicit mobile exclusions. A separate 18-profile device matrix exercises all
 three browser engines. Current run counts and retained reports are available in
 [GitHub Actions](https://github.com/andrecj93/Next-Level-Editor/actions).
 See the [document workspace](docs/document-workspace.md) for supported features and qualification limits, and the [earlier quality review](docs/reports/QUALITY_REVIEW_2026-09-20.md) for the writing baseline.
 
-#### Unit Tests (4,882 tests across 383 files, with Vitest)
+#### Unit Tests (Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
@@ -869,7 +868,7 @@ See the [document workspace](docs/document-workspace.md) for supported features 
 - **Composables** (20+ tests) - Auto-save, command palette, history timeline, loading states, smart toolbar, virtual scroll
 - **File Manager** - Upload, storage, and file management functionality
 
-#### End-to-End Tests (Playwright)
+#### End-to-End Tests (Playwright browser and device suites)
 
 - **Basic Functionality** - Editor loading, typing, word count
 - **Text Formatting** - Bold, italic, underline, toggle formatting
@@ -889,17 +888,17 @@ See the [document workspace](docs/document-workspace.md) for supported features 
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.mjs` (core 1,396.30 KB, 342.59 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs` (core 1,398.67 KB, 343.23 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Syntax highlighting, the colour picker and both exporters are separate
     chunks, fetched the first time you use them
   - Recommended for Vite, Webpack 5+, Rollup
-- **UMD** - `dist/next-level-editor.umd.js` (3,438.82 KB, 1,106.12 KB gzipped)
+- **UMD** - `dist/next-level-editor.umd.js` (3,440.37 KB, 1,106.47 KB gzipped)
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
   - Editor and feature code is bundled together, including features you may never use.
     The PDF preview additionally loads the packaged browser module and worker assets.
-- **CSS** - `dist/next-level-editor.css` (272.29 KB, 44.08 KB gzipped)
+- **CSS** - `dist/next-level-editor.css` (272.39 KB, 44.13 KB gzipped)
   - Minified styles with CSS variables
   - Includes light and dark themes, all four theme presets
   - Responsive design utilities
@@ -1008,7 +1007,7 @@ next-level-editor/
 │   │   ├── pageManagement.ts        # TOC and page breaks
 │   │   ├── spellChecker.ts          # Spell checking
 │   │   ├── fileManager.ts           # File operations
-│   │   └── __tests__/               # Unit tests (4,882 tests)
+│   │   └── __tests__/               # Utility unit tests
 │   ├── styles/              # CSS files
 │   │   ├── variables.css            # CSS custom properties
 │   │   └── animations.css           # Transitions
