@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
-import { nextTick, ref } from 'vue';
+import { defineComponent, h, nextTick, ref } from 'vue';
+import { provideEditorLocale } from '../../composables/useEditorLocale';
 import WritingSearch from '../WritingSearch.vue';
 import { useFindReplace } from '../../composables/useFindReplace';
 
@@ -25,6 +26,34 @@ async function setup(html = '<h2>The library</h2><p>Celia opened the door.</p><p
 }
 
 describe('WritingSearch', () => {
+  it('switches localized search controls without changing the query or readonly document', async () => {
+    vi.useFakeTimers();
+    const language = ref('pt-PT');
+    const editor = document.createElement('div');
+    editor.innerHTML = '<p>Celia arrived. Celia stayed.</p>';
+    document.body.appendChild(editor);
+    const before = editor.innerHTML;
+    const snapshot = vi.fn();
+    const engine = useFindReplace({ editorContent: ref(editor), captureSnapshot: snapshot });
+    const wrapper = mount(defineComponent({ setup() {
+      provideEditorLocale(() => language.value);
+      return () => h(WritingSearch, { show: true, content: before, editor, readonly: true,
+        find: engine.handleFind, replace: engine.handleReplace, replaceAll: engine.handleReplaceAll, clear: engine.clearPendingHighlight });
+    } }), { attachTo: document.body });
+    cleanups.push(() => { wrapper.unmount(); document.getSelection()?.removeAllRanges(); editor.remove(); });
+    await flushPromises();
+    await wrapper.get('input[placeholder="Localizar no documento…"]').setValue('Celia');
+    await vi.advanceTimersByTimeAsync(160);
+    expect(wrapper.get('.search-count').text()).toBe('1 de 2');
+    await wrapper.get('[aria-label="Mostrar controlos de substituição"]').trigger('click');
+    expect(wrapper.get('.replace-action').attributes('disabled')).toBeDefined();
+    language.value = 'en';
+    await nextTick();
+    expect((wrapper.get('input[placeholder="Find in document…"]').element as HTMLInputElement).value).toBe('Celia');
+    expect(wrapper.get('.search-count').text()).toBe('1 of 2');
+    expect(editor.innerHTML).toBe(before);
+    expect(snapshot).not.toHaveBeenCalled();
+  });
   it('searches immediately after a pause and navigates contextual matches without changing prose', async () => {
     const { wrapper, editor, search } = await setup();
     const before = editor.innerHTML;

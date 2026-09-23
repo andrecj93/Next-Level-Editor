@@ -469,7 +469,10 @@ export function useFindReplace(options: FindReplaceOptions) {
     }
     const selection =
       typeof window !== "undefined" ? window.getSelection() : null;
-    if (data.selectMatch !== false && selection && typeof selection.removeAllRanges === "function") {
+    // Inline search paints ranges with CSS highlights and returns a bookmark
+    // for Close/Escape. Borrowing the document selection here also focuses the
+    // manuscript in WebKit, opening its mobile dock after reveal was measured.
+    if (!data.preview && data.selectMatch !== false && selection && typeof selection.removeAllRanges === "function") {
       selection.removeAllRanges();
       selection.addRange(range);
     }

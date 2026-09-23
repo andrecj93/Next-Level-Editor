@@ -5,6 +5,8 @@
         v-if="show && position"
         ref="toolbarEl"
         class="floating-toolbar nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="{ 'is-below': position.below }"
         :style="{
           top: `${position.top}px`,
@@ -17,15 +19,15 @@
           :key="action.id"
           class="floating-btn"
           :class="{ active: action.isActive?.() }"
-          :aria-label="action.label"
-          :title="action.tooltip"
+          :aria-label="t(action.label)"
+          :title="hint(action.tooltip, action.shortcut)"
           @click="action.onClick"
         >
           <span
             v-if="action.icon"
             v-html="action.icon"
           />
-          <span v-else>{{ action.label }}</span>
+          <span v-else>{{ t(action.label) }}</span>
         </button>
       </div>
     </transition>
@@ -33,6 +35,11 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const locale = useEditorLocale();
+const { t, locale: uiLocale, direction: uiDirection } = locale;
+import { toolbarHint } from '../utils/toolbarHint';
+const hint = (label?: string, keys?: string) => toolbarHint(locale, label, keys);
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 // Positioning math lives in utils/ (pure + unit-testable; a second plain
 // <script> block exporting it from this SFC tripped TS4082 in vue-tsc's
@@ -56,6 +63,7 @@ interface ToolbarAction {
   id: string
   label: string
   tooltip: string
+  shortcut?: string
   icon?: string
   onClick: () => void
   isActive?: () => boolean

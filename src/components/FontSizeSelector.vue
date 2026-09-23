@@ -2,7 +2,7 @@
   <div class="font-size-selector">
     <button
       class="font-size-button"
-      :aria-label="`Font size: ${currentSizeLabel}`"
+      :aria-label="t('Font size: {size}', { size: currentSizeName })"
       @click="toggleDropdown"
     >
       <span class="size-icon">{{ currentSizeLabel }}</span>
@@ -16,7 +16,7 @@
         @click.stop
       >
         <div class="dropdown-header">
-          Font Size
+          {{ t("Font Size") }}
         </div>
         <button
           v-for="size in fontSizes"
@@ -25,11 +25,11 @@
           :class="{ active: modelValue === size.value }"
           @click="selectSize(size.value)"
         >
-          <span class="size-label">{{ size.label }}</span>
+          <span class="size-label">{{ t(size.label) }}</span>
           <span
             class="size-preview"
             :style="{ fontSize: size.preview }"
-          >Aa</span>
+          >{{ t("Aa") }}</span>
         </button>
       </div>
     </transition>
@@ -37,6 +37,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 type FontSizeValue = 'small' | 'normal' | 'large' | 'huge'
@@ -72,8 +74,9 @@ const fontSizes: FontSize[] = [
 
 const currentSizeLabel = computed(() => {
   const size = fontSizes.find(s => s.value === props.modelValue)
-  return size ? size.label.charAt(0) : 'N'
+  return t(size?.label ?? 'Normal').charAt(0)
 })
+const currentSizeName = computed(() => t(fontSizes.find(size => size.value === props.modelValue)?.label ?? 'Normal'))
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value

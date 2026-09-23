@@ -17,6 +17,10 @@
       </div>
     </div>
 
+    <p v-if="thread.anchorStatus === 'orphaned'" class="comment-anchor-notice" role="status">
+      {{ t('This passage was removed. The discussion is still available.') }}
+    </p>
+
     <!-- Main Comment -->
     <div class="comment-main" @click="handleToggle">
       <div class="comment-avatar-wrapper">
@@ -46,12 +50,12 @@
             </span>
           </div>
 
-          <div class="comment-actions" @click.stop>
+          <div v-if="!readonly" class="comment-actions" @click.stop>
             <button
               v-if="thread.status === 'open'"
               class="comment-action-btn"
-              aria-label="Resolve thread"
-              title="Mark as resolved"
+              :aria-label="t('Resolve thread')"
+              :title="t('Mark as resolved')"
               @click="emit('resolve', thread.id)"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -67,8 +71,8 @@
             <button
               v-else
               class="comment-action-btn"
-              aria-label="Reopen thread"
-              title="Reopen thread"
+              :aria-label="t('Reopen thread')"
+              :title="t('Reopen thread')"
               @click="emit('reopen', thread.id)"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -82,8 +86,8 @@
             </button>
             <button
               class="comment-action-btn comment-action-delete"
-              aria-label="Delete thread"
-              title="Delete thread"
+              :aria-label="t('Delete thread')"
+              :title="t('Delete thread')"
               @click="handleDelete"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -114,7 +118,7 @@
               stroke-linejoin="round"
             />
           </svg>
-          Resolved
+          {{ t("Resolved") }}
         </div>
       </div>
     </div>
@@ -134,13 +138,12 @@
           stroke-linejoin="round"
         />
       </svg>
-      View {{ thread.comments.length - 1 }}
-      {{ thread.comments.length === 2 ? "reply" : "replies" }}
+      {{ t('View {count} replies', { count: thread.comments.length - 1 }) }}
     </button>
 
     <!-- Add Reply Button (always visible when not showing form) -->
     <button
-      v-if="!showReplyForm"
+      v-if="!readonly && !showReplyForm"
       ref="replyButtonRef"
       class="comment-add-reply-btn"
       @click.stop="showReplyForm = true"
@@ -153,11 +156,11 @@
           stroke-linecap="round"
         />
       </svg>
-      Write a reply
+      {{ t("Write a reply") }}
     </button>
 
     <!-- Reply Form (when active) -->
-    <div v-if="showReplyForm" class="comment-reply-standalone">
+    <div v-if="!readonly && showReplyForm" class="comment-reply-standalone">
       <div class="comment-avatar-wrapper">
         <div class="comment-avatar comment-avatar-small">
           <span>U</span>
@@ -217,7 +220,7 @@
             />
 
             <span v-if="comment.isEdited" class="comment-edited">
-              (edited)
+              {{ t("(edited)") }}
             </span>
           </div>
         </div>
@@ -233,7 +236,7 @@
               stroke-linejoin="round"
             />
           </svg>
-          Hide replies
+          {{ t("Hide replies") }}
         </button>
       </div>
     </Transition>
@@ -241,7 +244,9 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref } from "vue";
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, date: calendarDate } = useEditorLocale();
+import { nextTick, ref, watch } from "vue";
 import type {
   CommentThread,
   MentionSuggestion,
@@ -252,6 +257,7 @@ interface Props {
   thread: CommentThread;
   isActive: boolean;
   isExpanded?: boolean;
+  readonly?: boolean;
   /** Host-supplied @mention provider, passed through to the reply form. */
   mentionSearch?: (
     query: string
@@ -269,6 +275,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   isExpanded: false,
+  readonly: false,
   mentionSearch: undefined,
 });
 
@@ -277,6 +284,9 @@ const emit = defineEmits<Emits>();
 // State
 const showReplyForm = ref(false);
 const replyButtonRef = ref<HTMLButtonElement | null>(null);
+watch(() => props.readonly, readonly => {
+  if (readonly) showReplyForm.value = false;
+});
 
 // Methods
 function handleToggle() {
@@ -284,12 +294,14 @@ function handleToggle() {
 }
 
 function handleDelete() {
-  if (confirm("Are you sure you want to delete this thread?")) {
+  if (props.readonly) return;
+  if (confirm(t("Are you sure you want to delete this thread?"))) {
     emit("delete", props.thread.id);
   }
 }
 
 function handleReplySubmit(content: string, mentions: string[]) {
+  if (props.readonly) return;
   emit("add-reply", props.thread.id, content, mentions);
   closeReplyForm();
 }
@@ -306,11 +318,11 @@ function formatTime(date: Date): string {
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
 
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
+  if (minutes < 1) return t("just now");
+  if (minutes < 60) return t('{count}m ago', { count: minutes });
+  if (hours < 24) return t('{count}h ago', { count: hours });
+  if (days < 7) return t('{count}d ago', { count: days });
+  return calendarDate(date, { year: 'numeric', month: 'numeric', day: 'numeric' });
 }
 
 function getInitials(name: string): string {
@@ -397,6 +409,15 @@ function renderCommentContent(content: string): string {
 }
 
 /* Quote */
+.comment-anchor-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-inline-start: 2px solid var(--text-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .comment-quote {
   display: flex;
   gap: 12px;

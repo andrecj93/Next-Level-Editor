@@ -1,4 +1,4 @@
-import { createApp } from "vue";
+import { createApp, defineAsyncComponent } from "vue";
 import App from "./App.vue";
 import "@cyhnkckali/vue3-color-picker/dist/style.css";
 import "./styles/site.css";
@@ -16,4 +16,4 @@ window.addEventListener("error", (event) => {
   }
 });
 
-createApp(App).mount("#app");
+createApp(new URLSearchParams(location.search).get('lab') === 'documents' ? defineAsyncComponent(() => import('./DocumentLab.vue')) : App).mount("#app");

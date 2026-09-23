@@ -175,7 +175,7 @@ describe("FileManagerModal", () => {
 
       await wrapper.setProps({ isOpen: true });
       const vm = wrapper.vm as any;
-      vm.errorMessage = "Test error";
+      vm.uploadResult = { uploaded: 0, failed: 1, reasons: [new Error('Test error')] };
 
       await wrapper.setProps({ isOpen: false });
       await wrapper.setProps({ isOpen: true });
@@ -290,7 +290,7 @@ describe("FileManagerModal", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".error-message").text()).toContain(
-        "0 file(s) uploaded, 1 failed"
+        "0 files uploaded, 1 failed"
       );
     });
 
@@ -316,7 +316,7 @@ describe("FileManagerModal", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".error-message").text()).toContain(
-        "1 file(s) uploaded, 1 failed"
+        "1 file uploaded, 1 failed"
       );
     });
 
@@ -324,7 +324,7 @@ describe("FileManagerModal", () => {
       wrapper = createWrapper({ isOpen: true });
 
       const vm = wrapper.vm as any;
-      vm.errorMessage = "Previous error";
+      vm.uploadResult = { uploaded: 0, failed: 1, reasons: [new Error('Previous error')] };
 
       const file = new File(["content"], "test.txt", { type: "text/plain" });
       const fileInput = wrapper.find('input[type="file"]');
@@ -410,7 +410,7 @@ describe("FileManagerModal", () => {
       const deleteButton = wrapper.find(".btn-danger");
       await deleteButton.trigger("click");
 
-      expect(globalThis.confirm).toHaveBeenCalledWith("Delete 2 file(s)?");
+      expect(globalThis.confirm).toHaveBeenCalledWith("Delete 2 files?");
       expect(fileManager.deleteFiles).toHaveBeenCalledWith([
         "file-1",
         "file-2",
@@ -471,12 +471,12 @@ describe("FileManagerModal", () => {
       expect(fileManager.getFileIcon).toHaveBeenCalledWith("image/png");
     });
 
-    it("should call formatFileSize for bytes", () => {
+    it("should format byte quantities for display", () => {
       wrapper = createWrapper({ isOpen: true });
       const vm = wrapper.vm as any;
 
-      vm.formatFileSize(1024);
-      expect(fileManager.formatFileSize).toHaveBeenCalledWith(1024);
+      expect(vm.formatFileSize(1024)).toBe('1 KB');
+      expect(vm.formatFileSize(1536)).toBe('1.5 KB');
     });
 
     it('should format date as "Today" for today', () => {

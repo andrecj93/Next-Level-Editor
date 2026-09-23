@@ -88,6 +88,9 @@
             </label>
           </div>
           <div class="cfg-row">
+            <label class="cfg-field">UI language<select v-model="uiLocale" class="select"><option value="en">English</option><option value="pt-PT">Português</option></select></label>
+            <label class="cfg-field">Document language<input v-model="contentLanguage" class="text" placeholder="en / pt-PT"></label>
+            <label class="cfg-field">Text direction<select v-model="contentDirection" class="select"><option value="auto">Auto</option><option value="ltr">Left to right</option><option value="rtl">Right to left</option></select></label>
             <div v-if="!editorConfig.writingMode" class="cfg-field">
               <label for="pg-adaptive">While writing</label>
               <select id="pg-adaptive" v-model="editorConfig.adaptiveChrome" class="select">
@@ -168,7 +171,10 @@
           v-model="content"
           v-model:comment-threads="commentThreads"
           v-model:kept-writing-notes="keptWritingNotes"
-          width="100%"
+          document-tools
+          :document-options="documentOptions"
+          :locale="uiLocale"
+          :content-language="contentLanguage" :content-direction="contentDirection" width="100%"
           :height="editorConfig.writingMode ? '100%' : editorHeight"
           :writing-mode="editorConfig.writingMode"
           :placeholder="editorConfig.placeholder"
@@ -187,6 +193,7 @@
           :variables="activeVariables"
           :mention-search="demoMentionSearch"
           :save-handler="saveDraft"
+          @document-change="value => { documentMetadata=value.metadata; }"
         />
       </EditorSheet>
 
@@ -214,6 +221,8 @@
 </template>
 
 <script setup lang="ts">
+import { createIndexedDbVersionStore } from "../../utils/versionStore";
+import type { DocumentOptions } from "../../types/document";
 import { ref, computed, nextTick } from "vue";
 import NextLevelEditor from "../../components/NextLevelEditor.vue";
 import { AVAILABLE_THEMES } from "../../composables/useEditorThemes";
@@ -259,10 +268,15 @@ const closeConfig = () => {
 };
 const outTab = ref<"preview" | "html">("preview");
 const documentRevision = ref(0);
+const uiLocale = ref('en');
+const contentLanguage = ref('en');
+const contentDirection = ref<'ltr' | 'rtl' | 'auto'>('auto');
+const versionStore = createIndexedDbVersionStore();
+const documentOptions = computed<DocumentOptions>(() => ({ id: documentId.value, metadata:documentMetadata.value, store: versionStore, localRecovery: true, autoCheckpointMs: 60000, author: 'You' }));
 
 const urlParams = new URLSearchParams(window.location.search);
 const startEmpty = urlParams.get("empty") === "true";
-const { content, commentThreads, keptWritingNotes, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft } = usePlaygroundDocument(startEmpty);
+const { documentId, metadata:documentMetadata, content, commentThreads, keptWritingNotes, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft } = usePlaygroundDocument(startEmpty);
 const { isOpen: confirmOpen, options: confirmOptions, requestConfirm, handleConfirm, handleCancel } = useConfirmDialog();
 const documentName = computed(() => {
   const doc = new DOMParser().parseFromString(content.value, 'text/html');

@@ -8,6 +8,8 @@ interface EditorComputedOptions {
   width: Ref<string | undefined>;
   height: Ref<string | undefined>;
   modelValue: Ref<string>;
+  /** A structured adapter reconciles model updates without replacing its DOM. */
+  isContentManaged?: () => boolean;
   editorContent: Ref<HTMLElement | null>;
   htmlContent: Ref<string>;
   isApplyingHistory: Ref<boolean>;
@@ -79,6 +81,7 @@ export function useEditorComputed(options: EditorComputedOptions) {
   watch(
     modelValue,
     (newValue) => {
+      if (options.isContentManaged?.()) return;
       if (!editorContent.value) return;
       if (isApplyingHistory.value) return;
 

@@ -4,6 +4,8 @@
       <div
         v-if="show"
         class="modal-overlay nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="theme"
         @click="handleOverlayClick"
       >
@@ -16,10 +18,10 @@
           @click.stop
         >
           <div class="modal-header">
-            <h3 id="table-modal-title">Insert Table</h3>
+            <h3 id="table-modal-title">{{ t("Insert Table") }}</h3>
             <button
               class="close-btn"
-              aria-label="Close modal"
+              :aria-label="t('Close modal')"
               @click="close"
             >
               ✕
@@ -28,7 +30,7 @@
           
           <div class="modal-body">
             <div class="input-group">
-              <label for="table-rows">Rows</label>
+              <label for="table-rows">{{ t("Rows") }}</label>
               <input
                 id="table-rows"
                 ref="rowsInput"
@@ -41,7 +43,7 @@
             </div>
             
             <div class="input-group">
-              <label for="table-cols">Columns</label>
+              <label for="table-cols">{{ t("Columns") }}</label>
               <input
                 id="table-cols"
                 v-model.number="cols"
@@ -58,13 +60,13 @@
                   v-model="includeHeader"
                   type="checkbox"
                 >
-                <span>Include header row</span>
+                <span>{{ t("Include header row") }}</span>
               </label>
             </div>
             
             <div class="table-preview">
               <div class="preview-label">
-                Preview:
+                {{ t("Preview:") }}
               </div>
               <div
                 class="preview-grid"
@@ -85,14 +87,14 @@
               class="btn btn-cancel"
               @click="close"
             >
-              Cancel
+              {{ t("Cancel") }}
             </button>
             <button
               class="btn btn-primary"
               :disabled="!isValid"
               @click="insertTable"
             >
-              Insert Table
+              {{ t("Insert Table") }}
             </button>
           </div>
         </div>
@@ -102,6 +104,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, computed } from 'vue'
 import { useModalDialog } from '../composables/useModalDialog'
 

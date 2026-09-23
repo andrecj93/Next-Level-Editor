@@ -75,10 +75,11 @@ export function keepSelectionVisible(root: HTMLElement | null, margin = 4) {
 /** Reveal a search match while keyboard focus stays in the search field. */
 export function keepRangeVisible(root: HTMLElement | null, range: Range, margin = 24) {
   if (!root || !root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
-  revealTextRect(range.startContainer, () => range.getClientRects()[0] ?? range.getBoundingClientRect(), margin);
+  const clearance = Math.max(0, Number.parseFloat(getComputedStyle(root).getPropertyValue('--nle-mobile-toolbar-clearance')) || 0);
+  revealTextRect(range.startContainer, () => range.getClientRects()[0] ?? range.getBoundingClientRect(), margin, clearance);
 }
 
-function revealTextRect(node: Node, rect: () => DOMRect, margin: number) {
+function revealTextRect(node: Node, rect: () => DOMRect, margin: number, bottomClearance = 0) {
   const initial = rect();
   if (!initial.height) return;
   const delta = (start: number, end: number, low: number, high: number) =>
@@ -103,7 +104,7 @@ function revealTextRect(node: Node, rect: () => DOMRect, margin: number) {
   const top = viewport?.offsetTop ?? 0;
   const left = viewport?.offsetLeft ?? 0;
   const focusRect = rect();
-  const dy = delta(focusRect.top, focusRect.bottom, top + 8, top + (viewport?.height ?? innerHeight) - 8);
+  const dy = delta(focusRect.top, focusRect.bottom, top + 8, top + (viewport?.height ?? innerHeight) - bottomClearance - 8);
   const dx = delta(focusRect.left, focusRect.right, left + 8, left + (viewport?.width ?? innerWidth) - 8);
   if (dx || dy) window.scrollBy({ top: dy, left: dx, behavior: 'instant' });
 }

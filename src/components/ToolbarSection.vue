@@ -5,9 +5,7 @@
     :class="{ 'toolbar-section-disabled': !visible }"
     :label="label"
     :icon="icon"
-    :tooltip="
-      visible ? tooltip : `${tooltip} (not available for current selection)`
-    "
+    :tooltip="tooltip"
     :items="items"
     :disabled="!visible"
     :preserve-label="preserveLabel"
@@ -27,11 +25,9 @@
         { active: action.isActive?.(), disabled: !visible || action.isDisabled?.() },
       ]"
       :data-tooltip="
-        visible
-          ? action.tooltip
-          : `${action.tooltip} (not available for current selection)`
+        hint(action.tooltip, action.shortcut, visible && !action.isDisabled?.())
       "
-      :aria-label="action.label"
+      :aria-label="t(action.label)"
       :aria-pressed="action.isActive ? action.isActive() : undefined"
       :disabled="!visible || action.isDisabled?.()"
       @mousedown.prevent="$emit('remember-selection')"
@@ -51,6 +47,11 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const locale = useEditorLocale();
+const { t } = locale;
+import { toolbarHint } from '../utils/toolbarHint';
+const hint = (label?: string, keys?: string, available = true) => toolbarHint(locale, label, keys, available);
 import ToolbarDropdown from "./ToolbarDropdown.vue";
 import type { ToolbarAction } from "../types/toolbar";
 

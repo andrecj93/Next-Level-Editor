@@ -1,9 +1,12 @@
-import { computed, ref, watch } from "vue";
+import { computed, ref, shallowRef, watch } from "vue";
 import { useHtmlSanitizer } from "../../composables/useHtmlSanitizer";
 import { getTemplateById } from "../examples/exampleTemplates";
 import { MAX_COMMENT_DATA_LENGTH, parseCommentThreads, serializeCommentThreads } from "../../composables/useComments";
 import { MAX_WRITING_DECISION_DATA_LENGTH, parseWritingDecisions, serializeWritingDecisions } from "../../utils/writingDecisions";
 
+import { defaultDocumentMetadata, type DocumentMetadata } from '../../types/document';
+import { operationId } from '../../utils/documentDiagnostics';
+import { validateDocumentSnapshot } from '../../utils/documentValidation';
 export const PLAYGROUND_DRAFT_KEY = "next-level-editor:playground-draft:v1";
 const MAX_DRAFT_LENGTH = 2_000_000;
 const MAX_STORED_LENGTH = MAX_DRAFT_LENGTH * 2 + MAX_COMMENT_DATA_LENGTH * 2 + MAX_WRITING_DECISION_DATA_LENGTH * 2 + 2000;
@@ -13,7 +16,13 @@ export function usePlaygroundDocument(startEmpty: boolean) {
   const { sanitizeHtml } = useHtmlSanitizer();
   const initial = "";
   const content = ref(initial);
-  const commentThreads = ref("[]");
+  const documentId=ref(operationId()),metadata=shallowRef<DocumentMetadata>(defaultDocumentMetadata());
+  // The document workspace and the standalone discussion model share one value.
+  // A checkpoint restore must not leave a second, stale discussion in the draft.
+  const commentThreads = computed({
+    get: () => metadata.value.comments,
+    set: (comments: string) => { metadata.value = { ...metadata.value, comments }; },
+  });
   const keptWritingNotes = ref("[]");
   const selectedTemplate = ref("empty");
   const baseline = ref(initial);
@@ -30,6 +39,8 @@ export function usePlaygroundDocument(startEmpty: boolean) {
             typeof draft.content === "string" && draft.content.length <= MAX_DRAFT_LENGTH &&
             "version" in draft && (draft.version === 1 || draft.version === 2 || draft.version === 3)) {
           content.value = sanitizeHtml(draft.content);
+          if('documentId' in draft && typeof draft.documentId==='string' && /^nle-[\w-]+$/.test(draft.documentId))documentId.value=draft.documentId;
+          if('metadata' in draft)metadata.value=validateDocumentSnapshot({html:content.value,metadata:draft.metadata},sanitizeHtml).metadata;
           if ("template" in draft && typeof draft.template === "string" && getTemplateById(draft.template)) {
             selectedTemplate.value = draft.template;
             baseline.value = draft.template === "empty" ? "" : sanitizeHtml(getTemplateById(draft.template)!.content);
@@ -75,6 +86,7 @@ export function usePlaygroundDocument(startEmpty: boolean) {
   const applyTemplate = (id: string) => {
     const template = getTemplateById(id);
     if (!template) return;
+    documentId.value=operationId();metadata.value=defaultDocumentMetadata();
     selectedTemplate.value = id;
     content.value = id === "empty" ? "" : sanitizeHtml(template.content);
     commentThreads.value = "[]";
@@ -92,7 +104,8 @@ export function usePlaygroundDocument(startEmpty: boolean) {
       const discussion = serializeCommentThreads(parseCommentThreads(commentThreads.value));
       const decisions = serializeWritingDecisions(parseWritingDecisions(keptWritingNotes.value));
       localStorage.setItem(PLAYGROUND_DRAFT_KEY, JSON.stringify({
-        version: 3,
+        version: 3, documentId:documentId.value,
+        metadata: { ...metadata.value, comments: discussion },
         content: html,
         commentThreads: discussion,
         keptWritingNotes: decisions,
@@ -107,5 +120,12 @@ export function usePlaygroundDocument(startEmpty: boolean) {
     }
   };
 
-  return { content, commentThreads, keptWritingNotes, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft };
+  // Discussion-only edits use the editor's debounced save/retry lifecycle.
+  // Saving here too could replace its supplied HTML with an older model value.
+  watch(() => JSON.stringify({ ...metadata.value, comments: undefined }), () => {
+    void saveDraft(content.value).catch(() => {
+      notice.value = 'Local document details could not be saved. Export a copy.';
+    });
+  });
+  return { documentId, metadata, content, commentThreads, keptWritingNotes, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft };
 }

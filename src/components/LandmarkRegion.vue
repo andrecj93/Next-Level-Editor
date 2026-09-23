@@ -2,7 +2,7 @@
   <component
     :is="tag"
     :role="role"
-    :aria-label="ariaLabel"
+    :aria-label="t(ariaLabel)"
     :aria-labelledby="ariaLabelledBy"
     :aria-describedby="ariaDescribedBy"
     :class="classes"
@@ -12,6 +12,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { computed } from "vue";
 
 /**

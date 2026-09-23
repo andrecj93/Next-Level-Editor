@@ -17,7 +17,7 @@
           />
         </svg>
       </span>
-      <span>Variables</span>
+      <span>{{ t("Variables") }}</span>
     </div>
 
     <!-- A real listbox: the host binds the combobox trio (haspopup/expanded/
@@ -27,7 +27,7 @@
       :id="listboxId"
       class="variable-autocomplete-list"
       role="listbox"
-      aria-label="Variables"
+      :aria-label="t('Variables')"
     >
       <div
         v-for="(variable, index) in filteredVariables"
@@ -63,7 +63,7 @@
               {{ variable.name }}
             </div>
             <div class="variable-autocomplete-item-label">
-              {{ variable.label }}
+              {{ t(variable.label) }}
             </div>
           </div>
         </div>
@@ -71,20 +71,22 @@
           v-if="variable.description"
           class="variable-autocomplete-item-description"
         >
-          {{ variable.description }}
+          {{ t(variable.description) }}
         </div>
       </div>
     </div>
 
     <div class="variable-autocomplete-footer">
       <span class="variable-autocomplete-hint">
-        <kbd>↑↓</kbd> Navigate <kbd>Enter</kbd> Insert <kbd>Esc</kbd> Close
+        <kbd>↑↓</kbd> {{ t("Navigate") }} <kbd>{{ shortcut('Enter') }}</kbd> {{ t("Insert") }} <kbd>{{ shortcut('Esc') }}</kbd> {{ t("Close") }}
       </span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, shortcut } = useEditorLocale();
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import type { Variable, VariableCategory } from "../composables/useVariables";
 import { nextInstanceToken } from "../utils/instanceToken";

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    # Stacked feature PRs must pass the same checks before they reach main.
   release:
     types: [created]
 
@@ -72,6 +72,17 @@ jobs:
         
       - name: Type check
         run: npx vue-tsc --noEmit
+
+      - name: Audit static locale keys and built-in errors
+        run: npm run audit:locales
+
+      - name: Preserve locale audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: locale-audit
+          path: node_modules/.cache/locale-audit.json
+          retention-days: 7
 
   e2e:
     # Run each Playwright project in its OWN job so the two browsers don't share
@@ -186,6 +197,20 @@ jobs:
 
       - name: Verify published bundle claims against the build
         run: npx vitest run src/__tests__/readme-bundle-claims.test.ts
+
+      - name: Install the consumer verification browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify installable Vue plugin and independent locale exports
+        run: npm run verify:package
+
+      - name: Preserve package-consumer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-consumer-verification
+          path: node_modules/.cache/package-verification/
+          retention-days: 7
         
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

@@ -14,11 +14,11 @@
     >
       <div class="modal-header">
         <h3 id="modal-title">
-          Embed Media
+          {{ t("Embed Media") }}
         </h3>
         <button
           class="close-button"
-          aria-label="Close modal"
+          :aria-label="t('Close modal')"
           @click="close"
         >
           ×
@@ -27,18 +27,18 @@
 
       <div class="modal-body">
         <p class="description">
-          Paste a YouTube or Vimeo URL to embed a video
+          {{ t("Paste a YouTube or Vimeo URL to embed a video") }}
         </p>
 
         <!-- Video URL Input -->
         <div class="input-group">
-          <label for="video-url">Video URL</label>
+          <label for="video-url">{{ t("Video URL") }}</label>
           <input
             id="video-url"
             ref="urlInput"
             v-model="videoUrl"
             type="url"
-            placeholder="https://www.youtube.com/watch?v=..."
+            :placeholder="t('https://www.youtube.com/watch?v=...')"
             @input="handleUrlChange"
             @keyup.enter="insertEmbed"
           >
@@ -55,7 +55,7 @@
           v-if="previewHtml"
           class="preview-section"
         >
-          <h4>Preview:</h4>
+          <h4>{{ t("Preview:") }}</h4>
           <div
             class="preview-container"
             v-html="previewHtml"
@@ -75,11 +75,11 @@
           v-if="!videoUrl"
           class="examples"
         >
-          <h4>Examples:</h4>
+          <h4>{{ t("Examples:") }}</h4>
           <ul>
-            <li>https://www.youtube.com/watch?v=dQw4w9WgXcQ</li>
-            <li>https://youtu.be/dQw4w9WgXcQ</li>
-            <li>https://vimeo.com/123456789</li>
+            <li>{{ t("https://www.youtube.com/watch?v=dQw4w9WgXcQ") }}</li>
+            <li>{{ t("https://youtu.be/dQw4w9WgXcQ") }}</li>
+            <li>{{ t("https://vimeo.com/123456789") }}</li>
           </ul>
         </div>
       </div>
@@ -89,14 +89,14 @@
           class="cancel-button"
           @click="close"
         >
-          Cancel
+          {{ t("Cancel") }}
         </button>
         <button 
           class="insert-button" 
           :disabled="!previewHtml"
           @click="insertEmbed"
         >
-          Insert Video
+          {{ t("Insert Video") }}
         </button>
       </div>
     </div>
@@ -104,6 +104,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, watch } from 'vue'
 import {
   getVideoEmbedHtml,

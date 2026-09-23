@@ -65,6 +65,14 @@
   transition: background 0.3s ease, color 0.3s ease;
 }
 
+/* A wide editor keeps its document inspector beside the writing surface.
+   Narrow hosts retain the inline panel, including browsers without :has. */
+@supports selector(:has(*)) {
+  .next-level-editor:has(> .nle-document-tools.is-docked > .document-tools-panel) {
+    padding-inline-end: min(48%, 620px);
+  }
+}
+
 .next-level-editor.theme-dark {
   --editor-bg: #0f172a;
   --editor-border: #1e293b;
@@ -2784,6 +2792,11 @@
 }
 
 @media print {
+  /* Remove the space reserved for a document inspector on screen. */
+  .next-level-editor:has(> .nle-document-tools.is-docked > .document-tools-panel) {
+    padding-inline-end: 0;
+  }
+
   /* Force the editing surface to legible black-on-white regardless of the
      on-screen theme. A dark-theme document otherwise prints near-invisible
      light-gray text (backgrounds stripped) or solid dark slabs (backgrounds

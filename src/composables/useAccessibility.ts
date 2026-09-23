@@ -1,4 +1,7 @@
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, getCurrentInstance, onMounted, onUnmounted, nextTick } from "vue";
+import { useEditorLocale } from "./useEditorLocale";
+import { createEditorLocaleFormatter } from "../utils/editorLocale";
+import type { EditorLocaleFormatter } from "../types/locale";
 
 /**
  * ARIA live region politeness levels
@@ -23,6 +26,9 @@ export interface AnnouncementOptions {
   delay?: number;
 }
 
+/** A getter keeps built-in feedback in its originating editor's current locale. */
+export type AnnouncementMessage = string | (() => string);
+
 /**
  * Keyboard navigation direction
  */
@@ -34,7 +40,7 @@ export type NavigationDirection = "next" | "previous" | "first" | "last";
 // announce() from one instance never reaches the aria-live regions rendered by
 // AriaLiveRegion, so screen-reader users got no spoken feedback. [#2]
 const sharedAnnouncements = ref<
-  Array<{ id: number; message: string; priority: AriaLive }>
+  Array<{ id: number; message: string; priority: AriaLive; language: string }>
 >([]);
 const sharedAnnouncementId = ref(0);
 
@@ -63,11 +69,32 @@ const sharedAnnouncementId = ref(0);
 const ZWSP = "\u200B";
 const ZWSP_RE = /\u200B/g;
 
-export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
+export function useAccessibility(
+  containerRef?: { value: HTMLElement | null },
+  locale?: Pick<EditorLocaleFormatter, "t" | "language">
+) {
+  // The editor provides its locale to descendants; its own setup must pass it
+  // explicitly because inject() only sees ancestor providers.
+  const formatter = locale ?? (getCurrentInstance()
+    ? useEditorLocale()
+    : createEditorLocaleFormatter(() => "en"));
+  const { t } = formatter;
   // Announcement state — shared singleton so all instances (editor, SkipLinks,
   // AriaLiveRegion) read/write the same array. [#2]
   const announcements = sharedAnnouncements;
   const announcementId = sharedAnnouncementId;
+  const ownedAnnouncements = new Set<number>();
+  const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
+  const preferenceCleanups: Array<() => void> = [];
+  let disposed = false;
+
+  const schedule = (callback: () => void, delay: number) => {
+    const timer = setTimeout(() => {
+      pendingTimers.delete(timer);
+      if (!disposed) callback();
+    }, delay);
+    pendingTimers.add(timer);
+  };
 
   // Focus state
   const focusedElement = ref<HTMLElement | null>(null);
@@ -137,7 +164,8 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
   /**
    * Announce message to screen readers
    */
-  const announce = (message: string, options: AnnouncementOptions = {}) => {
+  const announce = (message: AnnouncementMessage, options: AnnouncementOptions = {}) => {
+    if (disposed) return;
     const { priority = "polite", clearPrevious = false, delay = 0 } = options;
 
     if (clearPrevious) {
@@ -146,6 +174,7 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
 
     const announce = () => {
       const id = ++announcementId.value;
+      const resolveMessage = typeof message === "function" ? message : () => message;
 
       // The live regions are aria-atomic and render only the latest message —
       // a screen reader speaks only when the region's TEXT CHANGES. If this
@@ -156,21 +185,27 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
         (a) => a.priority === priority
       );
       const latest = matching[matching.length - 1]?.message;
-      let text = message;
-      if (latest !== undefined && latest.replace(ZWSP_RE, "") === message) {
-        text = latest.endsWith(ZWSP) ? message : `${message}${ZWSP}`;
-      }
+      const suffix = latest !== undefined &&
+        latest.replace(ZWSP_RE, "") === resolveMessage() && !latest.endsWith(ZWSP)
+        ? ZWSP : "";
 
-      announcements.value.push({ id, message: text, priority });
+      ownedAnnouncements.add(id);
+      announcements.value.push({
+        id,
+        get message() { return `${resolveMessage()}${suffix}`; },
+        get language() { return formatter.language(); },
+        priority,
+      });
 
       // Auto-clear after 5 seconds
-      setTimeout(() => {
+      schedule(() => {
+        ownedAnnouncements.delete(id);
         announcements.value = announcements.value.filter((a) => a.id !== id);
       }, 5000);
     };
 
     if (delay > 0) {
-      setTimeout(announce, delay);
+      schedule(announce, delay);
     } else {
       announce();
     }
@@ -200,6 +235,9 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
     return matching.length ? matching[matching.length - 1].message : "";
   };
 
+  const getAnnouncementLanguage = (priority: AriaLive) =>
+    announcements.value.filter((a) => a.priority === priority).at(-1)?.language;
+
   // ============================================
   // Focus Management
   // ============================================
@@ -209,7 +247,7 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
    */
   const setFocus = (
     element: HTMLElement | null,
-    options?: { announce?: string; preventScroll?: boolean }
+    options?: { announce?: AnnouncementMessage; preventScroll?: boolean }
   ) => {
     if (!element) return;
 
@@ -771,7 +809,9 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
 
     const target = landmarks[targetIndex];
     setFocus(target.element, {
-      announce: `Navigating to ${target.label || target.role} landmark`,
+      announce: () => t("Navigating to {label} landmark", {
+        label: target.element.getAttribute("aria-label") || target.role,
+      }),
     });
     currentLandmark.value = target.role;
   };
@@ -783,9 +823,9 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
   const updateMotionPreference = (e: MediaQueryListEvent) => {
     prefersReducedMotion.value = e.matches;
     announce(
-      e.matches
-        ? "Animations disabled for reduced motion"
-        : "Animations enabled",
+      () => e.matches
+        ? t("Animations disabled for reduced motion")
+        : t("Animations enabled"),
       { priority: "polite" }
     );
   };
@@ -793,7 +833,7 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
   const updateContrastPreference = (e: MediaQueryListEvent) => {
     prefersHighContrast.value = e.matches;
     announce(
-      e.matches ? "High contrast mode enabled" : "Standard contrast mode",
+      () => e.matches ? t("High contrast mode enabled") : t("Standard contrast mode"),
       { priority: "polite" }
     );
   };
@@ -817,10 +857,21 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
     motionQuery.addEventListener("change", updateMotionPreference);
     contrastQuery.addEventListener("change", updateContrastPreference);
     colorSchemeQuery.addEventListener("change", updateColorSchemePreference);
+    preferenceCleanups.push(
+      () => motionQuery.removeEventListener("change", updateMotionPreference),
+      () => contrastQuery.removeEventListener("change", updateContrastPreference),
+      () => colorSchemeQuery.removeEventListener("change", updateColorSchemePreference)
+    );
   });
 
   onUnmounted(() => {
-    clearAnnouncements();
+    disposed = true;
+    pendingTimers.forEach(clearTimeout);
+    pendingTimers.clear();
+    preferenceCleanups.forEach(cleanup => cleanup());
+    // Closing a dialog/editor must not erase another publisher's feedback.
+    announcements.value = announcements.value.filter(a => !ownedAnnouncements.has(a.id));
+    ownedAnnouncements.clear();
     if (focusTrapActive.value) {
       releaseFocusTrap();
     }
@@ -831,6 +882,7 @@ export function useAccessibility(containerRef?: { value: HTMLElement | null }) {
     announce,
     clearAnnouncements,
     getAnnouncements,
+    getAnnouncementLanguage,
     announcements: computed(() => announcements.value),
 
     // Focus management

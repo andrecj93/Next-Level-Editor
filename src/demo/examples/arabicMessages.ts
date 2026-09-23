@@ -1,0 +1,31 @@
+import type { EditorMessages } from '../../types/locale';
+
+/** A host dictionary example. Unspecified labels use the documented English fallback. */
+export const arabicMessages: EditorMessages = {
+  'Document tools': 'أدوات المستند',
+  Versions: 'الإصدارات',
+  'Import Word': 'استيراد Word',
+  'Export and pages': 'التصدير والصفحات',
+  Accessibility: 'إمكانية الوصول',
+  Review: 'المراجعة',
+  'AI writing': 'مساعد الكتابة',
+  References: 'المراجع',
+  Structure: 'البنية',
+  Templates: 'القوالب',
+  Collaboration: 'التعاون',
+  'Rich text editor': 'محرر النصوص',
+  'Find & Replace': 'بحث واستبدال',
+  Find: 'بحث',
+  'Replace with': 'استبدال بـ',
+  'Close modal': 'إغلاق الحوار',
+  Close: 'إغلاق',
+  Format: 'تنسيق',
+  Bold: 'عريض',
+  Italic: 'مائل',
+  'Checkpoint name': 'اسم الإصدار',
+  'Save checkpoint': 'حفظ الإصدار',
+  'Refresh versions': 'تحديث الإصدارات',
+  '{count} words': { zero: 'لا كلمات', one: 'كلمة واحدة', two: 'كلمتان', few: '{count} كلمات', many: '{count} كلمة', other: '{count} كلمة' },
+  '{count} characters': { zero: 'لا أحرف', one: 'حرف واحد', two: 'حرفان', few: '{count} أحرف', many: '{count} حرفًا', other: '{count} حرف' },
+  '{current} of {total}': '{current} من {total}',
+};

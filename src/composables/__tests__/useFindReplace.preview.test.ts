@@ -10,6 +10,8 @@ describe('contextual search', () => {
     document.body.appendChild(root);
     const { handleFind, clearPendingHighlight } = useFindReplace({ editorContent: ref(root), captureSnapshot: vi.fn() });
     const original = root.innerHTML;
+    const writerNode = root.querySelector('p')!.firstChild;
+    document.getSelection()!.collapse(writerNode, 4);
     const first = handleFind({ findText: 'Celia', direction: 'current', preview: true });
     expect(first.passage).toEqual({ before: 'Mara met ', match: 'Celia', after: ' by the library.', heading: 'The harbor' });
     expect(first.range?.toString()).toBe('Celia');
@@ -17,6 +19,11 @@ describe('contextual search', () => {
     const refreshed = handleFind({ findText: 'Celia', direction: 'current', preview: true, selectMatch: false });
     expect(refreshed.current).toBe(2);
     expect(refreshed.passage?.heading).toBe('The letter');
+    // Preview navigation must not move the native caret into a search match.
+    // Browsers may otherwise focus the editor and reopen its fixed controls.
+    expect(document.getSelection()!.isCollapsed).toBe(true);
+    expect(document.getSelection()!.focusNode).toBe(writerNode);
+    expect(document.getSelection()!.focusOffset).toBe(4);
     expect(root.innerHTML).toBe(original);
     clearPendingHighlight();
   });

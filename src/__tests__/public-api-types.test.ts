@@ -26,7 +26,7 @@ describe("public API surface: prop & emit types", () => {
   it("exposes a usable NextLevelEditorEmits type", () => {
     // A consumer can type a listener map against the emits contract.
     const emitted: string[] = [];
-    const emit: NextLevelEditorEmits = (event: string, value?: string) => {
+    const emit: NextLevelEditorEmits = (event: string, value?: string | import('../types/document').DocumentSnapshot) => {
       emitted.push(value !== undefined ? `${event}:${value}` : event);
     };
     emit("update:modelValue", "<p>new</p>");

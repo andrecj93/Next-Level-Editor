@@ -1,46 +1,47 @@
 <template>
-  <section v-if="show" ref="panel" class="writing-search" role="search" aria-label="Find & Replace" @keydown="onKeydown">
+  <section v-if="show" ref="panel" class="writing-search" role="search" :aria-label="t('Find & Replace')" @keydown="onKeydown">
     <div class="search-controls">
       <div class="search-query-row">
         <label class="search-field">
-          <span class="sr-only">Find</span>
+          <span class="sr-only">{{ t('Find') }}</span>
           <input
-            ref="queryInput" v-model="query" type="text" placeholder="Find in document…" :aria-describedby="statusId"
+            ref="queryInput" v-model="query" type="text" :placeholder="t('Find in document…')" :aria-describedby="statusId"
             autocomplete="off" autocapitalize="off" autocorrect="off" :spellcheck="false"
             @compositionstart="composing = true" @compositionend="finishComposition" @keydown.enter="navigateFromInput">
         </label>
-        <span :id="statusId" class="search-count" role="status" aria-live="polite" aria-atomic="true">{{ pending ? 'Searching…' : query ? result.total ? `${result.current} of ${result.total}` : 'No matches' : 'Find a passage' }}</span>
-        <button type="button" aria-label="Previous match" title="Previous match (Shift+Enter)" :disabled="!result.total" @click="search('previous')">↑</button>
-        <button type="button" aria-label="Next match" title="Next match (Enter)" :disabled="!result.total" @click="search('next')">↓</button>
-        <button type="button" aria-label="Close search" title="Close search (Escape)" @click="closeSearch">×</button>
+        <span :id="statusId" class="search-count" role="status" aria-live="polite" aria-atomic="true">{{ pending ? t('Searching…') : query ? result.total ? t('{current} of {total}', { current: result.current, total: result.total }) : t('No matches') : t('Find a passage') }}</span>
+        <button type="button" :aria-label="t('Previous match')" :title="t('Previous match') + ' (' + shortcut('Shift+Enter') + ')'" :disabled="!result.total" @click="search('previous')">↑</button>
+        <button type="button" :aria-label="t('Next match')" :title="t('Next match') + ' (' + shortcut('Enter') + ')'" :disabled="!result.total" @click="search('next')">↓</button>
+        <button type="button" :aria-label="t('Close search')" :title="t('Close search') + ' (' + shortcut('Escape') + ')'" @click="closeSearch">×</button>
       </div>
       <div class="search-options">
-        <label><input v-model="caseSensitive" type="checkbox"> Match case</label>
-        <label><input v-model="wholeWord" type="checkbox"> Whole word</label>
-        <button type="button" aria-label="Show replacement controls" :aria-expanded="replaceOpen" @click="toggleReplace">Replace <span aria-hidden="true">{{ replaceOpen ? '−' : '+' }}</span></button>
+        <label><input v-model="caseSensitive" type="checkbox"> {{ t('Match case') }}</label>
+        <label><input v-model="wholeWord" type="checkbox"> {{ t('Whole word') }}</label>
+        <button type="button" :aria-label="t('Show replacement controls')" :aria-expanded="replaceOpen" @click="toggleReplace">{{ t('Replace') }} <span aria-hidden="true">{{ replaceOpen ? '−' : '+' }}</span></button>
       </div>
       <div v-if="replaceOpen" class="search-replace-row">
         <label class="search-field">
-          <span class="sr-only">Replace with</span>
-          <input ref="replacementInput" v-model="replacement" type="text" placeholder="Replace with…" @keydown.enter="replaceFromInput">
+          <span class="sr-only">{{ t('Replace with') }}</span>
+          <input ref="replacementInput" v-model="replacement" type="text" :placeholder="t('Replace with…')" @keydown.enter="replaceFromInput">
         </label>
-        <button type="button" class="replace-action" :disabled="readonly || !result.total" @click="replaceCurrent">Replace</button>
-        <button type="button" class="replace-action" :disabled="readonly || !result.total" @click="replaceEvery">Replace all</button>
+        <button type="button" class="replace-action" :disabled="readonly || !result.total" @click="replaceCurrent">{{ t('Replace') }}</button>
+        <button type="button" class="replace-action" :disabled="readonly || !result.total" @click="replaceEvery">{{ t('Replace all') }}</button>
       </div>
     </div>
     <div class="search-context">
-      <button v-if="result.passage" type="button" class="search-passage" :aria-label="`Edit passage in ${result.passage.heading}: ${result.passage.before}${result.passage.match}${result.passage.after}`" @click="editPassage">
-        <span class="search-location">{{ result.passage.heading }}</span>
+      <button v-if="result.passage" type="button" class="search-passage" :aria-label="t('Edit passage in {heading}: {excerpt}', { heading: passageHeading, excerpt: result.passage.before + result.passage.match + result.passage.after })" @click="editPassage">
+        <span class="search-location">{{ passageHeading }}</span>
         <span>{{ result.passage.before }}<mark>{{ result.passage.match }}</mark>{{ result.passage.after }}</span>
       </button>
-      <p v-else>{{ query ? 'Try another word or change the search options.' : 'Search your words. The manuscript stays open while you revise.' }}</p>
-      <span v-if="notice" class="search-notice" role="status">{{ notice }}</span>
+      <p v-else>{{ t(query ? 'Try another word or change the search options.' : 'Search your words. The manuscript stays open while you revise.') }}</p>
+      <span v-if="notice" class="search-notice" role="status">{{ noticeText }}</span>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, shallowRef, toRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, toRef, watch } from 'vue';
+import { useEditorLocale } from '../composables/useEditorLocale';
 import type { FindRequest, FindResult, ReplaceRequest } from '../composables/useFindReplace';
 import { keepRangeVisible } from '../utils/caretVisibility';
 import { useStableId } from '../utils/useStableId';
@@ -54,7 +55,7 @@ const props = defineProps<{
   replaceAll: (data: ReplaceRequest) => void;
   clear: () => void;
 }>();
-const emit = defineEmits<{ close: [range?: Range] }>();
+const emit = defineEmits<{ close: [range?: Range]; 'match-revealed': [] }>();
 const panel = ref<HTMLElement | null>(null);
 const queryInput = ref<HTMLInputElement | null>(null);
 const replacementInput = ref<HTMLInputElement | null>(null);
@@ -66,7 +67,11 @@ const replaceOpen = ref(false);
 const composing = ref(false);
 const pending = ref(false);
 const notice = ref('');
+const { t, shortcut } = useEditorLocale();
+const noticeCount = ref(0);
+const noticeText = computed(() => t(notice.value, { count: noticeCount.value }));
 const result = shallowRef<FindResult>({ current: 0, total: 0 });
+const passageHeading = computed(() => result.value.passage?.heading === 'Matching passage' ? t('Matching passage') : result.value.passage?.heading ?? '');
 const revealMatch = (range: Range) => {
   const root = props.editor;
   if (!root?.contains(range.startContainer)) return;
@@ -75,7 +80,14 @@ const revealMatch = (range: Range) => {
   const box = root.getBoundingClientRect();
   root.scrollTop += rect.top - box.top - (box.height - rect.height) / 2;
   keepRangeVisible(root, range, 24);
+  // Native focus can leave a host's smooth scroll queued after this measurement.
+  // Finish at the revealed position instead of drifting back to the old field.
+  const view = root.ownerDocument.defaultView;
+  view?.scrollTo({ top: view.scrollY, left: view.scrollX, behavior: 'instant' });
   rememberMatchPosition();
+  // The manuscript also preserves its reading position during layout changes.
+  // Replace that snapshot after navigation so it cannot undo this reveal.
+  emit('match-revealed');
 };
 const rememberMatchPosition = useWritingReflow(toRef(props, 'editor'), toRef(props, 'show'), {
   hasFocus: root => Boolean(panel.value?.contains(root.ownerDocument.activeElement)),
@@ -139,8 +151,8 @@ const focusSearch = async (replace = false) => {
   field?.select();
   // Reveal the panel's edges as well as its input. On short viewports the
   // input alone can be visible while the surrounding controls are clipped.
-  panel.value?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  field?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  panel.value?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+  field?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
 };
 watch(() => props.show, async show => {
   stopPending();
@@ -184,7 +196,8 @@ const replaceEvery = () => {
   const count = result.value.total;
   props.replaceAll(replaceData());
   search();
-  notice.value = `Replaced ${count} ${count === 1 ? 'occurrence' : 'occurrences'}. Undo is available in the manuscript.`;
+  noticeCount.value = count;
+  notice.value = count === 1 ? 'Replaced {count} occurrence. Undo is available in the manuscript.' : 'Replaced {count} occurrences. Undo is available in the manuscript.';
   console.debug('[NextLevelEditor] Search replacement completed', { scope: 'all', count });
 };
 const replaceFromInput = (event: KeyboardEvent) => {

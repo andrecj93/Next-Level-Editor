@@ -11,7 +11,7 @@
     :style="containerStyle"
     role="button"
     tabindex="0"
-    :aria-label="ariaLabel"
+    :aria-label="t(ariaLabel)"
     @click="handleSelect"
     @keydown="handleKeyDown"
   >
@@ -37,21 +37,21 @@
         <div class="toolbar-group">
           <button
             class="toolbar-btn"
-            title="Align Left"
+            :title="t('Align Left')"
             @click="changeAlignment('left')"
           >
             <span>⬅️</span>
           </button>
           <button
             class="toolbar-btn"
-            title="Align Center"
+            :title="t('Align Center')"
             @click="changeAlignment('center')"
           >
             <span>↔️</span>
           </button>
           <button
             class="toolbar-btn"
-            title="Align Right"
+            :title="t('Align Right')"
             @click="changeAlignment('right')"
           >
             <span>➡️</span>
@@ -61,12 +61,12 @@
         <div class="toolbar-divider" />
 
         <div class="toolbar-group">
-          <button class="toolbar-btn" title="Reset Size" @click="resetSize">
+          <button class="toolbar-btn" :title="t('Reset Size')" @click="resetSize">
             <span>🔄</span>
           </button>
           <button
             class="toolbar-btn danger"
-            title="Delete"
+            :title="t('Delete')"
             @click="handleDelete"
           >
             <span>🗑️</span>
@@ -75,7 +75,7 @@
 
         <!-- Size Indicator -->
         <div class="size-indicator">
-          {{ Math.round(currentWidth) }}×{{ Math.round(currentHeight) }}px
+          {{ number(Math.round(currentWidth)) }}×{{ number(Math.round(currentHeight)) }}{{ t("px") }}
         </div>
       </div>
     </div>
@@ -93,6 +93,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, number } = useEditorLocale();
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useResizable } from "../composables/useResizable";
 import { useDraggable } from "../composables/useDraggable";

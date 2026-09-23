@@ -5,6 +5,8 @@
       <div
         v-if="show"
         class="modal-overlay nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="theme"
         @click="handleOverlayClick"
       >
@@ -17,44 +19,44 @@
           @click.stop
         >
           <div class="modal-header">
-            <h3 id="find-replace-modal-title">Find & Replace</h3>
-            <button class="close-btn" aria-label="Close modal" @click="close">
+            <h3 id="find-replace-modal-title">{{ t("Find & Replace") }}</h3>
+            <button class="close-btn" :aria-label="t('Close modal')" @click="close">
               ✕
             </button>
           </div>
 
           <div class="modal-body">
             <div class="input-group">
-              <label for="find-input">Find</label>
+              <label for="find-input">{{ t("Find") }}</label>
               <input
                 id="find-input"
                 ref="findInput"
                 v-model="findText"
                 type="text"
                 class="text-input"
-                placeholder="Search text..."
+                :placeholder="t('Search text...')"
                 :aria-describedby="searchInfoId"
                 @keydown.enter="handleSearchEnter"
               />
               <div :id="searchInfoId" class="search-info" role="status" aria-live="polite" aria-atomic="true">
                 <span v-if="matches > 0"
-                  >{{ currentMatch }} of {{ matches }}</span
+                  >{{ t('{current} of {total}', { current: currentMatch, total: matches }) }}</span
                 >
                 <span v-else-if="findText && matches === 0" class="no-matches"
-                  >No matches</span
+                  >{{ t("No matches") }}</span
                 >
-                <span v-else>Enter a word or phrase to search your document.</span>
+                <span v-else>{{ t("Enter a word or phrase to search your document.") }}</span>
               </div>
             </div>
 
             <div class="input-group">
-              <label for="replace-input">Replace with</label>
+              <label for="replace-input">{{ t("Replace with") }}</label>
               <input
                 id="replace-input"
                 v-model="replaceText"
                 type="text"
                 class="text-input"
-                placeholder="Replacement text..."
+                :placeholder="t('Replacement text...')"
                 @keydown.enter="replaceOne"
               />
             </div>
@@ -62,12 +64,12 @@
             <div class="options-group">
               <label class="checkbox-label">
                 <input v-model="caseSensitive" type="checkbox" />
-                <span>Case sensitive</span>
+                <span>{{ t("Case sensitive") }}</span>
               </label>
 
               <label class="checkbox-label">
                 <input v-model="wholeWord" type="checkbox" />
-                <span>Whole word</span>
+                <span>{{ t("Whole word") }}</span>
               </label>
             </div>
           </div>
@@ -79,14 +81,14 @@
                 :disabled="!findText || matches === 0"
                 @click="findPrevious"
               >
-                ← Previous
+                {{ t("← Previous") }}
               </button>
               <button
                 class="btn btn-secondary"
                 :disabled="!findText || matches === 0"
                 @click="findNext"
               >
-                Next →
+                {{ t("Next →") }}
               </button>
             </div>
             <div class="btn-group">
@@ -95,14 +97,14 @@
                 :disabled="!findText || matches === 0"
                 @click="replaceOne"
               >
-                Replace
+                {{ t("Replace") }}
               </button>
               <button
                 class="btn btn-primary"
                 :disabled="!findText || matches === 0"
                 @click="replaceAll"
               >
-                Replace All
+                {{ t("Replace All") }}
               </button>
             </div>
           </div>
@@ -113,6 +115,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { useModalDialog } from "../composables/useModalDialog";
 import { countMatchesInHtml } from "../composables/useFindReplace";

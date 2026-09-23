@@ -1,5 +1,6 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { nextInstanceToken } from "../utils/instanceToken";
+import type { EditorMessageDescriptor } from '../types/locale';
 
 interface ToastNotificationOptions {
   duration?: number;
@@ -39,6 +40,7 @@ export function useEditorUIState(options?: ToastNotificationOptions) {
   // Toast notification state
   const showToast = ref(false);
   const toastMessage = ref("");
+  const toastDescriptor = ref<EditorMessageDescriptor>();
   const toastType = ref<"success" | "error">("success");
 
   /**
@@ -46,9 +48,11 @@ export function useEditorUIState(options?: ToastNotificationOptions) {
    */
   const showToastNotification = (
     message: string,
-    type: "success" | "error" = "success"
+    type: "success" | "error" = "success",
+    descriptor?: EditorMessageDescriptor,
   ) => {
     toastMessage.value = message;
+    toastDescriptor.value = descriptor;
     toastType.value = type;
     showToast.value = true;
 
@@ -134,6 +138,7 @@ export function useEditorUIState(options?: ToastNotificationOptions) {
     // Toast notifications
     showToast,
     toastMessage,
+    toastDescriptor,
     toastType,
     showToastNotification,
 

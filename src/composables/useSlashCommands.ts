@@ -37,7 +37,9 @@ export interface UseSlashCommandsOptions {
   openCodeBlockModal: () => void;
   handleInsertHR: () => void;
   performWithSelection: (callback: (root: HTMLElement) => void) => void;
-  showToast?: (message: string, type?: "success" | "error") => void;
+  showToast?: (message: string, type?: "success" | "error", descriptor?: import('../types/locale').EditorMessageDescriptor) => void;
+  /** Translate built-in UI labels for search; host text falls back unchanged. */
+  translate?: (label: string) => string;
   /**
    * This editor's root element, so the menu is clamped against ITS toolbar and
    * not another editor's further down the page. #R23-7
@@ -352,8 +354,8 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     const matches = query
       ? all.filter(
           (option) =>
-            option.label.toLowerCase().includes(query) ||
-            option.description.toLowerCase().includes(query) ||
+            (options.translate?.(option.label) ?? option.label).toLocaleLowerCase().includes(query) ||
+            (options.translate?.(option.description) ?? option.description).toLocaleLowerCase().includes(query) ||
             option.trigger?.toLowerCase().includes(query)
         )
       : all;
@@ -366,12 +368,16 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     applyFilter();
   };
 
-  // Plugins register AFTER this composable is created (the host's list is
-  // installed on mount), and a host may swap its plugins at runtime — so the
-  // live option list has to follow them, not just the seed. #R23-45
-  if (pluginSlashCommands) {
-    watch(pluginSlashCommands, () => applyFilter(), { deep: true });
-  }
+  // Follow both plugin updates and reactive translations. An already open
+  // search must use the new labels without discarding what the user typed.
+  watch(
+    () => availableCommandOptions().map(option => ({
+      ...option,
+      label: options.translate?.(option.label) ?? option.label,
+      description: options.translate?.(option.description) ?? option.description,
+    })),
+    applyFilter
+  );
 
   /**
    * Scroll to the current selection/element
@@ -411,8 +417,45 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     // (Link/Image/Table/Code Block) hasn't applied anything yet — claiming
     // "Table applied" the moment its dialog opens is a lie.
     if (showToast && !option.opensModal) {
-      showToast(`${option.label} applied`, "success");
+      showToast(`${option.label} applied`, "success", { key: '{label} applied', parameters: { label: option.label }, translatedParameters: ['label'] });
     }
+  };
+
+  /**
+   * Native text input (accented characters, virtual keyboards) may arrive
+   * without a printable keydown. Share its filter path with physical keys so
+   * those characters cannot leak into the document behind the open menu.
+   */
+  const filterText = (text: string): boolean => {
+    if (text === " " && !filterQuery.value) {
+      // The user wanted literal "/ ". Restore the removed trigger and let
+      // the browser insert the space through its normal editing pipeline.
+      closeCommandMenu();
+      const selection = globalThis.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const slash = document.createTextNode("/");
+        range.insertNode(slash);
+        range.setStartAfter(slash);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      return false;
+    }
+    filterQuery.value += text;
+    applyFilter();
+    return true;
+  };
+
+  const handleMenuBeforeInput = (event: InputEvent): boolean => {
+    // Never intercept a live IME composition or an event the browser cannot
+    // cancel: preventing those here would corrupt the composition buffer.
+    if (!showCommandMenu.value || !event.cancelable || event.isComposing ||
+        event.inputType !== "insertText" || !event.data) return false;
+    if (!filterText(event.data)) return false;
+    event.preventDefault();
+    return true;
   };
 
   /**
@@ -469,28 +512,8 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
       !event.metaKey &&
       !event.altKey
     ) {
-      if (event.key === " " && !filterQuery.value) {
-        // Space right after "/" — the user wanted literal text, not a command.
-        // openCommandMenu already deleted the trigger "/" from the document, so
-        // simply letting the space type would leave " " with the slash gone.
-        // Restore the "/" at the caret; the browser then types the space after
-        // it, yielding the literal "/ " the user intended.
-        closeCommandMenu();
-        const selection = globalThis.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const slash = document.createTextNode("/");
-          range.insertNode(slash);
-          range.setStartAfter(slash);
-          range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-        return false;
-      }
+      if (!filterText(event.key)) return false;
       event.preventDefault();
-      filterQuery.value += event.key;
-      applyFilter();
       return true;
     }
     return false;
@@ -508,6 +531,7 @@ export function useSlashCommands(options: UseSlashCommandsOptions) {
     closeCommandMenu,
     handleCommandOption,
     handleMenuKeydown,
+    handleMenuBeforeInput,
     handleDocumentClick,
     handleEscape,
   };

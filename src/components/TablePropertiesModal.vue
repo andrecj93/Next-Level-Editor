@@ -4,6 +4,8 @@
       <div
         v-if="show"
         class="modal-overlay nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="theme"
         @click="handleOverlayClick"
       >
@@ -16,10 +18,10 @@
           @click.stop
         >
           <div class="modal-header">
-            <h3 id="table-properties-modal-title">{{ mode === 'cell' ? 'Cell Properties' : 'Table Properties' }}</h3>
+            <h3 id="table-properties-modal-title">{{ t(mode === 'cell' ? 'Cell Properties' : 'Table Properties') }}</h3>
             <button
               class="close-btn"
-              aria-label="Close modal"
+              :aria-label="t('Close modal')"
               @click="close"
             >
               ✕
@@ -37,14 +39,14 @@
                 :class="{ active: activeTab === 'cell' }"
                 @click="activeTab = 'cell'"
               >
-                Cell Properties
+                {{ t("Cell Properties") }}
               </button>
               <button
                 class="tab"
                 :class="{ active: activeTab === 'table' }"
                 @click="activeTab = 'table'"
               >
-                Table Properties
+                {{ t("Table Properties") }}
               </button>
             </div>
 
@@ -54,7 +56,7 @@
               class="properties-section"
             >
               <div class="property-group">
-                <label for="tp-cell-bg">Background Color</label>
+                <label for="tp-cell-bg">{{ t("Background Color") }}</label>
                 <div class="color-input-group">
                   <input
                     id="tp-cell-bg"
@@ -65,21 +67,21 @@
                   <input
                     v-model="cellProps.backgroundColor"
                     type="text"
-                    aria-label="Background color (hex)"
+                    :aria-label="t('Background color (hex)')"
                     class="text-input"
-                    placeholder="#ffffff"
+                    :placeholder="t('#ffffff')"
                   >
                   <button
                     class="btn-clear"
                     @click="cellProps.backgroundColor = ''"
                   >
-                    Clear
+                    {{ t("Clear") }}
                   </button>
                 </div>
               </div>
 
               <div class="property-group">
-                <span id="tp-cell-halign" class="group-label">Horizontal Alignment</span>
+                <span id="tp-cell-halign" class="group-label">{{ t("Horizontal Alignment") }}</span>
                 <div class="button-group" role="group" aria-labelledby="tp-cell-halign">
                   <button
                     v-for="align in ['left', 'center', 'right', 'justify']"
@@ -94,7 +96,7 @@
               </div>
 
               <div class="property-group">
-                <span id="tp-cell-valign" class="group-label">Vertical Alignment</span>
+                <span id="tp-cell-valign" class="group-label">{{ t("Vertical Alignment") }}</span>
                 <div class="button-group" role="group" aria-labelledby="tp-cell-valign">
                   <button
                     v-for="align in ['top', 'middle', 'bottom']"
@@ -109,7 +111,7 @@
               </div>
 
               <div class="property-group">
-                <label for="tp-cell-padding">Padding (px)</label>
+                <label for="tp-cell-padding">{{ t("Padding (px)") }}</label>
                 <input
                   id="tp-cell-padding"
                   v-model.number="cellProps.padding"
@@ -121,27 +123,27 @@
               </div>
 
               <div class="property-group">
-                <label for="tp-cell-width">Width</label>
+                <label for="tp-cell-width">{{ t("Width") }}</label>
                 <div class="dimension-input-group">
                   <input
                     id="tp-cell-width"
                     v-model="cellProps.width"
                     type="text"
                     class="text-input"
-                    placeholder="auto or 100px or 50%"
+                    :placeholder="t('auto or 100px or 50%')"
                   >
                 </div>
               </div>
 
               <div class="property-group">
-                <label for="tp-cell-height">Height</label>
+                <label for="tp-cell-height">{{ t("Height") }}</label>
                 <div class="dimension-input-group">
                   <input
                     id="tp-cell-height"
                     v-model="cellProps.height"
                     type="text"
                     class="text-input"
-                    placeholder="auto or 100px"
+                    :placeholder="t('auto or 100px')"
                   >
                 </div>
               </div>
@@ -153,32 +155,32 @@
               class="properties-section"
             >
               <div class="property-group">
-                <label for="tp-border-style">Border Style</label>
+                <label for="tp-border-style">{{ t("Border Style") }}</label>
                 <select
                   id="tp-border-style"
                   v-model="tableProps.borderStyle"
                   class="select-input"
                 >
                   <option value="solid">
-                    Solid
+                    {{ t("Solid") }}
                   </option>
                   <option value="dashed">
-                    Dashed
+                    {{ t("Dashed") }}
                   </option>
                   <option value="dotted">
-                    Dotted
+                    {{ t("Dotted") }}
                   </option>
                   <option value="double">
-                    Double
+                    {{ t("Double") }}
                   </option>
                   <option value="none">
-                    None
+                    {{ t("None") }}
                   </option>
                 </select>
               </div>
 
               <div class="property-group">
-                <label for="tp-border-width">Border Width (px)</label>
+                <label for="tp-border-width">{{ t("Border Width (px)") }}</label>
                 <input
                   id="tp-border-width"
                   v-model.number="tableProps.borderWidth"
@@ -190,7 +192,7 @@
               </div>
 
               <div class="property-group">
-                <label for="tp-border-color">Border Color</label>
+                <label for="tp-border-color">{{ t("Border Color") }}</label>
                 <div class="color-input-group">
                   <input
                     id="tp-border-color"
@@ -201,28 +203,28 @@
                   <input
                     v-model="tableProps.borderColor"
                     type="text"
-                    aria-label="Border color (hex)"
+                    :aria-label="t('Border color (hex)')"
                     class="text-input"
-                    placeholder="#d1d5db"
+                    :placeholder="t('#d1d5db')"
                   >
                 </div>
               </div>
 
               <div class="property-group">
-                <label for="tp-table-width">Table Width</label>
+                <label for="tp-table-width">{{ t("Table Width") }}</label>
                 <div class="dimension-input-group">
                   <input
                     id="tp-table-width"
                     v-model="tableProps.width"
                     type="text"
                     class="text-input"
-                    placeholder="100% or 500px"
+                    :placeholder="t('100% or 500px')"
                   >
                 </div>
               </div>
 
               <div class="property-group">
-                <label for="tp-table-bg">Background Color</label>
+                <label for="tp-table-bg">{{ t("Background Color") }}</label>
                 <div class="color-input-group">
                   <input
                     id="tp-table-bg"
@@ -233,15 +235,15 @@
                   <input
                     v-model="tableProps.backgroundColor"
                     type="text"
-                    aria-label="Background color (hex)"
+                    :aria-label="t('Background color (hex)')"
                     class="text-input"
-                    placeholder="#ffffff"
+                    :placeholder="t('#ffffff')"
                   >
                   <button
                     class="btn-clear"
                     @click="tableProps.backgroundColor = ''"
                   >
-                    Clear
+                    {{ t("Clear") }}
                   </button>
                 </div>
               </div>
@@ -253,7 +255,7 @@
                     type="checkbox"
                     class="checkbox-input"
                   >
-                  <span>Collapse Borders</span>
+                  <span>{{ t("Collapse Borders") }}</span>
                 </label>
               </div>
             </div>
@@ -264,13 +266,13 @@
               class="btn btn-cancel"
               @click="close"
             >
-              Cancel
+              {{ t("Cancel") }}
             </button>
             <button
               class="btn btn-primary"
               @click="applyProperties"
             >
-              Apply
+              {{ t("Apply") }}
             </button>
           </div>
         </div>
@@ -280,6 +282,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, watch } from 'vue'
 import { useModalDialog } from '../composables/useModalDialog'
 

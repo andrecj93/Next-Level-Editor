@@ -12,6 +12,8 @@ export interface CommentThread {
   createdAt: Date;
   updatedAt: Date;
   highlightElement?: HTMLElement;
+  /** Derived from the current document; never serialized as discussion data. */
+  anchorStatus?: "attached" | "orphaned";
 }
 
 /**
@@ -48,6 +50,8 @@ export interface SerializedRange {
   endContainerPath: number[];
   endOffset: number;
   text: string;
+  /** Once a marker is known, positional text matches cannot replace its identity. */
+  anchorMode?: "highlight";
 }
 
 export const MAX_COMMENT_DATA_LENGTH = 2_000_000;
@@ -93,6 +97,7 @@ export function parseCommentThreads(json: string): CommentThread[] {
     threadIds.add(threadId);
     if (data.status !== "open" && data.status !== "resolved") throw new TypeError("Invalid comment status");
     const range = object(data.rangeData);
+    if (range.anchorMode !== undefined && range.anchorMode !== "highlight") throw new TypeError("Invalid comment anchor mode");
     const createdAt = date(data.createdAt, new Date());
     if (!Array.isArray(data.comments)) throw new TypeError("Invalid thread comments");
     const commentIds = new Set<string>();
@@ -128,6 +133,7 @@ export function parseCommentThreads(json: string): CommentThread[] {
       rangeData: {
         startContainerPath: path(range.startContainerPath), startOffset: integer(range.startOffset),
         endContainerPath: path(range.endContainerPath), endOffset: integer(range.endOffset), text: text(range.text),
+        ...(range.anchorMode === "highlight" ? { anchorMode: "highlight" as const } : {}),
       },
     };
   });
@@ -160,6 +166,7 @@ export interface UseCommentsOptions {
   onThreadReopened?: (threadId: string) => void;
   /** A reader activated an inline highlight, including the already-active thread. */
   onThreadActivated?: (threadId: string) => void;
+  onAnchorStateChanged?: (threadId: string, status: "attached" | "orphaned") => void;
   onMentionTriggered?: (query: string) => Promise<MentionSuggestion[]>;
 }
 
@@ -273,6 +280,23 @@ export function useComments(options: UseCommentsOptions = {}) {
   const isAddingComment = ref(false);
   const mentionQuery = ref("");
   const mentionSuggestions = ref<MentionSuggestion[]>([]);
+  const highlightListeners = new WeakMap<HTMLElement, EventListener>();
+  const bindHighlight = (span: HTMLElement, threadId: string) => {
+    const previous = highlightListeners.get(span);
+    if (previous) span.removeEventListener("click", previous);
+    const listener: EventListener = event => {
+      event.stopPropagation();
+      setActiveThread(threadId);
+      options.onThreadActivated?.(threadId);
+    };
+    span.addEventListener("click", listener);
+    highlightListeners.set(span, listener);
+  };
+  const setAnchorState = (thread: CommentThread, status: "attached" | "orphaned") => {
+    if (thread.anchorStatus === status) return;
+    thread.anchorStatus = status;
+    options.onAnchorStateChanged?.(thread.id, status);
+  };
 
   // Computed
   const activeThread = computed(() =>
@@ -299,6 +323,7 @@ export function useComments(options: UseCommentsOptions = {}) {
       endContainerPath: getNodePath(range.endContainer, root),
       endOffset: range.endOffset,
       text: range.toString(),
+      anchorMode: "highlight",
     };
   }
 
@@ -360,11 +385,7 @@ export function useComments(options: UseCommentsOptions = {}) {
       : "comment-highlight";
     span.dataset.threadId = threadId;
     span.dataset.commentThread = threadId;
-    span.addEventListener("click", (e) => {
-      e.stopPropagation();
-      setActiveThread(threadId);
-      options.onThreadActivated?.(threadId);
-    });
+    bindHighlight(span, threadId);
     return span;
   }
 
@@ -586,6 +607,7 @@ export function useComments(options: UseCommentsOptions = {}) {
       createdAt: new Date(),
       updatedAt: new Date(),
       highlightElement,
+      anchorStatus: "attached",
     };
 
     threads.value.push(thread);
@@ -828,8 +850,9 @@ export function useComments(options: UseCommentsOptions = {}) {
       // Prefer highlight spans still live in the DOM (preserved through the
       // sanitizer round-trip): re-link + re-bind them so the anchor follows its
       // text through edits instead of drifting from a stale serialized range.
-      // innerHTML rebuilds drop event listeners, so re-decorate a fresh span.
-      const existing = getThreadSpans(thread.id);
+      // Bind in place: replacing a live mark breaks native selections and
+      // conflicts with a structured editor's ownership of its DOM.
+      const existing = getThreadSpans(thread.id).filter(span => Boolean(span.textContent));
       if (existing.length > 0) {
         // The restored DOM is authoritative for resolved-ness: thread.status is
         // NOT part of undo history, so after an undo/redo sync the model FROM
@@ -842,25 +865,29 @@ export function useComments(options: UseCommentsOptions = {}) {
             span.classList.contains("comment-highlight-resolved")
           ) ? "resolved" : "open";
         }
-        const rebound = existing.map((span) => {
-          const clone = span.cloneNode(true) as HTMLElement;
-          clone.addEventListener("click", (e) => {
-            e.stopPropagation();
-            setActiveThread(thread.id);
-            options.onThreadActivated?.(thread.id);
-          });
-          span.replaceWith(clone);
-          return clone;
-        });
-        thread.highlightElement = rebound[0];
+        existing.forEach(span => bindHighlight(span, thread.id));
+        thread.highlightElement = existing[0];
+        thread.rangeData.anchorMode = "highlight";
+        setAnchorState(thread, "attached");
         return;
       }
 
       // No live span (older content / imported threads): the model IS the source
       // of truth. Fall back to the serialized range, clearing any stale ref first.
       const isResolved = thread.status === "resolved";
+      const requiresHighlight = thread.rangeData.anchorMode === "highlight" || Boolean(thread.highlightElement);
       if (thread.highlightElement) {
         removeHighlightInternal(thread.highlightElement);
+      }
+      thread.highlightElement = undefined;
+      // A removed marker may leave identical words at the old node path.
+      // Preserve the discussion as orphaned; only the actual marker (e.g.
+      // restored by undo) can reattach it. Legacy range-only imports retain
+      // their original guarded fallback until a marker has been established.
+      if (requiresHighlight) {
+        thread.rangeData.anchorMode = "highlight";
+        setAnchorState(thread, "orphaned");
+        return;
       }
       const range = deserializeRange(thread.rangeData, editor);
       // A serialized range is a POSITIONAL node path. If the document was
@@ -872,8 +899,10 @@ export function useComments(options: UseCommentsOptions = {}) {
       // commented on. #r21-3
       if (range && range.toString() === thread.rangeData.text) {
         thread.highlightElement = createHighlight(range, thread.id, isResolved);
+        thread.rangeData.anchorMode = "highlight";
+        setAnchorState(thread, "attached");
       } else {
-        console.warn("Failed to restore thread range:", thread.id);
+        setAnchorState(thread, "orphaned");
       }
     });
   }

@@ -407,7 +407,8 @@ test('search keeps prose visible through navigation, replacement, undo and conti
         const rect = range?.getClientRects()[0];
         const box = root.getBoundingClientRect();
         const viewport = window.visualViewport;
-        return { text: range?.toString(), top: rect?.top ?? -1, bottom: rect?.bottom ?? -1, low: Math.max(box.top, viewport?.offsetTop ?? 0), high: Math.min(box.bottom, (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight)) };
+        const dock = Number.parseFloat(getComputedStyle(root).getPropertyValue('--nle-mobile-toolbar-clearance')) || 0;
+        return { text: range?.toString(), top: rect?.top ?? -1, bottom: rect?.bottom ?? -1, low: Math.max(box.top, viewport?.offsetTop ?? 0), high: Math.min(box.bottom, (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight) - dock) };
       });
       expect(position.text).toBe('Celia');
       expect(position.top, JSON.stringify(position)).toBeGreaterThanOrEqual(position.low);
@@ -466,10 +467,13 @@ test('PDF progress and cancellation stay reachable without losing the draft', as
   await page.locator('.code-editor').fill(`<h1>A chapter in progress</h1>${`<p>${paragraph}</p>`.repeat(200)}`);
   await switchView(page, 'Editor');
   const before = await editor.innerHTML();
+  const quickTools = page.getByRole('group', { name: 'Quick formatting', exact: true });
+  const hadQuickTools = await quickTools.isVisible();
   await activate(toolbarFor(page).getByRole('button', { name: 'Export', exact: true }), hasTouch);
   await activate(page.getByRole('menuitem', { name: 'PDF', exact: true }), hasTouch);
   const progress = page.getByRole('group', { name: 'PDF export progress' });
   await expect(progress).toBeVisible();
+  await expect(quickTools).not.toBeVisible();
   const cancel = progress.getByRole('button', { name: 'Cancel PDF export' });
   await cancel.scrollIntoViewIfNeeded();
   // PDF rasterization can keep WebKit's protocol busy for longer than the
@@ -489,6 +493,7 @@ test('PDF progress and cancellation stay reachable without losing the draft', as
   });
   await test.info().attach('pdf-progress', { body: progressScreenshot, contentType: 'image/png' });
   await expect(editor).toBeFocused();
+  if (hadQuickTools) await expect(quickTools).toBeVisible();
   await expect(page.locator('div[style*="-9999px"]')).toHaveCount(0);
   expect(await editor.innerHTML()).toBe(before);
   expect(downloads).toEqual([]);
@@ -542,6 +547,7 @@ test('a blank manuscript stays spacious and offers notes without moving the page
   const width = page.viewportSize()!.width;
   if (width <= 700) {
     const toolbar = await toolbarFor(page).boundingBox();
+    // Phones deliberately use two balanced rows so labels fit their targets.
     expect(toolbar!.height, 'mobile tools stay within their one- or two-row budget').toBeLessThanOrEqual(width > 450 ? 52 : 96);
   }
   await toolbarLabelsFit(page);

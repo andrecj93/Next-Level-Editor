@@ -28,7 +28,7 @@ interface InsertActionsOptions {
     afterCallback?: () => void
   ) => void;
   captureSnapshot: () => void;
-  showToast: (message: string, type?: "success" | "error") => void;
+  showToast: (message: string, type?: "success" | "error", descriptor?: import('../types/locale').EditorMessageDescriptor) => void;
   openLinkModal: () => void;
   openImageUploadModal: () => void;
   closeImageUploadModal: () => void;
@@ -189,7 +189,8 @@ export function useInsertActions(options: InsertActionsOptions) {
     if (!fileManager.isContentAvailable(file)) {
       showToast(
         `"${file.name}" lost its content when storage filled up and can't be inserted`,
-        "error"
+        "error",
+        { key: '"{name}" lost its content when storage filled up and can\'t be inserted', parameters: { name: String(file.name) } },
       );
       return;
     }
@@ -453,7 +454,7 @@ export function useInsertActions(options: InsertActionsOptions) {
         captureSnapshot();
 
         // Show success notification
-        showToast(`✓ Table (${data.rows}×${data.cols}) inserted successfully!`);
+        showToast(`✓ Table (${data.rows}×${data.cols}) inserted successfully!`, 'success', { key: '✓ Table ({rows}×{columns}) inserted successfully!', parameters: { rows: data.rows, columns: data.cols } });
       },
       () => {
         // After action callback - scroll to the newly inserted table
@@ -565,7 +566,7 @@ export function useInsertActions(options: InsertActionsOptions) {
         }
 
         captureSnapshot();
-        showToast(`✓ Code block inserted (${data.language || "text"})`);
+        showToast(`✓ Code block inserted (${data.language || "text"})`, 'success', { key: '✓ Code block inserted ({language})', parameters: { language: data.language || 'text' } });
       },
       () => {
         // After action callback - scroll to code block

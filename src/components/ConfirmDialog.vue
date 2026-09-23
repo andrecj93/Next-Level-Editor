@@ -13,8 +13,8 @@
         :aria-labelledby="titleId"
         :aria-describedby="messageId"
       >
-        <h3 :id="titleId" class="nle-confirm-title">{{ title }}</h3>
-        <p :id="messageId" class="nle-confirm-message">{{ message }}</p>
+        <h3 :id="titleId" class="nle-confirm-title">{{ t(title) }}</h3>
+        <p :id="messageId" class="nle-confirm-message">{{ t(message) }}</p>
         <div class="nle-confirm-actions">
           <button
             ref="cancelButtonRef"
@@ -22,7 +22,7 @@
             class="nle-confirm-cancel"
             @click="emit('cancel')"
           >
-            {{ cancelLabel }}
+            {{ t(cancelLabel) }}
           </button>
           <button
             type="button"
@@ -30,7 +30,7 @@
             :class="{ 'is-danger': danger }"
             @click="emit('confirm')"
           >
-            {{ confirmLabel }}
+            {{ t(confirmLabel) }}
           </button>
         </div>
       </div>
@@ -40,6 +40,8 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { useModalDialog } from "../composables/useModalDialog";
 
 interface Props {

@@ -4,6 +4,8 @@
       v-if="showToolbar"
       ref="toolbarEl"
       class="mobile-toolbar nle-chrome"
+      :lang="uiLocale"
+      :dir="uiDirection"
       :class="[
         presetClass,
         {
@@ -16,16 +18,16 @@
       ]"
       :style="{ bottom: `${keyboardInset}px` }"
     >
-    <div v-if="writingMode" class="quick-writing-tools" role="group" aria-label="Quick formatting">
-      <button v-for="action in formatActions.filter(item => ['bold', 'italic', 'underline', 'link'].includes(item.id))" :key="action.id" type="button" class="toolbar-button" :aria-label="action.label" :aria-pressed="action.isActive?.()" @mousedown.prevent @click="action.onClick"><span v-html="action.icon" /></button>
-      <button type="button" class="toolbar-button" aria-label="Undo" @mousedown.prevent @click="emit('action', 'undo')">↶</button>
-      <button type="button" class="toolbar-button" aria-label="Close toolbar" @click="emit('close')">×</button>
+    <div v-if="writingMode" class="quick-writing-tools" role="group" :aria-label="t('Quick formatting')">
+      <button v-for="action in formatActions.filter(item => ['bold', 'italic', 'underline', 'link'].includes(item.id))" :key="action.id" type="button" class="toolbar-button" :aria-label="t(action.label)" :aria-pressed="action.isActive?.()" @mousedown.prevent @click="action.onClick"><span v-html="action.icon" /></button>
+      <button type="button" class="toolbar-button" :aria-label="t('Undo')" @mousedown.prevent @click="emit('action', 'undo')">↶</button>
+      <button type="button" class="toolbar-button" :aria-label="t('Close toolbar')" @click="emit('close')">×</button>
     </div>
     <!-- Toolbar Header -->
     <div v-if="!writingMode" class="toolbar-header">
       <button
         class="toolbar-toggle touch-target"
-        :aria-label="isCollapsed ? 'Expand toolbar' : 'Collapse toolbar'"
+        :aria-label="t(isCollapsed ? 'Expand toolbar' : 'Collapse toolbar')"
         :aria-expanded="!isCollapsed"
         @click="toggleCollapse"
       >
@@ -47,12 +49,12 @@
       </button>
 
       <div class="toolbar-title">
-        {{ currentTab.label }}
+        {{ t(currentTab.label) }}
       </div>
 
       <button
         class="toolbar-close touch-target"
-        aria-label="Close toolbar"
+        :aria-label="t('Close toolbar')"
         @click="emit('close')"
       >
         <svg
@@ -91,7 +93,7 @@
           class="tab-icon"
           v-html="tab.icon"
         />
-        <span class="tab-label">{{ tab.label }}</span>
+        <span class="tab-label">{{ t(tab.label) }}</span>
       </button>
     </div>
 
@@ -113,8 +115,8 @@
             :key="action.id"
             class="toolbar-button touch-target-lg"
             :class="{ active: action.isActive?.() }"
-            :aria-label="action.label"
-            :title="action.label"
+            :aria-label="t(action.label)"
+            :title="t(action.label)"
             @click="action.onClick"
           >
             <span v-html="action.icon" />
@@ -134,14 +136,14 @@
             v-for="action in insertActions"
             :key="action.id"
             class="toolbar-button-large touch-target-xl"
-            :aria-label="action.label"
+            :aria-label="t(action.label)"
             @click="action.onClick"
           >
             <span
               class="button-icon"
               v-html="action.icon"
             />
-            <span class="button-label">{{ action.label }}</span>
+            <span class="button-label">{{ t(action.label) }}</span>
           </button>
         </div>
       </div>
@@ -158,14 +160,14 @@
             v-for="block in blockActions"
             :key="block.id"
             class="block-button touch-target"
-            :aria-label="`Convert to ${block.label}`"
+            :aria-label="t('Convert to {block}', { block: t(block.label) })"
             @click="block.onClick"
           >
             <span
               class="block-icon"
               v-html="block.icon"
             />
-            <span class="block-label">{{ block.label }}</span>
+            <span class="block-label">{{ t(block.label) }}</span>
           </button>
         </div>
       </div>
@@ -182,14 +184,14 @@
             v-for="action in moreActions"
             :key="action.id"
             class="more-button touch-target"
-            :aria-label="action.label"
+            :aria-label="t(action.label)"
             @click="action.onClick"
           >
             <span
               class="more-icon"
               v-html="action.icon"
             />
-            <span class="more-label">{{ action.label }}</span>
+            <span class="more-label">{{ t(action.label) }}</span>
           </button>
         </div>
       </div>
@@ -207,6 +209,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { keepCaretAboveToolbar } from "../utils/caretVisibility";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useDeviceDetection } from "../composables/useDeviceDetection";

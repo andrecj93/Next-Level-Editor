@@ -35,6 +35,9 @@ describe("clearance is only cleared by the toolbar that published it (#R22-M2)",
     w.find(".editor-content").element.dispatchEvent(
       new Event("pointerdown", { bubbles: true })
     );
+    w.find(".editor-content").element.dispatchEvent(
+      new MouseEvent("click", { bubbles: true })
+    );
     await nextTick();
     await nextTick();
   };

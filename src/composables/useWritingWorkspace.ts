@@ -15,7 +15,7 @@ function noteKeys(notes: WritingNote[]): Map<string, string> {
   }));
 }
 
-export function useWritingWorkspace(html: Ref<string>, enabled: Ref<boolean>) {
+export function useWritingWorkspace(html: Ref<string>, enabled: Ref<boolean>, language?: Ref<string>) {
   const review = ref<WritingReview>({ words: 0, paragraphs: 0, readingMinutes: 1, outline: [], notes: [] });
   const keptKeys = ref(new Set<string>());
   const currentKeys = computed(() => noteKeys(review.value.notes));
@@ -26,12 +26,16 @@ export function useWritingWorkspace(html: Ref<string>, enabled: Ref<boolean>) {
   const refresh = () => {
     clearTimeout(timer);
     if (!enabled.value || typeof DOMParser === 'undefined') return;
-    review.value = reviewWriting(html.value);
+    const next = reviewWriting(html.value);
     if (keptKeys.value.size) {
-      const available = new Set(currentKeys.value.values());
+      const available = new Set(noteKeys(next.notes).values());
       // Prune decisions as soon as their paragraph changes or disappears.
+      // Changing the document language only hides English checks; it must not
+      // erase private choices for unchanged passages.
       keptKeys.value = new Set([...keptKeys.value].filter(key => available.has(key)));
     }
+    if (language && !/^en(?:-|$)/i.test(language.value)) next.notes = [];
+    review.value = next;
   };
   const dismissNote = (note: WritingNote): boolean => {
     if (dismissedNotes.value.has(note.id) || !review.value.notes.some(current =>
@@ -56,7 +60,7 @@ export function useWritingWorkspace(html: Ref<string>, enabled: Ref<boolean>) {
     keptKeys.value = new Set();
     return count;
   };
-  watch([html, enabled], () => {
+  watch([html, enabled, () => language?.value], () => {
     clearTimeout(timer);
     if (enabled.value && typeof DOMParser !== 'undefined') timer = setTimeout(refresh, 650);
   }, { immediate: true });

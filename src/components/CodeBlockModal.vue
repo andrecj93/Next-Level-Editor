@@ -4,6 +4,8 @@
       <div
         v-if="show"
         class="modal-overlay nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="theme"
         @click="handleOverlayClick"
       >
@@ -16,10 +18,10 @@
           @click.stop
         >
           <div class="modal-header">
-            <h3 id="code-block-modal-title">Insert Code Block</h3>
+            <h3 id="code-block-modal-title">{{ t("Insert Code Block") }}</h3>
             <button
               class="close-btn"
-              aria-label="Close modal"
+              :aria-label="t('Close modal')"
               @click="close"
             >
               ✕
@@ -28,7 +30,7 @@
           
           <div class="modal-body">
             <div class="input-group">
-              <label for="language-select">Language</label>
+              <label for="language-select">{{ t("Language") }}</label>
               <select
                 id="language-select"
                 v-model="selectedLanguage"
@@ -39,19 +41,19 @@
                   :key="lang.value"
                   :value="lang.value"
                 >
-                  {{ lang.label }}
+                  {{ t(lang.label) }}
                 </option>
               </select>
             </div>
             
             <div class="input-group">
-              <label for="code-input">Code</label>
+              <label for="code-input">{{ t("Code") }}</label>
               <textarea
                 id="code-input"
                 ref="codeInput"
                 v-model="code"
                 class="code-textarea"
-                placeholder="Paste your code here..."
+                :placeholder="t('Paste your code here...')"
                 spellcheck="false"
                 @keydown.tab.prevent="handleTab"
               />
@@ -62,7 +64,7 @@
               class="preview-section"
             >
               <div class="preview-label">
-                Preview:
+                {{ t("Preview:") }}
               </div>
               <div class="code-preview">
                 <pre><code
@@ -78,14 +80,14 @@
               class="btn btn-cancel"
               @click="close"
             >
-              Cancel
+              {{ t("Cancel") }}
             </button>
             <button
               class="btn btn-primary"
               :disabled="!code"
               @click="insertCode"
             >
-              Insert Code
+              {{ t("Insert Code") }}
             </button>
           </div>
         </div>
@@ -95,6 +97,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, shallowRef, computed, nextTick, watch } from 'vue'
 import { useModalDialog } from '../composables/useModalDialog'
 

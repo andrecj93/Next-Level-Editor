@@ -3,24 +3,24 @@
     <!-- Timeline Header -->
     <div class="timeline-header">
       <h3 class="timeline-title">
-        {{ title }}
+        {{ t(title) }}
       </h3>
       <div class="timeline-actions">
         <button
           v-if="showClearButton && hasHistory"
           class="btn-clear"
-          :aria-label="clearButtonLabel"
+          :aria-label="t(clearButtonLabel)"
           @click="handleClear"
         >
-          {{ clearButtonLabel }}
+          {{ t(clearButtonLabel) }}
         </button>
         <button
           v-if="showExportButton && hasHistory"
           class="btn-export"
-          :aria-label="exportButtonLabel"
+          :aria-label="t(exportButtonLabel)"
           @click="handleExport"
         >
-          {{ exportButtonLabel }}
+          {{ t(exportButtonLabel) }}
         </button>
       </div>
     </div>
@@ -34,7 +34,7 @@
         />
       </div>
       <div class="timeline-progress-text">
-        {{ currentIndex + 1 }} / {{ historySize }}
+        {{ number(currentIndex + 1) }} / {{ number(historySize) }}
       </div>
     </div>
 
@@ -43,7 +43,7 @@
       <button
         :disabled="!canGoBack"
         class="nav-btn"
-        aria-label="Go to first"
+        :aria-label="t('Go to first')"
         @click="handleGoToFirst"
       >
         ⏮
@@ -51,7 +51,7 @@
       <button
         :disabled="!canGoBack"
         class="nav-btn"
-        aria-label="Go back"
+        :aria-label="t('Go back')"
         @click="handleGoBack"
       >
         ◀
@@ -59,7 +59,7 @@
       <button
         :disabled="!canGoForward"
         class="nav-btn"
-        aria-label="Go forward"
+        :aria-label="t('Go forward')"
         @click="handleGoForward"
       >
         ▶
@@ -67,7 +67,7 @@
       <button
         :disabled="!canGoForward"
         class="nav-btn"
-        aria-label="Go to latest"
+        :aria-label="t('Go to latest')"
         @click="handleGoToLatest"
       >
         ⏭
@@ -88,7 +88,7 @@
         role="button"
         tabindex="0"
         :aria-current="index === currentIndex ? 'true' : undefined"
-        :aria-label="`Restore ${entry.label || `Version ${index + 1}`}, ${formatTime(entry.timestamp)}`"
+        :aria-label="t('Restore {version}, {time}', { version: entry.label || t('Version {number}', { number: index + 1 }), time: formatTime(entry.timestamp) })"
         @click="handleEntryClick(index)"
         @keydown.enter.prevent="handleEntryClick(index)"
         @keydown.space.prevent="handleEntryClick(index)"
@@ -97,7 +97,7 @@
         <div class="entry-content">
           <div class="entry-header">
             <span class="entry-label">
-              {{ entry.label || `Version ${index + 1}` }}
+              {{ entry.label || t('Version {number}', { number: index + 1 }) }}
             </span>
             <span class="entry-time">
               {{ formatTime(entry.timestamp) }}
@@ -115,12 +115,14 @@
 
     <!-- Empty State -->
     <div v-else class="timeline-empty">
-      <p>{{ emptyMessage }}</p>
+      <p>{{ t(emptyMessage) }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, number, date: calendarDate } = useEditorLocale();
 import { ref } from "vue";
 import type { HistoryEntry } from "../composables/useHistoryTimeline";
 import { smoothScrollIntoView } from "../utils/scroll";
@@ -213,15 +215,15 @@ const formatTime = (timestamp: number): string => {
   const diffDays = Math.floor(diffMs / 86400000);
 
   if (diffMins < 1) {
-    return "Just now";
+    return t("Just now");
   } else if (diffMins < 60) {
-    return `${diffMins}m ago`;
+    return t('{count}m ago', { count: diffMins });
   } else if (diffHours < 24) {
-    return `${diffHours}h ago`;
+    return t('{count}h ago', { count: diffHours });
   } else if (diffDays < 7) {
-    return `${diffDays}d ago`;
+    return t('{count}d ago', { count: diffDays });
   } else {
-    return date.toLocaleDateString();
+    return calendarDate(date, { year: 'numeric', month: 'numeric', day: 'numeric' });
   }
 };
 

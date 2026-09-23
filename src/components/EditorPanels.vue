@@ -22,17 +22,20 @@
         ref="editorRef"
         class="editor-content"
         :contenteditable="editable ? 'true' : 'false'"
-        :placeholder="placeholder"
+        :placeholder="t(placeholder)"
         role="textbox"
         aria-multiline="true"
         :aria-readonly="!editable"
-        aria-label="Rich text editor"
+        :aria-label="t('Rich text editor')"
         aria-haspopup="listbox"
         :aria-controls="commandMenuOpen ? commandListboxId : undefined"
         :aria-activedescendant="commandActiveOptionId"
+        @beforeinput="$emit('beforeinput', $event)"
         @input="$emit('input', $event)"
         @compositionend="$emit('input', $event)"
         @paste="$emit('paste', $event)"
+        @copy="$emit('copy', $event)"
+        @cut="$emit('copy', $event)"
         @drop="$emit('drop', $event)"
         @dragstart="$emit('dragstart', $event)"
         @dragend="$emit('dragend', $event)"
@@ -53,7 +56,7 @@
       <textarea
         ref="codeEditorRef"
         class="code-editor"
-        aria-label="HTML source code"
+        :aria-label="t('HTML source code')"
         :value="codeContent"
         :readonly="!editable"
         spellcheck="false"
@@ -66,11 +69,14 @@
         ref="editorRef"
         class="editor-content"
         :contenteditable="editable ? 'true' : 'false'"
-        :placeholder="placeholder"
+        :placeholder="t(placeholder)"
         style="display: none"
+        @beforeinput="$emit('beforeinput', $event)"
         @input="$emit('input', $event)"
         @compositionend="$emit('input', $event)"
         @paste="$emit('paste', $event)"
+        @copy="$emit('copy', $event)"
+        @cut="$emit('copy', $event)"
         @drop="$emit('drop', $event)"
         @dragstart="$emit('dragstart', $event)"
         @dragend="$emit('dragend', $event)"
@@ -104,7 +110,7 @@
               stroke-linecap="round"
             />
           </svg>
-          Preview
+          {{ t("Preview") }}
         </button>
         <button
           :class="['split-toggle-btn', { active: splitRightMode === 'editor' }]"
@@ -119,19 +125,20 @@
               stroke-linecap="round"
             />
           </svg>
-          Editor
+          {{ t("Editor") }}
         </button>
       </div>
 
       <!-- Preview mode -->
       <div v-if="splitRightMode === 'preview'" class="preview-panel">
         <div
+          v-if="htmlContent"
           class="preview-content-wrapper"
-          v-html="
-            htmlContent ||
-            '<p class=\'empty-preview\'>Start typing to see preview...</p>'
-          "
+          v-html="htmlContent"
         />
+        <div v-else class="preview-content-wrapper">
+          <p class="empty-preview">{{ t("Start typing to see preview...") }}</p>
+        </div>
       </div>
 
       <!-- Editor mode -->
@@ -140,14 +147,17 @@
           ref="splitEditorRef"
           class="editor-content"
           :contenteditable="editable ? 'true' : 'false'"
-          :placeholder="placeholder"
+          :placeholder="t(placeholder)"
           role="textbox"
           aria-multiline="true"
           :aria-readonly="!editable"
-          aria-label="Rich text editor"
+          :aria-label="t('Rich text editor')"
+          @beforeinput="$emit('beforeinput', $event)"
           @input="$emit('split-editor-input', $event)"
           @compositionend="$emit('split-editor-input', $event)"
           @paste="$emit('paste', $event)"
+          @copy="$emit('copy', $event)"
+          @cut="$emit('copy', $event)"
           @drop="$emit('drop', $event)"
           @dragstart="$emit('dragstart', $event)"
           @dragend="$emit('dragend', $event)"
@@ -162,19 +172,22 @@
 
     <!-- Preview Panel (standalone preview mode) -->
     <div v-if="viewMode === 'preview'" class="preview-panel">
-      <div class="preview-header">Preview</div>
+      <div class="preview-header">{{ t("Preview") }}</div>
       <div
+        v-if="htmlContent"
         class="preview-content-wrapper"
-        v-html="
-          htmlContent ||
-          '<p class=\'empty-preview\'>Start typing to see preview...</p>'
-        "
+        v-html="htmlContent"
       />
+      <div v-else class="preview-content-wrapper">
+        <p class="empty-preview">{{ t("Start typing to see preview...") }}</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref } from "vue";
 
 interface Props {
@@ -207,6 +220,7 @@ withDefaults(defineProps<Props>(), {
 });
 
 defineEmits<{
+  beforeinput: [event: InputEvent];
   input: [event: Event];
   blur: [event: FocusEvent];
   focus: [event: FocusEvent];
@@ -214,6 +228,7 @@ defineEmits<{
   mouseup: [event: MouseEvent];
   contextmenu: [event: MouseEvent];
   paste: [event: ClipboardEvent];
+  copy: [event: ClipboardEvent];
   drop: [event: DragEvent];
   dragstart: [event: DragEvent];
   dragend: [event: DragEvent];

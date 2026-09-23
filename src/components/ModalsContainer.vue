@@ -134,12 +134,16 @@
   <!-- Toast Notification -->
   <transition name="toast-fade">
     <div v-if="showToast" :class="['toast-notification', toastType]">
-      {{ toastMessage }}
+      {{ localizedMessage(locale, toastMessage, toastDescriptor) }}
     </div>
   </transition>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const locale = useEditorLocale();
+import { localizedMessage } from '../utils/localizedMessage';
+import type { EditorMessageDescriptor } from '../types/locale';
 import SaveStatus from "./SaveStatus.vue";
 import TableModal from "./TableModal.vue";
 import FindReplaceModal from "./FindReplaceModal.vue";
@@ -196,6 +200,7 @@ interface Props {
   /** A v-model update is not evidence of durable storage. */
   persistentSave?: boolean;
   toastMessage: string;
+  toastDescriptor?: EditorMessageDescriptor;
   toastType: "success" | "error";
   /**
    * Whether THIS editor instance owns the page's viewport-fixed chrome (see
@@ -211,6 +216,7 @@ interface Props {
 // declared rather than inferred from "prop omitted".
 withDefaults(defineProps<Props>(), {
   ownsFixedChrome: true,
+  toastDescriptor: undefined,
   theme: undefined,
   linkContext: undefined,
   recentCommandIds: undefined,

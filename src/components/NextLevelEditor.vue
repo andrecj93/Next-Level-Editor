@@ -1,6 +1,8 @@
 <template>
   <div
     ref="rootEl"
+    :lang="resolvedUiLocale"
+    :dir="resolvedUiDirection"
     :class="[
       'next-level-editor',
       themeClass,
@@ -25,13 +27,15 @@
         : undefined
     "
   >
+    <DocumentTools v-if="documentTools && documentWorkspace" :workspace="documentWorkspace" :options="effectiveDocumentOptions" :collaborative="Boolean(collaboration)" :connection="collaborationState" :participants="collaborators" />
     <!-- Accessibility: Skip Links -->
     <SkipLinks
-      :label="skipLinksLabel"
+      label="Skip links {instance}"
+      :label-parameters="skipLinksLabelParameters"
       :main-target-id="mainLandmarkId"
       :toolbar-target-id="toolbarLandmarkId"
       :footer-target-id="footerLandmarkId"
-      :has-toolbar="showToolbar && !readonly && !isPillMode"
+      :has-toolbar="showToolbar && !effectiveReadonly && !isPillMode"
       :has-footer="effectiveToolbarPosition !== 'bottom'"
     />
 
@@ -45,7 +49,7 @@
          the sticky positioning the toolbar previously had — sticky inside a
          tight wrapper would otherwise pin to the wrapper's own bounds. -->
     <div
-      v-if="showToolbar && !readonly && !isPillMode"
+      v-if="showToolbar && !effectiveReadonly && !isPillMode"
       ref="toolbarShellEl"
       class="nle-toolbar-shell"
       :data-adaptive="effectiveAdaptiveChrome"
@@ -69,8 +73,8 @@
       :text-color="textColor"
       :background-color="backgroundColor"
       :font-size-dropdown-items="fontSizeDropdownItems"
-      :history-index="historyIndex"
-      :history-length="history.length"
+      :history-index="activeHistory.undo"
+      :history-length="activeHistory.undo + activeHistory.redo + 1"
       :productivity-dropdown-items="productivityDropdownItems"
       :tool-actions="toolActions"
       :export-dropdown-items="exportDropdownItems"
@@ -101,7 +105,7 @@
     <div
       v-if="effectiveAdaptiveChrome === 'letterbox'"
       class="nle-letterbox"
-      :title="'Click to show the toolbar'"
+      :title="t('Click to show the toolbar')"
       @click="restoreChrome"
     >
       <span class="nle-letterbox-format">{{ letterboxFormatLabel }}</span>
@@ -116,13 +120,15 @@
         :class="{ 'is-pulsing': letterboxSavePulse }"
         aria-hidden="true"
       />
-      <span class="nle-letterbox-count">{{ wordCount }} words</span>
+      <span class="nle-letterbox-count">{{ t('{count} words', { count: wordCount }) }}</span>
     </div>
     </div>
 
     <Teleport to="body">
     <CommandMenu
       class="nle-chrome"
+      :lang="resolvedUiLocale"
+      :dir="resolvedUiDirection"
       :class="teleportThemeClass"
       :show="showCommandMenu"
       :position="commandMenuPosition"
@@ -141,12 +147,13 @@
       :show="showFindReplaceModal"
       :content="htmlContent"
       :editor="editorContent"
-      :readonly="readonly"
+      :readonly="effectiveReadonly"
       :initially-replace="writingSearchInitiallyReplace"
       :find="handleFind"
       :replace="handleReplace"
       :replace-all="handleReplaceAll"
       :clear="clearFindHighlight"
+      @match-revealed="rememberWritingPosition"
       @close="closeWritingSearch"
     />
     <!-- Editor and Preview Panels -->
@@ -155,7 +162,8 @@
       :id="mainLandmarkId"
       ref="editorPanelsRef"
       :view-mode="viewMode"
-      :editable="!readonly"
+      :editable="!effectiveReadonly && (!collaboration || Boolean(collaborationBinding))"
+      :lang="contentLanguage" :dir="contentDirection"
       :command-menu-open="surfacePopup.open"
       :command-listbox-id="surfacePopup.listboxId"
       :command-active-option-id="surfacePopup.activeOptionId"
@@ -163,8 +171,10 @@
       :code-content="codeContent"
       :html-content="htmlContent"
       :split-right-mode="splitRightMode"
+      @beforeinput="handleSlashMenuBeforeInput"
       @input="onInput"
       @paste="onPaste"
+      @copy="documentClipboard.onCopy"
       @drop="onDrop"
       @dragstart="onDragStart"
       @dragend="onDragEnd"
@@ -184,7 +194,8 @@
       :review="writingReview"
       :dismissed-notes="dismissedWritingNotes"
       :start-note-id="writingReviewStart"
-      :readonly="readonly"
+      :readonly="effectiveReadonly"
+      :language-supported="writingLanguageSupported"
       @review-kept="reviewKeptWritingNotes"
       @close="closeCompanion"
       @leave="companionOpen = false"
@@ -208,7 +219,7 @@
       :companion-open="companionOpen && viewMode === 'editor'"
       :writing-note-count="writingReview.notes.filter(note => !dismissedWritingNotes.has(note.id)).length"
       :enable-comments="enableComments"
-      :enable-variables="enableVariables && !readonly"
+      :enable-variables="enableVariables && !effectiveReadonly"
       :comments-open="showCommentsSidebar"
       :variables-open="showVariablesPanel"
       @toggle-companion="toggleCompanion"
@@ -228,8 +239,8 @@
       v-if="!isFullScreen && !isFocusMode && !isPillMode"
       class="nle-resize-grip"
       type="button"
-      aria-label="Resize editor (drag, or use arrow keys)"
-      title="Drag to resize · double-click to reset"
+      :aria-label="t('Resize editor (drag, or use arrow keys)')"
+      :title="t('Drag to resize · double-click to reset')"
       @pointerdown="onResizeGripPointerdown"
       @keydown="onResizeGripKeydown"
       @dblclick="resetEditorSize"
@@ -246,13 +257,13 @@
     </button>
 
     <!-- Floating Toolbar -->
-    <!-- Selection toolbar (bubble over selected text) — never in readonly,
+    <!-- Selection toolbar (bubble over selected text) — never in effectiveReadonly,
          and suppressed while the mobile bottom toolbar owns the screen:
          two stacked formatting surfaces on a phone is duplicated, cramped
          UI (the bottom bar already carries the same actions). -->
     <FloatingToolbar
       :show="
-        showFloatingToolbar && !readonly && !mobileBarOnScreen && !isPillMode
+        showFloatingToolbar && !effectiveReadonly && !mobileBarOnScreen && !isPillMode
       "
       :actions="floatingActions"
       :boundary="editorContent"
@@ -293,13 +304,13 @@
     />
 
     <!-- Mobile bottom toolbar (self-hides on non-touch/desktop; off in
-         readonly). Because it teleports to <body>, `visible` is driven by
+         effectiveReadonly). Because it teleports to <body>, `visible` is driven by
          focus/last-interaction ownership: only the instance the user is
          working in shows a toolbar, so multi-editor pages never stack N
          identical fixed bars. -->
     <MobileToolbar
       :writing-mode="writingMode"
-      :visible="mobileToolbarVisible && !readonly"
+      :visible="mobileToolbarVisible && !effectiveReadonly"
       :is-active="mobileIsActive"
       :editor-root="rootEl"
       @action="handleMobileAction"
@@ -317,7 +328,7 @@
       ref="historyPanelRef"
       class="history-timeline-panel"
       role="region"
-      aria-label="History timeline"
+      :aria-label="t('History timeline')"
       tabindex="-1"
     >
       <HistoryTimeline
@@ -381,6 +392,7 @@
       :last-saved="lastSaved"
       :save-status="saveStatus"
       :toast-message="toastMessage"
+      :toast-descriptor="toastDescriptor"
       :has-pending-changes="isDirty"
       :persistent-save="Boolean(props.saveHandler)"
       :toast-type="toastType"
@@ -439,10 +451,11 @@
       v-if="showWritingStats && writingAssistant && showWritingStatsPanel"
       v-show="ownsFixedChrome"
       :stats="writingAssistant.stats.value"
-      :readability="writingAssistant.readability.value"
+      :readability="writingLanguageSupported ? writingAssistant.readability.value : null"
       :sentence-analysis="writingAssistant.sentenceAnalysis.value"
       :word-analysis="writingAssistant.wordAnalysis.value"
-      :issues="writingAssistant.issues.value"
+      :issues="writingLanguageSupported ? writingAssistant.issues.value : null"
+      :language-supported="writingLanguageSupported"
       :seo="writingAssistant.seo.value"
       @close="showWritingStatsPanel = false"
     />
@@ -454,6 +467,7 @@
       :threads="comments.threads.value"
       :active-thread-id="comments.activeThread.value?.id ?? null"
       :is-open="showCommentsSidebar"
+      :readonly="effectiveReadonly"
       :mention-search="mentionSearch"
       @close="closeCommentsSidebar"
       @select-thread="handleSelectThread"
@@ -505,8 +519,8 @@
       <button
         v-if="!writingMode && enableComments && !showCommentsSidebar && comments && ownsFixedChrome"
         class="comments-toggle-fab"
-        aria-label="Open comments"
-        title="Open comments"
+        :aria-label="t('Open comments')"
+        :title="t('Open comments')"
         @click="showCommentsSidebar = true"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -522,7 +536,7 @@
           v-if="comments.threads.value.some((t) => t.status === 'open')"
           class="comments-toggle-badge"
         >
-          {{ comments.threads.value.filter((t) => t.status === "open").length }}
+          {{ number(comments.threads.value.filter((t) => t.status === "open").length) }}
         </span>
       </button>
     </Transition>
@@ -532,17 +546,17 @@
       <button
         v-if="!writingMode && showWritingStats && writingAssistant && ownsFixedChrome"
         class="writing-stats-toggle-fab"
-        :aria-label="
+        :aria-label="t(
           showWritingStatsPanel
             ? 'Hide writing statistics'
             : 'Show writing statistics'
-        "
+        )"
         :aria-expanded="showWritingStatsPanel"
-        :title="
+        :title="t(
           showWritingStatsPanel
             ? 'Hide writing statistics'
             : 'Show writing statistics'
-        "
+        )"
         @click="showWritingStatsPanel = !showWritingStatsPanel"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -560,14 +574,14 @@
     <!-- Variables Toggle FAB (opt-in feature) -->
     <Transition name="fab-fade">
       <button
-        v-if="!writingMode && enableVariables && variablesComposable && !readonly && ownsFixedChrome"
+        v-if="!writingMode && enableVariables && variablesComposable && !effectiveReadonly && ownsFixedChrome"
         class="variables-toggle-fab"
         :style="{
           bottom: `calc(${variablesFabBottom}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
         }"
-        aria-label="Toggle variables panel"
+        :aria-label="t('Toggle variables panel')"
         :aria-expanded="showVariablesPanel"
-        :title="showVariablesPanel ? 'Hide variables' : 'Show variables'"
+        :title="t(showVariablesPanel ? 'Hide variables' : 'Show variables')"
         @click="showVariablesPanel = !showVariablesPanel"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -590,7 +604,7 @@
           enableVariables &&
           variablesComposable &&
           showVariablesPanel &&
-          !readonly &&
+          !effectiveReadonly &&
           ownsFixedChrome
         "
         class="variables-panel"
@@ -598,13 +612,13 @@
           bottom: `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
         }"
         role="region"
-        aria-label="Template variables"
+        :aria-label="t('Template variables')"
       >
         <div class="variables-panel-header">
-          <span class="variables-panel-title">Variables</span>
+          <span class="variables-panel-title">{{ t("Variables") }}</span>
           <button
             class="variables-panel-close"
-            aria-label="Close variables panel"
+            :aria-label="t('Close variables panel')"
             @click="showVariablesPanel = false"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -636,7 +650,7 @@
               )"
               :key="variable.id"
               class="variables-panel-item"
-              :title="variable.description"
+              :title="t(variable.description)"
               @mousedown.prevent
               @click="handlePanelInsert(variable)"
             >
@@ -651,12 +665,12 @@
             </button>
           </template>
           <template v-if="uncategorizedVariables.length">
-            <div class="variables-panel-category">Other</div>
+            <div class="variables-panel-category">{{ t("Other") }}</div>
             <button
               v-for="variable in uncategorizedVariables"
               :key="variable.id"
               class="variables-panel-item"
-              :title="variable.description"
+              :title="t(variable.description)"
               @mousedown.prevent
               @click="handlePanelInsert(variable)"
             >
@@ -672,7 +686,7 @@
           </template>
         </div>
         <div class="variables-panel-footer">
-          Click a variable to insert it at the cursor
+          {{ t("Click a variable to insert it at the cursor") }}
         </div>
       </div>
     </Transition>
@@ -692,6 +706,18 @@ import {
   watch,
   watchEffect,
 } from "vue";
+import DocumentTools from './DocumentTools.vue';
+import { useDocumentWorkspace } from '../composables/useDocumentWorkspace';
+import { useDocumentClipboard } from '../composables/useDocumentClipboard';
+import { REFERENCE_CLIPBOARD_TYPE, hasReferenceFragment, importReferenceFragment } from '../utils/referenceClipboard';
+import { provideEditorLocale } from '../composables/useEditorLocale';
+import { localizedMessage } from '../utils/localizedMessage';
+import type { EditorMessageDescriptor } from '../types/locale';
+import { assignBlockIds } from '../utils/documentOperations';
+import { diagnostic } from '../utils/documentDiagnostics';
+import type { CollaborationBinding } from '../utils/collaborationBinding';
+import { defaultDocumentMetadata } from '../types/document';
+import type { ConnectionState } from '../types/collaboration';
 import { useStableId } from "../utils/useStableId";
 import WritingCompanion from './WritingCompanion.vue';
 import WritingSearch from './WritingSearch.vue';
@@ -811,6 +837,10 @@ import type {
 
 const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   modelValue: "",
+  documentTools: false,
+  locale: "en",
+  contentLanguage: "en",
+  contentDirection: "auto",
   placeholder: "Start typing...",
   width: undefined,
   height: undefined,
@@ -833,6 +863,24 @@ const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   autofocus: false,
 });
 
+const effectiveReadonly = computed(() => props.readonly || props.documentOptions?.role === 'viewer' ||
+  Boolean(props.collaboration && props.documentOptions?.role === 'reviewer'));
+const writingLanguageSupported = computed(() => /^en(?:-|$)/i.test(props.contentLanguage));
+const editorLocale = provideEditorLocale(() => props.locale, () => props.messages ?? {}, () => props.uiDirection ?? 'auto', () => props.documentOptions);
+const { t, number, locale: resolvedUiLocale, direction: resolvedUiDirection } = editorLocale;
+const ephemeralDocumentId=useStableId();
+const effectiveDocumentOptions = computed(() => {
+  const options=props.documentOptions ?? (props.documentTools ? {id:'ephemeral-'+ephemeralDocumentId} : undefined);
+  if(!options)return undefined;
+  const metadata=options.metadata ?? defaultDocumentMetadata();
+  if(!options.metadata)metadata.page.language=props.contentLanguage;
+  return {...options, metadata, role:effectiveReadonly.value?'viewer' as const:options.role};
+});
+let collaborationBinding: CollaborationBinding | undefined;
+const collaborationState = ref<ConnectionState>('connecting');
+const collaborators = ref<string[]>([]);
+let collaborationController: AbortController | undefined;
+let syncingRemote = false;
 const emit = defineEmits<NextLevelEditorEmits>();
 
 // Whole-editor theme preset → root class (composes with the light/dark class).
@@ -954,7 +1002,7 @@ const isPillMode = computed(
   () =>
     effectiveToolbarMode.value === "pill" &&
     props.showToolbar &&
-    !props.readonly &&
+    !effectiveReadonly.value &&
     (viewMode.value === "editor" || viewMode.value === "split")
 );
 const isZen = computed(() => effectiveToolbarPosition.value === "zen");
@@ -1060,7 +1108,7 @@ const { theme, toggleTheme: toggleThemeComposable } = useTheme();
 // aria-live queue that the rendered <AriaLiveRegion> reads, so calling it here
 // speaks feedback to screen readers. Previously the return was discarded and
 // no editor action produced any spoken feedback. [a11y]
-const { announce } = useAccessibility();
+const { announce } = useAccessibility(undefined, editorLocale);
 
 // Writing Assistant (opt-in feature) - local state for toggle
 const showWritingStatsPanel = ref(false);
@@ -1106,7 +1154,7 @@ const writingAssistant = props.showWritingStats ? useWritingAssistant() : null;
 // "Skip links", indistinguishable in a screen reader's landmark list — and
 // nothing ever passed one. The ordinal is globally unique, so it also survives
 // two editors mounted as separate Vue apps. #R23-57
-const skipLinksLabel = `Skip links ${nextInstanceToken("nle-skip").split("-").pop()}`;
+const skipLinksLabelParameters = { instance: nextInstanceToken("nle-skip").split("-").pop()! };
 
 // The stats panel used to refresh from `onInput` ONLY, so any path that
 // REPLACES innerHTML without typing (undo/redo, loading a model, Replace All)
@@ -1131,6 +1179,11 @@ const comments = props.enableComments
         ? async (query: string) => props.mentionSearch!(query)
         : undefined,
       onThreadActivated: handleThreadActivation,
+      onAnchorStateChanged: (threadId, status) => diagnostic(
+        props.documentOptions?.onDiagnostic,
+        status === 'orphaned' ? 'comment.anchor_orphaned' : 'comment.anchor_attached',
+        props.documentOptions?.id, { threadId },
+      ),
     })
   : (null as ReturnType<typeof useComments> | null);
 
@@ -1270,8 +1323,11 @@ const uncategorizedVariables = computed(() => {
 });
 
 // Auto-save
-const { isSaving, isDirty, lastSaved, saveStatus, triggerAutoSave, forceSave, clearHistory: resetSaveState } = useAutoSave(
+const { isSaving, isDirty, lastSaved, saveStatus, triggerAutoSave: queueAutoSave, forceSave: saveImmediately, clearHistory: resetSaveState } = useAutoSave(
   async (content: string, version: number) => {
+    // A permission change can happen after a save was queued, or while a
+    // previous request was in flight. Recheck before calling host persistence.
+    if (effectiveReadonly.value) throw new Error("This document is read-only.");
     // With a host-provided saveHandler the "Saved" signal is TRUTHFUL: it
     // asserts real persistence and reports real failures. Without one, the
     // v-model emission IS the handoff — the host owns the content the moment
@@ -1288,6 +1344,12 @@ const { isSaving, isDirty, lastSaved, saveStatus, triggerAutoSave, forceSave, cl
   },
   { delay: 2000 } // 2 second delay
 );
+function triggerAutoSave(content: string) {
+  if (!effectiveReadonly.value) queueAutoSave(content);
+}
+async function forceSave(content: string) {
+  if (!effectiveReadonly.value) await saveImmediately(content);
+}
 
 // Editor Content Management (replaces inline sanitization, history, and content sync)
 const {
@@ -1297,7 +1359,7 @@ const {
   historyIndex,
   isApplyingHistory,
   applySanitizedContent,
-  captureAndEmit: captureSnapshot,
+  captureAndEmit: captureSnapshotBase,
   undo: undoBase,
   redo: redoBase,
   jumpToHistory,
@@ -1305,6 +1367,13 @@ const {
   sanitizeHtml,
 } = useEditorContent({
   onExternalUpdate: resetSaveState,
+  interceptExternalUpdate: html => {
+    if (!collaborationBinding) return false;
+    // Empty structured paragraphs serialize without a BR; native sanitized
+    // HTML adds one. A model echo must not turn that placeholder into content.
+    if (html !== sanitizeHtml(collaborationBinding.readHtml())) collaborationBinding.applyHtml(html);
+    return true;
+  },
   editorContent,
   modelValue: toRef(props, "modelValue"),
   onUpdate: (value) => emit("update:modelValue", value),
@@ -1319,6 +1388,49 @@ const {
   },
 });
 
+const documentWorkspace = useDocumentWorkspace({
+  options: effectiveDocumentOptions, html: htmlContent, root: editorContent, sanitize: sanitizeHtml,
+  locale: () => props.locale,
+  selection:{read:()=>editorContent.value?getCaretOffsets(editorContent.value):null,write:value=>{if(editorContent.value)setCaretOffsets(editorContent.value,value);}},
+  comments: comments ? { read: () => comments.exportThreads(), write: json => { comments.importThreads(json); } } : undefined,
+  apply(html) {
+    if (collaborationBinding) { collaborationBinding.applySnapshot({html,metadata:documentWorkspace.session.snapshot().metadata}); return; }
+    applySanitizedContent(html); codeContent.value = html; captureSnapshotBase();
+  },
+});
+const documentClipboard = useDocumentClipboard({
+  root: editorContent, options: effectiveDocumentOptions, workspace: documentWorkspace,
+  readonly: () => effectiveReadonly.value, collaboration: () => collaborationBinding,
+  sanitize: sanitizeHtml, notify: (message, type) => showToastNotification(message, type),
+});
+
+function captureSnapshot(...args: Parameters<typeof captureSnapshotBase>) {
+  if (syncingRemote) return;
+  const root = editorContent.value;
+  if (effectiveReadonly.value) return;
+  // ProseMirror observes native DOM edits and emits its own model transactions.
+  // Re-parsing each input here trims a just-typed space and races its caret mapping.
+  if (collaborationBinding) return;
+  documentWorkspace.session.setInputKind(args[1]);
+  if (root && effectiveDocumentOptions.value) {
+    if (Array.from(root.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())) {
+      const caret = getCaretOffsets(root);
+      const run:Node[]=[];
+      const flush=()=>{if(!run.length)return;const paragraph=document.createElement('p');root.insertBefore(paragraph,run[0]);paragraph.append(...run);run.length=0;};
+      for(const node of Array.from(root.childNodes)){if(node.nodeType===Node.TEXT_NODE || node instanceof HTMLElement && /^(SPAN|B|STRONG|I|EM|U|A|S|SUB|SUP|BR)$/.test(node.tagName))run.push(node);else flush();}flush();
+      setCaretOffsets(root,caret);
+    }
+    assignBlockIds(root);
+    for (const block of Array.from(root.children)) { if (!block.hasAttribute('lang')) block.setAttribute('lang',props.contentLanguage); if (!block.hasAttribute('dir')) block.setAttribute('dir',props.contentDirection); }
+    const reviewed = documentWorkspace?.captureSuggestedEdit(htmlContent.value, root.innerHTML);
+    if (reviewed !== undefined && reviewed !== root.innerHTML) {
+      const caret = getCaretOffsets(root); root.innerHTML = reviewed; setCaretOffsets(root, caret);
+    }
+  }
+  if (root && effectiveDocumentOptions.value) documentWorkspace.session.captureSelection(root.innerHTML);
+  captureSnapshotBase(...args);
+}
+
 usePendingSaveGuard(
   () => Boolean(props.saveHandler) && isDirty.value,
   () => forceSave(sanitizeHtml(htmlContent.value))
@@ -1329,17 +1441,17 @@ const {
   dismissedNotes: dismissedWritingNotes, dismissNote,
   serializedDecisions: keptWritingDecisions, importDecisions: importWritingDecisions,
   revisitKeptNotes,
-} = useWritingWorkspace(htmlContent, toRef(props, 'writingMode'));
-useWritingReflow(editorContent, toRef(props, 'writingMode'));
+} = useWritingWorkspace(htmlContent, toRef(props, 'writingMode'), toRef(props, 'contentLanguage'));
+const rememberWritingPosition = useWritingReflow(editorContent, toRef(props, 'writingMode'));
 const dismissWritingNote = (note: WritingNote) => {
   if (!dismissNote(note)) return;
-  announce('Note dismissed. Your words are unchanged.');
+  announce(() => t('Note dismissed. Your words are unchanged.'));
   console.debug('[NextLevelEditor] Writing note dismissed', { kind: note.title });
 };
 const reviewKeptWritingNotes = () => {
   const count = revisitKeptNotes();
   if (!count) return;
-  announce('Kept notes are ready to review again. Your words are unchanged.');
+  announce(() => t('Kept notes are ready to review again. Your words are unchanged.'));
   console.debug('[NextLevelEditor] Kept writing notes reopened', { count });
 };
 const companionOpen = ref(false);
@@ -1421,7 +1533,7 @@ const locateWritingNote = (note: WritingNote) => {
   const range = writingNoteRange(root, note);
   if (!range) {
     refreshWritingReview();
-    announce('That passage has changed. The writing notes have been refreshed.');
+    announce(() => t('That passage has changed. The writing notes have been refreshed.'));
     console.debug('[NextLevelEditor] Writing suggestion refreshed', { reason: 'passage-changed' });
     return false;
   }
@@ -1436,16 +1548,16 @@ const locateWritingNote = (note: WritingNote) => {
   return true;
 };
 const applyWritingNote = (note: WritingNote) => {
-  if (props.readonly || note.replacement === undefined || !locateWritingNote(note)) return;
+  if (effectiveReadonly.value || note.replacement === undefined || !locateWritingNote(note)) return;
   captureSnapshot();
   if (document.execCommand('insertText', false, note.replacement)) {
     onInput();
     captureSnapshot();
     refreshWritingReview();
-    announce('Suggestion applied. You can undo this change.');
+    announce(() => t('Suggestion applied. You can undo this change.'));
     console.debug('[NextLevelEditor] Writing suggestion applied', { kind: note.title });
   } else {
-    announce('The suggestion could not be applied. You can edit the selected passage directly.');
+    announce(() => t('The suggestion could not be applied. You can edit the selected passage directly.'));
     console.warn('[NextLevelEditor] Writing suggestion could not be applied', { kind: note.title });
   }
 };
@@ -1468,14 +1580,20 @@ const navigateWritingBlock = (index: number) => {
 // Announce undo/redo to screen readers, whatever the trigger (toolbar button,
 // Ctrl+Z/Y, command palette, or an advanced shortcut) — they all call these.
 const undo = () => {
-  undoBase();
-  announce("Undone");
+  if (collaborationBinding) collaborationBinding.undo();
+  else if (effectiveDocumentOptions.value) documentWorkspace.session.undo();
+  else undoBase();
+  historyTick.value++; announce(() => t("Undone"));
 };
 const redo = () => {
-  redoBase();
-  announce("Redone");
+  if (collaborationBinding) collaborationBinding.redo();
+  else if (effectiveDocumentOptions.value) documentWorkspace.session.redo();
+  else redoBase();
+  historyTick.value++; announce(() => t("Redone"));
 };
 
+const historyTick=ref(0);
+const activeHistory=computed(()=>{void historyTick.value;void htmlContent.value;void collaborationState.value;return collaborationBinding?.history() ?? (effectiveDocumentOptions.value?{undo:documentWorkspace.session.undoStack.value.length,redo:documentWorkspace.session.redoStack.value.length}:{undo:historyIndex.value,redo:history.value.length-historyIndex.value-1});});
 // History Timeline adapters: map the live undo/redo history (the single source
 // of truth) onto the HistoryTimeline component's entry shape. [#14]
 const timelineEntries = computed(() =>
@@ -1515,6 +1633,7 @@ const { themeClass, editorStyles, wordCount, characterCount } =
     width: toRef(props, "width"),
     height: toRef(props, "height"),
     modelValue: toRef(props, "modelValue"),
+    isContentManaged: () => Boolean(collaborationBinding),
     editorContent,
     htmlContent,
     isApplyingHistory,
@@ -1659,6 +1778,7 @@ const {
   showColorsDropdown,
   showToast,
   toastMessage,
+  toastDescriptor,
   toastType,
   showToastNotification,
   toggleFullScreen,
@@ -1668,9 +1788,9 @@ const {
 // A visible toast is also user-facing feedback that screen-reader users must
 // hear. `notify` fires both so every "Table inserted", "Copied", etc. is
 // spoken. Passed to the composables below in place of the bare toast fn.
-const notify = (message: string, type?: "success" | "error") => {
-  showToastNotification(message, type);
-  announce(message, { priority: type === "error" ? "assertive" : "polite" });
+const notify = (message: string, type?: "success" | "error", descriptor?: EditorMessageDescriptor) => {
+  showToastNotification(message, type, descriptor);
+  announce(() => localizedMessage(editorLocale, message, descriptor), { priority: type === "error" ? "assertive" : "polite" });
 };
 
 // Table state
@@ -1745,7 +1865,8 @@ const handleInlineAction = (tag: string) => {
   handleInlineActionBase(tag);
   const label = INLINE_FORMAT_LABELS[tag];
   if (label) {
-    announce(`${label} ${isInlineActionActive(tag) ? "on" : "off"}`);
+    const announcementKey = isInlineActionActive(tag) ? '{label} on' : '{label} off';
+    announce(() => t(announcementKey, { label: t(label) }));
   }
 };
 
@@ -1843,7 +1964,8 @@ const handleSelectTemplate = async (template: {
     hasContent
       ? "Template applied — press Ctrl+Z to restore your previous content"
       : "Template applied",
-    "success"
+    "success",
+    hasContent ? { key: 'Template applied — press {shortcut} to restore your previous content', parameters: { shortcut: 'Mod+Z' }, shortcutParameters: ['shortcut'] } : undefined,
   );
 };
 
@@ -1950,6 +2072,7 @@ const {
   closeContextMenu,
 } = useContextMenu({
   editorContent,
+  clipboardAction: documentClipboard.contextAction,
   handleInlineAction,
   insertLink,
   insertImage,
@@ -2097,7 +2220,7 @@ const {
   spellCheckEnabled,
   captureSnapshot,
   toggleHistoryTimeline: () => {
-    showHistoryTimeline.value = !showHistoryTimeline.value;
+    if(effectiveDocumentOptions.value){documentWorkspace.open.value=true;documentWorkspace.tab.value='Versions';}else showHistoryTimeline.value = !showHistoryTimeline.value;
   },
   // Adds the Tools > Keyboard Shortcuts item (the item only renders when this
   // handler is provided). Opens the registry-backed help modal.
@@ -2168,7 +2291,9 @@ const ownsMobileToolbar = ref(false);
 // The toolbar's Close (X) hides it until this editor is focused/tapped again.
 const mobileToolbarClosed = ref(false);
 const mobileToolbarVisible = computed(
-  () => ownsMobileToolbar.value && !mobileToolbarClosed.value && ownsFixedChrome.value
+  // Export progress owns the short viewport until it completes or is cancelled.
+  // A focus event in the footer must not reopen a dock over its Cancel button.
+  () => ownsMobileToolbar.value && !mobileToolbarClosed.value && ownsFixedChrome.value && !isExportingPdf.value
 );
 
 // Whether the mobile bottom bar is actually ON SCREEN: ownership alone isn't
@@ -2180,14 +2305,35 @@ const mobileBarOnScreen = computed(
   () => mobileToolbarVisible.value && deviceShowsMobileToolbar.value
 );
 
+let pendingToolbarPointer = false;
 const updateMobileToolbarOwnership = (event: Event) => {
+  if (event.type === 'pointercancel') {
+    pendingToolbarPointer = false;
+    return;
+  }
+  if (event.type === 'pointerdown') pendingToolbarPointer = true;
+  if (event.type === 'click') pendingToolbarPointer = false;
   const target = event.target;
   if (!(target instanceof Node)) return;
   if (rootEl.value?.contains(target)) {
+    const element = target instanceof Element ? target : target.parentElement;
+    // Search controls own typing while they are active. Finding a range can
+    // briefly focus contenteditable; returning to the search field must release
+    // the formatting dock before it takes space from the revealed passage.
+    if (element?.closest('.writing-search')) {
+      ownsMobileToolbar.value = false;
+      return;
+    }
     // Only entering the writing surface opens the dock. A first touch on a
     // footer/panel control must not insert a fixed toolbar under that finger
     // between pointerdown and click (Comments could become Underline).
     if (target === rootEl.value || editorContent.value?.contains(target)) {
+      // The same rule applies to text near the bottom of a short viewport.
+      // Focus arrives between pointerdown and click; revealing the dock then
+      // can redirect the pending touch to a formatting button. Keyboard focus
+      // opens it immediately, while pointer activation waits for the click.
+      if (pendingToolbarPointer) return;
+      if (element?.closest('.comment-highlight[data-thread-id]')) return;
       ownsMobileToolbar.value = true;
       mobileToolbarClosed.value = false;
     }
@@ -2246,12 +2392,14 @@ const onBeforePrint = () => {
 onMounted(() => {
   // Capture phase so stopPropagation inside widgets can't desync ownership.
   document.addEventListener("pointerdown", updateMobileToolbarOwnership, true);
+  document.addEventListener("pointercancel", updateMobileToolbarOwnership, true);
+  document.addEventListener("click", updateMobileToolbarOwnership, true);
   document.addEventListener("focusin", updateMobileToolbarOwnership, true);
   window.addEventListener("beforeprint", onBeforePrint);
 
   // autofocus: place the caret in the editing surface on mount so the user can
   // type immediately. Meaningless (and skipped) when readonly.
-  if (props.autofocus && !props.readonly) {
+  if (props.autofocus && !effectiveReadonly.value) {
     nextTick(() => {
       const surface = editorContent.value;
       if (surface) {
@@ -2276,6 +2424,8 @@ onUnmounted(() => {
     updateMobileToolbarOwnership,
     true
   );
+  document.removeEventListener("pointercancel", updateMobileToolbarOwnership, true);
+  document.removeEventListener("click", updateMobileToolbarOwnership, true);
   document.removeEventListener("focusin", updateMobileToolbarOwnership, true);
   window.removeEventListener("beforeprint", onBeforePrint);
 });
@@ -2398,6 +2548,7 @@ const {
   openCommandMenu,
   handleCommandOption,
   handleMenuKeydown: handleSlashMenuKeydown,
+  handleMenuBeforeInput: handleSlashMenuBeforeInput,
   handleDocumentClick,
   handleEscape,
 } = useSlashCommands({
@@ -2413,6 +2564,7 @@ const {
   showToast: notify,
   editorRoot: rootEl,
   pluginSlashCommands,
+  translate: t,
 });
 
 // The editing surface can host TWO exclusive popups — the slash menu and the
@@ -2444,20 +2596,17 @@ const surfacePopup = computed(() => {
 // opened. The live region takes over, and says more than the attribute could:
 // how many results there are, and how to use them. #R32-1
 watch(
-  () => surfacePopup.value.open,
-  (open, wasOpen) => {
-    if (open === wasOpen) return;
+  [() => surfacePopup.value.open, () => showVariableAutocomplete.value
+    ? variableAutocompleteRef.value?.optionCount : commandOptions.length],
+  ([open, count], [wasOpen]) => {
     if (!open) {
-      announce("Suggestions closed");
+      if (wasOpen) announce(() => t("Suggestions closed"));
       return;
     }
-    const count = showVariableAutocomplete.value
-      ? variableAutocompleteRef.value?.optionCount
-      : commandOptions.length;
     announce(
-      typeof count === "number"
-        ? `${count} suggestion${count === 1 ? "" : "s"} available. Use arrow keys to review, Enter to insert.`
-        : "Suggestions available. Use arrow keys to review, Enter to insert."
+      () => typeof count === "number"
+        ? t('{count} suggestions available. Use arrow keys to review, {shortcut} to insert.', { count, shortcut: editorLocale.shortcut('Enter') })
+        : t('Suggestions available. Use arrow keys to review, {shortcut} to insert.', { shortcut: editorLocale.shortcut('Enter') })
     );
   }
 );
@@ -2472,7 +2621,7 @@ const {
   onMouseUp: onMouseUpBase,
   onSelectionChange,
   onCodeInput: onCodeInputBase,
-  onCodeBlur,
+  onCodeBlur: onCodeBlurBase,
 } = useEditorEvents({
   editorContent,
   codeContent,
@@ -2506,7 +2655,7 @@ const onMouseUp = () => {
 // the toggle mutates data-checked in place and captures a history snapshot so it
 // persists (undoable) and round-trips through the sanitizer.
 const onEditorMousedown = (event: MouseEvent) => {
-  if (props.readonly) return;
+  if (effectiveReadonly.value) return;
   const li = checklistItemForCheckboxClick(event.target, event.clientX);
   if (!li) return;
   event.preventDefault();
@@ -2546,7 +2695,7 @@ const insertImageFromFile = async (file: File) => {
 };
 
 const onPaste = (event: ClipboardEvent) => {
-  if (props.readonly) return;
+  if (effectiveReadonly.value) return;
   const clipboard = event.clipboardData;
   if (!clipboard) return;
 
@@ -2598,7 +2747,13 @@ const onPaste = (event: ClipboardEvent) => {
   // Rebuild Word/Docs list paragraphs into real <ul>/<ol> BEFORE sanitizing
   // (which strips the mso-list markup they're detected by), else they paste as
   // flat paragraphs with literal bullet glyphs.
-  const clean = sanitizeHtml(reconstructWordLists(html));
+  const richHtml = reconstructWordLists(html), referenceData = clipboard.getData(REFERENCE_CLIPBOARD_TYPE);
+  if (documentClipboard.onPaste(richHtml, referenceData)) return;
+  // A plain HTML editor has no metadata store; retain readable text without
+  // adopting identifiers whose definitions it cannot save.
+  const clean = hasReferenceFragment(richHtml, referenceData)
+    ? importReferenceFragment({ html: richHtml, metadata: defaultDocumentMetadata(), documentId: '', sanitize: sanitizeHtml, preserveDefinitions: false }).html
+    : sanitizeHtml(richHtml);
 
   // Real visible content (text or media) → insert it directly.
   if (htmlHasVisibleContent(clean)) {
@@ -2685,7 +2840,7 @@ const onDragEnd = () => {
 };
 
 const onDrop = (event: DragEvent) => {
-  if (props.readonly) return;
+  if (effectiveReadonly.value) return;
   const data = event.dataTransfer;
   if (!data) return;
 
@@ -2772,6 +2927,9 @@ const onDrop = (event: DragEvent) => {
 };
 
 const onInput = (event?: Event) => {
+  if (documentClipboard.isApplying()) return;
+  // The structured editor owns input/composition and its inline decorations.
+  if (collaborationBinding) return;
   // IME guard: while a composition is live the browser fires input events
   // (inputType "insertCompositionText"); running the mutating passes below
   // (autocomplete's deleteContents/addRange, variable wrapping, model sync)
@@ -2821,6 +2979,17 @@ const onInput = (event?: Event) => {
   }
 };
 
+const onCodeBlur = () => {
+  if (effectiveDocumentOptions.value && editorContent.value) {
+    // Source input already passed through sanitization and snapshot capture,
+    // which assigns stable block IDs and inherited language attributes. The
+    // textarea stays raw while typing; do not replay that older representation
+    // over the canonical document when focus leaves it.
+    codeContent.value = sanitizeHtml(editorContent.value.innerHTML);
+  }
+  onCodeBlurBase();
+};
+
 // Wrap onCodeInput to sync with split editor in editor mode
 const onCodeInput = (event: Event) => {
   onCodeInputBase(event);
@@ -2864,6 +3033,7 @@ function handleSplitRightModeChange(mode: "preview" | "editor") {
 // (editorContent resolves to the split editor here) and keep the hidden main
 // editor mirrored so switching modes preserves content.
 function onSplitEditorInput(event: Event) {
+  if (documentClipboard.isApplying()) return;
   // Keep IME candidates out of history and autosave, as on the main surface.
   // compositionend runs this pipeline once with the committed text.
   if ((event as InputEvent).isComposing) return;
@@ -2966,12 +3136,15 @@ const advancedKeyboard = useAdvancedKeyboardShortcuts(editorContent, {
 // NOT consume the event do we offer it to the advanced registry, so the two
 // systems never double-handle a key.
 function onEditorKeydown(event: KeyboardEvent) {
-  if (event.altKey && event.key === 'F10' && props.showToolbar && !props.readonly) {
+  if (event.altKey && event.key === 'F10' && props.showToolbar && !effectiveReadonly.value) {
     if (editorToolbarRef.value?.focusToolbar()) {
       event.preventDefault();
       return;
     }
   }
+  // ProseMirror handles cursor movement, paragraph/list splitting and deletion.
+  // The legacy DOM merge handlers must not mutate a structured transaction.
+  if (collaborationBinding && !event.ctrlKey && !event.metaKey) return;
   if (variableAutocompleteRef.value?.handleEditorKeydown(event)) return;
 
   // Backspace after a pill unwraps it to editable token text. Model synced
@@ -2980,7 +3153,7 @@ function onEditorKeydown(event: KeyboardEvent) {
   // pass separately skips tokens the caret is INSIDE, so the user can then
   // edit freely and the token re-wraps when the caret leaves. #R23-63
   if (
-    !props.readonly &&
+    !effectiveReadonly.value &&
     variablesComposable?.unwrapPillBeforeCaret(editorContent.value, event)
   ) {
     captureSnapshot();
@@ -2992,7 +3165,7 @@ function onEditorKeydown(event: KeyboardEvent) {
   // gutter. The plain-Enter handler explicitly ignores ctrl/meta, so there's no
   // collision with paragraph splitting.
   if (
-    !props.readonly &&
+    !effectiveReadonly.value &&
     event.key === "Enter" &&
     (event.ctrlKey || event.metaKey) &&
     !event.shiftKey &&
@@ -3071,25 +3244,25 @@ function handleSelectThread(threadId: string) {
 // round-trips), and it's mutated outside Vue — so, like every other such
 // mutation, it has to go through the snapshot path or the host never sees it.
 function handleResolveThread(threadId: string) {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
   comments.resolveThread(threadId);
   captureSnapshot();
 }
 
 function handleReopenThread(threadId: string) {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
   comments.reopenThread(threadId);
   captureSnapshot();
 }
 
 function handleDeleteThread(threadId: string) {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
   comments.deleteThread(threadId);
   captureSnapshot();
 }
 
 function handleAddReply(threadId: string, content: string, mentions: string[]) {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
   const reply = comments.addReply(threadId, content, mentions);
   if (reply) {
     showToastNotification("Reply added successfully", "success");
@@ -3097,7 +3270,7 @@ function handleAddReply(threadId: string, content: string, mentions: string[]) {
 }
 
 function handleCreateComment() {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
 
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed) {
@@ -3122,7 +3295,7 @@ function handleCreateComment() {
 }
 
 function handleCommentSubmit(content: string, mentions: string[]) {
-  if (!comments) return;
+  if (!comments || effectiveReadonly.value) return;
 
   // Add the thread with the captured selection
   const thread = comments.addThread(content, mentions);
@@ -3154,6 +3327,10 @@ function handleCommentCancel() {
   showCommentModal.value = false;
   selectedTextForComment.value = "";
 }
+
+watch(effectiveReadonly, readonly => {
+  if (readonly) handleCommentCancel();
+}, { flush: 'sync' });
 
 // Variable handlers
 function detectVariableSyntax() {
@@ -3239,7 +3416,7 @@ function handlePanelInsert(variable: Variable) {
   // and panel are hidden in readonly, but guard the mutation itself too — this
   // path inserted a pill into the locked content and emitted it to the host.
   // #r21-2
-  if (props.readonly) return;
+  if (effectiveReadonly.value) return;
   if (!variablesComposable || !editorContent.value) return;
   const editor = editorContent.value;
   const selection = window.getSelection();
@@ -3451,13 +3628,16 @@ watch(keptWritingDecisions, value => {
 // serialized watch tracks data only, never live ranges/elements. Host echoes must
 // not re-import highlights: replacing their nodes would disturb a writing caret.
 if (comments) {
+  // Local input and remote transactions can remove or move an anchor without
+  // replacing the editor element. Keep the discussion's location state current.
+  watch(htmlContent, () => comments.restoreThreads(), { flush: "post" });
   let ready = false;
   let synchronizedThreads: string | undefined;
   const restoreCommentModel = (value: string | undefined) => {
     if (value === undefined || value === synchronizedThreads) return;
     if (comments.importThreads(value)) {
       synchronizedThreads = comments.exportThreads();
-      captureSnapshot(false);
+      captureSnapshotBase(false);
     }
   };
   onMounted(() => {
@@ -3521,7 +3701,7 @@ const chromeSuppressed = computed(
 const adaptiveChromeEnabled = computed(
   () =>
     props.showToolbar &&
-    !props.readonly &&
+    !effectiveReadonly.value &&
     viewMode.value !== "code" &&
     (isPillMode.value ||
       (effectiveAdaptiveChrome.value !== "off" &&
@@ -3697,13 +3877,14 @@ onMounted(() => {
     },
     getContent: () => editorContent.value?.innerHTML ?? "",
     setContent: (html: string) => {
-      if (!editorContent.value) return;
+      if (effectiveReadonly.value || !editorContent.value) return;
       // Host/plugin HTML is an ingestion path like any other — sanitize it.
       editorContent.value.innerHTML = sanitizeHtml(html);
       handleContentReplaced();
       captureSnapshot();
     },
     execCommand: (command: string, value?: string) => {
+      if (effectiveReadonly.value) return;
       document.execCommand(command, false, value);
       onInput();
     },
@@ -3811,13 +3992,13 @@ const pillOverflowItems = computed(() => [
   {
     id: "pill-undo",
     label: "Undo",
-    isDisabled: () => historyIndex.value <= 0,
+    isDisabled: () => activeHistory.value.undo <= 0,
     onClick: undo,
   },
   {
     id: "pill-redo",
     label: "Redo",
-    isDisabled: () => historyIndex.value >= history.value.length - 1,
+    isDisabled: () => activeHistory.value.redo <= 0,
     onClick: redo,
   },
   { divider: true },
@@ -3984,12 +4165,63 @@ watch(lastSaved, () => {
 onUnmounted(() => {
   if (savePulseTimer) clearTimeout(savePulseTimer);
 });
+watch(() => props.documentOptions?.role, role => { documentWorkspace.suggesting.value = role === 'reviewer'; }, { immediate: true });
+watch([() => props.contentLanguage, () => props.contentDirection], ([language,direction], [previousLanguage,previousDirection]) => {
+  if (effectiveReadonly.value || !effectiveDocumentOptions.value) return;
+  void documentWorkspace.run(() => documentWorkspace.mutate((root,value) => {
+    value.metadata.page.language=language;
+    for (const block of Array.from(root.children)) {
+      if (!block.hasAttribute('lang') || block.getAttribute('lang') === previousLanguage) block.setAttribute('lang',language);
+      if (!block.hasAttribute('dir') || block.getAttribute('dir') === previousDirection) block.setAttribute('dir',direction);
+    }
+  }));
+});
+watch([htmlContent, documentWorkspace.session.metadata], () => { if (effectiveDocumentOptions.value) emit('document-change', documentWorkspace.session.snapshot()); });
+let initializedDocumentId:string|undefined;
+watch([editorContent, () => effectiveDocumentOptions.value?.id], async ([root,id]) => {
+  await nextTick();
+  if (root && root===editorContent.value && id && id===effectiveDocumentOptions.value?.id && initializedDocumentId!==id && !props.collaboration) {
+    if(!root.innerHTML && htmlContent.value)root.innerHTML=sanitizeHtml(htmlContent.value);
+    assignBlockIds(root);
+    for(const block of Array.from(root.children)){if(!block.hasAttribute('lang'))block.setAttribute('lang',props.contentLanguage);if(!block.hasAttribute('dir'))block.setAttribute('dir',props.contentDirection);}
+    captureSnapshotBase(false);
+    documentWorkspace.session.resetBaseline();initializedDocumentId=id;
+  }
+}, { flush: 'post' });
+watch([() => props.collaboration, () => props.documentOptions?.id, editorContent], async ([configuration, documentId, root], _old, onCleanup) => {
+  collaborationController?.abort(); collaborationBinding?.destroy(); collaborationBinding = undefined;
+  if (!configuration || !root || !documentId) return;
+  const controller = new AbortController(); collaborationController = controller;
+  onCleanup(() => controller.abort());
+  collaborationState.value = 'connecting';
+  try {
+    const { bindCollaborativeEditor } = await import('../utils/collaborationBinding');
+    if (controller.signal.aborted) return;
+    collaborationBinding = await bindCollaborativeEditor({ root, documentId, html: htmlContent.value, configuration,
+      metadata: documentWorkspace.session.snapshot().metadata,
+      onMetadata: metadata => { syncingRemote = true; documentWorkspace.session.applyRemoteMetadata(metadata); syncingRemote = false; historyTick.value++; },
+      readonly: () => effectiveReadonly.value, sanitize: sanitizeHtml, signal: controller.signal,
+      onState: state => { collaborationState.value = state; }, onPresence: users => { collaborators.value = users; },
+      onUpdate: html => { syncingRemote = true; htmlContent.value = html; codeContent.value = html; emit('update:modelValue', html); syncingRemote = false; },
+    });
+  } catch (error) { if (!controller.signal.aborted) { collaborationState.value = 'error'; documentWorkspace.error.value = error instanceof Error ? error.message : 'Unable to connect.'; } }
+}, { flush: 'post' });
+watch(viewMode, mode => { if ((props.collaboration || props.documentOptions?.role === 'reviewer') && mode !== 'editor') viewMode.value = 'editor'; }, {immediate:true});
+if(comments)watch(()=>comments.exportThreads(),json=>{
+  if(syncingRemote || !effectiveDocumentOptions.value || effectiveReadonly.value || json===documentWorkspace.session.metadata.value.comments)return;
+  const before=documentWorkspace.session.metadata.value;
+  documentWorkspace.session.transact(value=>{value.metadata.comments=json;});
+  collaborationBinding?.applyMetadata(before,documentWorkspace.session.snapshot().metadata);
+},{flush:'post'});
+onUnmounted(() => { collaborationController?.abort(); collaborationBinding?.destroy(); });
+defineExpose({ document: documentWorkspace, undo, redo });
 </script>
 
 <style src="../styles/NextLevelEditor.css"></style>
 <style src="../styles/editor-variables.css"></style>
 <style src="../styles/gap-fallback.css"></style>
 <style src="../styles/writing-workspace.css"></style>
+<style src="../styles/document-collaboration.css"></style>
 
 <style scoped>
 /* History Timeline floating panel (toggled from the Tools dropdown) */

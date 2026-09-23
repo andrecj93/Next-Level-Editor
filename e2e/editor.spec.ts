@@ -142,8 +142,9 @@ test.describe('Next Level Editor - Headings', () => {
     await page.keyboard.press('Control+A')
     
     // Open format dropdown
-    await page.click('button:has-text("Format")')
-    await page.click('text=Heading 1')
+    await page.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true })
+      .getByRole('button', { name: 'Format', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Heading 1', exact: true }).click()
     
     const h1 = editor.locator('h1').filter({ hasText: 'Heading 1' })
     await expect(h1).toBeVisible()
@@ -161,8 +162,9 @@ test.describe('Next Level Editor - Headings', () => {
     await editor.pressSequentially('Heading 2')
     
     await page.keyboard.press('Control+A')
-    await page.click('button:has-text("Format")')
-    await page.click('text=Heading 2')
+    await page.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true })
+      .getByRole('button', { name: 'Format', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Heading 2', exact: true }).click()
     
     const h2 = editor.locator('h2').filter({ hasText: 'Heading 2' })
     await expect(h2).toBeVisible()

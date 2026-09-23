@@ -148,4 +148,26 @@ describe('writing workspace decisions', () => {
     restored.refresh();
     expect(restored.dismissedNotes.value.size).toBe(1);
   });
+
+  it('retains private decisions while a different document language hides English checks', () => {
+    const language = ref('en');
+    const html = ref(passage);
+    const scope = effectScope();
+    scopes.push(scope);
+    const state = scope.run(() => useWritingWorkspace(html, ref(true), language))!;
+    state.refresh();
+    state.dismissNote(state.review.value.notes[0]);
+    const saved = state.serializedDecisions.value;
+    language.value = 'pt-PT';
+    state.refresh();
+    expect(state.review.value.notes).toEqual([]);
+    expect(state.serializedDecisions.value).toBe(saved);
+    language.value = 'en-GB';
+    state.refresh();
+    expect(state.dismissedNotes.value.size).toBe(1);
+    language.value = 'pt-PT';
+    html.value = passage.replace('house', 'harbor');
+    state.refresh();
+    expect(state.serializedDecisions.value).toBe('[]');
+  });
 });

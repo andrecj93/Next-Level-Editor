@@ -5,13 +5,15 @@
         v-if="show"
         ref="menuRef"
         class="context-menu nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="theme"
         :style="{
           top: `${position.top}px`,
           left: `${position.left}px`,
         }"
         role="menu"
-        aria-label="Context menu"
+        :aria-label="t('Context menu')"
         tabindex="-1"
         @click.stop
         @contextmenu.prevent
@@ -33,12 +35,12 @@
             @click="handleItemClick(item)"
           >
             <span class="context-menu-icon">{{ item.icon }}</span>
-            <span class="context-menu-label">{{ item.label }}</span>
+            <span class="context-menu-label">{{ t(item.label) }}</span>
             <span
               v-if="item.shortcut"
               class="context-menu-shortcut"
             >{{
-              item.shortcut
+              shortcut(item.shortcut)
             }}</span>
           </button>
         </div>
@@ -48,6 +50,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, shortcut, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, watch, nextTick, onBeforeUnmount } from "vue";
 import type { ContextMenuItem } from "../types/contextMenu";
 

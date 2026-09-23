@@ -1,20 +1,20 @@
 <template>
   <div class="editor-footer">
     <div v-if="writingMode" class="writing-footer-actions">
-      <button type="button" class="width-toggle" aria-label="Writing companion" :aria-description="writingNoteCount ? `${writingNoteCount} writing ${writingNoteCount === 1 ? 'note' : 'notes'} ready to review` : undefined" :aria-expanded="companionOpen" @click="$emit('toggle-companion')">Writing companion <span v-if="writingNoteCount" class="writing-note-count" aria-hidden="true">{{ writingNoteCount }}</span></button>
-      <button v-if="enableComments" type="button" class="width-toggle" :aria-expanded="commentsOpen" @click="$emit('open-comments')">Comments</button>
-      <button v-if="enableVariables" type="button" class="width-toggle" :aria-expanded="variablesOpen" @click="$emit('open-variables')">Variables</button>
+      <button type="button" class="width-toggle" :aria-label="t('Writing companion')" :aria-description="writingNoteCount ? t('{count} writing notes ready to review', { count: writingNoteCount }) : undefined" :aria-expanded="companionOpen" @click="$emit('toggle-companion')">{{ t("Writing companion") }} <span v-if="writingNoteCount" class="writing-note-count" aria-hidden="true">{{ number(writingNoteCount) }}</span></button>
+      <button v-if="enableComments" type="button" class="width-toggle" :aria-expanded="commentsOpen" @click="$emit('open-comments')">{{ t("Comments") }}</button>
+      <button v-if="enableVariables" type="button" class="width-toggle" :aria-expanded="variablesOpen" @click="$emit('open-variables')">{{ t("Variables") }}</button>
     </div>
     <button
       v-else
       class="width-toggle"
       type="button"
       :aria-pressed="fullWidth"
-      :title="
+      :title="t(
         fullWidth
           ? 'Switch back to the centered reading column'
           : 'Expand the writing column to fill the editor'
-      "
+      )"
       @click="$emit('toggle-full-width')"
     >
       <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
@@ -37,18 +37,20 @@
           fill="none"
         />
       </svg>
-      <span>{{ fullWidth ? "Fit width" : "Full width" }}</span>
+      <span>{{ t(fullWidth ? "Fit width" : "Full width") }}</span>
     </button>
 
     <div class="footer-counts">
       <slot />
-      <span class="word-count">{{ wordCount.toLocaleString() }} {{ wordCount === 1 ? 'word' : 'words' }}</span>
-      <span class="char-count">{{ characterCount.toLocaleString() }} {{ characterCount === 1 ? 'character' : 'characters' }}</span>
+      <span class="word-count">{{ t('{count} words', { count: wordCount }) }}</span>
+      <span class="char-count">{{ t('{count} characters', { count: characterCount }) }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, number } = useEditorLocale();
 defineProps<{
   wordCount: number;
   characterCount: number;

@@ -13,10 +13,10 @@
     >
       <!-- Header -->
       <div class="modal-header">
-        <h2 id="shortcut-help-modal-title">⌨️ Keyboard Shortcuts Reference</h2>
+        <h2 id="shortcut-help-modal-title">{{ t("⌨️ Keyboard Shortcuts Reference") }}</h2>
         <button
           class="close-button"
-          aria-label="Close"
+          :aria-label="t('Close')"
           @click="close"
         >
           ×
@@ -29,9 +29,9 @@
           ref="searchInput"
           v-model="searchQuery"
           type="text"
-          placeholder="Search shortcuts..."
+          :placeholder="t('Search shortcuts...')"
           class="search-input"
-          aria-label="Search shortcuts"
+          :aria-label="t('Search shortcuts')"
         >
       </div>
 
@@ -43,7 +43,7 @@
           class="category-section"
         >
           <h3 class="category-title">
-            {{ category.name }}
+            {{ t(category.name) }}
           </h3>
           <div class="shortcuts-grid">
             <div
@@ -51,7 +51,7 @@
               :key="shortcut.id"
               class="shortcut-row"
             >
-              <span class="shortcut-desc">{{ shortcut.description }}</span>
+              <span class="shortcut-desc">{{ t(shortcut.description) }}</span>
               <span class="shortcut-keys-display">
                 <kbd
                   v-for="(key, index) in getActiveKeys(shortcut.id)"
@@ -69,14 +69,14 @@
           v-if="filteredCategories.length === 0"
           class="no-results"
         >
-          No shortcuts found matching "{{ searchQuery }}"
+          {{ t("No shortcuts found matching \"") }}{{ searchQuery }}"
         </div>
       </div>
 
       <!-- Footer -->
       <div class="modal-footer">
         <p class="footer-hint">
-          Press <kbd>Ctrl</kbd> + <kbd>/</kbd> in the editor to open this help
+          {{ t("Press") }} <kbd>{{ formatShortcut('Mod+/') }}</kbd> {{ t("in the editor to open this help") }}
         </p>
       </div>
     </div>
@@ -84,6 +84,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, shortcut: formatShortcut } = useEditorLocale();
 import { ref, computed } from "vue";
 import { useModalDialog } from "../composables/useModalDialog";
 
@@ -131,7 +133,7 @@ const getCategoryShortcuts = (categoryId: string) => {
     const query = searchQuery.value.toLowerCase();
     shortcuts = shortcuts.filter(
       (s) =>
-        s.description.toLowerCase().includes(query) ||
+        t(s.description).toLocaleLowerCase().includes(query) ||
         s.id.toLowerCase().includes(query) ||
         getActiveKeys(s.id)?.some((k) => k.toLowerCase().includes(query))
     );
@@ -147,7 +149,7 @@ const getActiveKeys = (shortcutId: string): string[] => {
 
 // Format key for display
 const formatKey = (key: string): string => {
-  return props.registry.getKeyDisplay([key]);
+  return formatShortcut(key);
 };
 
 // Close modal

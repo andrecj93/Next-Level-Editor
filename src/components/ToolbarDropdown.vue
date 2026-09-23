@@ -9,9 +9,9 @@
       ref="triggerRef"
       class="dropdown-trigger"
       :class="{ active: hasActiveItem }"
-      :data-tooltip="tooltip"
-      :title="tooltip"
-      :aria-label="label"
+      :data-tooltip="hint(tooltip, disabled)"
+      :title="hint(tooltip, disabled)"
+      :aria-label="t(label)"
       :aria-expanded="isOpen"
       aria-haspopup="menu"
       :disabled="disabled"
@@ -24,7 +24,7 @@
         class="dropdown-icon"
         v-html="icon"
       />
-      <span class="dropdown-label">{{ displayLabel }}</span>
+      <span class="dropdown-label">{{ t(displayLabel) }}</span>
       <span class="dropdown-arrow">▼</span>
     </button>
 
@@ -36,7 +36,7 @@
         :style="menuStyle"
         role="menu"
         tabindex="0"
-        :aria-label="label"
+        :aria-label="t(label)"
         @keydown="onMenuKeydown"
       >
         <div
@@ -54,7 +54,7 @@
             :disabled="isItemDisabled(item)"
             role="menuitem"
             tabindex="-1"
-            :aria-label="item.label"
+            :aria-label="t(item.label)"
             @mousedown.prevent
             @click="!isItemDisabled(item) && handleItemClick(item)"
           >
@@ -63,12 +63,12 @@
               class="item-icon"
               v-html="item.icon"
             />
-            <span class="item-label">{{ item.label }}</span>
+            <span class="item-label">{{ t(item.label) }}</span>
             <span
               v-if="item.shortcut"
               class="item-shortcut"
             >{{
-              item.shortcut
+              shortcut(item.shortcut)
             }}</span>
           </button>
         </div>
@@ -78,6 +78,11 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const locale = useEditorLocale();
+const { t, shortcut } = locale;
+import { toolbarHint } from '../utils/toolbarHint';
+const hint = (label?: string, disabled = false) => toolbarHint(locale, label, undefined, !disabled);
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 
 interface DropdownItem {

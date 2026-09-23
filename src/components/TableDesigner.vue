@@ -9,100 +9,102 @@
     ref="panelRef"
     class="table-designer"
     role="group"
-    aria-label="Table actions"
+    :aria-label="t('Table actions')"
     tabindex="-1"
     :style="position"
   >
     <div class="designer-controls">
       <button
         class="control-btn"
-        title="Add row above"
-        aria-label="Add row above"
+        :title="t('Add row above')"
+        :aria-label="t('Add row above')"
         @click="$emit('add-row-above')"
       >
         <span class="icon" aria-hidden="true">⬆</span>
-        <span class="label">Row Above</span>
+        <span class="label">{{ t("Row Above") }}</span>
       </button>
       <button
         class="control-btn"
-        title="Add row below"
-        aria-label="Add row below"
+        :title="t('Add row below')"
+        :aria-label="t('Add row below')"
         @click="$emit('add-row-below')"
       >
         <span class="icon" aria-hidden="true">⬇</span>
-        <span class="label">Row Below</span>
+        <span class="label">{{ t("Row Below") }}</span>
       </button>
       <button
         class="control-btn"
-        title="Add column left"
-        aria-label="Add column left"
+        :title="t('Add column left')"
+        :aria-label="t('Add column left')"
         @click="$emit('add-column-left')"
       >
         <span class="icon" aria-hidden="true">⬅</span>
-        <span class="label">Column Left</span>
+        <span class="label">{{ t("Column Left") }}</span>
       </button>
       <button
         class="control-btn"
-        title="Add column right"
-        aria-label="Add column right"
+        :title="t('Add column right')"
+        :aria-label="t('Add column right')"
         @click="$emit('add-column-right')"
       >
         <span class="icon" aria-hidden="true">➡</span>
-        <span class="label">Column Right</span>
+        <span class="label">{{ t("Column Right") }}</span>
       </button>
       <div class="divider" />
       <button
         class="control-btn"
-        title="Remove current row"
-        aria-label="Remove current row"
+        :title="t('Remove current row')"
+        :aria-label="t('Remove current row')"
         @click="$emit('remove-row')"
       >
         <span class="icon" aria-hidden="true">🗑</span>
-        <span class="label">Delete Row</span>
+        <span class="label">{{ t("Delete Row") }}</span>
       </button>
       <button
         class="control-btn"
-        title="Remove current column"
-        aria-label="Remove current column"
+        :title="t('Remove current column')"
+        :aria-label="t('Remove current column')"
         @click="$emit('remove-column')"
       >
         <span class="icon" aria-hidden="true">🗑</span>
-        <span class="label">Delete Column</span>
+        <span class="label">{{ t("Delete Column") }}</span>
       </button>
       <div class="divider" />
       <button
         class="control-btn"
-        title="Cell properties"
-        aria-label="Cell properties"
+        :title="t('Cell properties')"
+        :aria-label="t('Cell properties')"
         @click="$emit('cell-properties')"
       >
         <span class="icon" aria-hidden="true">🎨</span>
-        <span class="label">Cell Properties</span>
+        <span class="label">{{ t("Cell Properties") }}</span>
       </button>
       <button
         class="control-btn"
-        title="Table properties"
-        aria-label="Table properties"
+        :title="t('Table properties')"
+        :aria-label="t('Table properties')"
         @click="$emit('table-properties')"
       >
         <span class="icon" aria-hidden="true">⚙️</span>
-        <span class="label">Table Properties</span>
+        <span class="label">{{ t("Table Properties") }}</span>
       </button>
       <div class="divider" />
       <button
         class="control-btn danger"
-        title="Delete table"
-        aria-label="Delete table"
+        :title="t('Delete table')"
+        :aria-label="t('Delete table')"
         @click="$emit('delete-table')"
       >
         <span class="icon" aria-hidden="true">✕</span>
-        <span class="label">Delete Table</span>
+        <span class="label">{{ t("Delete Table") }}</span>
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { computed, ref, watch, nextTick } from 'vue'
 
 interface Props {

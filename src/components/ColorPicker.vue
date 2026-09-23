@@ -4,7 +4,7 @@
     <button
       class="color-button"
       :style="{ backgroundColor: modelValue || '#000000' }"
-      :aria-label="label"
+      :aria-label="t(label)"
       aria-haspopup="dialog"
       :aria-expanded="showPicker"
       @mousedown.prevent="togglePicker"
@@ -17,7 +17,7 @@
     <transition name="picker-fade">
       <div v-if="showPicker" class="color-picker-container" @click.stop>
         <div class="color-picker-label">
-          {{ label }}
+          {{ t(label) }}
         </div>
         <Vue3ColorPicker
           v-model="internalColor"
@@ -38,6 +38,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import {
   ref,
   onMounted,

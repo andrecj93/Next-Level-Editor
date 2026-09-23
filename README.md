@@ -27,6 +27,14 @@ template variables, and PDF / Word / Markdown / HTML export — in one `v-model`
 
 ---
 
+## Optional document workspace
+
+Enable `document-tools` for durable versions, Word import, searchable tagged PDF,
+content accessibility checks, English/Portuguese controls, tracked review,
+coauthoring, host AI proposals, citations, page setup, block operations, and typed
+templates. [Integration guide and capability boundaries](docs/document-workspace.md).
+Persistence, server authorization, and AI services use explicit host adapters.
+
 ## Start in 30 seconds
 
 ```bash
@@ -97,9 +105,11 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,835 unit checks
-across 376 files, plus end-to-end checks on Chromium and mobile Safari. Both
-suites gate the npm publish; neither is decoration.
+**Verification includes real editing workflows.** The latest full unit run has
+4,978 passing checks and two failing structural concurrency regressions. The
+failures remain release gates; coauthoring is experimental. Unit and browser
+suites on Chromium and mobile Safari gate npm publication. See the
+[known collaboration failure](docs/document-workspace.md#r00-architecture-decision).
 
 ---
 
@@ -221,7 +231,7 @@ readable — click any section to open it.
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **4,808 Unit Checks** - Across 372 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
+- **4,953 Unit Checks** - Across 393 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
 - **Browser Gates** - Playwright on Chromium and mobile WebKit, plus the same writing scenarios on 18 desktop, tablet, phone, landscape, and reflow profiles
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
@@ -252,8 +262,8 @@ Comment threads anchored to selected text. Shared storage, synchronization, and 
 - **Status Management** - Mark threads as open or resolved
 - **Visual Highlights** - Color-coded text highlighting (yellow for open, green for resolved)
 - **Sidebar UI** - Dedicated sidebar with tabs for open/resolved comments
-- **Persistence API** - Bind `v-model:comment-threads` to receive and restore thread JSON alongside the document HTML. Replies also trigger auto-save, including failure and Retry. The playground saves both together in its local draft.
-- **Auto-restore** - Automatically re-anchor comments after content changes
+- **Persistence API** - Bind `v-model:comment-threads` to receive and restore thread JSON alongside the document HTML. Replies also trigger auto-save, including failure and Retry. The playground saves both together in its local draft; document workspace checkpoints also include the discussion metadata.
+- **Stable Anchors** - Follow the original highlighted passage through edits. Removing it keeps the discussion available with a clear notice; identical text elsewhere cannot silently acquire the thread. Undoing the deletion reattaches the original passage.
 
 #### ♿ Accessibility
 
@@ -278,24 +288,28 @@ unverified; these checks do not establish full WCAG conformance. Implemented sup
 
 ### 📦 Bundle Size
 
-Measured from `npm run build` on 2026-09-20, with sizes divided by 1,024. The ES core includes the entry module and its implementation chunk. The heavy parts are split
+Measured from `npm run build` on 2026-09-23, with sizes divided by 1,024. The ES core includes the entry module and its implementation chunk. The heavy parts are split
 into chunks your bundler only fetches when the feature is first used, so what
 you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 913.7 KB | **221.0 KB** | On import |
-| **CSS** | 258.6 KB | **41.7 KB** | On import |
+| **Core (ES)** | 1,416.15 KB | **347.71 KB** | On import |
+| **CSS** | 273.46 KB | **44.33 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
-| **UMD** | 1,665.0 KB | 496.6 KB | On import (no splitting) |
+| PDF page preview module and worker assets | 1,467.53 KB | 409.50 KB | First page preview (ES and UMD) |
+| **UMD** | 3,457.84 KB | 1,111.13 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **262.7 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **392.04 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
+DOCX conversion, semantic PDF and its fonts, citation formatting, and the
+collaborative editing binding also load on demand in the ES build. They account
+for the larger UMD build; the original PDF row describes raster export. The PDF.js preview module and worker remain separate assets in both formats. Keep them beside the UMD file when serving it directly; bundlers resolve their module-relative URLs. Their Apache-2.0 license is included in the package.
 
 The UMD build cannot code-split by definition — prefer the ES build (Vite,
 webpack, Rollup, and every modern bundler pick it automatically) unless you
@@ -634,7 +648,12 @@ to its own instance.
 | `toolbarPosition`  | `string`  | `'top'`             | Where the toolbar lives: `top` \| `left` (slim margin rail) \| `bottom` (dock, menus open upward) \| `zen` (no persistent toolbar — the ambient band is the only chrome; intent peeks the full bar). All fall back to `top` below 640px |
 | `toolbarMode`      | `string`  | `'bar'`             | The toolbar's form: `bar` (docked masthead) \| `pill` (Playhead — one floating glass capsule that contracts while you write, expands on intent and travels to your selection to become the formatting bubble). Falls back to `bar` below 640px |
 | `saveHandler`      | `function`| `undefined`         | `(html) => boolean \| Promise<boolean>` — ordered, debounced persistence. Resolve `false`/throw to show an error and Retry. Pending changes guard page exit. Without a handler the indicator says "Updated", meaning content emitted to `v-model`. |
-| `readonly`         | `boolean` | `false`             | Viewer mode — content shown & selectable, not editable; toolbars hidden |
+| `readonly`         | `boolean` | `false`             | Content stays selectable; content-changing controls are disabled |
+| `locale` | `string` | `'en'` | UI language, plural rules, number and date formatting |
+| `messages` | `EditorMessages` | `{}` | Per-instance text/plural catalog overrides |
+| `uiDirection` | `'auto' \| 'ltr' \| 'rtl'` | `'auto'` | UI direction, including teleported controls |
+| `contentLanguage` | `string` | `'en'` | Document language, independent from UI language |
+| `contentDirection` | `'auto' \| 'ltr' \| 'rtl'` | `'auto'` | Document text direction |
 | `showToolbar`      | `boolean` | `true`              | Show the main toolbar; set `false` for a headless editor     |
 | `defaultViewMode`  | `string`  | `'editor'`          | Initial view: `editor` \| `code` \| `split` \| `preview`     |
 | `autofocus`        | `boolean` | `false`             | Focus the editing surface on mount                           |
@@ -838,22 +857,25 @@ npm run test:e2e:debug
 
 ### Test Coverage Statistics
 
-Measured in [CI run 35886211595](https://github.com/andrecj93/Next-Level-Editor/actions/runs/35886211595), 2026-09-23:
+| File Type   | Statements | Branches | Functions | Lines   |
+| ----------- | ---------- | -------- | --------- | ------- |
+| **Overall** | **83.58%** | **75.25%** | **78.83%** | **85.75%** |
 
-| Scope | Statements | Branches | Functions | Lines |
-| --- | --- | --- | --- | --- |
-| Overall | 88.66% | 82.08% | 84.07% | 90.60% |
+Last complete coverage run: `4cb0867`, measured on 2026-09-23. The CI coverage artifact includes per-file results.
 
 ### Test Suites Overview
 
-The linked CI checkpoint passed 4,780 unit checks, with four bundle-dependent
-checks deferred to the seven-check package build gate. Browser results were
-200 Chromium and 67 mobile WebKit passes, with 133 explicit mobile exclusions.
-The separate device matrix passed all 360 cases on 18 profiles with no skips,
-failures, or retries. Subsequent changes add a comment lifecycle scenario to
-each profile. See the CI reports for the result of the revision being reviewed.
+The latest full unit run on 2026-09-23 passed 4,978 checks and failed two new
+structural concurrency regressions; no tests were skipped. The earlier complete
+coverage run measured 85.75% line coverage. The new failures are retained as
+release gates, with reproduction details in the document workspace guide.
+Browser suites cover Chromium and mobile WebKit; duplicate desktop flows have
+explicit mobile exclusions. A separate 18-profile device matrix exercises all
+three browser engines. Current run counts and retained reports are available in
+[GitHub Actions](https://github.com/andrecj93/Next-Level-Editor/actions).
+See the [document workspace](docs/document-workspace.md) for supported features and qualification limits, and the [earlier quality review](docs/reports/QUALITY_REVIEW_2026-09-20.md) for the writing baseline.
 
-#### Unit Tests (376 files, with Vitest)
+#### Unit Tests (Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
@@ -889,17 +911,17 @@ each profile. See the CI reports for the result of the revision being reviewed.
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.mjs`
+- **ES Module** - `dist/next-level-editor.mjs` (core 1,411.98 KB, 346.59 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Syntax highlighting, the colour picker and both exporters are separate
     chunks, fetched the first time you use them
   - Recommended for Vite, Webpack 5+, Rollup
-- **UMD** - `dist/next-level-editor.umd.js`
+- **UMD** - `dist/next-level-editor.umd.js` (3,452.54 KB, 1,109.77 KB gzipped)
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
-  - Everything in one file — UMD cannot code-split, so this is the whole
-    library including features you may never use
-- **CSS** - `dist/next-level-editor.css`
+  - Editor and feature code is bundled together, including features you may never use.
+    The PDF preview additionally loads the packaged browser module and worker assets.
+- **CSS** - `dist/next-level-editor.css` (273.06 KB, 44.26 KB gzipped)
   - Minified styles with CSS variables
   - Includes light and dark themes, all four theme presets
   - Responsive design utilities

@@ -43,7 +43,13 @@ const ALLOWED_TAGS = new Set([
   "IFRAME",
 ]);
 
-const GLOBAL_ALLOWED_ATTRIBUTES = new Set(["title"]);
+// Document metadata attributes have a narrow value grammar below. They carry
+// identity/references only; none can introduce a URL, script or executable expression.
+const GLOBAL_ALLOWED_ATTRIBUTES = new Set([
+  "title", "lang", "dir", "data-nle-id", "data-nle-suggestion",
+  "data-nle-deletion", "data-nle-cite", "data-nle-note", "data-nle-generated", "data-nle-locator",
+  "data-nle-if", "data-nle-repeat",
+]);
 // Semantic containers commonly found in pasted content (figures, sectioning
 // elements, description lists). They are not part of the editor's document
 // model, so they are unwrapped — children survive and are still recursively
@@ -130,15 +136,15 @@ const COMMENT_HIGHLIGHT_RESOLVED_CLASS = "comment-highlight-resolved";
 const THREAD_ID_PATTERN = /^[\w-]{1,64}$/;
 
 const ELEMENT_ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
-  a: new Set(["href", "rel", "target", "title"]),
+  a: new Set(["href", "rel", "target", "title", "id"]),
   img: new Set(["alt", "src", "title", "width", "height", "style"]),
   table: new Set(["border", "cellpadding", "cellspacing", "style"]),
   colgroup: new Set(["span", "style"]),
   col: new Set(["span", "style"]),
   td: new Set(["colspan", "rowspan", "style"]),
-  th: new Set(["colspan", "rowspan", "style"]),
+  th: new Set(["colspan", "rowspan", "style", "scope"]),
   span: new Set(["style"]),
-  p: new Set(["style"]),
+  p: new Set(["style", "id"]),
   h1: new Set(["style", "id"]),
   h2: new Set(["style", "id"]),
   h3: new Set(["style", "id"]),
@@ -314,17 +320,27 @@ const sanitizeStyleValue = (styleValue: string): string => {
  * Provides secure HTML cleaning and validation
  */
 export function useHtmlSanitizer() {
+  // Input capture, document history and the host's v-model echo share this
+  // instance. The allowlist is immutable, so identical input in the same DOM
+  // environment can reuse its validated result. Retain only the latest pair,
+  // with a combined one-million-character limit (about 2 MB of UTF-16 text).
+  let cachedDocument: Document | undefined;
+  let cachedInput: string | undefined;
+  let cachedResult = "";
   const sanitizeHtml = (input: string | null = ""): string => {
     const value = input ?? "";
     if (!value.trim()) return "";
     // No DOM (SSR / Node): we cannot sanitize, so never echo raw untrusted HTML
     // through — return empty. The editor is browser-only and re-applies the real
     // content on client mount, so this only affects a server pre-render.
-    if (globalThis.window === undefined || document === undefined) return "";
+    if (globalThis.window === undefined || typeof document === "undefined") return "";
+    if (cachedDocument === document && cachedInput === value) return cachedResult;
 
     const workingDocument =
       document.implementation.createHTMLDocument("sanitizer");
     workingDocument.body.innerHTML = value;
+    // Presence is transient UI, never document content (including native input capture).
+    workingDocument.body.querySelectorAll('.nle-remote-cursor, .ProseMirror-yjs-cursor, .ProseMirror-widget, .ProseMirror-separator, br.ProseMirror-trailingBreak').forEach(node=>node.remove());
 
     const sanitizeTree = (root: HTMLElement) => {
       let child: ChildNode | null = root.firstChild;
@@ -340,6 +356,8 @@ export function useHtmlSanitizer() {
         }
         if (child.nodeType === Node.ELEMENT_NODE) {
           const element = child as HTMLElement;
+          const documentAttributes = Array.from(element.attributes).filter(attribute =>
+            /^(data-nle-|lang$|dir$)/.test(attribute.name) && isAttributeAllowed(attribute.name, element.tagName) && validateAttributeValue(element, attribute.name, attribute.value));
           if (element.tagName === "DIV") {
             if (element.classList.contains(RESIZE_HANDLE_CLASS)) {
               // Transient resize-handle UI must never persist into content.
@@ -446,7 +464,7 @@ export function useHtmlSanitizer() {
             sanitizeTree(element);
             if (
               element.childNodes.length === 0 &&
-              element.attributes.length === 0
+              Array.from(element.attributes).every(attribute => /^(lang|dir)$/.test(attribute.name))
             ) {
               child = next;
               element.remove();
@@ -481,6 +499,8 @@ export function useHtmlSanitizer() {
           } else {
             element.remove();
           }
+          // Special nodes rebuild their UI attributes; retain validated document identity.
+          if (element.parentNode) for (const attribute of documentAttributes) element.setAttribute(attribute.name, attribute.value);
         }
         child = next;
       }
@@ -823,6 +843,17 @@ export function useHtmlSanitizer() {
       attributeName: string,
       attributeValue: string
     ): boolean => {
+      if (attributeName === "lang") return /^[a-zA-Z]{2,8}(?:-[a-zA-Z0-9]{1,8}){0,6}$/.test(attributeValue);
+      if (attributeName === "dir") return /^(ltr|rtl|auto)$/.test(attributeValue);
+      if (attributeName === "scope") return /^(row|col|rowgroup|colgroup)$/.test(attributeValue);
+      if (/^data-nle-(id|suggestion|cite|note)$/.test(attributeName)) return /^nle-[a-zA-Z0-9-]{1,90}$/.test(attributeValue);
+      if (attributeName === "data-nle-deletion") return attributeValue === "true";
+      if (attributeName === "data-nle-locator") return attributeValue.length <= 120 && Array.from(attributeValue).every(character=>character.charCodeAt(0)>=32);
+      if (attributeName === "data-nle-generated") return /^(notes|bibliography)$/.test(attributeValue);
+      if (/^data-nle-(if|repeat)$/.test(attributeName)) {
+        const path = attributeName === "data-nle-if" ? attributeValue.replace(/^!/, "") : attributeValue;
+        return /^[a-zA-Z_][a-zA-Z0-9_.-]{0,100}$/.test(path) && !path.split(".").some(p => /^(constructor|prototype|__proto__)$/.test(p));
+      }
       if (attributeName === "href") {
         return (
           SAFE_URL_PATTERN.test(attributeValue) ||
@@ -834,7 +865,7 @@ export function useHtmlSanitizer() {
         // `heading-N-slug` on headings) survive the round-trip — without this
         // every TOC link died on save/reload. Arbitrary ids stay stripped: an
         // id like "location" can shadow window globals (DOM clobbering).
-        return TOC_HEADING_ID_PATTERN.test(attributeValue);
+        return (/^H[1-6]$/.test(element.tagName) && TOC_HEADING_ID_PATTERN.test(attributeValue)) || /^nle-(note|ref)-nle-[a-zA-Z0-9-]{1,90}$/.test(attributeValue);
       }
       if (attributeName === "src") {
         if (element.tagName === "IFRAME") {
@@ -1003,7 +1034,17 @@ export function useHtmlSanitizer() {
     ensureBlockLineBreaks(workingDocument.body);
     workingDocument.body.normalize();
 
-    return workingDocument.body.innerHTML;
+    const result = workingDocument.body.innerHTML;
+    if (value.length + result.length <= 1_000_000) {
+      cachedDocument = document;
+      cachedInput = value;
+      cachedResult = result;
+    } else {
+      cachedDocument = undefined;
+      cachedInput = undefined;
+      cachedResult = "";
+    }
+    return result;
   };
 
   return {

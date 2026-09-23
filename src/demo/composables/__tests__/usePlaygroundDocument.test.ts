@@ -93,6 +93,33 @@ describe("playground draft recovery", () => {
     expect(restored.hasEdits.value).toBe(false);
   });
 
+  it('keeps checkpoint metadata and the comment model in one saved record', async () => {
+    const draft = usePlaygroundDocument(true);
+    draft.commentThreads.value = discussion;
+    expect(draft.metadata.value.comments).toBe(discussion);
+    draft.content.value = '<p>A restored checkpoint.</p>';
+    draft.metadata.value = { ...draft.metadata.value, comments: '[]', page: { ...draft.metadata.value.page, title: 'Restored' } };
+    expect(draft.commentThreads.value).toBe('[]');
+    await nextTick();
+    const restored = usePlaygroundDocument(false);
+    expect(restored.documentId.value).toBe(draft.documentId.value);
+    expect(restored.content.value).toBe(draft.content.value);
+    expect(restored.metadata.value.page.title).toBe('Restored');
+    expect(restored.commentThreads.value).toBe('[]');
+  });
+
+  it('restores comments from an earlier document-workspace draft without a separate comment model', () => {
+    const draft = usePlaygroundDocument(true);
+    localStorage.setItem(PLAYGROUND_DRAFT_KEY, JSON.stringify({
+      version: 1, documentId: draft.documentId.value, content: '<p>Saved text.</p>',
+      metadata: { ...draft.metadata.value, comments: discussion },
+    }));
+    const restored = usePlaygroundDocument(false);
+    expect(restored.documentId.value).toBe(draft.documentId.value);
+    expect(restored.commentThreads.value).toBe(discussion);
+    expect(restored.restoreFailed.value).toBe(false);
+  });
+
   it('recovers prose and reports invalid discussion without rendering partial threads', () => {
     localStorage.setItem(PLAYGROUND_DRAFT_KEY, JSON.stringify({ version: 2, content: '<p>Recover me.</p>', commentThreads: '[{"id":"broken"}]' }));
     const draft = usePlaygroundDocument(false);
@@ -119,10 +146,19 @@ describe("playground draft recovery", () => {
   const kept = JSON.stringify(['0:' + JSON.stringify(['In order to remember.', 0, 'In order to', 'A little more direct'])]);
   it('restores kept writing decisions with the prose and clears them for a new document', async () => {
     const draft = usePlaygroundDocument(true);
+    draft.content.value = '<p>In order to remember.</p>';
     draft.keptWritingNotes.value = kept;
+    draft.metadata.value = { ...draft.metadata.value, page: { ...draft.metadata.value.page, title: 'A private decision' } };
+    draft.commentThreads.value = discussion;
     expect(draft.hasEdits.value).toBe(true);
     await draft.saveDraft('<p>In order to remember.</p>');
-    expect(usePlaygroundDocument(false).keptWritingNotes.value).toBe(kept);
+    const recovered = usePlaygroundDocument(false);
+    expect(recovered.keptWritingNotes.value).toBe(kept);
+    expect(recovered.metadata.value.page.title).toBe('A private decision');
+    expect(recovered.content.value).toBe(draft.content.value);
+    expect(JSON.parse(recovered.commentThreads.value)).toMatchObject([{ id: 'thread', status: 'resolved', comments: [{ content: 'An opening note.' }, { content: 'A reply worth keeping.' }] }]);
+    expect(recovered.metadata.value.comments).toBe(recovered.commentThreads.value);
+    expect(recovered.documentId.value).toBe(draft.documentId.value);
     draft.applyTemplate('empty');
     await draft.saveDraft('');
     const restored = usePlaygroundDocument(false);

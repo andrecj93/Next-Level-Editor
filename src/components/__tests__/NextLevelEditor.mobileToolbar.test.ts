@@ -15,8 +15,9 @@ vi.mock("../../composables/useDeviceDetection", () => ({
 const visibleToolbars = () =>
   document.body.querySelectorAll(".mobile-toolbar").length;
 
-const pointerdownOn = (el: Element) => {
+const activateOn = (el: Element) => {
   el.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+  el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 };
 
 describe("NextLevelEditor - mobile toolbar ownership", () => {
@@ -49,12 +50,12 @@ describe("NextLevelEditor - mobile toolbar ownership", () => {
     wrappers.push(a, b);
     await nextTick();
 
-    pointerdownOn(a.element);
+    activateOn(a.element);
     await nextTick();
     expect(visibleToolbars()).toBe(1);
 
     // Interacting with the second instance transfers ownership: still one.
-    pointerdownOn(b.element);
+    activateOn(b.element);
     await nextTick();
     expect(visibleToolbars()).toBe(1);
   });
@@ -66,11 +67,11 @@ describe("NextLevelEditor - mobile toolbar ownership", () => {
     document.body.appendChild(outside);
     await nextTick();
 
-    pointerdownOn(a.element);
+    activateOn(a.element);
     await nextTick();
     expect(visibleToolbars()).toBe(1);
 
-    pointerdownOn(outside);
+    activateOn(outside);
     await nextTick();
     expect(visibleToolbars()).toBe(0);
   });
@@ -80,12 +81,12 @@ describe("NextLevelEditor - mobile toolbar ownership", () => {
     wrappers.push(a);
     await nextTick();
 
-    pointerdownOn(a.element);
+    activateOn(a.element);
     await nextTick();
     const toolbar = document.body.querySelector(".mobile-toolbar");
     expect(toolbar).not.toBeNull();
 
-    pointerdownOn(toolbar!);
+    activateOn(toolbar!);
     await nextTick();
     expect(visibleToolbars()).toBe(1);
   });
@@ -95,7 +96,7 @@ describe("NextLevelEditor - mobile toolbar ownership", () => {
     wrappers.push(a);
     await nextTick();
 
-    pointerdownOn(a.element);
+    activateOn(a.element);
     await nextTick();
     expect(visibleToolbars()).toBe(1);
 
@@ -108,7 +109,7 @@ describe("NextLevelEditor - mobile toolbar ownership", () => {
     expect(visibleToolbars()).toBe(0);
 
     // Interacting with the editor again re-opens it.
-    pointerdownOn(a.element);
+    activateOn(a.element);
     await nextTick();
     expect(visibleToolbars()).toBe(1);
   });
@@ -120,7 +121,7 @@ describe("NextLevelEditor - mobile toolbar ownership", () => {
     a.element.getBoundingClientRect = () => ({
       top, bottom: top + 300, left: 0, right: 350, width: 350, height: 300,
     } as DOMRect);
-    pointerdownOn(a.element);
+    activateOn(a.element);
     await nextTick();
     expect(visibleToolbars()).toBe(1);
     top = -500;
@@ -135,7 +136,7 @@ describe("NextLevelEditor - mobile toolbar ownership", () => {
     await nextTick();
     const footerButtons = editor.findAll('.writing-footer-actions button');
     for (const button of footerButtons) {
-      pointerdownOn(button.element);
+      button.element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
       (button.element as HTMLButtonElement).focus();
       await nextTick();
       expect(visibleToolbars()).toBe(0);
@@ -143,5 +144,19 @@ describe("NextLevelEditor - mobile toolbar ownership", () => {
     await footerButtons.find(button => button.text() === 'Comments')!.trigger('click');
     expect(editor.find('.comments-sidebar-open').exists()).toBe(true);
     expect(visibleToolbars()).toBe(0);
+  });
+
+  it('waits until a pointer click finishes before opening the dock over the writing surface', async () => {
+    const editor = mountEditor();
+    wrappers.push(editor);
+    await nextTick();
+    const surface = editor.get('.editor-content').element as HTMLElement;
+    surface.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    surface.focus();
+    await nextTick();
+    expect(visibleToolbars()).toBe(0);
+    surface.click();
+    await nextTick();
+    expect(visibleToolbars()).toBe(1);
   });
 });

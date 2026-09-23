@@ -75,6 +75,13 @@ afterEach(() => {
 });
 
 describe("CommentThreadCard", () => {
+  it("keeps an orphaned discussion readable and explains its missing passage", () => {
+    const w = mountCard({ anchorStatus: "orphaned" }, { readonly: true });
+    expect(w.get('[role="status"]').text()).toBe("This passage was removed. The discussion is still available.");
+    expect(w.get(".comment-text").text()).toContain("This is the first comment");
+    expect(w.find('[aria-label="Delete thread"]').exists()).toBe(false);
+    w.unmount();
+  });
   // -------------------------------------------------------------------------
   describe("rendering comment data", () => {
     it("renders the author name, timestamp slot and comment body", () => {
@@ -407,11 +414,11 @@ describe("CommentThreadCard", () => {
       expect(timeFor(2 * 24 * 60 * 60 * 1000)).toBe("2d ago");
     });
 
-    it("falls back to a locale date string for timestamps a week or older", () => {
+    it("uses the editor's default English locale for timestamps a week or older", () => {
       const old = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
       const w = mountCard({ createdAt: old });
       expect(w.get(".comment-main .comment-time").text()).toBe(
-        old.toLocaleDateString()
+        old.toLocaleDateString('en')
       );
       w.unmount();
     });

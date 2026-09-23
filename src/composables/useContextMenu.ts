@@ -28,6 +28,8 @@ interface ContextMenuOptions {
    * reason as captureSnapshot.
    */
   emitUpdate?: (html: string) => void;
+  /** Document-aware clipboard operations can handle metadata and atomic undo. */
+  clipboardAction?: (action: "copy" | "cut" | "paste") => Promise<boolean>;
 }
 
 /**
@@ -217,6 +219,7 @@ export function useContextMenu(options: ContextMenuOptions) {
         disabled: !hasSelection,
          
         onClick: async () => {
+          if (await options.clipboardAction?.("cut")) return;
           const sel = globalThis.getSelection();
           if (!sel || sel.rangeCount === 0) return;
 
@@ -251,6 +254,7 @@ export function useContextMenu(options: ContextMenuOptions) {
         disabled: !hasSelection,
          
         onClick: async () => {
+          if (await options.clipboardAction?.("copy")) return;
           const sel = globalThis.getSelection();
           if (!sel || sel.rangeCount === 0) return;
 
@@ -281,6 +285,7 @@ export function useContextMenu(options: ContextMenuOptions) {
          
         onClick: async () => {
           if (!pasteSupported) return;
+          if (await options.clipboardAction?.("paste")) return;
 
           try {
             const text = await readClipboard();

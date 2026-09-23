@@ -14,7 +14,7 @@
       ref="sidebarContentRef"
       class="comments-sidebar-content"
       role="complementary"
-      aria-label="Comments"
+      :aria-label="t('Comments')"
       :inert="!isOpen ? true : undefined"
       :aria-hidden="!isOpen ? 'true' : undefined"
     >
@@ -32,13 +32,13 @@
               />
             </svg>
           </div>
-          <h3 class="comments-sidebar-title">Comments</h3>
+          <h3 class="comments-sidebar-title">{{ t("Comments") }}</h3>
           <button
-            v-if="activeTab === 'open'"
+            v-if="activeTab === 'open' && !readonly"
             class="comments-fab"
             type="button"
-            aria-label="Add new comment"
-            title="Add new comment"
+            :aria-label="t('Add new comment')"
+            :title="t('Add new comment')"
             @click="createNewComment"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -48,7 +48,7 @@
           <button
             ref="closeButtonRef"
             class="comments-sidebar-close"
-            aria-label="Close comments sidebar"
+            :aria-label="t('Close comments sidebar')"
             @click="closeSidebar"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -63,7 +63,7 @@
         </div>
 
         <!-- Tabs -->
-        <div class="comments-tabs" role="tablist" aria-label="Comment threads">
+        <div class="comments-tabs" role="tablist" :aria-label="t('Comment threads')">
           <button
             class="comments-tab"
             role="tab"
@@ -71,8 +71,8 @@
             :class="{ active: activeTab === 'open' }"
             @click="activeTab = 'open'"
           >
-            <span class="comments-tab-label">Open</span>
-            <span class="comments-tab-badge">{{ openThreads.length }}</span>
+            <span class="comments-tab-label">{{ t("Open") }}</span>
+            <span class="comments-tab-badge">{{ number(openThreads.length) }}</span>
           </button>
           <button
             class="comments-tab"
@@ -81,14 +81,15 @@
             :class="{ active: activeTab === 'resolved' }"
             @click="activeTab = 'resolved'"
           >
-            <span class="comments-tab-label">Resolved</span>
-            <span class="comments-tab-badge">{{ resolvedThreads.length }}</span>
+            <span class="comments-tab-label">{{ t("Resolved") }}</span>
+            <span class="comments-tab-badge">{{ number(resolvedThreads.length) }}</span>
           </button>
         </div>
       </div>
 
       <!-- Thread List -->
       <div class="comments-thread-list">
+        <p v-if="readonly" class="comments-readonly-notice" role="status">{{ t("Comments are read-only.") }}</p>
         <template v-if="currentThreads.length === 0">
           <div class="comments-empty-state">
             <div class="comments-empty-icon">
@@ -115,13 +116,13 @@
             </div>
             <p class="comments-empty-text">
               {{
-                activeTab === "open"
+                t(activeTab === "open"
                   ? "No comments yet"
-                  : "No resolved comments"
+                  : "No resolved comments")
               }}
             </p>
-            <p class="comments-empty-hint">
-              Select text and add your first comment to start a conversation
+            <p v-if="!readonly" class="comments-empty-hint">
+              {{ t("Select text and add your first comment to start a conversation") }}
             </p>
           </div>
         </template>
@@ -133,6 +134,7 @@
             :is-active="activeThreadId === thread.id"
             :is-expanded="expandedThreads.has(thread.id)"
             :mention-search="mentionSearch"
+            :readonly="readonly"
             @select="selectThread"
             @toggle="toggleThread"
             @resolve="resolveThread"
@@ -147,6 +149,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, number } = useEditorLocale();
 import { ref, computed, watch, nextTick } from "vue";
 import type {
   CommentThread,
@@ -158,6 +162,7 @@ interface Props {
   threads: CommentThread[];
   activeThreadId: string | null;
   isOpen?: boolean;
+  readonly?: boolean;
   /** Host-supplied @mention provider, passed through to the reply forms. */
   mentionSearch?: (
     query: string
@@ -176,6 +181,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   isOpen: true,
+  readonly: false,
   mentionSearch: undefined,
 });
 
@@ -238,11 +244,13 @@ function toggleThread(threadId: string) {
 }
 
 function resolveThread(threadId: string) {
+  if (props.readonly) return;
   emit("resolve-thread", threadId);
   focusActiveTab();
 }
 
 function reopenThread(threadId: string) {
+  if (props.readonly) return;
   emit("reopen-thread", threadId);
   focusActiveTab();
 }
@@ -256,10 +264,12 @@ function focusActiveTab() {
 }
 
 function deleteThread(threadId: string) {
+  if (props.readonly) return;
   emit("delete-thread", threadId);
 }
 
 function addReply(threadId: string, content: string, mentions: string[]) {
+  if (props.readonly) return;
   emit("add-reply", threadId, content, mentions);
   // Ensure thread stays expanded after adding reply
   if (!expandedThreads.value.has(threadId)) {
@@ -269,6 +279,7 @@ function addReply(threadId: string, content: string, mentions: string[]) {
 }
 
 function createNewComment() {
+  if (props.readonly) return;
   emit("create-comment");
 }
 
@@ -289,6 +300,17 @@ defineExpose({ revealThread });
 </script>
 
 <style scoped>
+.comments-readonly-notice {
+  margin: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: var(--background-alt, #f8fafc);
+  color: var(--text-secondary, #64748b);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* Sidebar Container */
 .comments-sidebar {
   position: fixed;

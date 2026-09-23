@@ -10,8 +10,8 @@
       @click.stop
     >
       <div class="modal-header">
-        <h3 id="modal-title">Insert Image</h3>
-        <button class="close-button" aria-label="Close modal" @click="close">
+        <h3 id="modal-title">{{ t("Insert Image") }}</h3>
+        <button class="close-button" :aria-label="t('Close modal')" @click="close">
           ×
         </button>
       </div>
@@ -19,13 +19,13 @@
       <div class="modal-body">
         <!-- Image URL Input -->
         <div class="input-group">
-          <label for="image-url">Image URL</label>
+          <label for="image-url">{{ t("Image URL") }}</label>
           <input
             id="image-url"
             ref="urlInput"
             v-model="imageUrl"
             type="url"
-            placeholder="https://example.com/image.jpg"
+            :placeholder="t('https://example.com/image.jpg')"
             @input="handleUrlChange"
             @keyup.enter="previewUrl && insertImage()"
           />
@@ -34,7 +34,7 @@
         <!-- File Upload -->
         <div class="upload-section">
           <div class="divider">
-            <span>OR</span>
+            <span>{{ t("OR") }}</span>
           </div>
 
           <label class="file-upload-label">
@@ -50,7 +50,7 @@
               class="upload-button"
               @click="fileInput?.click()"
             >
-              📁 Choose Image File
+              {{ t("📁 Choose Image File") }}
             </button>
           </label>
           <p v-if="uploadError" class="error-message">⚠️ {{ uploadError }}</p>
@@ -58,18 +58,18 @@
 
         <!-- Alt Text -->
         <div class="input-group">
-          <label for="alt-text">Alt Text (for accessibility)</label>
+          <label for="alt-text">{{ t("Alt Text (for accessibility)") }}</label>
           <input
             id="alt-text"
             v-model="altText"
             type="text"
-            placeholder="Description of the image"
+            :placeholder="t('Description of the image')"
           />
         </div>
 
         <!-- Image Preview -->
         <div v-if="previewUrl" class="preview-section">
-          <h4>Preview:</h4>
+          <h4>{{ t("Preview:") }}</h4>
           <div class="preview-container">
             <img
               :src="previewUrl"
@@ -78,28 +78,28 @@
             />
           </div>
           <p v-if="imageError" class="error-message">
-            ⚠️ Failed to load image. Please check the URL.
+            {{ t("⚠️ Failed to load image. Please check the URL.") }}
           </p>
         </div>
       </div>
 
       <div class="modal-footer">
         <p v-if="!previewUrl" class="footer-hint">
-          💡 Enter a URL or upload a file to enable the Insert button
+          {{ t("💡 Enter a URL or upload a file to enable the Insert button") }}
         </p>
         <div class="footer-buttons">
-          <button class="cancel-button" @click="close">Cancel</button>
+          <button class="cancel-button" @click="close">{{ t("Cancel") }}</button>
           <button
             class="insert-button"
             :disabled="!previewUrl"
-            :title="
+            :title="t(
               !previewUrl
                 ? 'Please provide an image URL or upload a file first'
                 : 'Insert this image into the editor'
-            "
+            )"
             @click="insertImage"
           >
-            ✓ Insert Image
+            {{ t("✓ Insert Image") }}
           </button>
         </div>
       </div>
@@ -108,6 +108,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t } = useEditorLocale();
 import { ref, watch } from "vue";
 import { useModalDialog } from "../composables/useModalDialog";
 

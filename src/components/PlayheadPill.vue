@@ -4,6 +4,8 @@
       v-if="targetPoint"
       ref="rootEl"
       class="playhead nle-chrome"
+      :lang="uiLocale"
+      :dir="uiDirection"
       :class="[
         theme,
         {
@@ -15,7 +17,7 @@
       :style="rootStyle"
       :data-state="state"
       role="toolbar"
-      aria-label="Editor toolbar"
+      :aria-label="t('Editor toolbar')"
       @mousedown.prevent
       @keydown="handleRovingKeydown"
       @focusin="handleFocusin"
@@ -32,8 +34,8 @@
           <button
             type="button"
             class="playhead-ambient-btn"
-            aria-label="Show toolbar"
-            title="Show toolbar"
+            :aria-label="t('Show toolbar')"
+            :title="t('Show toolbar')"
             @click="$emit('expand')"
             @focus="$emit('expand')"
           >
@@ -45,7 +47,7 @@
             <span class="playhead-count">{{ wordCountLabel }}</span>
           </button>
           <span class="playhead-sr">{{
-            saveStatus === "error"
+            t(saveStatus === "error"
               ? "Couldn't save changes"
               : saveStatus === "conflict"
                 ? "Save conflict"
@@ -55,7 +57,7 @@
                   ? (persistentSave ? "Unsaved changes" : "Updating…")
                   : saveStatus === "unsaved"
                     ? "Ready to write"
-                    : (persistentSave ? "All changes saved" : "All changes updated")
+                    : (persistentSave ? "All changes saved" : "All changes updated"))
           }}</span>
         </div>
 
@@ -72,11 +74,11 @@
               type="button"
               class="playhead-trigger playhead-trigger-format"
               :class="{ 'is-open': openMenu === 'format' }"
-              aria-label="Paragraph format"
+              :aria-label="t('Paragraph format')"
               aria-haspopup="menu"
               :aria-expanded="openMenu === 'format'"
               data-menu-trigger="format"
-              title="Paragraph format"
+              :title="t('Paragraph format')"
               @mousedown.prevent="$emit('remember-selection')"
               @click.stop="toggleMenu('format')"
               @keydown="onTriggerKeydown('format', $event)"
@@ -105,14 +107,14 @@
                     tabindex="-1"
                     :class="{ active: item.isActive?.(), disabled: isItemDisabled(item) }"
                     :disabled="isItemDisabled(item)"
-                    :aria-label="item.label"
+                    :aria-label="t(item.label)"
                     @mousedown.prevent
                     @click="handleItemClick(item)"
                   >
                     <span v-if="item.icon" class="item-icon" v-html="item.icon" />
-                    <span class="item-label">{{ item.label }}</span>
+                    <span class="item-label">{{ t(item.label) }}</span>
                     <span v-if="item.shortcut" class="item-shortcut">{{
-                      item.shortcut
+                      shortcut(item.shortcut)
                     }}</span>
                   </button>
                 </template>
@@ -129,14 +131,14 @@
             class="playhead-btn"
             :class="{ active: action.isActive?.() }"
             :disabled="action.isDisabled?.()"
-            :aria-label="action.label"
+            :aria-label="t(action.label)"
             :aria-pressed="action.isActive ? action.isActive() : undefined"
-            :title="action.tooltip"
+            :title="hint(action.tooltip, action.shortcut)"
             @mousedown.prevent="$emit('remember-selection')"
             @click="action.onClick()"
           >
             <span v-if="action.icon" class="playhead-btn-icon" v-html="action.icon" />
-            <span v-else class="playhead-btn-label">{{ action.label }}</span>
+            <span v-else class="playhead-btn-label">{{ t(action.label) }}</span>
           </button>
 
           <!-- List toggles (bullet/numbered/indent…) — inline, right after
@@ -148,14 +150,14 @@
             class="playhead-btn"
             :class="{ active: action.isActive?.() }"
             :disabled="action.isDisabled?.()"
-            :aria-label="action.label"
+            :aria-label="t(action.label)"
             :aria-pressed="action.isActive ? action.isActive() : undefined"
-            :title="action.tooltip"
+            :title="hint(action.tooltip, action.shortcut)"
             @mousedown.prevent="$emit('remember-selection')"
             @click="action.onClick()"
           >
             <span v-if="action.icon" class="playhead-btn-icon" v-html="action.icon" />
-            <span v-else class="playhead-btn-label">{{ action.label }}</span>
+            <span v-else class="playhead-btn-label">{{ t(action.label) }}</span>
           </button>
 
           <span class="playhead-sep" aria-hidden="true" />
@@ -171,10 +173,10 @@
               type="button"
               class="playhead-trigger playhead-trigger-icon"
               :class="{ 'is-open': openMenu === 'colors' }"
-              aria-label="Colors"
+              :aria-label="t('Colors')"
               :aria-expanded="openMenu === 'colors' ? 'true' : 'false'"
               data-menu-trigger="colors"
-              title="Text &amp; background colors"
+              :title="t('Text & background colors')"
               @mousedown.prevent="$emit('remember-selection')"
               @click.stop="toggleMenu('colors')"
             >
@@ -189,11 +191,11 @@
                 v-if="openMenu === 'colors'"
                 class="dropdown-menu playhead-menu playhead-colors-menu"
                 role="group"
-                aria-label="Colors"
+                :aria-label="t('Colors')"
                 @click.stop
               >
                 <div v-if="textColorPresets?.length" class="colors-section">
-                  <div class="colors-section-label">Text color</div>
+                  <div class="colors-section-label">{{ t("Text color") }}</div>
                   <div class="colors-swatches">
                     <button
                       v-for="c in textColorPresets"
@@ -202,7 +204,7 @@
                       class="colors-swatch"
                       :class="{ active: sameColor(selectionTextColor, c) }"
                       :style="{ background: c }"
-                      :aria-label="`Text color ${c}`"
+                      :aria-label="t('Text color {color}', { color: c })"
                       :title="c"
                       @mousedown.prevent="$emit('remember-selection')"
                       @click="pickTextColor(c)"
@@ -210,14 +212,14 @@
                   </div>
                 </div>
                 <div v-if="highlightColorPresets?.length" class="colors-section">
-                  <div class="colors-section-label">Highlight</div>
+                  <div class="colors-section-label">{{ t("Highlight") }}</div>
                   <div class="colors-swatches">
                     <button
                       type="button"
                       class="colors-swatch colors-swatch-none"
                       :class="{ active: noHighlightActive }"
-                      aria-label="No highlight"
-                      title="None"
+                      :aria-label="t('No highlight')"
+                      :title="t('None')"
                       @mousedown.prevent="$emit('remember-selection')"
                       @click="pickHighlightColor('transparent')"
                     />
@@ -228,7 +230,7 @@
                       class="colors-swatch"
                       :class="{ active: sameColor(selectionHighlightColor, c) }"
                       :style="{ background: c }"
-                      :aria-label="`Highlight ${c}`"
+                      :aria-label="t('Highlight {color}', { color: c })"
                       :title="c"
                       @mousedown.prevent="$emit('remember-selection')"
                       @click="pickHighlightColor(c)"
@@ -248,11 +250,11 @@
               type="button"
               class="playhead-trigger playhead-trigger-icon"
               :class="{ 'is-open': openMenu === menu.id }"
-              :aria-label="menu.ariaLabel"
+              :aria-label="t(menu.ariaLabel)"
               aria-haspopup="menu"
               :aria-expanded="openMenu === menu.id"
               :data-menu-trigger="menu.id"
-              :title="menu.tooltip"
+              :title="t(menu.tooltip)"
               @mousedown.prevent="$emit('remember-selection')"
               @click.stop="toggleMenu(menu.id)"
               @keydown="onTriggerKeydown(menu.id, $event)"
@@ -280,14 +282,14 @@
                     tabindex="-1"
                     :class="{ active: item.isActive?.(), disabled: isItemDisabled(item) }"
                     :disabled="isItemDisabled(item)"
-                    :aria-label="item.label"
+                    :aria-label="t(item.label)"
                     @mousedown.prevent
                     @click="handleItemClick(item)"
                   >
                     <span v-if="item.icon" class="item-icon" v-html="item.icon" />
-                    <span class="item-label">{{ item.label }}</span>
+                    <span class="item-label">{{ t(item.label) }}</span>
                     <span v-if="item.shortcut" class="item-shortcut">{{
-                      item.shortcut
+                      shortcut(item.shortcut)
                     }}</span>
                   </button>
                 </template>
@@ -313,14 +315,14 @@
             class="playhead-btn"
             :class="{ active: action.isActive?.() }"
             :disabled="action.isDisabled?.()"
-            :aria-label="action.label"
+            :aria-label="t(action.label)"
             :aria-pressed="action.isActive ? action.isActive() : undefined"
-            :title="action.tooltip"
+            :title="hint(action.tooltip, action.shortcut)"
             @mousedown.prevent
             @click="action.onClick()"
           >
             <span v-if="action.icon" class="playhead-btn-icon" v-html="action.icon" />
-            <span v-else class="playhead-btn-label">{{ action.label }}</span>
+            <span v-else class="playhead-btn-label">{{ t(action.label) }}</span>
           </button>
         </div>
       </div>
@@ -329,6 +331,11 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const locale = useEditorLocale();
+const { t, shortcut, locale: uiLocale, direction: uiDirection } = locale;
+import { toolbarHint } from '../utils/toolbarHint';
+const hint = (label?: string, keys?: string) => toolbarHint(locale, label, keys);
 import {
   ref,
   computed,
@@ -634,7 +641,7 @@ const layerAttrs = (active: boolean): Record<string, unknown> => ({
 
 const wordCountLabel = computed(
   () =>
-    `${props.wordCount.toLocaleString()} ${props.wordCount === 1 ? "word" : "words"}`
+    t('{count} words', { count: props.wordCount })
 );
 
 // --- Menus (Format / colors / insert / overflow) -----------------------------

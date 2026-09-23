@@ -4,6 +4,8 @@
       <div
         v-if="show"
         class="modal-overlay nle-chrome"
+        :lang="uiLocale"
+        :dir="uiDirection"
         :class="theme"
         @click="handleOverlayClick"
       >
@@ -16,10 +18,10 @@
           @click.stop
         >
           <div class="modal-header">
-            <h3 id="html-code-modal-title">HTML Code</h3>
+            <h3 id="html-code-modal-title">{{ t("HTML Code") }}</h3>
             <button
               class="close-btn"
-              aria-label="Close modal"
+              :aria-label="t('Close modal')"
               @click="close"
             >
               ✕
@@ -29,7 +31,7 @@
           <div class="modal-body">
             <div class="code-section">
               <div class="code-header">
-                <span class="code-label">Formatted HTML Code:</span>
+                <span class="code-label">{{ t("Formatted HTML Code:") }}</span>
                 <button
                   class="btn btn-copy"
                   @click="copyToClipboard"
@@ -51,7 +53,7 @@
               class="btn btn-primary"
               @click="close"
             >
-              Close
+              {{ t("Close") }}
             </button>
           </div>
         </div>
@@ -61,6 +63,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEditorLocale } from "../composables/useEditorLocale";
+const { t, locale: uiLocale, direction: uiDirection } = useEditorLocale();
 import { ref, computed, watch } from "vue";
 import Prism from "prismjs";
 import { useModalDialog } from "../composables/useModalDialog";
