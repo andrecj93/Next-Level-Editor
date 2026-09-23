@@ -105,6 +105,16 @@ test('UI locale changes preserve the draft, selected passage, document language 
   const { root, editor } = await load(page);
   await editor.fill('Words stay with their writer.');
   await selectText(editor, 'writer');
+  // WebKit's Selection.toString() can be empty for this table-containing
+  // editable even with a valid, visible Range. Check the selected range and
+  // both endpoints so a lost or collapsed selection still fails this test.
+  const selectedRange = () => page.evaluate(() => {
+    const range = window.getSelection()!.getRangeAt(0);
+    return { text: range.toString(), start: range.startOffset, end: range.endOffset, collapsed: range.collapsed };
+  });
+  const selectionBefore = await selectedRange();
+  expect(selectionBefore.text).toBe('writer');
+  expect(selectionBefore.collapsed).toBe(false);
   const before = await editor.innerHTML();
   await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
   await expect(root.locator('.next-level-editor')).toHaveAttribute('lang', 'pt-PT');
@@ -112,7 +122,7 @@ test('UI locale changes preserve the draft, selected passage, document language 
   await expect(root.getByRole('button', { name: 'Ferramentas do documento', exact: false })).toBeVisible();
   expect(await editor.evaluate(element => element.closest('[lang]')?.getAttribute('lang'))).toBe('en');
   expect(await editor.innerHTML()).toBe(before);
-  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('writer');
+  expect(await selectedRange()).toEqual(selectionBefore);
   await editor.focus();
   await editor.press('ControlOrMeta+z');
   await expect(editor).toContainText('A better document');
@@ -122,8 +132,10 @@ test('UI locale changes preserve the draft, selected passage, document language 
 test('a host RTL dictionary supports mixed Arabic/Hebrew text, keyboard navigation and teleported dialogs', async ({ page }, info) => {
   const { root, editor } = await load(page);
   await page.getByLabel('Interface', { exact: true }).selectOption('ar-EG-u-nu-arab');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByLabel('Document language', { exact: true }).fill('he');
   await page.getByLabel('Direction', { exact: true }).selectOption('rtl');
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
   const text = 'שלום עולם — مرحبا بالعالم — English 2026';
   await editor.fill(text);
   await expect(root.locator('.next-level-editor')).toHaveAttribute('dir', 'rtl');

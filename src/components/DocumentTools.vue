@@ -24,6 +24,23 @@ const DocumentPdfPreview = defineAsyncComponent(() => import("./DocumentPdfPrevi
 const { t, number, locale, date, direction: uiDirection } = useEditorLocale();
 const id = useStableId();
 const trigger = ref<HTMLButtonElement>();
+const root = ref<HTMLElement>();
+const compactTabs = ref(true);
+const dockPanel = ref(false);
+watch(root, (element, _previous, onCleanup) => {
+  if (!element) return;
+  // Measure the editor, not the space left after docking, to avoid a resize loop.
+  const container = element.closest('.next-level-editor') ?? element;
+  const measure = () => {
+    dockPanel.value = container.clientWidth >= 1100;
+    compactTabs.value = container.clientWidth < 700;
+  };
+  measure();
+  if (typeof ResizeObserver === 'undefined') return;
+  const observer = new ResizeObserver(measure);
+  observer.observe(container);
+  onCleanup(() => observer.disconnect());
+});
 const tabs = [
   "Versions",
   "Import Word",
@@ -36,6 +53,36 @@ const tabs = [
   "Templates",
   "Collaboration",
 ];
+const tabIcons = [
+  'M3 11a9 9 0 1 1 3 7M3 4v7h7M12 7v5l3 2',
+  'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M12 12v6m-3-3 3 3 3-3',
+  'M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4',
+  'M12 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M4 9l8 2 8-2M12 11v5m0 0-4 5m4-5 4 5',
+  'M4 4h16v13H9l-5 4zM8 9h8M8 13h5',
+  'm4 20 4-1L20 7l-3-3L5 16zM14 7l3 3M4 4h5M6.5 1.5v5',
+  'M12 5v16M3 3h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z',
+  'M4 5h16M4 12h4M12 12h8M4 19h4M12 19h8',
+  'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+  'M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M2 21v-2a7 7 0 0 1 14 0v2M17 4a4 4 0 0 1 0 8M22 21v-2a7 7 0 0 0-4-6',
+];
+const tabDescriptions = computed<Record<string, string>>(() => ({
+  Versions: t('Save a checkpoint to compare drafts or return to an earlier version.'),
+  'Import Word': t('Preview a Word document before adding it to your draft.'),
+  'Export and pages': t('Set up your pages, preview the result, and download your document.'),
+  Accessibility: t('Find potential barriers in your document and review suggested fixes.'),
+  Review: t('Suggest edits and review changes before accepting them.'),
+  'AI writing': t('Preview a suggestion before applying it to your writing.'),
+  References: t('Keep sources, citations, and notes together.'),
+  Structure: t('Navigate and rearrange the building blocks of your document.'),
+  Templates: t('Define fields and preview a document with your own data.'),
+  Collaboration: t('See the connection status and people editing this document.'),
+}));
+watch([w.open, w.tab, compactTabs], async ([open]) => {
+  if (!open) return;
+  await nextTick();
+  root.value?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+    ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+});
 const label = ref(""),
   acknowledge = ref(false),
   fixValues = ref<Record<string, string>>({});
@@ -145,7 +192,7 @@ function toggle() {
     return;
   }
   w.captureSelection();
-  w.tab.value = "Versions";
+  if (!tabs.includes(w.tab.value)) w.tab.value = tabs[0];
   w.open.value = true;
 }
 function close() {
@@ -162,7 +209,10 @@ function returnToWriting() {
 }
 function tabKey(event: KeyboardEvent, index: number) {
   let next = index;
-  if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+  if (!compactTabs.value && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+    next = (index + (event.key === 'ArrowDown' ? 1 : -1) + tabs.length) % tabs.length;
+  }
+  else if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
     const delta = (event.key === 'ArrowRight' ? 1 : -1) * (uiDirection.value === 'rtl' ? -1 : 1);
     next = (index + delta + tabs.length) % tabs.length;
   }
@@ -175,6 +225,7 @@ function tabKey(event: KeyboardEvent, index: number) {
     event.currentTarget as HTMLElement
   ).parentElement?.querySelectorAll<HTMLButtonElement>("button");
   buttons?.[next]?.focus();
+  buttons?.[next]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
 }
 function selectFile(event: Event) {
   const input = event.target as HTMLInputElement;
@@ -228,26 +279,29 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
 </script>
 
 <template>
-  <div class="nle-document-tools" :lang="locale">
+  <div ref="root" class="nle-document-tools" :lang="locale" :class="{ 'compact-tabs': compactTabs, 'is-docked': dockPanel }">
     <div class="document-tool-bar">
       <button
         ref="trigger"
+        class="document-tools-trigger"
         type="button"
         :aria-expanded="w.open.value"
         :aria-controls="id + '-panel'"
         @pointerdown="w.captureSelection()"
         @click="toggle"
       >
+        <svg viewBox="0 0 24 24" class="document-icon" aria-hidden="true"><path d="M4 4h16v16H4zM9 4v16M13 9h3M13 13h3" /></svg>
         {{ t("Document tools") }}
-        <span aria-hidden="true">{{ w.open.value ? "−" : "+" }}</span>
+        <svg viewBox="0 0 24 24" class="document-icon document-chevron" :class="{ 'is-open': w.open.value }" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
       </button>
-      <span v-if="options?.store" role="status">
+      <span v-if="options?.store" class="document-status" :data-state="w.session.status.value" role="status">
+        <svg v-if="w.session.status.value === 'ready' || w.session.status.value === 'saved'" viewBox="0 0 24 24" class="document-icon" aria-hidden="true"><path d="m5 12 4 4 10-10" /></svg>
         {{ t(w.session.status.value) }}
       </span>
       <span v-if="collaborative" role="status">
         {{ t(connection || "Connecting") }}
       </span>
-      <span v-if="w.readonly.value">{{ t("Read only") }}</span>
+      <span v-if="w.readonly.value" class="document-readonly">{{ t("Read only") }}</span>
       <button
         v-if="w.session.recovery.value"
         type="button"
@@ -267,12 +321,17 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
       :aria-label="t('Document tools')"
       @keydown.esc.stop="close"
     >
-      <header>
+      <header class="document-panel-heading">
         <strong>{{ t("Document tools") }}</strong>
-        <button type="button" @click="close">{{ t("Close") }}</button>
+        <button class="document-close" type="button" @click="close">
+          {{ t("Close") }}
+          <svg viewBox="0 0 24 24" class="document-icon" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg>
+        </button>
       </header>
+      <div class="document-tool-workspace">
       <div
         role="tablist"
+        :aria-orientation="compactTabs ? 'horizontal' : 'vertical'"
         :aria-label="t('Document tools')"
         class="document-tool-tabs"
       >
@@ -288,9 +347,11 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
           @click="w.tab.value = tab"
           @keydown="tabKey($event, index)"
         >
+          <svg viewBox="0 0 24 24" class="document-icon" aria-hidden="true"><path :d="tabIcons[index]" /></svg>
           {{ t(tab) }}
         </button>
       </div>
+      <div class="document-tool-main">
       <p
         v-if="w.error.value || w.session.error.value"
         role="alert"
@@ -298,7 +359,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
       >
         {{ t(w.error.value || w.session.error.value) }}
       </p>
-      <p v-if="w.message.value" role="status">{{ t(w.message.value) }}</p>
+      <p v-if="w.message.value" class="document-notice" role="status">{{ t(w.message.value) }}</p>
       <div v-if="w.busy.value" class="document-actions" role="status">
         <progress
           :value="w.progress.value || undefined"
@@ -314,6 +375,10 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
         tabindex="0"
         class="document-tool-body"
       >
+        <div class="document-section-heading">
+          <h3>{{ t(w.tab.value) }}</h3>
+          <p>{{ tabDescriptions[w.tab.value] }}</p>
+        </div>
         <template v-if="w.tab.value === 'Versions'">
           <div v-if="w.session.recovery.value" class="document-card">
             <strong>{{ t("Local recovery available") }}</strong>
@@ -345,6 +410,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
                 <input v-model="label" maxlength="120">
               </label>
               <button
+                class="document-primary"
                 :disabled="
                   w.readonly.value ||
                   ['loading', 'saving'].includes(w.session.status.value)
@@ -356,7 +422,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
                 {{ t("Refresh versions") }}
               </button>
             </form>
-            <label>
+            <label v-if="w.session.versions.value.length">
               {{ t("Compare against") }}
               <select v-model="compareId">
                 <option value="">{{ t("Current draft") }}</option>
@@ -369,9 +435,10 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
                 </option>
               </select>
             </label>
-            <p v-if="!w.session.versions.value.length">
-              {{ t("No saved versions yet.") }}
-            </p>
+            <div v-if="!w.session.versions.value.length" class="document-empty">
+              <svg viewBox="0 0 24 24" class="document-icon" aria-hidden="true"><path :d="tabIcons[0]" /></svg>
+              <div><strong>{{ t("No saved versions yet.") }}</strong><p>{{ t('Give this draft a name, then save your first checkpoint.') }}</p></div>
+            </div>
             <ol class="document-cards">
               <li
                 v-for="version in [...w.session.versions.value].reverse()"
@@ -526,7 +593,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
             </button>
           </form>
           <div class="document-actions">
-            <button :disabled="w.busy.value" @click="w.run(w.previewPdf)">
+            <button class="document-primary" :disabled="w.busy.value" @click="w.run(w.previewPdf)">
               {{ t("Create PDF preview") }}
             </button>
             <button
@@ -568,7 +635,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
           </template>
         </template>
         <template v-else-if="w.tab.value === 'Accessibility'">
-          <button @click="w.run(w.checkContent)">
+          <button class="document-primary" @click="w.run(w.checkContent)">
             {{ t("Run document check") }}
           </button>
           <p>{{ t("These checks do not certify accessibility.") }}</p>
@@ -1179,19 +1246,30 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
           </p>
         </template>
       </div>
+      </div>
+      </div>
     </section>
   </div>
 </template>
 
 <style scoped>
 .nle-document-tools {
+  flex: none;
   color: var(--color-text, #1e293b);
   background: var(--color-surface, #fff);
-  font:
-    14px/1.5 system-ui,
-    sans-serif;
+  font: 0.875rem/1.5 system-ui, sans-serif;
   border-block-end: 1px solid var(--color-border, #dbe1e9);
   text-align: start;
+}
+.document-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .document-tool-bar,
 .document-actions {
@@ -1203,46 +1281,113 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
 }
 .document-tool-bar {
   padding: 0.5rem 1rem;
+  gap: 1rem;
 }
 @media (max-height: 500px) {
   /* Preserve writing space above the phone dock without shrinking controls. */
   .document-tool-bar { padding-block: 0.25rem; }
 }
 .document-tool-bar > span {
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
 }
+.document-tool-bar .document-tools-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  border-color: transparent;
+  background: transparent;
+  padding-inline: 0.5rem;
+  margin-inline-start: -0.5rem;
+}
+.document-tool-bar .document-tools-trigger[aria-expanded="true"] {
+  color: var(--toolbar-accent-ink, var(--color-primary, #2457d6));
+  background: var(--editor-bg, #f8fafc);
+}
+.document-chevron { width: 14px; height: 14px; }
+.document-chevron.is-open { transform: rotate(180deg); }
+.document-status { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--color-text-secondary, #596579); text-transform: capitalize; }
+.document-status .document-icon { width: 14px; height: 14px; }
+.document-status[data-state="error"], .document-status[data-state="conflict"] { color: var(--error-color, #b42318); }
+.document-readonly { margin-inline-start: auto; color: var(--color-text-secondary, #596579); }
 .document-tools-panel {
-  padding: 1rem;
-  max-height: min(40vh, 360px);
-  overflow: auto;
-  overscroll-behavior: contain;
+  border-block-start: 1px solid var(--color-border, #dbe1e9);
 }
-.document-tools-panel.has-page-preview {
-  max-height: 85vh;
-  max-height: 85dvh;
+.document-tool-workspace {
+  display: grid;
+  grid-template-columns: 205px minmax(0, 1fr);
+  height: clamp(180px, 38vh, 340px);
+  overflow: hidden;
 }
-.document-tools-panel header {
+.has-page-preview .document-tool-workspace {
+  height: 65vh;
+  height: 65dvh;
+}
+.document-panel-heading {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-block-end: 0.75rem;
+  padding: 0.35rem 1rem;
+  border-block-end: 1px solid var(--color-border, #dbe1e9);
 }
+.document-panel-heading strong { font-size: 0.8125rem; font-weight: 600; color: var(--color-text-secondary, #596579); }
+.document-panel-heading .document-close { display: flex; align-items: center; gap: 0.45rem; border-color: transparent; background: transparent; min-height: 36px; }
+.document-panel-heading .document-close:hover { background: var(--toolbar-hover, #f1f4f9); }
+.document-close .document-icon { width: 15px; height: 15px; }
+.document-tool-main { min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 1.25rem 1.5rem; }
+.document-section-heading { margin-bottom: 1rem; }
+.document-section-heading h3 { font-size: 1.125rem; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+.document-section-heading p { margin: 0.25rem 0 0; color: var(--color-text-secondary, #596579); max-width: 65ch; }
+.document-empty {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 1px dashed var(--color-border, #dbe1e9);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-block: 1rem 0;
+  color: var(--color-text-secondary, #596579);
+}
+.document-empty > .document-icon { width: 28px; height: 28px; }
+.document-empty strong { color: var(--color-text, #1e293b); font-weight: 500; }
+.document-empty p { margin: 0.25rem 0 0; font-size: 0.8125rem; }
 .document-tool-tabs {
   display: flex;
-  gap: 0.4rem;
-  overflow-x: auto;
-  padding-bottom: 0.6rem;
+  flex-direction: column;
+  gap: 0.2rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0.65rem;
+  border-inline-end: 1px solid var(--color-border, #dbe1e9);
+  background: var(--editor-bg, #fafbfe);
 }
 .document-tool-tabs button {
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: none;
+  min-height: 40px;
+  padding: 0.5rem 0.6rem;
+  text-align: start;
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-secondary, #596579);
+}
+.document-tool-tabs button:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--toolbar-hover, #edf2fc);
+  color: var(--color-text, #1e293b);
 }
 .document-tool-tabs [aria-selected="true"] {
-  background: #2448ad;
-  color: white;
-  border-color: #2448ad;
+  background: var(--toolbar-hover, #edf2fc);
+  color: var(--toolbar-accent-ink, var(--color-primary, #2457d6));
+  font-weight: 600;
+  box-shadow: inset 3px 0 var(--toolbar-accent, var(--color-primary, #2457d6));
+}
+:global([dir="rtl"]) .document-tool-tabs [aria-selected="true"] {
+  box-shadow: inset -3px 0 var(--toolbar-accent, var(--color-primary, #2457d6));
 }
 .document-tool-body {
-  padding-block: 0.8rem;
   min-height: 8rem;
 }
 .document-fields {
@@ -1254,7 +1399,7 @@ function editSource(source: (typeof w.session.metadata.value.sources)[number]) {
 label {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.4rem;
   margin-block: 0.5rem;
 }
 label:has(input[type="checkbox"]) {
@@ -1271,27 +1416,34 @@ button {
 input:not([type="checkbox"]),
 textarea,
 select {
-  padding: 0.45rem;
+  padding: 0.5rem 0.65rem;
   border: 1px solid var(--color-border, #cbd5e1);
-  border-radius: 6px;
+  border-radius: 8px;
   max-width: 100%;
   background: var(--color-surface, #fff);
   min-width: 0;
+  min-height: 40px;
 }
 textarea {
   min-height: 5rem;
 }
 button {
   border: 1px solid var(--color-border, #cbd5e1);
-  border-radius: 6px;
-  background: var(--color-surface-overlay, #f8fafc);
-  padding: 0.4rem 0.7rem;
-  min-height: 36px;
+  border-radius: 8px;
+  background: var(--color-surface, #fff);
+  padding: 0.5rem 0.8rem;
+  min-height: 40px;
   cursor: pointer;
 }
 button:hover:not(:disabled) {
-  border-color: #6683ce;
+  border-color: var(--toolbar-accent, #6683ce);
+  background: var(--toolbar-hover, #f1f4f9);
 }
+button.document-primary { background: var(--color-primary, #2457d6); color: #fff; border-color: var(--color-primary, #2457d6); font-weight: 600; }
+button.document-primary:hover:not(:disabled) { background: var(--color-primary-dark, #1d4ed8); color: #fff; }
+.document-actions { align-items: end; }
+.document-actions label { margin-block: 0; }
+input[type="checkbox"] { accent-color: var(--color-primary, #2457d6); width: 16px; height: 16px; flex: none; }
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -1301,7 +1453,7 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 [tabindex]:focus-visible {
-  outline: 3px solid #6683ce;
+  outline: 3px solid var(--toolbar-accent, #6683ce);
   outline-offset: 2px;
 }
 .document-cards {
@@ -1310,9 +1462,9 @@ select:focus-visible,
 }
 .document-card {
   border: 1px solid var(--color-border, #dbe1e9);
-  border-radius: 8px;
+  border-radius: 10px;
   margin-block: 0.7rem;
-  padding: 0.8rem;
+  padding: 1rem;
   overflow-wrap: anywhere;
 }
 .document-card time {
@@ -1361,7 +1513,12 @@ select:focus-visible,
 }
 .document-error {
   color: var(--error-color, #b42318);
+  padding: 0.75rem;
+  border-inline-start: 3px solid currentColor;
+  border-radius: 4px;
+  background: var(--editor-bg, #fafbfe);
 }
+.document-notice { border-inline-start: 3px solid var(--toolbar-accent, #2457d6); padding: 0.65rem 0.85rem; margin-top: 0; background: var(--editor-bg, #fafbfe); }
 .document-block-title {
   text-align: start;
   border: none;
@@ -1376,16 +1533,44 @@ blockquote {
   padding: 0.6rem;
   border-inline-start: 3px solid #6683ce;
 }
-@media (max-width: 640px) {
-  .document-tools-panel {
-    padding: 0.65rem;
+.compact-tabs .document-tool-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: clamp(200px, 34vh, 310px); }
+.compact-tabs .has-page-preview .document-tool-workspace { height: 70vh; height: 70dvh; }
+.compact-tabs .document-tool-tabs { flex-direction: row; padding: 0.5rem 0.65rem; border-inline-end: 0; border-block-end: 1px solid var(--color-border, #dbe1e9); }
+.compact-tabs .document-tool-tabs button { white-space: nowrap; }
+.compact-tabs .document-tool-tabs [aria-selected="true"] { box-shadow: inset 0 -2px var(--toolbar-accent, var(--color-primary, #2457d6)); }
+.compact-tabs .document-tool-main { padding: 1rem; }
+.compact-tabs .document-actions > label { flex: 1 1 100%; }
+.document-tool-tabs, .document-tool-main { scrollbar-width: thin; scrollbar-color: var(--color-border, #cbd5e1) transparent; }
+@supports selector(:has(*)) {
+  .is-docked .document-tools-panel {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: min(48%, 620px);
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface, #fff);
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--color-border, #dbe1e9);
   }
+  .is-docked .document-panel-heading { min-height: 56px; flex: none; }
+  .is-docked .document-tool-workspace { flex: 1; height: auto; min-height: 0; grid-template-columns: 160px minmax(0, 1fr); }
+  .is-docked .document-tool-tabs { padding-inline: 0.4rem; }
+  .is-docked .document-tool-tabs button { font-size: 0.8125rem; gap: 0.4rem; }
+  .is-docked .document-tool-main { padding: 1.1rem; }
+  .is-docked .document-actions > label { flex: 1 1 100%; }
+  .is-docked .document-actions > button { flex: 1 1 auto; }
+  .is-docked .document-empty { align-items: start; padding: 1rem; gap: 0.7rem; }
+}
+@media (max-width: 640px), (pointer: coarse) {
+  .document-tool-bar { gap: 0.5rem; padding-inline: 0.75rem; }
   .document-actions > button {
     flex: 1 1 auto;
   }
-  .document-tool-tabs button {
+  button, input:not([type="checkbox"]), select, .document-tool-tabs button, .document-panel-heading .document-close {
     min-height: 44px;
   }
+  .document-tool-tabs button { padding-inline: 0.7rem; }
 }
 @media print {
   .nle-document-tools {

@@ -293,17 +293,17 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 1,357.92 KB | **332.24 KB** | On import |
-| **CSS** | 265.13 KB | **43.04 KB** | On import |
+| **Core (ES)** | 1,396.30 KB | **342.59 KB** | On import |
+| **CSS** | 272.29 KB | **44.08 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
 | PDF page preview module and worker assets | 1,467.53 KB | 409.50 KB | First page preview (ES and UMD) |
-| **UMD** | 3,407.84 KB | 1,098.07 KB | On import (no splitting) |
+| **UMD** | 3,438.82 KB | 1,106.12 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **375.28 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **386.67 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 DOCX conversion, semantic PDF and its fonts, citation formatting, and the
@@ -889,17 +889,17 @@ See the [document workspace](docs/document-workspace.md) for supported features 
 
 The library is built using Vite with optimized output for multiple formats:
 
-- **ES Module** - `dist/next-level-editor.mjs` (core 1,357.92 KB, 332.24 KB gzipped)
+- **ES Module** - `dist/next-level-editor.mjs` (core 1,396.30 KB, 342.59 KB gzipped)
   - Modern ES6+ syntax with code splitting
   - Syntax highlighting, the colour picker and both exporters are separate
     chunks, fetched the first time you use them
   - Recommended for Vite, Webpack 5+, Rollup
-- **UMD** - `dist/next-level-editor.umd.js` (3,407.84 KB, 1,098.07 KB gzipped)
+- **UMD** - `dist/next-level-editor.umd.js` (3,438.82 KB, 1,106.12 KB gzipped)
   - Universal Module Definition
   - Compatible with AMD, CommonJS, and global variables
   - Editor and feature code is bundled together, including features you may never use.
     The PDF preview additionally loads the packaged browser module and worker assets.
-- **CSS** - `dist/next-level-editor.css` (265.13 KB, 43.04 KB gzipped)
+- **CSS** - `dist/next-level-editor.css` (272.29 KB, 44.08 KB gzipped)
   - Minified styles with CSS variables
   - Includes light and dark themes, all four theme presets
   - Responsive design utilities

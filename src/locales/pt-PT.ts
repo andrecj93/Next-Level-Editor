@@ -1,6 +1,17 @@
 import type { EditorMessages } from '../types/locale';
 /** European Portuguese for the existing editor chrome. Document text is never translated. */
 export const editorPortuguese: Record<string, string> = {
+  "Save a checkpoint to compare drafts or return to an earlier version.": "Guarde uma versão para comparar rascunhos ou recuperar uma versão anterior.",
+  "Preview a Word document before adding it to your draft.": "Pré-visualize um documento Word antes de o adicionar ao rascunho.",
+  "Set up your pages, preview the result, and download your document.": "Configure as páginas, pré-visualize o resultado e transfira o documento.",
+  "Find potential barriers in your document and review suggested fixes.": "Encontre possíveis barreiras no documento e reveja as correções sugeridas.",
+  "Suggest edits and review changes before accepting them.": "Sugira edições e reveja as alterações antes de as aceitar.",
+  "Preview a suggestion before applying it to your writing.": "Pré-visualize uma sugestão antes de a aplicar ao seu texto.",
+  "Keep sources, citations, and notes together.": "Mantenha as fontes, citações e notas organizadas.",
+  "Navigate and rearrange the building blocks of your document.": "Navegue pelos blocos do documento e reorganize-os.",
+  "Define fields and preview a document with your own data.": "Defina campos e pré-visualize um documento com os seus dados.",
+  "See the connection status and people editing this document.": "Veja o estado da ligação e as pessoas a editar este documento.",
+  "Give this draft a name, then save your first checkpoint.": "Dê um nome ao rascunho e guarde a primeira versão.",
   "Writing statistics": "Estatísticas de escrita",
   "Readability, word analysis, and SEO": "Legibilidade, análise de palavras e SEO",
   "Smart Quote": "Aspa tipográfica",

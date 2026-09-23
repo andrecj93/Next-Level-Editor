@@ -208,8 +208,10 @@ test("Portuguese controls, RTL content and read-only role work together", async 
   page,
 }) => {
   await page.getByLabel("Interface", { exact: true }).selectOption("pt-PT");
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByLabel("Document language", { exact: true }).fill("pt-PT");
   await page.getByLabel("Direction", { exact: true }).selectOption("rtl");
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
   const root = primary(page);
   await root
     .getByRole("button", { name: "Ferramentas do documento", exact: false })
