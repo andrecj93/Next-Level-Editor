@@ -9,6 +9,7 @@
       role="status"
       aria-live="polite"
       aria-atomic="true"
+      :lang="getAnnouncementLanguage('polite')"
       class="sr-only"
     >
       {{ politeAnnouncements }}
@@ -20,6 +21,7 @@
       role="alert"
       aria-live="assertive"
       aria-atomic="true"
+      :lang="getAnnouncementLanguage('assertive')"
       class="sr-only"
     >
       {{ assertiveAnnouncements }}
@@ -46,7 +48,7 @@ import { liveRegionOwner as regionOwner } from "../utils/liveRegionOwner";
 // NOTE: there used to be a third region wired to getAnnouncements("off"), but
 // priority "off" means "do not announce" and nothing ever announces with it —
 // the region was permanently empty dead markup.
-const { getAnnouncements } = useAccessibility();
+const { getAnnouncements, getAnnouncementLanguage } = useAccessibility();
 
 const politeAnnouncements = computed(() => getAnnouncements("polite"));
 const assertiveAnnouncements = computed(() => getAnnouncements("assertive"));

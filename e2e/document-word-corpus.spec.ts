@@ -189,9 +189,18 @@ for (const tag of ["p", "h2"] as const)
       selection.addRange(range);
       document.dispatchEvent(new Event("selectionchange"));
     });
-    expect(await page.evaluate(() => document.getSelection()?.toString())).toBe(
-      "|",
-    );
+    // WebKit can return an empty Selection.toString() for an editable while
+    // retaining the correct Range. Check the text, endpoints and ownership;
+    // the subsequent insertion and exact undo/redo still verify the edit.
+    expect(await editor(page).evaluate(element => {
+      const selection = document.getSelection();
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+      return {
+        text: range?.toString(), collapsed: range?.collapsed,
+        start: range?.startOffset, end: range?.endOffset,
+        contained: Boolean(range && element.contains(range.commonAncestorContainer)),
+      };
+    })).toEqual({ text: "|", collapsed: false, start: 9, end: 10, contained: true });
     const before = await editor(page).innerHTML();
     const fixture = wordCorpus("merged-and-nested-tables", await images(page));
     const root = await tools(page, "Import Word");

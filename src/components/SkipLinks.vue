@@ -1,5 +1,5 @@
 <template>
-  <nav class="skip-links" :aria-label="t(navLabel)">
+  <nav class="skip-links" :aria-label="t(navLabel, labelParameters)">
     <a
       v-for="link in links"
       :key="link.id"
@@ -18,6 +18,7 @@ const { t } = useEditorLocale();
 import { computed } from "vue";
 import { useAccessibility } from "../composables/useAccessibility";
 import { smoothScrollIntoView } from "../utils/scroll";
+import type { EditorMessageParameters } from "../types/locale";
 
 /**
  * Skip Link Configuration
@@ -55,6 +56,7 @@ interface Props {
    * AT landmark list.
    */
   label?: string;
+  labelParameters?: EditorMessageParameters;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -65,6 +67,7 @@ const props = withDefaults(defineProps<Props>(), {
   hasToolbar: true,
   hasFooter: true,
   label: "Skip links",
+  labelParameters: undefined,
 });
 
 // The landmark's accessible name (per-instance for multi-editor pages).
@@ -121,7 +124,7 @@ const handleSkip = (targetId: string, label: string) => {
       // The LINK's own wording, never the generated landmark id: that read
       // out as "Skipped to v 0-main" (and replace("-", " ") only ever swapped
       // the FIRST hyphen anyway). #R23-52
-      announce: `Skipped: ${label}`,
+      announce: () => t("Skipped: {label}", { label: t(label) }),
       preventScroll: false,
     });
 
@@ -131,7 +134,7 @@ const handleSkip = (targetId: string, label: string) => {
       block: "start",
     });
   } else {
-    announce(`Target ${targetId} not found`, { priority: "assertive" });
+    announce(() => t("Target {target} not found", { target: targetId }), { priority: "assertive" });
   }
 };
 </script>

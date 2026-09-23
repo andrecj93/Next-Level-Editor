@@ -30,6 +30,7 @@
         aria-haspopup="listbox"
         :aria-controls="commandMenuOpen ? commandListboxId : undefined"
         :aria-activedescendant="commandActiveOptionId"
+        @beforeinput="$emit('beforeinput', $event)"
         @input="$emit('input', $event)"
         @compositionend="$emit('input', $event)"
         @paste="$emit('paste', $event)"
@@ -70,6 +71,7 @@
         :contenteditable="editable ? 'true' : 'false'"
         :placeholder="t(placeholder)"
         style="display: none"
+        @beforeinput="$emit('beforeinput', $event)"
         @input="$emit('input', $event)"
         @compositionend="$emit('input', $event)"
         @paste="$emit('paste', $event)"
@@ -149,6 +151,7 @@
           aria-multiline="true"
           :aria-readonly="!editable"
           :aria-label="t('Rich text editor')"
+          @beforeinput="$emit('beforeinput', $event)"
           @input="$emit('split-editor-input', $event)"
           @compositionend="$emit('split-editor-input', $event)"
           @paste="$emit('paste', $event)"
@@ -215,6 +218,7 @@ withDefaults(defineProps<Props>(), {
 });
 
 defineEmits<{
+  beforeinput: [event: InputEvent];
   input: [event: Event];
   blur: [event: FocusEvent];
   focus: [event: FocusEvent];

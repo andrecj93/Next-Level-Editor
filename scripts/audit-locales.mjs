@@ -71,7 +71,7 @@ function template(node, file, offset) {
   if (node.type === 5) scan(`(${node.content.content})`, file, offset + node.loc.start.line - 1);
   if (node.type === 2 && /[A-Za-z]{2}/.test(node.content.trim())) unwrappedText.push({ text: node.content.trim(), location });
   for (const prop of node.props ?? []) {
-    if (prop.type === 6 && ['ToolbarSection', 'ToolbarDropdown', 'ColorPicker'].includes(node.tag) && ['label', 'tooltip'].includes(prop.name) && prop.value) add(keys, prop.value.content, location);
+    if (prop.type === 6 && ['ToolbarSection', 'ToolbarDropdown', 'ColorPicker', 'SkipLinks'].includes(node.tag) && ['label', 'tooltip'].includes(prop.name) && prop.value) add(keys, prop.value.content, location);
     if (prop.type === 7 && prop.exp) scan(`(${prop.exp.content})`, file, offset + prop.loc.start.line - 1);
     const attribute = prop.type === 6 ? prop.name : prop.arg?.content;
     const isUiAttribute = ['title', 'aria-label', 'aria-description', 'data-tooltip'].includes(attribute);

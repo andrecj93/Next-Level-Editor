@@ -1,5 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { ensureToolbarExpanded } from './helpers/toolbar';
+import { readFile } from 'node:fs/promises';
 
 async function selectText(editor: Locator, needle: string) {
   await editor.evaluate((root, text) => {
@@ -66,8 +67,7 @@ test('translated color controls return keyboard focus to their trigger on Escape
   const before = await editor.innerHTML();
   await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
   const trigger = root.getByRole('button', { name: 'Cores', exact: true });
-  const expand = root.getByRole('button', { name: 'Expandir barra de ferramentas', exact: true });
-  if (await expand.isVisible()) await expand.click();
+  await ensureToolbarExpanded(page);
   await trigger.click();
   const menu = root.locator('.colors-menu');
   await expect(menu).toBeVisible();
@@ -93,12 +93,101 @@ test('a table insertion and its visible feedback follow locale changes and remai
   await dialog.getByRole('button', { name: 'Insert Table', exact: true }).click();
   const toast = root.locator('.toast-notification');
   await expect(toast).toHaveText('✓ Table (2×3) inserted successfully!');
+  const spoken = page.locator('#aria-live-polite');
+  await expect(spoken).toHaveText('✓ Table (2×3) inserted successfully!');
   await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
   await expect(toast).toHaveText('✓ Tabela (2×3) inserida com sucesso!');
+  await expect(spoken).toHaveText('✓ Tabela (2×3) inserida com sucesso!');
+  await expect(spoken).toHaveAttribute('lang', 'pt-PT');
   await expect(editor.locator('table')).toHaveCount(2);
   await editor.focus();
   await editor.press('ControlOrMeta+z');
   expect(await editor.innerHTML()).toBe(before);
+});
+
+test('checkpoint status and export feedback switch language while the saved draft and undo stay intact', async ({ page }) => {
+  const { root, editor } = await load(page);
+  const draft = 'A saved multilingual draft.';
+  await editor.fill(draft);
+  await root.getByRole('button', { name: 'Document tools', exact: false }).click();
+  await root.getByLabel('Checkpoint name', { exact: true }).fill('Save');
+  await root.getByRole('button', { name: 'Save checkpoint', exact: true }).click();
+  const status = root.locator('.document-status');
+  await expect(status).toHaveAttribute('data-state', 'saved');
+  await expect(status).toHaveText('saved');
+  await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
+  await expect(status).toHaveText('Guardado');
+  await expect(root.locator('.document-card').getByText('Save', { exact: true })).toBeVisible();
+  await page.getByLabel('Interface', { exact: true }).selectOption('en');
+  await expect(status).toHaveText('saved');
+  await root.getByRole('button', { name: 'Close', exact: true }).click();
+  await ensureToolbarExpanded(page);
+  await root.getByRole('button', { name: 'Export', exact: true }).click();
+  const pending = page.waitForEvent('download');
+  await root.getByRole('menuitem', { name: 'HTML', exact: true }).click();
+  const download = await pending;
+  expect(await download.failure()).toBeNull();
+  expect(await readFile((await download.path())!, 'utf8')).toContain(draft);
+  const spoken = page.locator('#aria-live-polite');
+  const english = '✓ Document downloaded as HTML! Check your Downloads folder';
+  await expect(root.locator('.toast-notification')).toHaveText(english);
+  await expect(spoken).toHaveText(english);
+  await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
+  const portuguese = '✓ Documento transferido em HTML! Consulte a pasta Transferências';
+  await expect(root.locator('.toast-notification')).toHaveText(portuguese);
+  await expect(spoken).toHaveText(portuguese);
+  await expect(spoken).toHaveAttribute('lang', 'pt-PT');
+  await expect(editor).toHaveText(draft);
+  await editor.press('ControlOrMeta+z');
+  await expect(editor).toContainText('A better document');
+  await expect(spoken).toHaveText('Anulado');
+});
+
+test('a shared live region follows each editor language when navigating by skip links', async ({ page }) => {
+  await load(page);
+  await page.getByLabel('Two editors', { exact: true }).check();
+  await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
+  const primary = page.getByTestId('primary');
+  const peer = page.getByTestId('peer');
+  const spoken = page.locator('#aria-live-polite');
+  await expect(spoken).toHaveCount(1);
+  await expect(primary.locator('nav.skip-links')).toHaveAccessibleName(/^Ligações de navegação rápida \d+$/);
+  const firstSkip = primary.getByRole('link', { name: 'Ir para o conteúdo principal', exact: true });
+  await firstSkip.focus();
+  await firstSkip.press('Enter');
+  await expect(spoken).toHaveText('Navegação rápida: Ir para o conteúdo principal');
+  await expect(spoken).toHaveAttribute('lang', 'pt-PT');
+  const peerSkip = peer.getByRole('link', { name: 'Skip to main content', exact: true });
+  await peerSkip.focus();
+  await peerSkip.press('Enter');
+  await expect(spoken).toHaveText('Skipped: Skip to main content');
+  await expect(spoken).toHaveAttribute('lang', 'en');
+  await page.getByLabel('Interface', { exact: true }).selectOption('ar-EG-u-nu-arab');
+  await expect(spoken).toHaveText('Skipped: Skip to main content');
+  await expect(spoken).toHaveAttribute('lang', 'en');
+});
+
+test('an open slash search refilters translated commands and announces the current result count', async ({ page }) => {
+  const { editor } = await load(page);
+  await editor.fill('');
+  await editor.press('/');
+  const menu = page.locator('.command-menu');
+  await expect(menu).toBeVisible();
+  const before = await editor.innerHTML();
+  await editor.pressSequentially('título');
+  await expect(menu).toContainText('No matching commands');
+  expect(await editor.innerHTML()).toBe(before);
+  await page.getByLabel('Interface', { exact: true }).selectOption('pt-PT');
+  await expect(menu.getByRole('option')).toHaveCount(3);
+  await expect(menu.locator('.command-title')).toHaveText(['Título 1', 'Título 2', 'Título 3']);
+  await expect(page.locator('#aria-live-polite')).toContainText('3 sugestões disponíveis');
+  expect(await editor.innerHTML()).toBe(before);
+  await page.getByLabel('Interface', { exact: true }).selectOption('en');
+  await expect(menu.getByRole('option')).toHaveCount(0);
+  await expect(menu).toContainText('No matching commands');
+  expect(await editor.innerHTML()).toBe(before);
+  await editor.press('Escape');
+  await expect(menu).toHaveCount(0);
 });
 
 test('UI locale changes preserve the draft, selected passage, document language and undo', async ({ page }) => {

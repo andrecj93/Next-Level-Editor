@@ -9,7 +9,15 @@ import type { Page } from "@playwright/test";
  * same flow a real phone user follows.
  */
 export async function ensureToolbarExpanded(page: Page): Promise<void> {
-  const expand = page.getByRole("button", { name: /Expand toolbar/i });
+  // ResizeObserver defers the density update by a frame. Wait for that update
+  // and its sweep before deciding whether expansion is needed; a closing
+  // inspector can otherwise remove the compact toggle between lookup/click.
+  await page.evaluate(() => new Promise<void>(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  }));
+  await page.waitForFunction(() => !document.querySelector('.editor-toolbar-modern.is-sweeping'));
+  // The disclosure state is language-independent (en/pt and host dictionaries).
+  const expand = page.locator('.toolbar-expand-toggle[aria-expanded="false"]');
   if (await expand.isVisible().catch(() => false)) {
     await expand.click();
     // Expanding plays the staged unfold (staggered opacity/translate on the

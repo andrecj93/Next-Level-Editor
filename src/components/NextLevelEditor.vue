@@ -30,7 +30,8 @@
     <DocumentTools v-if="documentTools && documentWorkspace" :workspace="documentWorkspace" :options="effectiveDocumentOptions" :collaborative="Boolean(collaboration)" :connection="collaborationState" :participants="collaborators" />
     <!-- Accessibility: Skip Links -->
     <SkipLinks
-      :label="t(skipLinksLabel)"
+      label="Skip links {instance}"
+      :label-parameters="skipLinksLabelParameters"
       :main-target-id="mainLandmarkId"
       :toolbar-target-id="toolbarLandmarkId"
       :footer-target-id="footerLandmarkId"
@@ -170,6 +171,7 @@
       :code-content="codeContent"
       :html-content="htmlContent"
       :split-right-mode="splitRightMode"
+      @beforeinput="handleSlashMenuBeforeInput"
       @input="onInput"
       @paste="onPaste"
       @copy="documentClipboard.onCopy"
@@ -1102,7 +1104,7 @@ const { theme, toggleTheme: toggleThemeComposable } = useTheme();
 // aria-live queue that the rendered <AriaLiveRegion> reads, so calling it here
 // speaks feedback to screen readers. Previously the return was discarded and
 // no editor action produced any spoken feedback. [a11y]
-const { announce } = useAccessibility();
+const { announce } = useAccessibility(undefined, editorLocale);
 
 // Writing Assistant (opt-in feature) - local state for toggle
 const showWritingStatsPanel = ref(false);
@@ -1148,7 +1150,7 @@ const writingAssistant = props.showWritingStats ? useWritingAssistant() : null;
 // "Skip links", indistinguishable in a screen reader's landmark list — and
 // nothing ever passed one. The ordinal is globally unique, so it also survives
 // two editors mounted as separate Vue apps. #R23-57
-const skipLinksLabel = `Skip links ${nextInstanceToken("nle-skip").split("-").pop()}`;
+const skipLinksLabelParameters = { instance: nextInstanceToken("nle-skip").split("-").pop()! };
 
 // The stats panel used to refresh from `onInput` ONLY, so any path that
 // REPLACES innerHTML without typing (undo/redo, loading a model, Replace All)
@@ -1415,7 +1417,7 @@ const {
 const rememberWritingPosition = useWritingReflow(editorContent, toRef(props, 'writingMode'));
 const dismissWritingNote = (note: WritingNote) => {
   if (!dismissNote(note)) return;
-  announce(t('Note dismissed. Your words are unchanged.'));
+  announce(() => t('Note dismissed. Your words are unchanged.'));
   console.debug('[NextLevelEditor] Writing note dismissed', { kind: note.title });
 };
 const companionOpen = ref(false);
@@ -1500,7 +1502,7 @@ const locateWritingNote = (note: WritingNote) => {
   const range = writingNoteRange(root, note);
   if (!range) {
     refreshWritingReview();
-    announce(t('That passage has changed. The writing notes have been refreshed.'));
+    announce(() => t('That passage has changed. The writing notes have been refreshed.'));
     console.debug('[NextLevelEditor] Writing suggestion refreshed', { reason: 'passage-changed' });
     return false;
   }
@@ -1521,10 +1523,10 @@ const applyWritingNote = (note: WritingNote) => {
     onInput();
     captureSnapshot();
     refreshWritingReview();
-    announce(t('Suggestion applied. You can undo this change.'));
+    announce(() => t('Suggestion applied. You can undo this change.'));
     console.debug('[NextLevelEditor] Writing suggestion applied', { kind: note.title });
   } else {
-    announce(t('The suggestion could not be applied. You can edit the selected passage directly.'));
+    announce(() => t('The suggestion could not be applied. You can edit the selected passage directly.'));
     console.warn('[NextLevelEditor] Writing suggestion could not be applied', { kind: note.title });
   }
 };
@@ -1550,13 +1552,13 @@ const undo = () => {
   if (collaborationBinding) collaborationBinding.undo();
   else if (effectiveDocumentOptions.value) documentWorkspace.session.undo();
   else undoBase();
-  historyTick.value++; announce(t("Undone"));
+  historyTick.value++; announce(() => t("Undone"));
 };
 const redo = () => {
   if (collaborationBinding) collaborationBinding.redo();
   else if (effectiveDocumentOptions.value) documentWorkspace.session.redo();
   else redoBase();
-  historyTick.value++; announce(t("Redone"));
+  historyTick.value++; announce(() => t("Redone"));
 };
 
 const historyTick=ref(0);
@@ -1756,7 +1758,7 @@ const {
 // spoken. Passed to the composables below in place of the bare toast fn.
 const notify = (message: string, type?: "success" | "error", descriptor?: EditorMessageDescriptor) => {
   showToastNotification(message, type, descriptor);
-  announce(localizedMessage(editorLocale, message, descriptor), { priority: type === "error" ? "assertive" : "polite" });
+  announce(() => localizedMessage(editorLocale, message, descriptor), { priority: type === "error" ? "assertive" : "polite" });
 };
 
 // Table state
@@ -1831,7 +1833,8 @@ const handleInlineAction = (tag: string) => {
   handleInlineActionBase(tag);
   const label = INLINE_FORMAT_LABELS[tag];
   if (label) {
-    announce(t(isInlineActionActive(tag) ? '{label} on' : '{label} off', { label: t(label) }));
+    const announcementKey = isInlineActionActive(tag) ? '{label} on' : '{label} off';
+    announce(() => t(announcementKey, { label: t(label) }));
   }
 };
 
@@ -2485,6 +2488,7 @@ const {
   openCommandMenu,
   handleCommandOption,
   handleMenuKeydown: handleSlashMenuKeydown,
+  handleMenuBeforeInput: handleSlashMenuBeforeInput,
   handleDocumentClick,
   handleEscape,
 } = useSlashCommands({
@@ -2532,18 +2536,15 @@ const surfacePopup = computed(() => {
 // opened. The live region takes over, and says more than the attribute could:
 // how many results there are, and how to use them. #R32-1
 watch(
-  () => surfacePopup.value.open,
-  (open, wasOpen) => {
-    if (open === wasOpen) return;
+  [() => surfacePopup.value.open, () => showVariableAutocomplete.value
+    ? variableAutocompleteRef.value?.optionCount : commandOptions.length],
+  ([open, count], [wasOpen]) => {
     if (!open) {
-      announce(t("Suggestions closed"));
+      if (wasOpen) announce(() => t("Suggestions closed"));
       return;
     }
-    const count = showVariableAutocomplete.value
-      ? variableAutocompleteRef.value?.optionCount
-      : commandOptions.length;
     announce(
-      typeof count === "number"
+      () => typeof count === "number"
         ? t('{count} suggestions available. Use arrow keys to review, {shortcut} to insert.', { count, shortcut: editorLocale.shortcut('Enter') })
         : t('Suggestions available. Use arrow keys to review, {shortcut} to insert.', { shortcut: editorLocale.shortcut('Enter') })
     );

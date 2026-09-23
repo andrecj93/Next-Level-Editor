@@ -1564,6 +1564,15 @@ describe("useAccessibility - user preferences and lifecycle", () => {
     expect(api.announcements.value).toHaveLength(0);
   });
 
+  it("removes preference listeners on unmount so closed editors cannot announce", () => {
+    const { api, wrapper } = mountAccessibility();
+    wrapper.unmount();
+    for (const query of queries.values()) expect(query.listeners).toHaveLength(0);
+    fire("(prefers-reduced-motion: reduce)", true);
+    fire("(prefers-contrast: more)", true);
+    expect(api.getAnnouncements("polite")).toBe("");
+  });
+
   it("releases an active focus trap on unmount", async () => {
     const { api, wrapper } = mountAccessibility();
     const container = document.createElement("div");
