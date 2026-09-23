@@ -293,7 +293,7 @@ you pay to put an editor on screen is the "core" row:
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
 | **Core (ES)** | 1,409.55 KB | **345.92 KB** | On import |
-| **CSS** | 272.99 KB | **44.25 KB** | On import |
+| **CSS** | 273.06 KB | **44.26 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
@@ -302,7 +302,7 @@ you pay to put an editor on screen is the "core" row:
 | **UMD** | 3,449.31 KB | 1,108.75 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **390.17 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **390.18 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 DOCX conversion, semantic PDF and its fonts, citation formatting, and the
@@ -913,7 +913,7 @@ The library is built using Vite with optimized output for multiple formats:
   - Compatible with AMD, CommonJS, and global variables
   - Editor and feature code is bundled together, including features you may never use.
     The PDF preview additionally loads the packaged browser module and worker assets.
-- **CSS** - `dist/next-level-editor.css` (272.99 KB, 44.25 KB gzipped)
+- **CSS** - `dist/next-level-editor.css` (273.06 KB, 44.26 KB gzipped)
   - Minified styles with CSS variables
   - Includes light and dark themes, all four theme presets
   - Responsive design utilities

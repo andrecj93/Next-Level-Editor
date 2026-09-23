@@ -1029,7 +1029,12 @@
 }
 
 .auto-save-indicator .saved {
-  color: var(--color-success);
+  /* Status text needs a darker ink than the success accent used for fills. */
+  color: var(--color-success-text, #047857);
+}
+
+.theme-dark .auto-save-indicator .saved {
+  color: var(--color-success-text, #75c5a4);
 }
 
 /* A failed auto-save must read unmistakably as a problem, not success. #r20-2 */
