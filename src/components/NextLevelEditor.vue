@@ -1360,7 +1360,13 @@ const {
   sanitizeHtml,
 } = useEditorContent({
   onExternalUpdate: resetSaveState,
-  interceptExternalUpdate: html => { if (!collaborationBinding) return false; if (html !== collaborationBinding.readHtml()) collaborationBinding.applyHtml(html); return true; },
+  interceptExternalUpdate: html => {
+    if (!collaborationBinding) return false;
+    // Empty structured paragraphs serialize without a BR; native sanitized
+    // HTML adds one. A model echo must not turn that placeholder into content.
+    if (html !== sanitizeHtml(collaborationBinding.readHtml())) collaborationBinding.applyHtml(html);
+    return true;
+  },
   editorContent,
   modelValue: toRef(props, "modelValue"),
   onUpdate: (value) => emit("update:modelValue", value),
@@ -1615,6 +1621,7 @@ const { themeClass, editorStyles, wordCount, characterCount } =
     width: toRef(props, "width"),
     height: toRef(props, "height"),
     modelValue: toRef(props, "modelValue"),
+    isContentManaged: () => Boolean(collaborationBinding),
     editorContent,
     htmlContent,
     isApplyingHistory,
@@ -2297,6 +2304,14 @@ const updateMobileToolbarOwnership = (event: Event) => {
   const target = event.target;
   if (!(target instanceof Node)) return;
   if (rootEl.value?.contains(target)) {
+    const element = target instanceof Element ? target : target.parentElement;
+    // Search controls own typing while they are active. Finding a range can
+    // briefly focus contenteditable; returning to the search field must release
+    // the formatting dock before it takes space from the revealed passage.
+    if (element?.closest('.writing-search')) {
+      ownsMobileToolbar.value = false;
+      return;
+    }
     // Only entering the writing surface opens the dock. A first touch on a
     // footer/panel control must not insert a fixed toolbar under that finger
     // between pointerdown and click (Comments could become Underline).
@@ -2306,7 +2321,6 @@ const updateMobileToolbarOwnership = (event: Event) => {
       // can redirect the pending touch to a formatting button. Keyboard focus
       // opens it immediately, while pointer activation waits for the click.
       if (pendingToolbarPointer) return;
-      const element = target instanceof Element ? target : target.parentElement;
       if (element?.closest('.comment-highlight[data-thread-id]')) return;
       ownsMobileToolbar.value = true;
       mobileToolbarClosed.value = false;

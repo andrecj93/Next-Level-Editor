@@ -301,10 +301,9 @@ const marks: Record<string, MarkSpec> = {
         getAttrs: (node) => ({
           ...read(node),
           "data-thread-id": (node as Element).getAttribute("data-thread-id"),
-          class: /^comment-highlight(?:-resolved)?$/.test(
-            (node as Element).className,
-          )
-            ? (node as Element).className
+          class: (node as Element).classList.contains("comment-highlight")
+            ? "comment-highlight" + ((node as Element).classList.contains("comment-highlight-resolved")
+              ? " comment-highlight-resolved" : "")
             : null,
         }),
       },

@@ -755,12 +755,20 @@ test('menus and insert dialogs fit the available screen', async ({ page }) => {
     const menu = page.locator('.dropdown-menu:visible').first();
     await expect(menu).toBeVisible();
     await settle(page);
+    const interfaceFont = await trigger.evaluate(el => getComputedStyle(el).fontFamily);
+    const menuFonts = await menu.getByRole('menuitem').evaluateAll(items =>
+      [...new Set(items.map(item => getComputedStyle(item).fontFamily))]);
+    expect(menuFonts, `${name} menu labels inherit the toolbar's interface font`).toEqual([interfaceFont]);
     await insideViewport(menu);
     await noHorizontalOverflow(page);
+    if (name === 'View') {
+      await test.info().attach('toolbar-view-menu', { body: await page.screenshot(), contentType: 'image/png' });
+    }
     await menu.press('Escape');
     // The leaving menu still occupies the DOM: its exit must not widen the
     // page or make a mobile browser rescale the manuscript for one frame.
     await noHorizontalOverflow(page);
+    await expect(menu).not.toBeVisible();
   }
   for (const item of ['Link', 'Image', 'Table', 'Code Block', 'Video', 'File Manager']) {
     await toolbarFor(page).getByRole('button', { name: 'Insert', exact: true }).click();
@@ -880,6 +888,7 @@ test('light and dark interfaces remain accessible with reduced motion', async ({
     await scan('.dropdown-menu');
     await viewMenu.press('Escape');
     await noHorizontalOverflow(page);
+    await expect(viewMenu).not.toBeVisible();
   }
 });
 

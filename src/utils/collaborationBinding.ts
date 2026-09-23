@@ -9,7 +9,7 @@ import { DOMParser, type Node as PMNode } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
 import { baseKeymap, chainCommands } from "prosemirror-commands";
 import { keymap } from "prosemirror-keymap";
-import { tableEditing, goToNextCell } from "prosemirror-tables";
+import { tableEditing, goToNextCell, addRowAfter } from "prosemirror-tables";
 import {
   splitListItem,
   sinkListItem,
@@ -23,6 +23,7 @@ import {
   undo,
   redo,
   prosemirrorToYDoc,
+  initProseMirrorDoc,
 } from "y-prosemirror";
 import {
   Awareness,
@@ -47,6 +48,7 @@ import type {
   ConnectionState,
 } from "../types/collaboration";
 import { diagnostic } from "./documentDiagnostics";
+import { collaborativeTextSplice } from "./collaborationText";
 export interface CollaborationBinding {
   applyHtml(html: string): void;
   applySnapshot(value: DocumentSnapshot): void;
@@ -105,6 +107,7 @@ export async function bindCollaborativeEditor(options: {
   const doc = new Y.Doc();
   Y.applyUpdate(doc, transport.initialState, "remote");
   const fragment = doc.getXmlFragment("content");
+  const initial = initProseMirrorDoc(fragment, collaborationSchema);
   const sharedMetadata = doc.getMap<string>("metadata");
   const localOperation = Symbol("document-operation");
   const undoManager = new Y.UndoManager([fragment, sharedMetadata], {
@@ -145,6 +148,7 @@ export async function bindCollaborativeEditor(options: {
   sharedMetadata.observe(publishMetadata);
   let closed = false,
     pending = 0;
+  let preservedTextOperations = 0;
   const send = (update: Uint8Array, origin: unknown) => {
     if (origin === "remote" || closed) return;
     pending++;
@@ -182,8 +186,9 @@ export async function bindCollaborativeEditor(options: {
     {
       state: EditorState.create({
         schema: collaborationSchema,
+        doc: initial.doc,
         plugins: [
-          ySyncPlugin(fragment),
+          ySyncPlugin(fragment, { mapping: initial.mapping }),
           yUndoPlugin({ undoManager }),
           yCursorPlugin(awareness, {
             cursorBuilder(user) {
@@ -229,6 +234,22 @@ export async function bindCollaborativeEditor(options: {
             Enter: splitListItem(collaborationSchema.nodes.list_item),
             Tab: chainCommands(
               goToNextCell(1),
+              (state, dispatch) => {
+                // Match native editing: Tab in the last cell adds a body row
+                // and enters its first cell as one undoable transaction.
+                if (!dispatch) return addRowAfter(state);
+                return addRowAfter(state, (tr) => {
+                  // Resolve the destination without running live Yjs plugins
+                  // against a speculative state before the real dispatch.
+                  const navigation = EditorState.create({
+                    schema: state.schema, doc: tr.doc, selection: tr.selection,
+                  });
+                  goToNextCell(1)(navigation, (next) => {
+                    tr.setSelection(next.selection);
+                  });
+                  dispatch(tr);
+                });
+              },
               sinkListItem(collaborationSchema.nodes.list_item),
             ),
             "Shift-Tab": chainCommands(
@@ -255,7 +276,18 @@ export async function bindCollaborativeEditor(options: {
         )
           return;
         // Yjs can dispatch during EditorView construction, before the outer binding is assigned.
-        this.updateState(this.state.apply(transaction));
+        const splice = transaction.docChanged && !transaction.getMeta(ySyncPluginKey)
+          ? collaborativeTextSplice(transaction, fragment, initial.mapping) : undefined;
+        if (splice) {
+          // Complete the text change and its formatting in the same Yjs update.
+          // Structural transactions continue through the schema binding.
+          doc.transact(() => {
+            if (splice.remove) splice.text.delete(splice.index, splice.remove);
+            if (splice.insert) splice.text.insert(splice.index, splice.insert);
+            this.updateState(this.state.apply(transaction));
+          }, ySyncPluginKey);
+          preservedTextOperations++;
+        } else this.updateState(this.state.apply(transaction));
         if (transaction.docChanged)
           options.onUpdate(
             options.sanitize(serializeCollaborativeDocument(this.state.doc)),
@@ -389,7 +421,9 @@ export async function bindCollaborativeEditor(options: {
       view.destroy();
       transport.close();
       doc.destroy();
-      diagnostic(config.onDiagnostic, "sync.disconnected", options.documentId);
+      diagnostic(config.onDiagnostic, "sync.disconnected", options.documentId, {
+        preservedTextOperations,
+      });
     },
   };
 }

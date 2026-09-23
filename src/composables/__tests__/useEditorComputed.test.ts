@@ -90,6 +90,24 @@ const mountHost = (options: EditorComputedOptions) => {
 };
 
 describe("useEditorComputed", () => {
+  it("leaves structured DOM updates to their owner and resumes native reconciliation afterwards", async () => {
+    const ctx = makeCtx({ modelValue: "<p><br></p>" });
+    const structured = ref(true);
+    ctx.editorContent.value = el('<p><br class="ProseMirror-trailingBreak"></p>');
+    ctx.options.isContentManaged = () => structured.value;
+    const { wrapper } = mountHost(ctx.options);
+    ctx.options.modelValue.value = "<p>Remote update</p>";
+    await nextTick();
+    expect(ctx.applySanitizedContent).not.toHaveBeenCalled();
+    expect(ctx.captureSnapshot).not.toHaveBeenCalled();
+    expect(ctx.editorContent.value.innerHTML).toContain("ProseMirror-trailingBreak");
+    structured.value = false;
+    ctx.options.modelValue.value = "<p>Native update</p>";
+    await flushPromises();
+    expect(ctx.applySanitizedContent).toHaveBeenCalledWith("<p>Native update</p>");
+    wrapper.unmount();
+  });
+
   it("exposes exactly the four computed properties", () => {
     const ctx = makeCtx();
     const { wrapper, api } = mountHost(ctx.options);
