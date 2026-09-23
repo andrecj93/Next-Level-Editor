@@ -28,6 +28,8 @@ interface ContextMenuOptions {
    * reason as captureSnapshot.
    */
   emitUpdate?: (html: string) => void;
+  /** Use the editor's complete paste pipeline when the menu belongs to it. */
+  pasteClipboard?: () => Promise<void>;
 }
 
 /**
@@ -153,6 +155,7 @@ export function useContextMenu(options: ContextMenuOptions) {
     tableDesignerPosition,
     captureSnapshot,
     emitUpdate,
+    pasteClipboard,
   } = options;
 
   /**
@@ -197,8 +200,7 @@ export function useContextMenu(options: ContextMenuOptions) {
   const contextMenuItems = computed<ContextMenuItem[]>(() => {
     const hasSelection = selectionActive.value;
 
-    // #28: programmatic paste requires the async Clipboard read API, which is
-    // only available in secure contexts on Chromium browsers.
+    // Programmatic paste requires a supported async Clipboard read API.
     // `typeof` guard, not `navigator?.`: this computed is EVALUATED DURING THE
     // SSR RENDER, and `navigator` is not a global in Node before v21, so a
     // bare reference throws ReferenceError (optional chaining does not help —
@@ -206,7 +208,7 @@ export function useContextMenu(options: ContextMenuOptions) {
     // on Node 20 LTS. #R32-10
     const pasteSupported =
       typeof navigator !== "undefined" &&
-      Boolean(navigator.clipboard?.readText);
+      Boolean(navigator.clipboard?.readText || (pasteClipboard && navigator.clipboard?.read));
 
     const items: ContextMenuItem[] = [
       {
@@ -274,13 +276,15 @@ export function useContextMenu(options: ContextMenuOptions) {
         label: "Paste",
         icon: "📄",
         shortcut: "Ctrl+V",
-        // #28: enable paste when the async Clipboard read API is available
-        // (Chrome/Edge). Where it is not (Safari/Firefox), keep it disabled -
-        // those browsers require a real paste event (Ctrl+V/Cmd+V).
+        // Older browsers without an async read API still need keyboard paste.
         disabled: !pasteSupported,
          
         onClick: async () => {
           if (!pasteSupported) return;
+          if (pasteClipboard) {
+            await pasteClipboard();
+            return;
+          }
 
           try {
             const text = await readClipboard();

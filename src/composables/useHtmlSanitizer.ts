@@ -906,19 +906,32 @@ export function useHtmlSanitizer() {
     };
 
     const wrapOrphanTextNodes = (root: HTMLElement) => {
-      const nodes = Array.from(root.childNodes);
-      for (const node of nodes) {
-        if (node.nodeType === Node.TEXT_NODE) {
-          const textContent = node.textContent ?? "";
-          if (!textContent.trim()) {
-            node.remove();
-            continue;
-          }
-          const paragraph = workingDocument.createElement("p");
-          paragraph.textContent = textContent.trim();
-          node.replaceWith(paragraph);
+      const inlineTags = new Set(['A', 'B', 'BR', 'CODE', 'EM', 'I', 'IMG', 'S', 'SPAN', 'STRONG', 'SUB', 'SUP', 'U']);
+      let run: ChildNode[] = [];
+      const flush = () => {
+        // Ignore indentation between blocks, but retain spaces BETWEEN inline
+        // marks. Wrapping each orphan text node separately splits one sentence
+        // around its emphasis and moves punctuation into another paragraph.
+        const first = run[0];
+        const last = run[run.length - 1];
+        if (first?.nodeType === Node.TEXT_NODE) first.textContent = first.textContent?.trimStart() ?? '';
+        if (last?.nodeType === Node.TEXT_NODE) last.textContent = last.textContent?.trimEnd() ?? '';
+        run = run.filter(node => {
+          if (node.nodeType === Node.TEXT_NODE && !node.textContent) { node.remove(); return false; }
+          return true;
+        });
+        if (run.some(node => node.nodeType === Node.TEXT_NODE)) {
+          const paragraph = workingDocument.createElement('p');
+          root.insertBefore(paragraph, run[0]);
+          for (const node of run) paragraph.appendChild(node);
         }
+        run = [];
+      };
+      for (const node of Array.from(root.childNodes)) {
+        if (node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && inlineTags.has((node as Element).tagName))) run.push(node);
+        else flush();
       }
+      flush();
     };
 
     const convertDivsToParagraphs = (root: HTMLElement) => {

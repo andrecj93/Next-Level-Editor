@@ -698,6 +698,7 @@ import WritingSearch from './WritingSearch.vue';
 import SaveStatus from './SaveStatus.vue';
 import PdfExportStatus from './PdfExportStatus.vue';
 import { useWritingWorkspace } from '../composables/useWritingWorkspace';
+import { useClipboardPaste } from '../composables/useClipboardPaste';
 import { writingBlocks, writingNoteRange, writingNoteNearSelection, type WritingNote } from '../utils/writingReview';
 import { keepSelectionVisible, preserveVisibleSelection } from '../utils/caretVisibility';
 import { useWritingReflow } from '../composables/useWritingReflow';
@@ -1941,6 +1942,14 @@ const {
   closeEmojiPicker: toggleEmojiPicker,
 });
 
+const pasteFromContextMenu = useClipboardPaste({
+  editorContent,
+  readonly: toRef(props, 'readonly'),
+  onPaste: event => onPaste(event),
+  captureSnapshot,
+  notify: message => notify(message),
+});
+
 // Context menu using composable
 const {
   showContextMenu,
@@ -1960,6 +1969,7 @@ const {
   tableDesignerPosition,
   captureSnapshot,
   emitUpdate: (value: string) => emit("update:modelValue", value),
+  pasteClipboard: pasteFromContextMenu,
 });
 
 // Export actions using composable. The toolbar's "Format HTML" button is only

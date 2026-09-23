@@ -97,8 +97,8 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,835 unit checks
-across 376 files, plus end-to-end checks on Chromium and mobile Safari. Both
+**It is tested like something you'd put in production.** 4,855 unit checks
+across 379 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
 ---
@@ -339,7 +339,7 @@ Next Level Editor is built with cross-browser compatibility in mind and thorough
 ### Cross-Browser Features
 
 - ✅ **contenteditable core** - Native `contenteditable` with the Selection/Range APIs plus `document.execCommand` (e.g. for paste insertion), all transpiled to ES2015 for broad reach
-- ✅ **Clipboard API with fallbacks** - Copy/paste works on all browsers including Safari iOS
+- ✅ **Clipboard API with fallbacks** - Rich menu paste shares keyboard paste sanitization; text-only APIs retain literal text
 - ✅ **Smooth scroll polyfill** - Automatic fallback for Safari < 15.4
 - ✅ **CSS gap fallbacks** - Margin-based fallbacks for Safari < 14.1
 - ✅ **ES2015 target** - Transpiled for broad compatibility
@@ -348,7 +348,7 @@ Next Level Editor is built with cross-browser compatibility in mind and thorough
 
 ### Known Limitations
 
-- **Paste from context menu** is disabled on Safari iOS and Firefox (use Ctrl+V/Cmd+V instead)
+- **Paste from context menu** requires a browser clipboard-read API and permission. It preserves rich text and images when supported; use Ctrl+V/Cmd+V when access is unavailable. A pending paste is cancelled if you move to another writing position or revise the document.
 - **PDF export** may be slower on older iOS devices (consider using Share > Print > Save as PDF)
 - Some advanced features require HTTPS for security (Clipboard API, Service Workers)
 
@@ -853,7 +853,7 @@ The separate device matrix passed all 360 cases on 18 profiles with no skips,
 failures, or retries. Subsequent changes add a comment lifecycle scenario to
 each profile. See the CI reports for the result of the revision being reviewed.
 
-#### Unit Tests (376 files, with Vitest)
+#### Unit Tests (379 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
