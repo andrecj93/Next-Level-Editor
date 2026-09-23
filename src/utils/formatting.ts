@@ -1,5 +1,6 @@
 import { CHECKLIST_CLASS } from "./checklist";
 import { rangeCapturesContent, rangeTouchesElement } from "./rangeContact";
+import { captureSelectionBookmark, type RememberReplacement } from "./selectionBookmark";
 
 export interface SelectionSnapshot {
   range: Range | null;
@@ -108,7 +109,7 @@ const wrapNodes = (
   return wrapper;
 };
 
-const replaceTag = (element: HTMLElement, tagName: string): HTMLElement => {
+const replaceTag = (element: HTMLElement, tagName: string, remember?: RememberReplacement): HTMLElement => {
   if (element.tagName.toLowerCase() === tagName.toLowerCase()) {
     return element;
   }
@@ -117,6 +118,7 @@ const replaceTag = (element: HTMLElement, tagName: string): HTMLElement => {
     newElement.appendChild(element.firstChild);
   }
   element.replaceWith(newElement);
+  remember?.(element, newElement);
   return newElement;
 };
 
@@ -870,10 +872,10 @@ const drainListItemInto = (
  * Unnest a list item by converting it to a block element outside the list
  * Returns the new block element
  */
-const unnestListItem = (li: HTMLElement, tagName: string): HTMLElement => {
+const unnestListItem = (li: HTMLElement, tagName: string, remember?: RememberReplacement): HTMLElement => {
   const list = li.parentElement;
   if (!list || !["ul", "ol"].includes(list.tagName.toLowerCase())) {
-    return replaceTag(li, tagName);
+    return replaceTag(li, tagName, remember);
   }
 
   const isChecklist = list.classList.contains(CHECKLIST_CLASS);
@@ -938,8 +940,12 @@ const unnestListItem = (li: HTMLElement, tagName: string): HTMLElement => {
   // none remain it is now empty and must go (no stray <ul>/<ol>).
   if (list.children.length === 0) {
     list.remove();
+    remember?.(list, replacement);
+  } else {
+    remember?.(list, [list, ...replacement]);
   }
 
+  remember?.(li, newBlock);
   return newBlock;
 };
 
@@ -948,7 +954,7 @@ const unnestListItem = (li: HTMLElement, tagName: string): HTMLElement => {
  * handling the special case of unnesting a list item when converting to a
  * heading. Returns the resulting block element.
  */
-const convertBlockTo = (block: HTMLElement, newTag: string): HTMLElement => {
+const convertBlockTo = (block: HTMLElement, newTag: string, remember?: RememberReplacement): HTMLElement => {
   // A list item leaves the list WHATEVER it becomes. Retagging it in place put
   // a <p>/<blockquote> directly inside the <ul> (invalid — the parser hoists it
   // out on the next round-trip) and dragged any sublist along inside it. Only
@@ -956,10 +962,10 @@ const convertBlockTo = (block: HTMLElement, newTag: string): HTMLElement => {
   // that. unnestListItem splices the new block, and the sublist it lifts out,
   // beside the list instead. #R23-11
   if (block.tagName.toLowerCase() === "li" && newTag.toLowerCase() !== "li") {
-    return unnestListItem(block, newTag);
+    return unnestListItem(block, newTag, remember);
   }
 
-  return replaceTag(block, newTag);
+  return replaceTag(block, newTag, remember);
 };
 
 /**
@@ -970,11 +976,12 @@ const convertBlockTo = (block: HTMLElement, newTag: string): HTMLElement => {
 const convertBlock = (
   block: HTMLElement,
   targetTag: string,
-  fallbackTag: string
+  fallbackTag: string,
+  remember?: RememberReplacement
 ): HTMLElement => {
   const currentTag = block.tagName.toLowerCase();
   const newTag = currentTag === targetTag ? fallbackTag : targetTag;
-  return convertBlockTo(block, newTag);
+  return convertBlockTo(block, newTag, remember);
 };
 
 /** Browsers initially type directly into an empty contenteditable. Format the
@@ -1009,6 +1016,20 @@ export const toggleBlock = (
   tagName: string,
   fallbackTag = "p"
 ) => {
+  const bookmark = captureSelectionBookmark(root);
+  try {
+    toggleBlockContent(root, tagName, fallbackTag, bookmark?.remember);
+  } finally {
+    bookmark?.restore();
+  }
+};
+
+const toggleBlockContent = (
+  root: HTMLElement,
+  tagName: string,
+  fallbackTag: string,
+  remember?: RememberReplacement
+) => {
   const range = getSelectionRange();
   if (!range) return;
   ensureRangeWithinRoot(range, root);
@@ -1016,7 +1037,7 @@ export const toggleBlock = (
   const targetTag = tagName.toLowerCase();
 
   // Multi-block selection: convert every block-level element the range
-  // intersects, then reselect the converted blocks (mirrors applyTextAlignment).
+  // intersects. The caller restores the exact original selection afterward.
   if (!range.collapsed) {
     const blocks = getBlocksInRange(range, root);
     if (blocks.length > 1) {
@@ -1031,22 +1052,24 @@ export const toggleBlock = (
       const decidedTag = everyBlockMatchesTarget ? fallbackTag : targetTag;
       const converted = blocks.map((block) =>
         isTableCell(block)
-          ? convertCellContentTo(block, decidedTag)
-          : convertBlockTo(block, decidedTag)
+          ? convertCellContentTo(block, decidedTag, remember)
+          : convertBlockTo(block, decidedTag, remember)
       );
       selectElements(converted);
       return;
     }
   }
 
-  const block = getBlockAncestor(range.startContainer, root);
+  const block = getBlockOrCellAncestor(range.startContainer, root);
   if (!block) {
     if (wrapLooseParagraph(root, range, tagName)) return;
     wrapSelection(root, tagName);
     return;
   }
 
-  const replaced = convertBlock(block, targetTag, fallbackTag);
+  const replaced = isTableCell(block)
+    ? convertCellContentTo(block, effectiveBlockTag(block) === targetTag ? fallbackTag : targetTag, remember)
+    : convertBlock(block, targetTag, fallbackTag, remember);
 
   const selection = getSelection();
   if (selection) {
@@ -1060,7 +1083,8 @@ export const toggleBlock = (
 
 const convertBlockToList = (
   block: HTMLElement,
-  listTag: "ul" | "ol"
+  listTag: "ul" | "ol",
+  remember?: RememberReplacement
 ): HTMLElement => {
   const list = document.createElement(listTag);
   const listItem = document.createElement("li");
@@ -1069,10 +1093,11 @@ const convertBlockToList = (
   }
   list.appendChild(listItem);
   block.replaceWith(list);
+  remember?.(block, listItem);
   return listItem;
 };
 
-const unwrapList = (list: HTMLElement) => {
+const unwrapList = (list: HTMLElement, remember?: RememberReplacement) => {
   const parent = list.parentNode;
   if (!parent) return;
   const fragment = document.createDocumentFragment();
@@ -1083,11 +1108,14 @@ const unwrapList = (list: HTMLElement) => {
       const nestedLists = drainListItemInto(child, paragraph);
       fragment.appendChild(paragraph);
       nestedLists.forEach((nested) => fragment.appendChild(nested));
+      remember?.(child, paragraph);
     } else {
       fragment.appendChild(child);
     }
   });
+  const replacement = Array.from(fragment.childNodes);
   list.replaceWith(fragment);
+  remember?.(list, replacement);
 };
 
 const isListTag = (element: HTMLElement | null): element is HTMLElement =>
@@ -1143,15 +1171,17 @@ const effectiveBlockTag = (block: HTMLElement): string =>
  * #R23-2 */
 const convertCellContentTo = (
   cell: HTMLElement,
-  newTag: string
+  newTag: string,
+  remember?: RememberReplacement
 ): HTMLElement => {
   const inner = cellContentBlock(cell);
-  if (inner) return convertBlockTo(inner, newTag);
+  if (inner) return convertBlockTo(inner, newTag, remember);
   const wrapper = document.createElement(newTag);
   while (cell.firstChild) {
     wrapper.appendChild(cell.firstChild);
   }
   cell.appendChild(wrapper);
+  remember?.(cell, wrapper);
   return wrapper;
 };
 
@@ -1161,7 +1191,8 @@ const convertCellContentTo = (
  * obliterating the table. #r20-1 */
 const wrapCellContentInList = (
   cell: HTMLElement,
-  listTag: "ul" | "ol"
+  listTag: "ul" | "ol",
+  remember?: RememberReplacement
 ): HTMLElement => {
   const list = document.createElement(listTag);
   const listItem = document.createElement("li");
@@ -1170,6 +1201,7 @@ const wrapCellContentInList = (
   }
   list.appendChild(listItem);
   cell.appendChild(list);
+  remember?.(cell, listItem);
   return list;
 };
 
@@ -1186,13 +1218,14 @@ const wrapCellContentInList = (
  */
 const wrapBlocksIntoList = (
   blocks: HTMLElement[],
-  listTag: "ul" | "ol"
+  listTag: "ul" | "ol",
+  remember?: RememberReplacement
 ): HTMLElement[] => {
   const lists: HTMLElement[] = [];
   let i = 0;
   while (i < blocks.length) {
     if (isTableCell(blocks[i])) {
-      lists.push(wrapCellContentInList(blocks[i], listTag));
+      lists.push(wrapCellContentInList(blocks[i], listTag, remember));
       i++;
       continue;
     }
@@ -1216,6 +1249,7 @@ const wrapBlocksIntoList = (
         listItem.appendChild(block.firstChild);
       }
       list.appendChild(listItem);
+      remember?.(block, listItem);
     });
     group[0].replaceWith(list);
     group.slice(1).forEach((block) => block.remove());
@@ -1229,10 +1263,19 @@ const wrapBlocksIntoList = (
  * Convert a single list item back into a paragraph, splitting the surrounding
  * list if necessary (via unnestListItem). Returns the created paragraph.
  */
-const convertListItemToParagraph = (li: HTMLElement): HTMLElement =>
-  unnestListItem(li, "p");
+const convertListItemToParagraph = (li: HTMLElement, remember?: RememberReplacement): HTMLElement =>
+  unnestListItem(li, "p", remember);
 
 export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
+  const bookmark = captureSelectionBookmark(root);
+  try {
+    toggleListContent(root, listTag, bookmark?.remember);
+  } finally {
+    bookmark?.restore();
+  }
+};
+
+const toggleListContent = (root: HTMLElement, listTag: "ul" | "ol", remember?: RememberReplacement) => {
   const range = getSelectionRange();
   if (!range) return;
   ensureRangeWithinRoot(range, root);
@@ -1246,22 +1289,21 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
     // Fix #3: switching list type (e.g. caret in a <ul>, click Numbered)
     // retags the list in place instead of nesting one list inside another.
     if (currentListTag !== listTag) {
-      const retagged = replaceTag(listAncestor, listTag);
       // A selection spanning a bullet's own text AND its sub-bullet must
       // switch every level it touches, not just the outermost (Word/Docs
       // behavior) — the sub-list otherwise kept its old type. Only lists the
       // range genuinely touches retag: an untouched sibling sub-list stays,
       // and a selection wholly inside a sub-list never reaches here for the
-      // parent (its listAncestor IS the sub-list). replaceTag moves the
-      // children wholesale, so the range's text-node boundaries — and the
-      // nested list elements themselves — survive the ancestor's retag. #R28-2
-      Array.from(retagged.querySelectorAll("ul, ol"))
+      // parent (its listAncestor IS the sub-list). Collect before reparenting
+      // the children: live Range endpoints move when their nodes are removed.
+      const nestedLists = Array.from(listAncestor.querySelectorAll("ul, ol"))
         .filter(
           (nested): nested is HTMLElement =>
             nested.tagName.toLowerCase() !== listTag &&
             rangeTouchesElement(range, nested)
-        )
-        .forEach((nested) => replaceTag(nested, listTag));
+        );
+      const retagged = replaceTag(listAncestor, listTag, remember);
+      nestedLists.forEach((nested) => replaceTag(nested, listTag, remember));
       const li = getClosestElement(
         range.startContainer,
         (element) => element.tagName.toLowerCase() === "li",
@@ -1293,7 +1335,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
       blocks.filter((block) => block.tagName.toLowerCase() === "li").length > 1;
 
     if (!spansMultipleItems && li) {
-      const paragraph = convertListItemToParagraph(li);
+      const paragraph = convertListItemToParagraph(li, remember);
       const selection = getSelection();
       if (selection) {
         const newRange = document.createRange();
@@ -1321,7 +1363,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
     // Every item selected -> unwrap the whole list (this also frees any non-<li>
     // children and drains nested sublists so nothing lands inside a <p>).
     if (selectedItems.length > 0 && selectedItems.length === directItems.length) {
-      unwrapList(listAncestor);
+      unwrapList(listAncestor, remember);
       return;
     }
 
@@ -1333,7 +1375,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
     if (selectedItems.length > 0) {
       let lastParagraph: HTMLElement | null = null;
       for (const item of selectedItems) {
-        lastParagraph = convertListItemToParagraph(item);
+        lastParagraph = convertListItemToParagraph(item, remember);
       }
       const selection = getSelection();
       if (selection && lastParagraph) {
@@ -1346,7 +1388,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
       return;
     }
 
-    unwrapList(listAncestor);
+    unwrapList(listAncestor, remember);
     return;
   }
 
@@ -1357,7 +1399,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
       (block) => block.tagName.toLowerCase() !== "li"
     );
     if (blocks.length > 1) {
-      const lists = wrapBlocksIntoList(blocks, listTag);
+      const lists = wrapBlocksIntoList(blocks, listTag, remember);
       const items = lists.flatMap(
         (list) => Array.from(list.children) as HTMLElement[]
       );
@@ -1368,7 +1410,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
 
   const block = getBlockAncestor(range.startContainer, root);
   if (block) {
-    const listItem = convertBlockToList(block, listTag);
+    const listItem = convertBlockToList(block, listTag, remember);
     const selection = getSelection();
     if (selection) {
       const newRange = document.createRange();
@@ -1390,7 +1432,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
   // (e.g. the other cell already holds a list). #r21-1 #r21-2
   const cell = getBlockOrCellAncestor(range.startContainer, root);
   if (cell && isTableCell(cell)) {
-    const cellList = wrapCellContentInList(cell, listTag);
+    const cellList = wrapCellContentInList(cell, listTag, remember);
     selectElements(Array.from(cellList.children) as HTMLElement[]);
     return;
   }

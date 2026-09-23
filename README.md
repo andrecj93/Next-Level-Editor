@@ -68,6 +68,8 @@ an AI service. The chapter outline helps you find your way through longer work.
 beside the manuscript, with a chapter and sentence excerpt for each match.
 Enter and Shift+Enter move through results while focus stays in search. Replace
 one occurrence or all, undo in the document, and keep writing with search open.
+Changing a heading or list keeps your caret and selected passage in place, so
+you can continue the sentence or apply another style without selecting it again.
 
 **It exports what you actually see.** PDF, Word, Markdown and HTML round-trip
 your tables, checklists, page breaks, code blocks and embeds. Videos that no
@@ -95,8 +97,8 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,658 unit tests
-across 358 files, plus end-to-end checks on Chromium and mobile Safari. Both
+**It is tested like something you'd put in production.** 4,784 unit checks
+across 372 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
 ---
@@ -283,16 +285,16 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 910.5 KB | **220.1 KB** | On import |
+| **Core (ES)** | 913.7 KB | **221.0 KB** | On import |
 | **CSS** | 258.6 KB | **41.7 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
-| **UMD** | 1,662.7 KB | 495.8 KB | On import (no splitting) |
+| **UMD** | 1,665.0 KB | 496.6 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **261.8 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **262.7 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 
