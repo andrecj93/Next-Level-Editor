@@ -69,12 +69,21 @@ export function keepSelectionVisible(root: HTMLElement | null, margin = 4) {
   if (!root || !selection?.rangeCount || !selection.focusNode ||
       !root.contains(selection.focusNode)) return;
   const rect = () => selectionFocusRect(selection);
+  revealTextRect(selection.focusNode, rect, margin);
+}
+
+/** Reveal a search match while keyboard focus stays in the search field. */
+export function keepRangeVisible(root: HTMLElement | null, range: Range, margin = 24) {
+  if (!root || !root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
+  revealTextRect(range.startContainer, () => range.getClientRects()[0] ?? range.getBoundingClientRect(), margin);
+}
+
+function revealTextRect(node: Node, rect: () => DOMRect, margin: number) {
   const initial = rect();
   if (!initial.height) return;
   const delta = (start: number, end: number, low: number, high: number) =>
     end > high ? end - high : start < low ? start - low : 0;
-  let parent = selection.focusNode instanceof Element
-    ? selection.focusNode : selection.focusNode.parentElement;
+  let parent = node instanceof Element ? node : node.parentElement;
   while (parent && parent !== document.scrollingElement) {
     if (parent instanceof HTMLElement) {
       const style = getComputedStyle(parent);

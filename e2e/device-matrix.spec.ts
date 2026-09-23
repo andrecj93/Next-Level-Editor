@@ -132,6 +132,78 @@ test('writing notes follow the current paragraph and keep every decision reachab
   expect(await editor.innerHTML()).toBe(before);
 });
 
+test('search keeps prose visible through navigation, replacement, undo and continued writing', async ({ page, hasTouch }) => {
+  const editor = editorFor(page);
+  await switchView(page, 'Code');
+  await page.locator('.code-editor').fill('<h2>The harbor</h2><p>Mara met Ce<em>lia</em> at the library.</p>' + '<p>There was a map beside the window.</p>'.repeat(15) + '<h2>The letter</h2><p>Celia wrote back.</p><p>Celia kept the key.</p>');
+  await switchView(page, 'Editor');
+  const before = await editor.innerHTML();
+  await activate(toolbarFor(page).getByRole('button', { name: 'Tools', exact: true }), hasTouch);
+  await activate(page.getByRole('menuitem', { name: 'Find & Replace', exact: true }), hasTouch);
+  const search = page.getByRole('search', { name: 'Find & Replace' });
+  const query = search.getByRole('textbox', { name: 'Find', exact: true });
+  const queryIsVisible = async () => {
+    await insideViewport(query);
+    await expect.poll(() => query.evaluate(el => {
+      const box = el.getBoundingClientRect();
+      return [box.top + 4, box.bottom - 4].every(y => document.elementFromPoint(box.left + 8, y) === el);
+    }), { message: 'The focused search input must not be covered by sticky controls' }).toBe(true);
+  };
+  await query.fill('Celia');
+  await expect(search.locator('.search-count')).toHaveText('1 of 3');
+  await expect(query).toBeFocused();
+  await expect(search.locator('.search-passage')).toContainText('The harbor');
+  const matchIsVisible = async () => {
+    await expect(async () => {
+      const position = await editor.evaluate(root => {
+        const matches = CSS.highlights.get('nle-find-current');
+        const range = matches && [...matches][0] as Range | undefined;
+        const rect = range?.getClientRects()[0];
+        const box = root.getBoundingClientRect();
+        const viewport = window.visualViewport;
+        return { text: range?.toString(), top: rect?.top ?? -1, bottom: rect?.bottom ?? -1, low: Math.max(box.top, viewport?.offsetTop ?? 0), high: Math.min(box.bottom, (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight)) };
+      });
+      expect(position.text).toBe('Celia');
+      expect(position.top, JSON.stringify(position)).toBeGreaterThanOrEqual(position.low);
+      expect(position.bottom, JSON.stringify(position)).toBeLessThanOrEqual(position.high);
+    }).toPass({ timeout: 2500 });
+  };
+  await matchIsVisible();
+  await queryIsVisible();
+  expect(await editor.innerHTML()).toBe(before);
+  await query.press('Enter');
+  await expect(search.locator('.search-count')).toHaveText('2 of 3');
+  await expect(query).toBeFocused();
+  await expect(search.locator('.search-passage')).toContainText('The letter');
+  await matchIsVisible();
+  await activate(search.getByRole('button', { name: 'Show replacement controls' }), hasTouch);
+  await search.getByRole('textbox', { name: 'Replace with', exact: true }).fill('Célia');
+  await activate(search.getByRole('button', { name: 'Replace', exact: true }), hasTouch);
+  await expect(editor).toContainText('Célia wrote back.');
+  await expect(editor).toContainText('Celia kept the key.');
+  await expect(search.locator('.search-count')).toHaveText('2 of 2');
+  await matchIsVisible();
+  await editor.press('ControlOrMeta+z');
+  await expect(editor).toHaveJSProperty('innerHTML', before);
+  await expect(search.locator('.search-count')).toHaveText('2 of 3');
+  await editor.press('ControlOrMeta+End');
+  await page.keyboard.type(' The next sentence stays here.');
+  await expect(editor).toBeFocused();
+  await expect(editor).toContainText('Celia kept the key. The next sentence stays here.');
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.isCollapsed)).toBe(true);
+  await editor.press('ControlOrMeta+f');
+  await expect(query).toBeFocused();
+  await queryIsVisible();
+  await query.press('Shift+Enter');
+  await expect(search.locator('.search-count')).toHaveText('1 of 3');
+  await matchIsVisible();
+  await activate(search.getByRole('button', { name: 'Close search' }), hasTouch);
+  await expect(search).toHaveCount(0);
+  await expect(editor).toBeFocused();
+  expect(await page.evaluate(() => CSS.highlights.has('nle-find-current'))).toBe(false);
+  await noHorizontalOverflow(page);
+});
+
 test('PDF progress and cancellation stay reachable without losing the draft', async ({ page, hasTouch }) => {
   const editor = editorFor(page);
   const downloads: string[] = [];
@@ -322,7 +394,7 @@ test('formatting, links, search and download remain usable', async ({ page, hasT
   await expect(editor.locator('a')).toHaveText('Reading room');
   await toolbarFor(page).getByRole('button', { name: 'Tools', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Find & Replace', exact: true }).click();
-  const find = page.getByRole('dialog', { name: 'Find & Replace' });
+  const find = page.getByRole('search', { name: 'Find & Replace' });
   await expect(find).toBeVisible();
   await settle(page);
   await insideViewport(find);

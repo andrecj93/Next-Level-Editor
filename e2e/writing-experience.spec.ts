@@ -74,7 +74,19 @@ test.describe('Manuscript writing workspace', () => {
     await expect(page.getByRole('button', { name: 'More formatting', exact: true })).toBeFocused();
     await page.getByRole('button', { name: 'Tools', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Find & Replace', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Find & Replace' })).toBeVisible();
+    const search = page.getByRole('search', { name: 'Find & Replace' });
+    await expect(search).toBeVisible();
+    await search.getByRole('textbox', { name: 'Find', exact: true }).fill('sentence');
+    await expect(search.locator('.search-count')).toHaveText('1 of 1');
+    await page.getByRole('button', { name: 'View', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Code view', exact: true }).click();
+    await expect(page.locator('.code-editor')).toBeVisible();
+    await expect(search).toHaveCount(0);
+    expect(await page.evaluate(() => CSS.highlights.has('nle-find-current'))).toBe(false);
+    await page.getByRole('button', { name: 'Tools', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Find & Replace', exact: true }).click();
+    await expect(editor).toBeVisible();
+    await expect(search.getByRole('textbox', { name: 'Find', exact: true })).toBeFocused();
   });
 
   test('the companion opens from source or preview and returns keyboard focus on dismissal', async ({ page }) => {
@@ -204,6 +216,53 @@ test.describe('Manuscript writing workspace', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() => editor.evaluate(el => el.scrollTop)).toBe(0);
     expect(await editor.innerHTML()).toBe(before);
+  });
+
+  test('search follows a visible passage through reflow and respects reading elsewhere', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+    await page.getByRole('button', { name: 'View', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Code view', exact: true }).click();
+    await page.locator('.code-editor').fill('<h2>The letter</h2>' + '<p>Mara carried the letter to the kitchen. The clock was the only sound in the house.</p>'.repeat(30) + '<p>Celia folded the map.</p>');
+    await page.getByRole('button', { name: 'View', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Editor view', exact: true }).click();
+    const before = await editor.innerHTML();
+    await editor.press('ControlOrMeta+f');
+    const search = page.getByRole('search', { name: 'Find & Replace' });
+    const query = search.getByRole('textbox', { name: 'Find', exact: true });
+    await query.fill('Celia');
+    await expect(search.locator('.search-count')).toHaveText('1 of 1');
+    for (const viewport of [{ width: 320, height: 568 }, { width: 834, height: 1112 }, { width: 740, height: 360 }]) {
+      await page.setViewportSize(viewport);
+      await expect(async () => {
+        const geometry = await editor.evaluate(el => {
+          const range = [...CSS.highlights.get('nle-find-current')!][0] as Range;
+          const match = range.getClientRects()[0];
+          const area = el.getBoundingClientRect();
+          return { top: match.top, bottom: match.bottom, low: Math.max(area.top, 0), high: Math.min(area.bottom, innerHeight) };
+        });
+        expect(geometry.top, JSON.stringify(geometry)).toBeGreaterThanOrEqual(geometry.low);
+        expect(geometry.bottom, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.high);
+      }).toPass({ timeout: 3000 });
+      await expect(query).toBeFocused();
+    }
+    expect(await editor.innerHTML()).toBe(before);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))));
+    await editor.evaluate(el => { el.scrollTop = 0; });
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect.poll(() => editor.evaluate(el => el.scrollTop)).toBe(0);
+    await expect(query).toBeFocused();
+    // Returning to a result is deliberate; clicking its excerpt restores the
+    // exact selection so normal typing edits that occurrence immediately.
+    await query.press('Enter');
+    await search.getByRole('button', { name: /^Edit passage in/ }).click();
+    await expect(search).toHaveCount(0);
+    await expect(editor).toBeFocused();
+    await page.keyboard.type('Célia');
+    await expect(editor).toContainText('Célia folded the map.');
+    await editor.press('ControlOrMeta+z');
+    await expect(editor).toHaveJSProperty('innerHTML', before);
   });
 
   test('writing notes and toolbar reflow without covering the page on a phone', async ({ page }) => {
