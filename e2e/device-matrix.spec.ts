@@ -9,6 +9,7 @@ import { exerciseMovingFormattedText } from './helpers/cutClipboard';
 import { exerciseInlineTyping, exerciseInlineDeletion, exerciseParagraphTyping } from './helpers/inlineTyping';
 import { exerciseFontSizeTyping } from './helpers/fontSizeTyping';
 import { exerciseUndoWritingPosition } from './helpers/undoWritingPosition';
+import { exerciseCrossParagraphEnter } from './helpers/crossParagraphEnter';
 
 const editorFor = (page: Page) => page.getByRole('textbox', { name: 'Rich text editor', exact: true });
 const toolbarFor = (page: Page) => page.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true });
@@ -139,6 +140,11 @@ test('text size changes and Normal keep natural typing, undo and draft recovery'
 
 test('undo of a loaded draft keeps the next sentence at the writing position', async ({ page }) => {
   await exerciseUndoWritingPosition(page);
+  await noHorizontalOverflow(page);
+});
+
+test('Enter across paragraphs updates the document, undo and saved recovery', async ({ page }) => {
+  await exerciseCrossParagraphEnter(page);
   await noHorizontalOverflow(page);
 });
 

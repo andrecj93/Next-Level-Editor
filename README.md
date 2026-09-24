@@ -224,7 +224,7 @@ readable — click any section to open it.
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **5,001 Unit Checks** - Across 390 files after the library build, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run in the package build gate.
+- **5,005 Unit Checks** - Across 391 files after the library build, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run in the package build gate.
 - **Browser Gates** - Playwright on Chromium and mobile WebKit, plus the same writing scenarios on 18 desktop, tablet, phone, landscape, and reflow profiles
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
@@ -287,7 +287,7 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 958.0 KB | **232.8 KB** | On import |
+| **Core (ES)** | 958.1 KB | **232.8 KB** | On import |
 | **CSS** | 259.6 KB | **41.8 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
@@ -857,7 +857,7 @@ failures, or retries. Subsequent changes improve text-size changes and preserve
 the writing position when undoing the first edit of a loaded draft. See the CI reports
 for the result of the revision being reviewed.
 
-#### Unit Tests (390 files, with Vitest)
+#### Unit Tests (391 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
@@ -1088,7 +1088,8 @@ npm run test:devices
 
 Every profile exercises typing, emphasis changes followed by continued typing
 and deletion, text-size changes and returning to Normal, heading formatting,
-suggestions, undo with continued writing at the original caret,
+suggestions, undo with continued writing at the original caret, paragraph
+corrections spanning a selection with counts and saving kept in sync,
 recovery, links, search, downloads, insert dialogs, source/preview, chapter
 navigation, mixed scripts, light/dark accessibility, keyboard access, and resizing
 with menus open. The device job gates demo deployment and package publication.

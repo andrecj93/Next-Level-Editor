@@ -439,11 +439,12 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       // handleEnterWithoutBlock, which is only for bare unwrapped text. It then
       // re-wrapped both halves in new <p>s: <p><p>He</p></p><p><p>rld</p></p>,
       // three <ol>s each restarting at 1, a table torn into three tables.
-      // Nothing is left to do here — the delete already left the two partial
-      // blocks as siblings, which IS the split Enter is supposed to make. Just
-      // put the caret at the join. #R23-1
+      // The delete already left the two partial blocks as siblings, which IS
+      // the intended split. Restore the caret and publish this edit through
+      // the same history/model/save pipeline as every other Enter. #R23-1
       if (spannedBlocks) {
         collapseCaretAtJoin(range, selection);
+        root.dispatchEvent(new Event("input", { bubbles: true }));
         return;
       }
     }
