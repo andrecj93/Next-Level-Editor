@@ -1039,7 +1039,7 @@ const { handleInput: handleSmartAutocomplete } =
   useSmartAutocomplete(editorContent);
 
 // Selection management using composable
-const { rememberSelection: rememberSelectionBase, performWithSelection } =
+const { rememberSelection: rememberSelectionBase, performWithSelection, restoreEditorFocus } =
   useSelection(editorContent);
 
 // Extend rememberSelection to hide floating toolbar
@@ -1398,6 +1398,7 @@ const toggleCompanion = () => {
     return;
   }
   const keepPlace = preserveVisibleSelection(editorContent.value);
+  rememberSelectionBase();
   refreshWritingReview();
   startReviewNearWriting();
   viewMode.value = 'editor';
@@ -1408,8 +1409,11 @@ const toggleCompanion = () => {
   });
 };
 const closeCompanion = () => {
+  // Closing a reading aid should return to the sentence, including a backward
+  // selection. Tab leaving the compact panel uses @leave and keeps its target.
+  rememberSelectionBase();
   companionOpen.value = false;
-  nextTick(() => rootEl.value?.querySelector<HTMLButtonElement>('.writing-footer-actions button')?.focus());
+  nextTick(restoreEditorFocus);
 };
 const revealWritingPassage = (root: HTMLElement) => {
   const panel = rootEl.value?.querySelector('.writing-companion');

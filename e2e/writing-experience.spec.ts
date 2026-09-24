@@ -103,7 +103,7 @@ test.describe('Manuscript writing workspace', () => {
       await expect(companion.getByRole('button', { name: 'Writing notes', exact: true })).toBeFocused();
       await companion.getByRole('button', { name: 'Writing notes', exact: true }).press('Escape');
       await expect(companion).not.toBeVisible();
-      await expect(button).toBeFocused();
+      await expect(page.getByRole('textbox', { name: 'Rich text editor', exact: true })).toBeFocused();
     }
   });
 
@@ -175,6 +175,11 @@ test.describe('Manuscript writing workspace', () => {
     await lineIsVisible();
     expect(await editor.innerHTML()).toBe(before);
     await page.getByRole('button', { name: 'Close writing companion', exact: true }).click();
+    await expect(editor).toBeFocused();
+    // Let the panel-close layout restore the writing line before simulating a
+    // separate reading scroll. Direct scrollTop assignment has no wheel/touch
+    // intent, unlike a person scrolling, and must not race pending reflow.
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     // A scroll-state fixture also runs in mobile WebKit, which has no wheel API.
     await editor.evaluate(el => { el.scrollTop = 0; });
     await expect.poll(() => editor.evaluate(el => el.scrollTop)).toBe(0);

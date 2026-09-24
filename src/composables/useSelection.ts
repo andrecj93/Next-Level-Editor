@@ -479,9 +479,37 @@ export function useSelection(editorContent: Ref<HTMLElement | null>) {
     }
   };
 
+  /** Return from a reading panel without running an edit or creating a block. */
+  const restoreEditorFocus = () => {
+    const root = editorContent.value;
+    if (!root) return;
+    const valid = (range: Range | null) => range &&
+      root.contains(range.startContainer) && root.contains(range.endContainer);
+    const saved = valid(savedRange.value) ? savedRange.value : null;
+    const previous = saved ?? (valid(lastValidRange.value) ? lastValidRange.value : null);
+    // Clone before focus: some browsers collapse live ranges when focus moves.
+    const range = previous?.cloneRange() ?? root.ownerDocument.createRange();
+    const backwards = saved ? savedBackwards : lastValidBackwards;
+    if (!previous) {
+      range.selectNodeContents(root);
+      range.collapse(false);
+    }
+    pauseTracking();
+    try {
+      root.focus({ preventScroll: true });
+      restoreDirectedRange(range, Boolean(previous && backwards));
+      savedRange.value = range.cloneRange();
+      savedBackwards = Boolean(previous && backwards);
+      ensureCursorVisible();
+    } finally {
+      resumeTracking();
+    }
+  };
+
   return {
     saveSelection,
     rememberSelection,
     performWithSelection,
+    restoreEditorFocus,
   };
 }
