@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { exerciseRichClipboard } from './helpers/clipboard';
 import { exerciseFormatCopy } from './helpers/formatPainter';
 import { exerciseClearFormatting } from './helpers/clearFormatting';
+import { exerciseWritingContinuation } from './helpers/writingContinuation';
 
 const editorFor = (page: Page) => page.getByRole('textbox', { name: 'Rich text editor', exact: true });
 const toolbarFor = (page: Page) => page.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true });
@@ -379,6 +380,10 @@ test('writing notes follow the current paragraph and keep every decision reachab
   expect(await editor.innerHTML()).toBe(before);
   await activate(companion.getByRole('button', { name: 'Next note', exact: true }), hasTouch);
   await expect(companion.locator('.note-location')).toHaveText('Chapter 2 · Paragraph 1');
+  // Explicitly move to this passage before editing it; accepting a note alone
+  // keeps the writer at the original position in chapter 8.
+  await activate(companion.locator('.note-passage'), hasTouch);
+  await openWritingNotes(page, hasTouch);
   await activate(apply, hasTouch);
   await expect(editor.locator('p').nth(1)).toHaveText('Mara returned to find house 2.');
   await expect(editor.locator('p').filter({ hasText: 'in order to' })).toHaveCount(7);
@@ -394,6 +399,10 @@ test('writing notes follow the current paragraph and keep every decision reachab
   // moves to the next passage. Neither path may strand focus on the body.
   await expect.poll(() => page.evaluate(() => document.activeElement?.matches('.note-passage, .editor-content'))).toBe(true);
   expect(await editor.innerHTML()).toBe(before);
+});
+
+test('accept a writing note and continue at the same place', async ({ page, hasTouch }) => {
+  await exerciseWritingContinuation(page, hasTouch);
 });
 
 test('search keeps prose visible through navigation, replacement, undo and continued writing', async ({ page, hasTouch }) => {
@@ -1030,6 +1039,8 @@ test('expanded formatting includes colors in keyboard navigation without losing 
   await editor.press('Alt+F10');
   await page.keyboard.press('End');
   await expect(toolbar.getByRole('button', { name: 'Close more formatting', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(toolbar.getByRole('group', { name: 'More formatting options' }).getByRole('button', { name: 'Clear Formatting', exact: true })).toBeFocused();
   await page.keyboard.press('ArrowLeft');
   await expect(toolbar.getByLabel('Highlight color', { exact: true })).toBeFocused();
   await page.keyboard.press('ArrowLeft');

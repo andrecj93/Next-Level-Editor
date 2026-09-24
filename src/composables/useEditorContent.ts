@@ -97,7 +97,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
 
     // Record the caret alongside the snapshot so undo/redo can restore it
     // instead of dropping the cursor to the top of the document.
-    captureSnapshot(html, getCaretOffsets(editorContent.value), coalesceKey, editorContent.value.textContent || "");
+    captureSnapshot(html, getCaretOffsets(editorContent.value, true), coalesceKey, editorContent.value.textContent || "");
 
     if (emitUpdate) {
       const sanitized = sanitizeHtml(html);

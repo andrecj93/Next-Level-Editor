@@ -802,6 +802,7 @@ import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
 import { getCaretOffsets, setCaretOffsets, type CaretOffsets } from "../utils/caretOffset";
+import { preserveSelectionAfterTextReplacement } from '../utils/selectionAfterReplacement';
 import { captureSelectionBookmark } from "../utils/selectionBookmark";
 import { useVariables, type Variable } from "../composables/useVariables";
 import { usePlugin } from "../composables/usePlugin";
@@ -1438,18 +1439,37 @@ const locateWritingNote = (note: WritingNote) => {
   return true;
 };
 const applyWritingNote = (note: WritingNote) => {
-  if (props.readonly || note.replacement === undefined || !locateWritingNote(note)) return;
-  captureSnapshot();
-  if (document.execCommand('insertText', false, note.replacement)) {
-    onInput();
-    captureSnapshot();
+  const root = editorContent.value;
+  if (props.readonly || note.replacement === undefined || !root) return;
+  const range = writingNoteRange(root, note);
+  if (!range) {
     refreshWritingReview();
-    announce('Suggestion applied. You can undo this change.');
-    console.debug('[NextLevelEditor] Writing suggestion applied', { kind: note.title });
-  } else {
-    announce('The suggestion could not be applied. You can edit the selected passage directly.');
-    console.warn('[NextLevelEditor] Writing suggestion could not be applied', { kind: note.title });
+    announce('That passage has changed. The writing notes have been refreshed.');
+    console.debug('[NextLevelEditor] Writing suggestion refreshed', { reason: 'passage-changed' });
+    return;
   }
+  const replacement = note.replacement;
+  performWithSelection(() => {
+    const restorePosition = preserveSelectionAfterTextReplacement(root, range, replacement);
+    // The before/after history entries retain the writing position, rather
+    // than the temporary selection used by the replacement command.
+    captureSnapshot(false);
+    const selection = root.ownerDocument.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    if (root.ownerDocument.execCommand('insertText', false, replacement)) {
+      const positionRestored = restorePosition?.() ?? false;
+      onInput();
+      captureSnapshot();
+      refreshWritingReview();
+      announce('Suggestion applied. You can undo this change.');
+      console.debug('[NextLevelEditor] Writing suggestion applied', { kind: note.title, positionRestored });
+    } else {
+      announce('The suggestion could not be applied. You can edit the selected passage directly.');
+      console.warn('[NextLevelEditor] Writing suggestion could not be applied', { kind: note.title });
+    }
+    revealWritingPassage(root);
+  });
 };
 const navigateWritingBlock = (index: number) => {
   const root = editorContent.value;

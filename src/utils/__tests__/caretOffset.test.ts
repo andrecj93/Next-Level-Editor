@@ -107,4 +107,42 @@ describe("caretOffset capture/restore", () => {
     expect(applied).toBe(true);
     expect(getCaretOffsets(r)).toEqual({ start: 2, end: 2 });
   });
+
+  it.each([
+    ['<p>Earlier.</p><p><br></p>', 'p:last-child', 0],
+    ['<p>Earlier.</p><table><tbody><tr><td><br></td></tr></tbody></table>', 'td', 0],
+    ['<p><em>Quiet.</em></p>', 'p', 1],
+    ['<p><span contenteditable="false">Name</span></p>', 'p', 1],
+    ['<p>First<br>Second</p>', 'p', 2],
+  ] as const)('preserves the structural caret in %s', (html, selector, offset) => {
+    const r = mount(html);
+    collapseAt(r.querySelector(selector)!, offset);
+    const saved = getCaretOffsets(r, true);
+    r.innerHTML = html;
+    expect(setCaretOffsets(r, saved)).toBe(true);
+    expect(window.getSelection()!.anchorNode).toBe(r.querySelector(selector));
+    expect(window.getSelection()!.anchorOffset).toBe(offset);
+  });
+
+  it('retains selection direction in a restored history snapshot', () => {
+    const html = '<p>Hello <em>world</em>.</p>';
+    const r = mount(html);
+    const text = r.querySelector('em')!.firstChild!;
+    window.getSelection()!.setBaseAndExtent(text, 5, text, 0);
+    const saved = getCaretOffsets(r, true);
+    r.innerHTML = html;
+    expect(setCaretOffsets(r, saved)).toBe(true);
+    expect(window.getSelection()!.toString()).toBe('world');
+    expect(window.getSelection()!.anchorOffset).toBe(5);
+    expect(window.getSelection()!.focusOffset).toBe(0);
+  });
+
+  it('uses text offsets when a restored snapshot has different inline wrappers', () => {
+    const r = mount('<p>Hello <em>world</em>.</p>');
+    collapseAt(r.querySelector('em')!.firstChild!, 3);
+    const saved = getCaretOffsets(r, true);
+    r.innerHTML = '<p>Hello world.</p>';
+    expect(setCaretOffsets(r, saved)).toBe(true);
+    expect(getCaretOffsets(r)).toEqual({ start: 9, end: 9 });
+  });
 });

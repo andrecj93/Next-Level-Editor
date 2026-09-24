@@ -16,8 +16,8 @@ export interface HistoryEntry {
   /** Capture time (epoch ms) — shown by the history timeline. */
   timestamp: number;
   /**
-   * Caret/selection at capture time, as text offsets within the editor. Lets
-   * undo/redo put the cursor back where it was instead of at the document top.
+   * Caret/selection at capture time, including DOM boundaries and direction.
+   * Text offsets provide a fallback if restored inline markup changes.
    */
   selection?: CaretOffsets | null;
   /** Set on burst-coalesced entries (typing/deleting runs). */

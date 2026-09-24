@@ -98,3 +98,13 @@
   .is-writing-workspace .nle-document-workspace { min-height: 96px; }
   .writing-format-row { max-height: 38dvh; overflow-y: auto; }
 }
+
+/* Expanded controls can leave a short page even in a tall viewport. Keep
+   padding smaller than the actual writing surface: a zero-height content box
+   makes WebKit report empty rendered text and selections despite visible ink. */
+@container nle-writing-area (max-height: 240px) {
+  .is-writing-workspace .editor-content {
+    padding-block: min(16px, 10cqh) min(32px, 20cqh);
+    scroll-padding-block: 12px;
+  }
+}

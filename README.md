@@ -97,7 +97,7 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,889 unit checks
+**It is tested like something you'd put in production.** 4,913 unit checks
 across 380 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
@@ -284,16 +284,16 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 938.8 KB | **227.9 KB** | On import |
-| **CSS** | 259.5 KB | **41.8 KB** | On import |
+| **Core (ES)** | 942.1 KB | **228.7 KB** | On import |
+| **CSS** | 259.6 KB | **41.8 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
-| **UMD** | 1,684.7 KB | 502.6 KB | On import (no splitting) |
+| **UMD** | 1,687.2 KB | 503.3 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **269.7 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **270.5 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 
@@ -374,7 +374,7 @@ For a long-form writing workspace, add `writing-mode`:
 <NextLevelEditor v-model="manuscript" writing-mode theme-preset="warm" height="80vh" />
 ```
 
-This gives the manuscript a readable column, a small formatting toolbar, a chapter outline, and writing notes beside the page. Notes identify repeated words, a few wordy phrases, and long sentences. Review one note at a time, with chapter context and the exact wording highlighted inside an excerpt; previous and next controls reach every note. Feedback starts near the paragraph being written, and its accept/keep actions stay visible on small screens. Jumping to a passage reveals the selected words, including in a long paragraph, and closes an overlay that would cover them. Edits are undoable. These are private, on-device English checks and optional writing prompts, not an AI generation service. Press **Alt+F10** to reach the toolbar and **Escape** to return to the manuscript.
+This gives the manuscript a readable column, a small formatting toolbar, a chapter outline, and writing notes beside the page. Notes identify repeated words, a few wordy phrases, and long sentences. Review one note at a time, with chapter context and the exact wording highlighted inside an excerpt; previous and next controls reach every note. Feedback starts near the paragraph being written, and its accept/keep actions stay visible on small screens. Accepting a note keeps your writing position so you can continue typing; undo and redo retain that position too. Jumping to a passage reveals the selected words, including in a long paragraph, and closes an overlay that would cover them. Edits are undoable. These are private, on-device English checks and optional writing prompts, not an AI generation service. Press **Alt+F10** to reach the toolbar and **Escape** to return to the manuscript.
 
 The playground remembers **Keep as is** when reopening a saved draft. **Review kept notes** brings those suggestions back whenever you want to reconsider. For your own recovery flow, bind `v-model:kept-writing-notes` to a string initialized as `'[]'` and persist that JSON with the HTML in `saveHandler`. A decision-only change also triggers save status and Retry. These private keys contain exact passage text; keep them with the document, not in analytics. Decisions survive formatting and edits elsewhere, and are discarded when their paragraph changes. Use a fresh component key and empty decisions for a new document.
 
@@ -853,7 +853,7 @@ The separate device matrix passed all 360 cases on 18 profiles with no skips,
 failures, or retries. Subsequent changes add a comment lifecycle scenario to
 each profile. See the CI reports for the result of the revision being reviewed.
 
-#### Unit Tests (382 files, with Vitest)
+#### Unit Tests (384 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color

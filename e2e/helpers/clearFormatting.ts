@@ -50,6 +50,12 @@ export async function exerciseClearFormatting(page: Page, options: {
   await expect(page.locator('.toast-notification')).toHaveText('Formatting cleared.');
   expect(await editor.locator('p').first().innerHTML()).toBe('She wrote ba<strong><em>ck</em></strong>.');
   expect(await editor.locator('p').nth(1).innerHTML()).toBe(untouched);
+  const writingArea = await editor.evaluate(root => {
+    const style = getComputedStyle(root);
+    return { contentHeight: root.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom), lineHeight: parseFloat(style.lineHeight), text: (root as HTMLElement).innerText };
+  });
+  expect(writingArea.contentHeight, 'Expanded controls must leave a real content box for readable and selectable prose').toBeGreaterThanOrEqual(writingArea.lineHeight);
+  expect(writingArea.text).toContain('She wrote back.');
   expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('ba');
   const cleared = await editor.innerHTML();
   await page.keyboard.press('ControlOrMeta+z');
