@@ -165,6 +165,7 @@
       :split-right-mode="splitRightMode"
       @input="onInput"
       @before-input="onBeforeInput"
+      @composition-start="onCompositionStart"
       @paste="onPaste"
       @drop="onDrop"
       @dragstart="onDragStart"
@@ -1303,6 +1304,7 @@ const {
   isApplyingHistory,
   applySanitizedContent,
   captureAndEmit: captureSnapshot,
+  captureBeforeEdit,
   undo: undoBase,
   redo: redoBase,
   jumpToHistory,
@@ -2825,10 +2827,17 @@ const onDrop = (event: DragEvent) => {
 };
 
 const onBeforeInput = (event: Event) => {
+  const input = event as InputEvent;
+  if (input.isComposing || input.defaultPrevented) return;
   if (canEditRichText() && editorContent.value) {
-    prepareTypingPlaceholdersForInput(editorContent.value, event as InputEvent);
-    handleKeyboardBeforeInput(event as InputEvent);
+    if (input.inputType !== 'historyUndo' && input.inputType !== 'historyRedo') captureBeforeEdit(coalesceKeyForInputEvent(event));
+    prepareTypingPlaceholdersForInput(editorContent.value, input);
+    handleKeyboardBeforeInput(input);
   }
+};
+
+const onCompositionStart = () => {
+  if (canEditRichText()) captureBeforeEdit();
 };
 
 const onInput = (event?: Event) => {
@@ -3036,6 +3045,14 @@ function onEditorKeydown(event: KeyboardEvent) {
     }
   }
   if (variableAutocompleteRef.value?.handleEditorKeydown(event)) return;
+  // Custom Enter/list/delete handlers can prevent the native beforeinput.
+  // Capture their starting position before either they or typing anchors move it.
+  if (canEditRichText() && !event.defaultPrevented && !event.isComposing && event.keyCode !== 229
+    && ['Enter', 'Tab', 'Backspace', 'Delete'].includes(event.key)) {
+    const deleting = (event.key === 'Backspace' || event.key === 'Delete')
+      && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey;
+    captureBeforeEdit(deleting ? 'deleting' : undefined);
+  }
   if (canEditRichText() && editorContent.value) prepareTypingPlaceholdersForKey(editorContent.value, event);
 
   // Backspace after a pill unwraps it to editable token text. Model synced

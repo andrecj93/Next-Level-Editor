@@ -110,6 +110,24 @@ export function useEditorContent(options: UseEditorContentOptions) {
     }
   };
 
+  /** Keep the undo destination at the position where this edit begins.
+   * A loaded document has no caret yet, and navigation alone is not an edit.
+   * Recording only the post-input caret loses the first edit's destination.
+   * This updates history metadata without emitting content or scheduling saves.
+   */
+  const captureBeforeEdit = (coalesceKey?: HistoryCoalesceKey) => {
+    const root = editorContent.value;
+    if (!root || isApplyingHistory.value) return;
+    const selection = getCaretOffsets(root, true);
+    if (!selection) return;
+    const previous = history.value[historyIndex.value]?.selection;
+    const samePosition = previous?.start === selection.start && previous.end === selection.end
+      && JSON.stringify(previous.points) === JSON.stringify(selection.points);
+    // Moving to another passage starts a new burst even without a pause.
+    // Uninterrupted typing still coalesces into a word/sentence undo step.
+    captureSnapshot(root.innerHTML, selection, samePosition ? coalesceKey : undefined, root.textContent || '');
+  };
+
   /**
    * Apply a restored history snapshot to the editor and keep every derived
    * reactive ref in sync. Previously undo/redo only wrote innerHTML and emitted
@@ -268,6 +286,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
     isApplyingHistory,
     applySanitizedContent,
     captureAndEmit,
+    captureBeforeEdit,
     undo,
     redo,
     jumpToHistory,

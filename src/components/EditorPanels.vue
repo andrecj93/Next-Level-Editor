@@ -32,6 +32,7 @@
         :aria-activedescendant="commandActiveOptionId"
         @input="$emit('input', $event)"
         @beforeinput="$emit('before-input', $event)"
+        @compositionstart="$emit('composition-start', $event)"
         @compositionend="$emit('input', $event)"
         @paste="$emit('paste', $event)"
         @drop="$emit('drop', $event)"
@@ -71,6 +72,7 @@
         style="display: none"
         @input="$emit('input', $event)"
         @beforeinput="$emit('before-input', $event)"
+        @compositionstart="$emit('composition-start', $event)"
         @compositionend="$emit('input', $event)"
         @paste="$emit('paste', $event)"
         @drop="$emit('drop', $event)"
@@ -149,6 +151,7 @@
           aria-label="Rich text editor"
           @input="$emit('split-editor-input', $event)"
           @beforeinput="$emit('before-input', $event)"
+          @compositionstart="$emit('composition-start', $event)"
           @compositionend="$emit('split-editor-input', $event)"
           @paste="$emit('paste', $event)"
           @drop="$emit('drop', $event)"
@@ -212,6 +215,7 @@ withDefaults(defineProps<Props>(), {
 defineEmits<{
   input: [event: Event];
   'before-input': [event: Event];
+  'composition-start': [event: CompositionEvent];
   blur: [event: FocusEvent];
   focus: [event: FocusEvent];
   mousedown: [event: MouseEvent];

@@ -8,6 +8,7 @@ import { exerciseWritingContinuation } from './helpers/writingContinuation';
 import { exerciseMovingFormattedText } from './helpers/cutClipboard';
 import { exerciseInlineTyping, exerciseInlineDeletion, exerciseParagraphTyping } from './helpers/inlineTyping';
 import { exerciseFontSizeTyping } from './helpers/fontSizeTyping';
+import { exerciseUndoWritingPosition } from './helpers/undoWritingPosition';
 
 const editorFor = (page: Page) => page.getByRole('textbox', { name: 'Rich text editor', exact: true });
 const toolbarFor = (page: Page) => page.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true });
@@ -133,6 +134,11 @@ test('Backspace after emphasis changes edits visible text through native input',
 
 test('text size changes and Normal keep natural typing, undo and draft recovery', async ({ page }) => {
   await exerciseFontSizeTyping(page);
+  await noHorizontalOverflow(page);
+});
+
+test('undo of a loaded draft keeps the next sentence at the writing position', async ({ page }) => {
+  await exerciseUndoWritingPosition(page);
   await noHorizontalOverflow(page);
 });
 
