@@ -69,6 +69,8 @@ import { ref, computed, nextTick, onMounted, onBeforeUnmount } from "vue";
 import type { MentionSuggestion } from "../composables/useComments";
 
 interface Props {
+  initialContent?: string;
+  autofocus?: boolean;
   /**
    * Host-supplied mention provider (e.g. useComments.searchMentions or the
    * onMentionTriggered callback). When absent, the dropdown stays empty.
@@ -79,11 +81,14 @@ interface Props {
 }
 
 interface Emits {
+  (e: "draft-change", content: string): void;
   (e: "submit", content: string, mentions: string[]): void;
   (e: "cancel"): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  initialContent: "",
+  autofocus: true,
   mentionSearch: undefined,
 });
 
@@ -94,13 +99,13 @@ const MENTION_SEARCH_DEBOUNCE_MS = 150;
 
 // Refs
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
-const content = ref("");
+const content = ref(props.initialContent);
 const showMentions = ref(false);
 const mentionQuery = ref("");
 const selectedMentionIndex = ref(0);
 const mentionSuggestions = ref<MentionSuggestion[]>([]);
 
-onMounted(() => textareaRef.value?.focus());
+onMounted(() => { if (props.autofocus) textareaRef.value?.focus(); });
 
 let mentionSearchTimer: ReturnType<typeof setTimeout> | null = null;
 let mentionSearchToken = 0;
@@ -164,6 +169,7 @@ onBeforeUnmount(() => {
 
 // Methods
 function handleInput() {
+  emit("draft-change", content.value);
   // Detect @ mentions
   const cursorPos = textareaRef.value?.selectionStart ?? 0;
   const textBeforeCursor = content.value.slice(0, cursorPos);
@@ -224,6 +230,7 @@ function selectMention(suggestion: MentionSuggestion) {
     `@${suggestion.name} `
   );
   content.value = newTextBefore + textAfterCursor;
+  emit("draft-change", content.value);
 
   showMentions.value = false;
   mentionQuery.value = "";

@@ -142,6 +142,7 @@
             v-for="thread in currentThreads"
             :key="thread.id"
             :thread="thread"
+            :reply-draft="replyDrafts.get(thread.id)"
             :is-active="activeThreadId === thread.id"
             :is-expanded="expandedThreads.has(thread.id)"
             :mention-search="mentionSearch"
@@ -151,6 +152,7 @@
             @reopen="reopenThread"
             @delete="deleteThread"
             @add-reply="addReply"
+            @reply-draft="updateReplyDraft"
           />
         </template>
       </div>
@@ -214,6 +216,19 @@ watch(
 // State
 const activeTab = ref<"open" | "resolved">("open");
 const expandedThreads = ref<Set<string>>(new Set());
+// Cards unmount when switching status tabs. Unsent prose belongs to the
+// discussion, and must survive that navigation without retaining hidden DOM.
+const replyDrafts = ref(new Map<string, string>());
+function updateReplyDraft(threadId: string, content: string | undefined) {
+  if (content === undefined) replyDrafts.value.delete(threadId);
+  else replyDrafts.value.set(threadId, content);
+}
+watch(() => props.threads.map(thread => thread.id), ids => {
+  const live = new Set(ids);
+  for (const id of replyDrafts.value.keys()) {
+    if (!live.has(id)) replyDrafts.value.delete(id);
+  }
+});
 
 // Computed
 const openThreads = computed(() =>

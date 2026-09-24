@@ -78,6 +78,64 @@ afterEach(() => {
 });
 
 describe("CommentsSidebar", () => {
+  it('retains separate unsent replies through empty tabs and sidebar closure', async () => {
+    const w = mountSidebar({ threads: [makeThread({ id: 't1' }), makeThread({ id: 't2' })] });
+    const cards = w.findAllComponents(CommentThreadCard);
+    await cards[0].get('.comment-add-reply-btn').trigger('click');
+    await cards[0].get('textarea').setValue('Keep this first thought.\nAnd this line.');
+    await cards[1].get('.comment-add-reply-btn').trigger('click');
+    await cards[1].get('textarea').setValue('A different reply.');
+    await w.get('[role="tab"][id$="-resolved"]').trigger('click');
+    expect(w.find('textarea').exists()).toBe(false);
+    await w.setProps({ isOpen: false });
+    await w.setProps({ isOpen: true });
+    await w.get('[role="tab"][id$="-open"]').trigger('click');
+    expect(w.findAll('textarea').map(t => t.element.value)).toEqual(['Keep this first thought.\nAnd this line.', 'A different reply.']);
+    expect(w.emitted('add-reply')).toBeUndefined();
+    w.unmount();
+  });
+
+  it('restores a reply without stealing focus from keyboard tab navigation', async () => {
+    const w = mount(CommentsSidebar, { attachTo: document.body, props: { threads: [makeThread()], activeThreadId: null } });
+    await w.get('.comment-add-reply-btn').trigger('click');
+    await w.get('textarea').setValue('Still thinking.');
+    const open = w.get<HTMLButtonElement>('[role="tab"][id$="-open"]');
+    open.element.focus();
+    await open.trigger('keydown', { key: 'ArrowRight' });
+    await w.get('[role="tab"][id$="-resolved"]').trigger('keydown', { key: 'ArrowLeft' });
+    expect(w.get('textarea').element.value).toBe('Still thinking.');
+    expect(document.activeElement).toBe(open.element);
+    w.unmount();
+  });
+
+  it.each(['cancel', 'submit'])('clears only the explicitly %s reply draft', async action => {
+    const w = mountSidebar({ threads: [makeThread()] });
+    await w.get('.comment-add-reply-btn').trigger('click');
+    await w.get('textarea').setValue('Keep the final line.');
+    await w.get(`.comment-reply-${action}`).trigger('click');
+    await w.get('[role="tab"][id$="-resolved"]').trigger('click');
+    await w.get('[role="tab"][id$="-open"]').trigger('click');
+    expect(w.find('textarea').exists()).toBe(false);
+    await w.get('.comment-add-reply-btn').trigger('click');
+    expect(w.get('textarea').element.value).toBe('');
+    expect(w.emitted('add-reply')?.length ?? 0).toBe(action === 'submit' ? 1 : 0);
+    w.unmount();
+  });
+
+  it('keeps a draft when its thread resolves, but removes it when the thread is deleted', async () => {
+    const thread = makeThread();
+    const w = mountSidebar({ threads: [thread] });
+    await w.get('.comment-add-reply-btn').trigger('click');
+    await w.get('textarea').setValue('An unfinished reply.');
+    await w.setProps({ threads: [{ ...thread, status: 'resolved' }] });
+    await w.get('[role="tab"][id$="-resolved"]').trigger('click');
+    expect(w.get('textarea').element.value).toBe('An unfinished reply.');
+    await w.setProps({ threads: [] });
+    await w.setProps({ threads: [{ ...thread, status: 'resolved' }] });
+    expect(w.find('textarea').exists()).toBe(false);
+    w.unmount();
+  });
+
   describe("rendering threads from props", () => {
     it("renders one CommentThreadCard per open thread on the default tab", () => {
       const threads = [

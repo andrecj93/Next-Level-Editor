@@ -286,6 +286,24 @@ test('comments stay usable by touch and keyboard from selection back to writing'
   await expect(writeReply).toBeFocused();
   await activate(writeReply, hasTouch);
   await reply.pressSequentially('Let the next visit stay unwritten.');
+  // Browsing another discussion must not discard an unfinished reply or move
+  // keyboard focus into a restored form without the writer asking for it.
+  const openDraftTab = sidebar.getByRole('tab', { name: /^Open/ });
+  const resolvedDraftTab = sidebar.getByRole('tab', { name: /^Resolved/ });
+  await openDraftTab.press('ArrowRight');
+  await expect(reply).toHaveCount(0);
+  await resolvedDraftTab.press('ArrowLeft');
+  await expect(openDraftTab).toBeFocused();
+  await expect(reply).toHaveValue('Let the next visit stay unwritten.');
+  await activate(sidebar.getByRole('button', { name: 'Close comments sidebar' }), hasTouch);
+  await activate(page.getByRole('button', { name: 'Comments', exact: true }), hasTouch);
+  await expect(reply).toHaveValue('Let the next visit stay unwritten.');
+  await activate(card.getByRole('button', { name: 'Resolve thread', exact: true }), hasTouch);
+  await activate(resolvedDraftTab, hasTouch);
+  await expect(reply).toHaveValue('Let the next visit stay unwritten.');
+  await activate(card.getByRole('button', { name: 'Reopen thread', exact: true }), hasTouch);
+  await activate(openDraftTab, hasTouch);
+  await expect(reply).toHaveValue('Let the next visit stay unwritten.');
   await activate(card.getByRole('button', { name: 'Reply', exact: true }), hasTouch);
   const toast = page.locator('.toast-notification');
   await expect(toast).toHaveText('Reply added successfully');

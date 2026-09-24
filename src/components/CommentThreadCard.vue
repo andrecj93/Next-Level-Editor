@@ -143,7 +143,7 @@
       v-if="!showReplyForm"
       ref="replyButtonRef"
       class="comment-add-reply-btn"
-      @click.stop="showReplyForm = true"
+      @click.stop="openReplyForm"
     >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path
@@ -165,7 +165,10 @@
       </div>
       <div class="comment-body">
         <CommentReplyForm
+          :initial-content="replyDraft"
+          :autofocus="focusReplyOnMount"
           :mention-search="mentionSearch"
+          @draft-change="emit('reply-draft', thread.id, $event)"
           @submit="handleReplySubmit"
           @cancel="closeReplyForm"
         />
@@ -249,6 +252,7 @@ import type {
 import CommentReplyForm from "./CommentReplyForm.vue";
 
 interface Props {
+  replyDraft?: string;
   thread: CommentThread;
   isActive: boolean;
   isExpanded?: boolean;
@@ -259,6 +263,7 @@ interface Props {
 }
 
 interface Emits {
+  (e: "reply-draft", threadId: string, content: string | undefined): void;
   (e: "select", threadId: string): void;
   (e: "toggle", threadId: string): void;
   (e: "resolve", threadId: string): void;
@@ -268,6 +273,7 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  replyDraft: undefined,
   isExpanded: false,
   mentionSearch: undefined,
 });
@@ -275,10 +281,17 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 // State
-const showReplyForm = ref(false);
+const showReplyForm = ref(props.replyDraft !== undefined);
+const focusReplyOnMount = ref(props.replyDraft === undefined);
 const replyButtonRef = ref<HTMLButtonElement | null>(null);
 
 // Methods
+function openReplyForm() {
+  focusReplyOnMount.value = true;
+  showReplyForm.value = true;
+  emit("reply-draft", props.thread.id, props.replyDraft ?? "");
+}
+
 function handleToggle() {
   emit("toggle", props.thread.id);
 }
@@ -295,6 +308,7 @@ function handleReplySubmit(content: string, mentions: string[]) {
 }
 
 function closeReplyForm() {
+  emit("reply-draft", props.thread.id, undefined);
   showReplyForm.value = false;
   nextTick(() => replyButtonRef.value?.focus());
 }
