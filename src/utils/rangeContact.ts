@@ -58,6 +58,38 @@ export function rangeCapturesContent(range: Range): boolean {
   );
 }
 
+/** Keep atomic widgets whole during character formatting. Equivalent boundary
+ * points inside the start/end of a label move outside its widget. A selection
+ * cutting through the label is refused instead of cloning part of the widget. */
+export function rangeForEditableFormatting(range: Range, root: HTMLElement): Range | null {
+  const normalized = range.cloneRange();
+  for (const side of ['start', 'end'] as const) {
+    const node = side === 'start' ? range.startContainer : range.endContainer;
+    const offset = side === 'start' ? range.startOffset : range.endOffset;
+    const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
+    const widget = element?.closest('[contenteditable="false"]');
+    if (!widget || !root.contains(widget)) continue;
+    if (widget === root) return null;
+    const before = root.ownerDocument.createRange();
+    before.selectNodeContents(widget);
+    before.setEnd(node, offset);
+    const after = root.ownerDocument.createRange();
+    after.selectNodeContents(widget);
+    after.setStart(node, offset);
+    const atStart = !rangeCapturesContent(before);
+    const atEnd = !rangeCapturesContent(after);
+    if (!atStart && !atEnd) return null;
+    if (side === 'start') {
+      if (atStart) normalized.setStartBefore(widget);
+      else normalized.setStartAfter(widget);
+    } else {
+      if (atStart) normalized.setEndBefore(widget);
+      else normalized.setEndAfter(widget);
+    }
+  }
+  return normalized;
+}
+
 export function rangeTouchesElement(range: Range, el: Element): boolean {
   const content = el.ownerDocument.createRange();
   content.selectNodeContents(el);

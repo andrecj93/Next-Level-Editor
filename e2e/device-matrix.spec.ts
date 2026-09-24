@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
 import { exerciseRichClipboard } from './helpers/clipboard';
 import { exerciseFormatCopy } from './helpers/formatPainter';
+import { exerciseClearFormatting } from './helpers/clearFormatting';
 
 const editorFor = (page: Page) => page.getByRole('textbox', { name: 'Rich text editor', exact: true });
 const toolbarFor = (page: Page) => page.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true });
@@ -112,6 +113,11 @@ test('menu clipboard preserves rich text, undo and draft recovery', async ({ pag
 
 test('format copying preserves selected emphasis, focus, undo and recovery', async ({ page, hasTouch }) => {
   await exerciseFormatCopy(page, { touch: hasTouch });
+  await noHorizontalOverflow(page);
+});
+
+test('clearing selected styles preserves neighboring marks, typing and recovery', async ({ page, hasTouch }) => {
+  await exerciseClearFormatting(page, { touch: hasTouch });
   await noHorizontalOverflow(page);
 });
 

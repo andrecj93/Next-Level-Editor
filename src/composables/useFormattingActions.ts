@@ -155,9 +155,10 @@ export function useFormattingActions(
     }
     // Pass the editor root so the paint is applied PER-BLOCK (never extracting
     // across block/cell boundaries). #r15-5/6/8
+    const before = editorContent.value.innerHTML;
     const success = pasteFormat(selection, editorContent.value);
     if (success) {
-      captureSnapshot();
+      if (editorContent.value.innerHTML !== before) captureSnapshot();
       console.debug('[NextLevelEditor] Formatting applied');
       notify?.('Formatting applied.');
     } else {

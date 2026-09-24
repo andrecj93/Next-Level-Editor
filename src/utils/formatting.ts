@@ -1,5 +1,5 @@
 import { CHECKLIST_CLASS } from "./checklist";
-import { rangeCapturesContent, rangeTouchesElement } from "./rangeContact";
+import { rangeCapturesContent, rangeForEditableFormatting, rangeTouchesElement } from "./rangeContact";
 import { captureSelectionBookmark, type RememberReplacement } from "./selectionBookmark";
 
 export interface SelectionSnapshot {
@@ -1467,6 +1467,7 @@ export const isInlineStyleActive = (
   } catch {
     return false;
   }
+  if (!range.collapsed) return isRangeFullyStyled(range, tagName, root);
   return Boolean(
     getClosestElement(
       range.startContainer,
@@ -1915,66 +1916,105 @@ const CLEARABLE_INLINE_TAGS = new Set([
   "span",
 ]);
 
-export const clearFormatting = (root: HTMLElement) => {
-  const range = getSelectionRange();
-  if (!range) return;
-  ensureRangeWithinRoot(range, root);
-  if (range.collapsed) return;
+/** Keep semantic wrappers and non-editable widgets when clearing character styles. */
+const canClearInlineElement = (element: HTMLElement): boolean =>
+  CLEARABLE_INLINE_TAGS.has(element.tagName.toLowerCase()) &&
+  !element.closest('[contenteditable="false"]') &&
+  !Array.from(element.attributes).some(attribute =>
+    !["style", "class"].includes(attribute.name)
+  );
 
-  // Strip inline formatting IN PLACE by unwrapping the formatting elements the
-  // selection touches — leaving block structure (paragraphs, headings, list
-  // items) intact. The previous implementation did range.toString() +
-  // deleteContents + insert one text node, which flattened a multi-block
-  // selection into a single line and merged separate paragraphs together.
-  const rangeTouches = (node: Node): boolean =>
-    typeof range.intersectsNode === "function"
-      ? range.intersectsNode(node)
-      : true;
+/** Split only the inline formatting around a boundary. The unselected side
+ * keeps a shallow clone of the original wrapper and all of its attributes. */
+const isolateFormattingBoundary = (
+  marker: Comment,
+  root: HTMLElement,
+  side: "start" | "end"
+) => {
+  let outer: HTMLElement | null = null;
+  let ancestor = marker.parentElement;
+  while (ancestor && ancestor !== root && !BLOCK_OR_CELL_TAGS.has(ancestor.tagName.toLowerCase())) {
+    if (canClearInlineElement(ancestor)) outer = ancestor;
+    ancestor = ancestor.parentElement;
+  }
+  if (!outer?.parentNode) return;
+  const doc = root.ownerDocument;
+  const outside = doc.createRange();
+  if (side === "end") {
+    outside.setStartAfter(marker);
+    outside.setEnd(outer, outer.childNodes.length);
+  } else {
+    outside.setStart(outer, 0);
+    outside.setEndBefore(marker);
+  }
+  const fragment = outside.extractContents();
+  const clone = outer.cloneNode(false) as HTMLElement;
+  clone.appendChild(fragment);
+  const hasContent = clone.textContent || clone.querySelector("img, br, hr, iframe, video, [contenteditable]");
+  if (side === "end") {
+    outer.after(marker);
+    if (hasContent) marker.after(clone);
+  } else {
+    outer.before(marker);
+    if (hasContent) marker.before(clone);
+  }
+};
 
-  const container: Element | null = isElement(range.commonAncestorContainer)
-    ? (range.commonAncestorContainer as Element)
-    : range.commonAncestorContainer.parentElement;
-  if (!container) return;
+export const clearFormatting = (root: HTMLElement): boolean => {
+  const originalRange = getSelectionRange();
+  if (!originalRange) return false;
+  ensureRangeWithinRoot(originalRange, root);
+  if (originalRange.collapsed || !rangeCapturesContent(originalRange)) return false;
+  const range = rangeForEditableFormatting(originalRange, root);
+  if (!range || !rangeCapturesContent(range)) return false;
 
-  const toUnwrap: HTMLElement[] = [];
+  const selection = getSelection();
+  if (!selection) return false;
+  const backwards = selection.anchorNode === originalRange.endContainer &&
+    selection.anchorOffset === originalRange.endOffset;
+  const before = root.innerHTML;
+  const emptyBefore = snapshotEmptyInlineHusks(root);
+  const doc = root.ownerDocument;
+  const start = doc.createComment("format-start");
+  const end = doc.createComment("format-end");
+  const endRange = range.cloneRange();
+  endRange.collapse(false);
+  endRange.insertNode(end);
+  const startRange = range.cloneRange();
+  startRange.collapse(true);
+  startRange.insertNode(start);
+  let bookmark: ReturnType<typeof captureSelectionBookmark> = null;
 
-  // Ancestors of the selection start/end may themselves be formatting elements
-  // that wrap (and extend beyond) the selection — e.g. the caret sits inside a
-  // <strong> that spans more than the selection.
-  const collectAncestors = (start: Node | null) => {
-    let el: Element | null = isElement(start as Node)
-      ? (start as Element)
-      : (start?.parentElement ?? null);
-    while (el && el !== root) {
-      if (
-        isElement(el) &&
-        CLEARABLE_INLINE_TAGS.has(el.tagName.toLowerCase()) &&
-        !toUnwrap.includes(el as HTMLElement)
-      ) {
-        toUnwrap.push(el as HTMLElement);
-      }
-      el = el.parentElement;
+  try {
+    // End first keeps both boundary markers attached when they share a wrapper.
+    isolateFormattingBoundary(end, root, "end");
+    isolateFormattingBoundary(start, root, "start");
+    const selected = doc.createRange();
+    selected.setStartAfter(start);
+    selected.setEndBefore(end);
+    const inline = Array.from(root.querySelectorAll<HTMLElement>(
+      Array.from(CLEARABLE_INLINE_TAGS).join(",")
+    )).filter(element => canClearInlineElement(element) && rangeTouchesElement(selected, element));
+    inline.forEach(unwrapElement);
+    removeNewEmptyInlineHusks(root, emptyBefore);
+
+    // Markers survive unwrapping and preserve the exact selected content.
+    const restored = doc.createRange();
+    restored.setStartAfter(start);
+    restored.setEndBefore(end);
+    if (backwards && selection.setBaseAndExtent) {
+      selection.setBaseAndExtent(restored.endContainer, restored.endOffset, restored.startContainer, restored.startOffset);
+    } else {
+      selection.removeAllRanges();
+      selection.addRange(restored);
     }
-  };
-  collectAncestors(range.startContainer);
-  collectAncestors(range.endContainer);
-
-  // Formatting elements nested inside the common ancestor that the selection
-  // actually intersects.
-  container
-    .querySelectorAll<HTMLElement>(Array.from(CLEARABLE_INLINE_TAGS).join(","))
-    .forEach((el) => {
-      if (rangeTouches(el) && !toUnwrap.includes(el)) toUnwrap.push(el);
-    });
-
-  // Unwrap each (order-independent: unwrapping moves children up, never removes
-  // descendants, and we re-check the parent still exists).
-  toUnwrap.forEach((el) => {
-    const parent = el.parentNode;
-    if (!parent) return;
-    while (el.firstChild) parent.insertBefore(el.firstChild, el);
-    parent.removeChild(el);
-  });
-
-  root.normalize();
+    bookmark = captureSelectionBookmark(root);
+  } finally {
+    end.remove();
+    start.remove();
+    // Removing markers shifts element offsets. Restore from their surviving
+    // neighbours instead of relying on the live Range's mutation adjustment.
+    bookmark?.restore();
+  }
+  return root.innerHTML !== before;
 };

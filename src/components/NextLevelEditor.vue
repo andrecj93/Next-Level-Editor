@@ -778,6 +778,7 @@ import {
 } from "../composables/useEditorEvents";
 import { useFormattingHandlers } from "../composables/useFormattingHandlers";
 import { hasFormatCopied, clearCopiedFormat } from "../utils/formatPainter";
+import { clearFormatting } from "../utils/formatting";
 import { formatHtml } from "../utils/export";
 import { useCommandPalette } from "../composables/useCommandPalette";
 import { useSlashCommands } from "../composables/useSlashCommands";
@@ -1757,10 +1758,20 @@ const handleInlineAction = (tag: string) => {
 
 // Insert actions - Defined after composable initialization
 
-// Clear formatting function (for future cleanup toolbar)
-// const clearFormatting = () => {
-//   performWithSelection((root) => clearFormattingUtil(root))
-// }
+const canClearFormatting = () => !props.readonly &&
+  (viewMode.value === 'editor' || (viewMode.value === 'split' && splitRightMode.value === 'editor'));
+const handleClearFormatting = () => {
+  if (!canClearFormatting()) return;
+  performWithSelection(root => {
+    if (clearFormatting(root)) {
+      captureSnapshot();
+      console.debug('[NextLevelEditor] Selected character formatting cleared');
+      notify('Formatting cleared.');
+    } else {
+      notify('Select formatted text to clear its styling.', 'info');
+    }
+  });
+};
 
 const toggleTheme = () => {
   toggleThemeComposable();
@@ -2107,6 +2118,8 @@ const {
   handleCopyFormat,
   handlePasteFormat,
   hasFormatCopied,
+  handleClearFormatting,
+  canClearFormatting,
   spellCheckEnabled,
   captureSnapshot,
   toggleHistoryTimeline: () => {
@@ -2145,6 +2158,7 @@ const { commands: builtInPaletteCommands } = useCommandPaletteCommands({
   openFindReplaceModal,
   handleCopyFormat,
   openTemplateModal,
+  handleClearFormatting,
   handleToggleSpellCheck,
   toggleTheme,
   toggleFullScreen,
@@ -2939,6 +2953,7 @@ const advancedKeyboard = useAdvancedKeyboardShortcuts(editorContent, {
   code: () => handleInlineAction("code"),
   superscript: () => handleInlineAction("sup"),
   subscript: () => handleInlineAction("sub"),
+  clearFormatting: handleClearFormatting,
   paragraph: () => handleBlockAction("p"),
   heading1: () => handleBlockAction("h1"),
   heading2: () => handleBlockAction("h2"),

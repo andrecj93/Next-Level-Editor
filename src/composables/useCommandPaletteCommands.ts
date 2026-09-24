@@ -28,6 +28,7 @@ interface CommandPaletteCommandsOptions {
   handleInsertTOC: () => void;
   openFindReplaceModal: () => void;
   handleCopyFormat: () => void;
+  handleClearFormatting?: () => void;
   openTemplateModal: () => void;
   handleToggleSpellCheck: () => void;
   toggleTheme: () => void;
@@ -72,6 +73,7 @@ export function useCommandPaletteCommands(
     handleInsertTOC,
     openFindReplaceModal,
     handleCopyFormat,
+    handleClearFormatting,
     openTemplateModal,
     handleToggleSpellCheck,
     toggleTheme,
@@ -90,6 +92,15 @@ export function useCommandPaletteCommands(
    * Organized by category for easy filtering and discovery
    */
   const commands = computed<CommandPaletteCommand[]>(() => [
+    ...(handleClearFormatting ? [{
+      id: "clear-formatting",
+      name: "Clear Formatting",
+      description: "Clear selected character styles; keep links and document structure",
+      icon: "⌫",
+      category: "Formatting",
+      shortcut: "Ctrl+\\",
+      action: handleClearFormatting,
+    }] : []),
     // Formatting Commands
     {
       id: "format-bold",

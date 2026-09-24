@@ -68,6 +68,30 @@ export async function exerciseFormatCopy(page: Page, options: { touch?: boolean;
   await page.keyboard.press('ControlOrMeta+Shift+z');
   expect(await editor.innerHTML()).toBe(painted);
 
+  // Copying plain text is meaningful too: it removes destination emphasis.
+  await editor.evaluate(root => {
+    const range = document.createRange();
+    range.selectNodeContents(root.querySelectorAll('p')[1].firstChild!);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+  });
+  await command('Copy Format');
+  await editor.evaluate(root => {
+    const range = document.createRange();
+    range.selectNodeContents(root.querySelector('em')!);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+  });
+  await command('Paste Format');
+  expect(await editor.locator('p').first().innerHTML()).toBe('She wrote back.');
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('back');
+  await expect(editor.locator('p').nth(1).locator('em')).toHaveText('gate');
+  const plainApplied = await editor.innerHTML();
+  await page.keyboard.press('ControlOrMeta+z');
+  expect(await editor.innerHTML()).toBe(painted);
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  expect(await editor.innerHTML()).toBe(plainApplied);
+
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.press('Enter');
   await page.keyboard.type('Tomorrow, she would return.');
@@ -75,6 +99,6 @@ export async function exerciseFormatCopy(page: Page, options: { touch?: boolean;
   await expect(page.locator('.auto-save-indicator')).toContainText('Saved at');
   const final = await editor.innerHTML();
   await page.reload();
-  await expect(editor.locator('em')).toHaveCount(2);
+  await expect(editor.locator('em')).toHaveCount(1);
   expect(await editor.innerHTML()).toBe(final);
 }

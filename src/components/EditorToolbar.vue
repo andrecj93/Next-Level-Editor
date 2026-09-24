@@ -25,6 +25,7 @@
       <ToolbarSection type="buttons" :items="listActions" :visible="isToolbarSectionVisible('lists')" @remember-selection="$emit('remember-selection')" />
       <label class="writing-color" @mousedown="$emit('remember-selection')">Text <input type="color" aria-label="Text color" :disabled="!isToolbarSectionVisible('colors')" :value="textColor || '#333333'" @input="$emit('text-color-change', ($event.target as HTMLInputElement).value)"></label>
       <label class="writing-color" @mousedown="$emit('remember-selection')">Highlight <input type="color" aria-label="Highlight color" :disabled="!isToolbarSectionVisible('colors')" :value="backgroundColor === 'transparent' ? '#fff1a8' : backgroundColor" @input="$emit('background-color-change', ($event.target as HTMLInputElement).value)"></label>
+      <ToolbarSection type="buttons" :items="toolActions.filter(item => item.id === 'clear-formatting')" @remember-selection="$emit('remember-selection')" />
       <button type="button" class="toolbar-btn-modern" aria-label="Close more formatting" @click="closeWritingFormatting">×</button>
     </div>
   </nav>

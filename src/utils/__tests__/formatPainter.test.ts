@@ -128,6 +128,71 @@ describe('copyFormat', () => {
 })
 
 describe('pasteFormat', () => {
+  it('does not split a partially selected non-editable variable', () => {
+    const source = mount('<p><strong>bold</strong></p>')
+    copyFormat(selectContents(source.querySelector('strong')!.firstChild!), source)
+    const target = mount('<p><em><span contenteditable="false" data-variable="name">Name</span></em></p>')
+    const label = target.querySelector('[data-variable]')!.firstChild!
+    const before = target.innerHTML
+    expect(pasteFormat(selectAcross(label, 1, label, 3), target)).toBe(false)
+    expect(target.innerHTML).toBe(before)
+  })
+
+  it('accepts an already plain destination without changing content', () => {
+    const source = mount('<p>plain</p>')
+    copyFormat(selectContents(source.querySelector('p')!.firstChild!), source)
+    const target = mount('<p>Already plain.</p>')
+    const before = target.innerHTML
+    const selection = selectContents(target.querySelector('p')!)
+    expect(pasteFormat(selection, target)).toBe(true)
+    expect(target.innerHTML).toBe(before)
+    expect(selection.toString()).toBe('Already plain.')
+  })
+
+  it('copies plain formatting onto only the selected part of an emphasized word', () => {
+    const source = mount('<p>plain</p>')
+    copyFormat(selectContents(source.querySelector('p')!.firstChild!), source)
+    const target = mount('<p>She wrote <em>back</em>.</p>')
+    const word = target.querySelector('em')!.firstChild!
+    const selection = selectAcross(word, 0, word, 2)
+    expect(pasteFormat(selection, target)).toBe(true)
+    expect(target.innerHTML).toBe('<p>She wrote ba<em>ck</em>.</p>')
+    expect(selection.toString()).toBe('ba')
+  })
+
+  it('replaces target emphasis while keeping neighboring formatting and a backwards selection', () => {
+    const source = mount('<p><strong>bold</strong></p>')
+    copyFormat(selectContents(source.querySelector('strong')!.firstChild!), source)
+    const target = mount('<p><em>before target after</em></p>')
+    const word = target.querySelector('em')!.firstChild!
+    const selection = window.getSelection()!
+    selection.setBaseAndExtent(word, 13, word, 7)
+    expect(pasteFormat(selection, target)).toBe(true)
+    expect(target.innerHTML).toBe('<p><em>before </em><strong>target</strong><em> after</em></p>')
+    expect(selection.toString()).toBe('target')
+    expect(selection.anchorNode).toBe(selection.getRangeAt(0).endContainer)
+    expect(selection.anchorOffset).toBe(selection.getRangeAt(0).endOffset)
+  })
+
+  it('removes destination color, size and underline while preserving a link and comment', () => {
+    const source = mount('<p><em>italic</em></p>')
+    copyFormat(selectContents(source.querySelector('em')!.firstChild!), source)
+    const target = mount('<p><u><span style="color:red;font-size:24px"><a href="https://example.com"><span data-comment-id="note">target</span></a></span></u></p>')
+    expect(pasteFormat(selectContents(target.querySelector('p')!), target)).toBe(true)
+    expect(target.querySelector('u, [style]')).toBeNull()
+    expect(target.querySelector('em a')?.getAttribute('href')).toBe('https://example.com')
+    expect(target.querySelector('em [data-comment-id="note"]')?.textContent).toBe('target')
+  })
+
+  it('refuses to paint a range outside the supplied editor', () => {
+    const source = mount('<p><strong>bold</strong></p>')
+    copyFormat(selectContents(source.querySelector('strong')!.firstChild!), source)
+    const foreign = mount('<p><em>outside</em></p>')
+    const before = foreign.innerHTML
+    expect(pasteFormat(selectContents(foreign.querySelector('em')!.firstChild!), source)).toBe(false)
+    expect(foreign.innerHTML).toBe(before)
+  })
+
   it('returns false when nothing is copied', () => {
     const el = mount('<p>text</p>')
     expect(
