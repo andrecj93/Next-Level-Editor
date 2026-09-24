@@ -196,7 +196,7 @@ interface Props {
   /** A v-model update is not evidence of durable storage. */
   persistentSave?: boolean;
   toastMessage: string;
-  toastType: "success" | "error";
+  toastType: "success" | "error" | "info";
   /**
    * Whether THIS editor instance owns the page's viewport-fixed chrome (see
    * useFloatingChromeOwner). The auto-save chip is `position: fixed`, so on a

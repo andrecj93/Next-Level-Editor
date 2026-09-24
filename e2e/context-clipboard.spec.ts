@@ -194,7 +194,31 @@ test('a stalled clipboard permission gives feedback and a keyboard fallback', as
   await editor.click({ button: 'right' });
   await pasteWithContextMenu(page);
   await expect(page.locator('.toast-notification')).toHaveText('Waiting for clipboard access. You can also paste with Ctrl+V or ⌘V.');
+  await expect(page.locator('.toast-notification')).toHaveClass(/info/);
   await expect(page.locator('.toast-notification')).toHaveText('Clipboard access took too long. Use Ctrl+V or ⌘V to paste.', { timeout: 15_000 });
+  await expect(page.locator('.toast-notification')).toHaveClass(/info/);
   await expect(editor).toBeFocused();
   expect(await editor.innerHTML()).toBe(before);
+});
+
+test('waiting feedback clears when clipboard access resolves', async ({ page }) => {
+  await installClipboard(page, { 'text/html': '<strong>Ready to write.</strong>' });
+  await page.goto('/?empty=true#playground');
+  const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+  await editor.fill('Replace this paragraph.');
+  await page.evaluate(() => {
+    const read = navigator.clipboard.read.bind(navigator.clipboard);
+    navigator.clipboard.read = () => new Promise(resolve => {
+      (window as unknown as { finishPaste: () => Promise<void> }).finishPaste = async () => resolve(await read());
+    });
+  });
+  await editor.press('ControlOrMeta+a');
+  await editor.click({ button: 'right' });
+  await pasteWithContextMenu(page);
+  await expect(page.locator('.toast-notification')).toHaveText('Waiting for clipboard access. You can also paste with Ctrl+V or ⌘V.');
+  await expect(page.locator('.toast-notification')).toHaveClass(/info/);
+  await page.evaluate(() => (window as unknown as { finishPaste: () => Promise<void> }).finishPaste());
+  await expect(editor.locator('strong')).toHaveText('Ready to write.');
+  await expect(page.locator('.toast-notification')).toBeHidden();
+  await expect(editor).toBeFocused();
 });

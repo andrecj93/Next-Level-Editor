@@ -20,7 +20,8 @@ describe('context-menu paste intent', () => {
     const onPaste = vi.fn((event: ClipboardPasteInput) => event.preventDefault());
     const captureSnapshot = vi.fn();
     const notify = vi.fn();
-    return { editorContent, readonly, onPaste, captureSnapshot, notify, paste: useClipboardPaste({ editorContent, readonly, onPaste, captureSnapshot, notify }) };
+    const clearNotification = vi.fn();
+    return { editorContent, readonly, onPaste, captureSnapshot, notify, clearNotification, paste: useClipboardPaste({ editorContent, readonly, onPaste, captureSnapshot, notify, clearNotification }) };
   };
   beforeEach(() => {
     vi.clearAllMocks();
@@ -131,6 +132,21 @@ describe('context-menu paste intent', () => {
     expect(root.innerHTML).toBe(before);
     expect(state.onPaste).not.toHaveBeenCalled();
     expect(state.captureSnapshot).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('clears waiting feedback when the clipboard becomes available', async () => {
+    vi.useFakeTimers();
+    let resolve!: (value: DataTransfer) => void;
+    vi.mocked(readClipboardData).mockReturnValue(new Promise(done => { resolve = done; }));
+    const state = setup();
+    const pending = state.paste();
+    await vi.advanceTimersByTimeAsync(800);
+    expect(state.notify).toHaveBeenCalledOnce();
+    resolve(transfer('<em>Ready</em>'));
+    await pending;
+    expect(state.clearNotification).toHaveBeenCalledWith('Waiting for clipboard access. You can also paste with Ctrl+V or ⌘V.');
+    expect(state.onPaste).toHaveBeenCalledOnce();
     expect(vi.getTimerCount()).toBe(0);
   });
 });

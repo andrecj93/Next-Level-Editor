@@ -39,22 +39,28 @@ export function useEditorUIState(options?: ToastNotificationOptions) {
   // Toast notification state
   const showToast = ref(false);
   const toastMessage = ref("");
-  const toastType = ref<"success" | "error">("success");
+  const toastType = ref<"success" | "error" | "info">("success");
+  let toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const dismissToastNotification = (message?: string) => {
+    if (message !== undefined && message !== toastMessage.value) return;
+    clearTimeout(toastTimer);
+    showToast.value = false;
+  };
 
   /**
    * Show a toast notification with a message
    */
   const showToastNotification = (
     message: string,
-    type: "success" | "error" = "success"
+    type: "success" | "error" | "info" = "success"
   ) => {
     toastMessage.value = message;
     toastType.value = type;
     showToast.value = true;
 
-    setTimeout(() => {
-      showToast.value = false;
-    }, duration);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => dismissToastNotification(), duration);
   };
 
   /**
@@ -114,6 +120,7 @@ export function useEditorUIState(options?: ToastNotificationOptions) {
   });
 
   onBeforeUnmount(() => {
+    clearTimeout(toastTimer);
     document.removeEventListener("fullscreenchange", syncFullScreenState);
     document.removeEventListener("keydown", onFocusModeKeydown);
   });
@@ -136,6 +143,7 @@ export function useEditorUIState(options?: ToastNotificationOptions) {
     toastMessage,
     toastType,
     showToastNotification,
+    dismissToastNotification,
 
     // Actions
     toggleFullScreen,

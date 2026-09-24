@@ -9,7 +9,10 @@ interface ClipboardPasteOptions {
   onPaste: (event: ClipboardPasteInput) => void;
   captureSnapshot: () => void;
   notify: (message: string) => void;
+  clearNotification?: (message: string) => void;
 }
+
+const waitingMessage = 'Waiting for clipboard access. You can also paste with Ctrl+V or ⌘V.';
 
 /** Menu Paste shares the keyboard paste pipeline, including sanitization,
  * code blocks, images and history. Clipboard permission must not redirect a
@@ -34,7 +37,7 @@ export function useClipboardPaste(options: ClipboardPasteOptions) {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const waiting = setTimeout(() => {
       if (token === request && root.isConnected && root === options.editorContent.value) {
-        options.notify('Waiting for clipboard access. You can also paste with Ctrl+V or ⌘V.');
+        options.notify(waitingMessage);
       }
     }, 800);
     let data: DataTransfer | null;
@@ -50,6 +53,7 @@ export function useClipboardPaste(options: ClipboardPasteOptions) {
       clearTimeout(timeout);
     }
     if (token !== request) return;
+    options.clearNotification?.(waitingMessage);
     if (timedOut) {
       console.debug('[NextLevelEditor] Clipboard paste cancelled', { reason: 'clipboard-read-timeout' });
       options.notify('Clipboard access took too long. Use Ctrl+V or ⌘V to paste.');

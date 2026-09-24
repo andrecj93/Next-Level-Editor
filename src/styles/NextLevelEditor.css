@@ -3028,6 +3028,11 @@
   color: #ffffff;
 }
 
+.toast-notification.info {
+  background: #334155;
+  color: #ffffff;
+}
+
 .toast-fade-enter-active,
 .toast-fade-leave-active {
   transition: all 0.3s ease;

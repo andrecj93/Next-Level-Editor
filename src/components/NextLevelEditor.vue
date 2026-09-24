@@ -1662,6 +1662,7 @@ const {
   toastMessage,
   toastType,
   showToastNotification,
+  dismissToastNotification,
   toggleFullScreen,
   toggleFocusMode,
 } = useEditorUIState({ duration: 3000 });
@@ -1669,7 +1670,7 @@ const {
 // A visible toast is also user-facing feedback that screen-reader users must
 // hear. `notify` fires both so every "Table inserted", "Copied", etc. is
 // spoken. Passed to the composables below in place of the bare toast fn.
-const notify = (message: string, type?: "success" | "error") => {
+const notify = (message: string, type?: "success" | "error" | "info") => {
   showToastNotification(message, type);
   announce(message, { priority: type === "error" ? "assertive" : "polite" });
 };
@@ -1947,7 +1948,8 @@ const pasteFromContextMenu = useClipboardPaste({
   readonly: toRef(props, 'readonly'),
   onPaste: event => onPaste(event),
   captureSnapshot,
-  notify: message => notify(message),
+  notify: message => notify(message, 'info'),
+  clearNotification: dismissToastNotification,
 });
 
 // Context menu using composable

@@ -97,8 +97,8 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,859 unit checks
-across 379 files, plus end-to-end checks on Chromium and mobile Safari. Both
+**It is tested like something you'd put in production.** 4,862 unit checks
+across 380 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
 ---
@@ -853,7 +853,7 @@ The separate device matrix passed all 360 cases on 18 profiles with no skips,
 failures, or retries. Subsequent changes add a comment lifecycle scenario to
 each profile. See the CI reports for the result of the revision being reviewed.
 
-#### Unit Tests (379 files, with Vitest)
+#### Unit Tests (380 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
