@@ -13,6 +13,12 @@ import { exerciseCrossParagraphEnter } from './helpers/crossParagraphEnter';
 import { exerciseCompanionReturn } from './helpers/companionReturn';
 import { exerciseVariablesReturn } from './helpers/variablesReturn';
 import { exerciseCommentsReturn } from './helpers/commentsReturn';
+import { exerciseFocusModeReturn } from './helpers/focusModeReturn';
+
+test('focus mode enters and exits without interrupting writing', async ({ page }) => {
+  await exerciseFocusModeReturn(page);
+  await exerciseFocusModeReturn(page, 'escape', true, true);
+});
 
 const editorFor = (page: Page) => page.getByRole('textbox', { name: 'Rich text editor', exact: true });
 

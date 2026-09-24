@@ -1,6 +1,7 @@
 <template>
   <div
     ref="rootEl"
+    @focusin="rememberEditingSurface"
     :class="[
       'next-level-editor',
       themeClass,
@@ -1019,6 +1020,11 @@ const viewMode = ref<"editor" | "code" | "split" | "preview">(
   props.defaultViewMode
 );
 const splitRightMode = ref<"preview" | "editor">("preview");
+let lastEditingSurface: 'rich' | 'code' = 'rich';
+const rememberEditingSurface = (event: FocusEvent) => {
+  if (event.target === editorPanelsRef.value?.codeEditorRef) lastEditingSurface = 'code';
+  else if (event.target === editorContent.value) lastEditingSurface = 'rich';
+};
 
 // The ACTIVE editable surface. In split view with the right pane in editor
 // mode, the visible surface is splitEditorRef — the classic editorRef is a
@@ -1617,6 +1623,12 @@ const commandPaletteCommands = computed(() => [
 const { showCommandPalette, closeCommandPalette, addToRecent, recentCommands } =
   useCommandPalette({ editorRoot: rootEl });
 
+// Capture the final keyboard selection before the palette focuses its input.
+// Safari may deliver selectionchange after that focus move.
+watch(showCommandPalette, open => {
+  if (open) rememberSelectionBase();
+}, { flush: 'sync' });
+
 // Smart Toolbar
 const {
   updateContext: updateToolbarContext,
@@ -1703,6 +1715,26 @@ const {
   toggleFullScreen,
   toggleFocusMode,
 } = useEditorUIState({ duration: 3000 });
+
+watch(isFocusMode, () => {
+  // A layout choice should leave the next keystroke in the document, not on
+  // the View trigger. Unrelated host focus must not be stolen on global Esc.
+  if (!showCommandPalette.value && !rootEl.value?.contains(document.activeElement)) return;
+  const mode = viewMode.value;
+  const useCode = mode === 'code' || (mode === 'split' &&
+    (splitRightMode.value !== 'editor' || lastEditingSurface === 'code'));
+  const code = editorPanelsRef.value?.codeEditorRef;
+  const position = code && [code.selectionStart, code.selectionEnd, code.selectionDirection] as const;
+  nextTick(() => {
+    if (viewMode.value !== mode) return;
+    if (useCode && code?.isConnected && position) {
+      code.focus({ preventScroll: true });
+      code.setSelectionRange(...position);
+    } else if (mode === 'editor' || (mode === 'split' && splitRightMode.value === 'editor')) {
+      restoreEditorFocus();
+    }
+  });
+}, { flush: 'sync' });
 
 // A visible toast is also user-facing feedback that screen-reader users must
 // hear. `notify` fires both so every "Table inserted", "Copied", etc. is
