@@ -97,7 +97,7 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,913 unit checks
+**It is tested like something you'd put in production.** 4,917 unit checks
 across 380 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
@@ -284,13 +284,13 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 942.1 KB | **228.7 KB** | On import |
+| **Core (ES)** | 942.2 KB | **228.7 KB** | On import |
 | **CSS** | 259.6 KB | **41.8 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
-| **UMD** | 1,687.2 KB | 503.3 KB | On import (no splitting) |
+| **UMD** | 1,687.3 KB | 503.3 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
 exports pays **270.5 KB gzipped** for the library's JS + CSS. Vue is an external
@@ -853,7 +853,7 @@ The separate device matrix passed all 360 cases on 18 profiles with no skips,
 failures, or retries. Subsequent changes add a comment lifecycle scenario to
 each profile. See the CI reports for the result of the revision being reviewed.
 
-#### Unit Tests (384 files, with Vitest)
+#### Unit Tests (385 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color

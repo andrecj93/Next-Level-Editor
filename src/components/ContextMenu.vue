@@ -204,15 +204,27 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 };
 
+let openingDismissTimer: ReturnType<typeof setTimeout> | null = null;
+
 const addDismissListeners = () => {
-  document.addEventListener("click", handleDocumentClick);
-  // `scroll` fires on inner scrollable elements too, so capture it.
-  window.addEventListener("scroll", handleDismiss, true);
-  window.addEventListener("resize", handleDismiss);
   document.addEventListener("keydown", handleKeydown);
+  // Let the opening pointer event and its viewport adjustments settle before
+  // outside dismissal. Keyboard navigation is ready as soon as the menu opens.
+  openingDismissTimer = setTimeout(() => {
+    openingDismissTimer = null;
+    if (!props.show) return;
+    document.addEventListener("click", handleDocumentClick);
+    // `scroll` fires on inner scrollable elements too, so capture it.
+    window.addEventListener("scroll", handleDismiss, true);
+    window.addEventListener("resize", handleDismiss);
+  }, 0);
 };
 
 const removeDismissListeners = () => {
+  if (openingDismissTimer !== null) {
+    clearTimeout(openingDismissTimer);
+    openingDismissTimer = null;
+  }
   document.removeEventListener("click", handleDocumentClick);
   window.removeEventListener("scroll", handleDismiss, true);
   window.removeEventListener("resize", handleDismiss);
@@ -251,10 +263,7 @@ watch(
           ? document.activeElement
           : null;
       settleOpeningScroll();
-      // Defer so the opening right-click/keypress does not immediately close it.
-      setTimeout(() => {
-        addDismissListeners();
-      }, 0);
+      addDismissListeners();
       // Move focus into the menu so keyboard/screen-reader users can operate it.
       nextTick(() => focusItemAt(0));
     } else {

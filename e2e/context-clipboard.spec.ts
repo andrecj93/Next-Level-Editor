@@ -13,7 +13,14 @@ test('a short-screen menu keeps every item reachable by keyboard', async ({ page
   await editor.fill('A short draft.');
   const before = await editor.innerHTML();
   await editor.press('ControlOrMeta+a');
-  await editor.click({ button: 'right' });
+  // Right-click the selected prose. The editor's empty center can contain the
+  // selection toolbar on a short screen, so it is not a reliable text target.
+  const selectedText = await editor.evaluate(root => {
+    const text = window.getSelection()!.getRangeAt(0).getClientRects()[0];
+    const area = root.getBoundingClientRect();
+    return { x: text.x + text.width / 2 - area.x, y: text.y + text.height / 2 - area.y };
+  });
+  await editor.click({ button: 'right', position: selectedText });
   const menu = page.getByRole('menu', { name: 'Context menu', exact: true });
   await menu.press('End');
   const last = menu.getByRole('menuitem').last();
