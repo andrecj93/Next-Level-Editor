@@ -22,6 +22,78 @@ async function typeInTextarea(wrapper: VueWrapper, text: string) {
 }
 
 describe("CommentReplyForm mentions", () => {
+  it.each(['Enter', 'Tab'])('accepts a visible mention suggestion with %s', async key => {
+    const wrapper = mount(CommentReplyForm, { props: { mentionSearch: () => users } });
+    await typeInTextarea(wrapper, 'Thanks @a');
+    await vi.advanceTimersByTimeAsync(160);
+    await wrapper.get('textarea').trigger('keydown', { key: 'ArrowDown' });
+    await wrapper.get('textarea').trigger('keydown', { key });
+    expect(wrapper.get('textarea').element.value).toBe('Thanks @Amir Khan ');
+    expect(wrapper.emitted('draft-change')?.at(-1)).toEqual(['Thanks @Amir Khan ']);
+    expect(wrapper.emitted('submit')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it('drops old mention results as soon as the writer changes the query', async () => {
+    let resolveOld!: (items: MentionSuggestion[]) => void;
+    const search = vi.fn((query: string) => query === 'a'
+      ? new Promise<MentionSuggestion[]>(resolve => { resolveOld = resolve; }) : [users[1]]);
+    const wrapper = mount(CommentReplyForm, { props: { mentionSearch: search } });
+    await typeInTextarea(wrapper, '@a');
+    await vi.advanceTimersByTimeAsync(160);
+    await typeInTextarea(wrapper, '@am');
+    resolveOld([users[0]]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(wrapper.find('.comment-mention-dropdown').exists()).toBe(false);
+    await vi.advanceTimersByTimeAsync(160);
+    expect(wrapper.get('.comment-mention-dropdown').text()).toContain('Amir Khan');
+    expect(wrapper.get('.comment-mention-dropdown').text()).not.toContain('Alice Wonder');
+    wrapper.unmount();
+  });
+
+  it.each(['absent', 'empty', 'pending', 'rejected'])('leaves editing keys native when suggestions are %s', async state => {
+    const mentionSearch = state === 'absent' ? undefined : state === 'pending'
+      ? () => new Promise<MentionSuggestion[]>(() => {})
+      : state === 'rejected' ? () => Promise.reject(new Error('Unavailable')) : () => [];
+    const wrapper = mount(CommentReplyForm, { props: { mentionSearch } });
+    await typeInTextarea(wrapper, 'Thanks @Celia');
+    await vi.advanceTimersByTimeAsync(160);
+    for (const key of ['Enter', 'Tab', 'ArrowUp', 'ArrowDown']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      wrapper.get('textarea').element.dispatchEvent(event);
+      expect(event.defaultPrevented, key).toBe(false);
+    }
+    await wrapper.get('textarea').trigger('keydown', { key: 'Enter', ctrlKey: true });
+    expect(wrapper.emitted('submit')?.[0][0]).toBe('Thanks @Celia');
+    wrapper.unmount();
+  });
+
+  it('does not submit or query mentions until text composition commits', async () => {
+    const mentionSearch = vi.fn(() => users);
+    const wrapper = mount(CommentReplyForm, { props: { mentionSearch } });
+    await typeInTextarea(wrapper, 'A reply');
+    const textarea = wrapper.get('textarea');
+    await textarea.trigger('compositionstart');
+    await textarea.setValue('A reply @a');
+    await textarea.trigger('keydown', { key: 'Enter', ctrlKey: true });
+    await wrapper.get('.comment-reply-submit').trigger('click');
+    await vi.advanceTimersByTimeAsync(160);
+    expect(wrapper.emitted('submit')).toBeUndefined();
+    expect(mentionSearch).not.toHaveBeenCalled();
+    await textarea.trigger('compositionend');
+    await vi.advanceTimersByTimeAsync(160);
+    expect(mentionSearch).toHaveBeenCalledWith('a');
+    wrapper.unmount();
+  });
+
+  it.each([{ isComposing: true }, { keyCode: 229 }])('ignores a composition Enter signalled by %j', async flags => {
+    const wrapper = mount(CommentReplyForm);
+    await typeInTextarea(wrapper, 'A reply');
+    await wrapper.get('textarea').trigger('keydown', { key: 'Enter', ctrlKey: true, ...flags });
+    expect(wrapper.emitted('submit')).toBeUndefined();
+    wrapper.unmount();
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
   });

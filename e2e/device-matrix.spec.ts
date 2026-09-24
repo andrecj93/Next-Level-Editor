@@ -285,7 +285,17 @@ test('comments stay usable by touch and keyboard from selection back to writing'
   await activate(card.getByRole('button', { name: 'Cancel', exact: true }), hasTouch);
   await expect(writeReply).toBeFocused();
   await activate(writeReply, hasTouch);
+  await reply.pressSequentially('Thanks @Celia');
+  await reply.press('Tab');
+  await expect(card.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(reply).toBeFocused();
+  // Native Safari places the textarea caret at the start on keyboard reentry.
+  await reply.press('ControlOrMeta+End');
+  await reply.press('Enter');
   await reply.pressSequentially('Let the next visit stay unwritten.');
+  const replyText = 'Thanks @Celia\nLet the next visit stay unwritten.';
+  await expect(reply).toHaveValue(replyText);
   // Browsing another discussion must not discard an unfinished reply or move
   // keyboard focus into a restored form without the writer asking for it.
   const openDraftTab = sidebar.getByRole('tab', { name: /^Open/ });
@@ -294,16 +304,16 @@ test('comments stay usable by touch and keyboard from selection back to writing'
   await expect(reply).toHaveCount(0);
   await resolvedDraftTab.press('ArrowLeft');
   await expect(openDraftTab).toBeFocused();
-  await expect(reply).toHaveValue('Let the next visit stay unwritten.');
+  await expect(reply).toHaveValue(replyText);
   await activate(sidebar.getByRole('button', { name: 'Close comments sidebar' }), hasTouch);
   await activate(page.getByRole('button', { name: 'Comments', exact: true }), hasTouch);
-  await expect(reply).toHaveValue('Let the next visit stay unwritten.');
+  await expect(reply).toHaveValue(replyText);
   await activate(card.getByRole('button', { name: 'Resolve thread', exact: true }), hasTouch);
   await activate(resolvedDraftTab, hasTouch);
-  await expect(reply).toHaveValue('Let the next visit stay unwritten.');
+  await expect(reply).toHaveValue(replyText);
   await activate(card.getByRole('button', { name: 'Reopen thread', exact: true }), hasTouch);
   await activate(openDraftTab, hasTouch);
-  await expect(reply).toHaveValue('Let the next visit stay unwritten.');
+  await expect(reply).toHaveValue(replyText);
   await activate(card.getByRole('button', { name: 'Reply', exact: true }), hasTouch);
   const toast = page.locator('.toast-notification');
   await expect(toast).toHaveText('Reply added successfully');

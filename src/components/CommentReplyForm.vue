@@ -10,6 +10,8 @@
       rows="3"
       @input="handleInput"
       @keydown="handleKeydown"
+      @compositionstart="startComposition"
+      @compositionend="finishComposition"
     />
 
     <!-- Mention Autocomplete Dropdown -->
@@ -100,6 +102,7 @@ const MENTION_SEARCH_DEBOUNCE_MS = 150;
 // Refs
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const content = ref(props.initialContent);
+const composing = ref(false);
 const showMentions = ref(false);
 const mentionQuery = ref("");
 const selectedMentionIndex = ref(0);
@@ -142,7 +145,9 @@ async function runMentionSearch(query: string) {
 }
 
 function queueMentionSearch(query: string) {
-  cancelMentionSearch();
+  // Invalidate the previous query before the debounce, not only when the next
+  // request starts. A late response must never offer a different name to Enter.
+  resetMentions();
 
   if (!props.mentionSearch) {
     mentionSuggestions.value = [];
@@ -164,11 +169,24 @@ const mentionDropdownStyle = computed(() => {
 });
 
 onBeforeUnmount(() => {
-  cancelMentionSearch();
+  resetMentions();
 });
 
 // Methods
+function startComposition() {
+  composing.value = true;
+  showMentions.value = false;
+  resetMentions();
+}
+
+function finishComposition() {
+  composing.value = false;
+  // Vue commits the textarea's composition value through its input handler.
+  nextTick(handleInput);
+}
+
 function handleInput() {
+  if (composing.value) return;
   emit("draft-change", content.value);
   // Detect @ mentions
   const cursorPos = textareaRef.value?.selectionStart ?? 0;
@@ -188,7 +206,10 @@ function handleInput() {
 }
 
 function handleKeydown(event: KeyboardEvent) {
-  if (!showMentions.value) {
+  if (composing.value || event.isComposing || event.keyCode === 229) return;
+  // A mention query is not a popup. With no selectable result (including a
+  // pending/failed provider), Enter, Tab and arrows still belong to writing.
+  if (!showMentions.value || !mentionSuggestions.value.length) {
     // Submit on Cmd/Ctrl + Enter
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
@@ -259,7 +280,7 @@ function extractMentions(text: string): string[] {
 }
 
 function handleSubmit() {
-  if (!content.value.trim()) return;
+  if (composing.value || !content.value.trim()) return;
 
   const mentions = extractMentions(content.value);
   emit("submit", content.value.trim(), mentions);
