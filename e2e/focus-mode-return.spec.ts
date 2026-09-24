@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { exerciseFocusModeReturn } from './helpers/focusModeReturn';
+import { exerciseFocusModeReturn, exerciseWritingBeforeFocusExit } from './helpers/focusModeReturn';
 import { switchViewMode } from './helpers/toolbar';
+
+for (const backwards of [false, true]) {
+  test(`writing before leaving focus mode retains the current position (backwards=${backwards})`, async ({ page }) => {
+    await exerciseWritingBeforeFocusExit(page, backwards);
+  });
+}
 test('enter focus mode and continue the sentence', async ({ page }) => {
   await exerciseFocusModeReturn(page);
 });

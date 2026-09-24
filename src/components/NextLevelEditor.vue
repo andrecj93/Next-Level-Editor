@@ -1731,7 +1731,10 @@ watch(isFocusMode, () => {
       code.focus({ preventScroll: true });
       code.setSelectionRange(...position);
     } else if (mode === 'editor' || (mode === 'split' && splitRightMode.value === 'editor')) {
-      restoreEditorFocus();
+      // Escape can leave the live caret in the document. Restoring the old
+      // toolbar bookmark there would discard everything navigated since entry.
+      if (document.activeElement !== editorContent.value) restoreEditorFocus();
+      else keepSelectionVisible(editorContent.value, 24);
     }
   });
 }, { flush: 'sync' });

@@ -16,6 +16,31 @@ async function toggle(label = 'Focus mode') {
 }
 
 describe('focus mode resumes the editing surface', () => {
+  it.each([false, true])('keeps the live writing position on Escape (backwards=%s)', async backwards => {
+    wrapper = mount(NextLevelEditor, {
+      attachTo: document.body,
+      props: { modelValue: '<p>The bus waited.</p>', writingMode: true },
+    });
+    await nextTick();
+    const root = wrapper.get<HTMLElement>('[aria-label="Rich text editor"]').element;
+    const text = root.firstChild!.firstChild!;
+    root.focus();
+    window.getSelection()!.setBaseAndExtent(text, 3, text, 3);
+    document.dispatchEvent(new Event('selectionchange'));
+    await toggle();
+    // Continue navigating after opening Focus mode. Escape must not restore
+    // the toolbar bookmark captured at offset 3.
+    window.getSelection()!.setBaseAndExtent(text, 15, text, backwards ? 8 : 15);
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await nextTick();
+    await nextTick();
+    expect(wrapper.classes()).not.toContain('is-focus');
+    expect(document.activeElement).toBe(root);
+    expect(window.getSelection()!.anchorOffset).toBe(15);
+    expect(window.getSelection()!.focusOffset).toBe(backwards ? 8 : 15);
+    expect(root.innerHTML).toBe('<p>The bus waited.</p>');
+  });
+
   it.each([false, true])('preserves the rich-text position (backwards=%s) on entry and exit', async backwards => {
     const html='<p>The bus waited.</p>';
     wrapper=mount(NextLevelEditor,{attachTo:document.body,props:{modelValue:html,writingMode:true}});
