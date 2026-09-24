@@ -224,7 +224,7 @@ readable — click any section to open it.
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **5,020 Unit Checks** - Across 393 files after the library build, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run in the package build gate.
+- **5,027 Unit Checks** - Across 394 files after the library build, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run in the package build gate.
 - **Browser Gates** - Playwright on Chromium and mobile WebKit, plus the same writing scenarios on 18 desktop, tablet, phone, landscape, and reflow profiles
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
@@ -254,7 +254,7 @@ Comment threads anchored to selected text. Shared storage, synchronization, and 
 - **@ Mentions** - Autocomplete using a host-supplied mention provider
 - **Status Management** - Mark threads as open or resolved
 - **Visual Highlights** - Color-coded text highlighting (yellow for open, green for resolved)
-- **Sidebar UI** - Dedicated sidebar with tabs for open/resolved comments
+- **Sidebar UI** - Open/resolved tabs support arrow keys and Home/End. Closing with the sidebar button or footer toggle returns to the manuscript selection without changing the document.
 - **Persistence API** - Bind `v-model:comment-threads` to receive and restore thread JSON alongside the document HTML. Replies also trigger auto-save, including failure and Retry. The playground saves both together in its local draft.
 - **Auto-restore** - Automatically re-anchor comments after content changes
 
@@ -287,18 +287,22 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 959.0 KB | **233.1 KB** | On import |
+| **Core (ES)** | 960.4 KB | **233.4 KB** | On import |
 | **CSS** | 260.2 KB | **41.9 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
-| **UMD** | 1,700.3 KB | 507.5 KB | On import (no splitting) |
+| **UMD** | 1,701.2 KB | 507.7 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **275.0 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **275.3 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
+
+The demo serves its existing Fraunces, Hanken Grotesk and JetBrains Mono fonts
+locally, with their SIL Open Font licenses. Font loading does not require Google
+Fonts access; these demo assets are separate from the editor library bundle.
 
 The UMD build cannot code-split by definition — prefer the ES build (Vite,
 webpack, Rollup, and every modern bundler pick it automatically) unless you
@@ -1089,7 +1093,7 @@ npm run test:devices
 
 Every profile exercises typing, emphasis changes followed by continued typing
 and deletion, text-size changes and returning to Normal, heading formatting,
-suggestions, closing writing notes or variables and continuing the sentence, undo with continued writing at the original caret, paragraph
+suggestions, closing writing notes, variables or comments and continuing the sentence, undo with continued writing at the original caret, paragraph
 corrections spanning a selection with counts and saving kept in sync,
 recovery, links, search, downloads, insert dialogs, source/preview, chapter
 navigation, mixed scripts, light/dark accessibility, keyboard access, and resizing

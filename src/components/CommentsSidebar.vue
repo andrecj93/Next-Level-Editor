@@ -63,11 +63,14 @@
         </div>
 
         <!-- Tabs -->
-        <div class="comments-tabs" role="tablist" aria-label="Comment threads">
+        <div class="comments-tabs" role="tablist" aria-label="Comment threads" @keydown="handleTabKeydown">
           <button
+            :id="`${sidebarId}-open`"
             class="comments-tab"
             role="tab"
+            :aria-controls="`${sidebarId}-threads`"
             :aria-selected="activeTab === 'open'"
+            :tabindex="activeTab === 'open' ? 0 : -1"
             :class="{ active: activeTab === 'open' }"
             @click="activeTab = 'open'"
           >
@@ -75,9 +78,12 @@
             <span class="comments-tab-badge">{{ openThreads.length }}</span>
           </button>
           <button
+            :id="`${sidebarId}-resolved`"
             class="comments-tab"
             role="tab"
+            :aria-controls="`${sidebarId}-threads`"
             :aria-selected="activeTab === 'resolved'"
+            :tabindex="activeTab === 'resolved' ? 0 : -1"
             :class="{ active: activeTab === 'resolved' }"
             @click="activeTab = 'resolved'"
           >
@@ -88,7 +94,13 @@
       </div>
 
       <!-- Thread List -->
-      <div class="comments-thread-list">
+      <div
+        :id="`${sidebarId}-threads`"
+        class="comments-thread-list"
+        role="tabpanel"
+        :aria-labelledby="`${sidebarId}-${activeTab}`"
+        tabindex="0"
+      >
         <template v-if="currentThreads.length === 0">
           <div class="comments-empty-state">
             <div class="comments-empty-icon">
@@ -153,6 +165,7 @@ import type {
   MentionSuggestion,
 } from "../composables/useComments";
 import CommentThreadCard from "./CommentThreadCard.vue";
+import { useStableId } from "../utils/useStableId";
 
 interface Props {
   threads: CommentThread[];
@@ -180,6 +193,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<Emits>();
+const sidebarId = `comments-${useStableId()}`;
 
 // The "Open comments" FAB unmounts itself on activation (its v-if includes
 // !showCommentsSidebar), so focus would fall to <body> the instant the sidebar
@@ -217,6 +231,18 @@ const currentThreads = computed(() =>
 // Methods
 function closeSidebar() {
   emit("close");
+}
+
+function handleTabKeydown(event: KeyboardEvent) {
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.key === 'Home') activeTab.value = 'open';
+  else if (event.key === 'End') activeTab.value = 'resolved';
+  else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    activeTab.value = activeTab.value === 'open' ? 'resolved' : 'open';
+  } else return;
+  event.preventDefault();
+  event.stopPropagation();
+  focusActiveTab();
 }
 
 function selectThread(threadId: string) {

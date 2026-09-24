@@ -25,6 +25,18 @@ async function setup(html = '<h2>The library</h2><p>Celia opened the door.</p><p
 }
 
 describe('WritingSearch', () => {
+  it('keeps a tapped replacement control focused when the browser does not focus buttons', async () => {
+    const { wrapper, search } = await setup();
+    await search('Celia');
+    await wrapper.get('[aria-label="Show replacement controls"]').trigger('click');
+    await wrapper.get('[placeholder="Replace with…"]').setValue('Célia');
+    (document.activeElement as HTMLElement).blur();
+    const replace = wrapper.findAll('.replace-action')[0];
+    await replace.trigger('click');
+    expect(document.activeElement).toBe(replace.element);
+    expect(wrapper.get('.search-count').text()).toBe('1 of 2');
+  });
+
   it('searches immediately after a pause and navigates contextual matches without changing prose', async () => {
     const { wrapper, editor, search } = await setup();
     const before = editor.innerHTML;

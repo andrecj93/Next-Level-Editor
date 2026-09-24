@@ -12,8 +12,13 @@ import { exerciseUndoWritingPosition } from './helpers/undoWritingPosition';
 import { exerciseCrossParagraphEnter } from './helpers/crossParagraphEnter';
 import { exerciseCompanionReturn } from './helpers/companionReturn';
 import { exerciseVariablesReturn } from './helpers/variablesReturn';
+import { exerciseCommentsReturn } from './helpers/commentsReturn';
 
 const editorFor = (page: Page) => page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+
+test('closing comments returns to the sentence and saves continued typing', async ({ page }) => {
+  await exerciseCommentsReturn(page);
+});
 
 test('closing variables returns to the sentence and saves continued typing', async ({ page }) => {
   await exerciseVariablesReturn(page);
@@ -498,6 +503,7 @@ test('search keeps prose visible through navigation, replacement, undo and conti
   await activate(search.getByRole('button', { name: 'Show replacement controls' }), hasTouch);
   await search.getByRole('textbox', { name: 'Replace with', exact: true }).fill('Célia');
   await activate(search.getByRole('button', { name: 'Replace', exact: true }), hasTouch);
+  await expect(search.getByRole('button', { name: 'Replace', exact: true })).toBeFocused();
   await expect(editor).toContainText('Célia wrote back.');
   await expect(editor).toContainText('Celia kept the key.');
   await expect(search.locator('.search-count')).toHaveText('2 of 2');
@@ -658,7 +664,8 @@ test('dismissing writing notes keeps keyboard focus and leaves the manuscript in
   await expect(companion).toContainText('You’ve considered every note. Keep your voice.');
   expect(await editor.innerHTML()).toBe(before);
   await companion.getByRole('button', { name: 'Writing notes', exact: true }).press('Escape');
-  await expect(page.getByRole('button', { name: 'Writing companion', exact: true })).toBeFocused();
+  await expect(editor).toBeFocused();
+  expect(await editor.innerHTML()).toBe(before);
 });
 
 test('kept writing notes survive recovery and edits elsewhere in the book', async ({ page, hasTouch }) => {
@@ -894,7 +901,7 @@ test('notes, chapter navigation and the caret retain usable space', async ({ pag
   await expect(editor.locator('h2').first()).toBeInViewport();
   if (await companion.isVisible()) {
     await companion.getByRole('button', { name: 'Close writing companion' }).click();
-    await expect(page.getByRole('button', { name: 'Writing companion', exact: true })).toBeFocused();
+    await expect(editor).toBeFocused();
   } else await expect(editor).toBeFocused();
   await editor.click();
   await editor.press('ControlOrMeta+End');

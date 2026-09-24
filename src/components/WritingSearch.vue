@@ -1,5 +1,5 @@
 <template>
-  <section v-if="show" ref="panel" class="writing-search" role="search" aria-label="Find & Replace" @keydown="onKeydown">
+  <section v-if="show" ref="panel" class="writing-search" role="search" aria-label="Find & Replace" @keydown="onKeydown" @click.capture="focusSearchControl">
     <div class="search-controls">
       <div class="search-query-row">
         <label class="search-field">
@@ -93,6 +93,13 @@ let returnRange: Range | undefined;
 let returnToMatch = false;
 const options = () => ({ caseSensitive: caseSensitive.value, wholeWord: wholeWord.value });
 const stopPending = () => { clearTimeout(timer); timer = undefined; pending.value = false; };
+const focusSearchControl = (event: MouseEvent) => {
+  // Safari does not focus a tapped button. Give the activated control focus
+  // before selecting a match, so reflow cannot hand scrolling to the editor's
+  // previous caret and the next keyboard action stays in search.
+  const button = event.target instanceof Element ? event.target.closest('button') : null;
+  if (button && !button.disabled && panel.value?.contains(button)) button.focus({ preventScroll: true });
+};
 const search = (direction: FindRequest['direction'] = 'current', selectMatch = true) => {
   stopPending();
   if (!props.show || composing.value) return;

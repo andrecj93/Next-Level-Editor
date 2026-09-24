@@ -1,6 +1,7 @@
 import { createApp } from "vue";
 import App from "./App.vue";
 import "@cyhnkckali/vue3-color-picker/dist/style.css";
+import "./assets/fonts/editor-fonts.css";
 import "./styles/site.css";
 
 // Suppress HMR errors in test environment

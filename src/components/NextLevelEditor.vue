@@ -214,7 +214,7 @@
       :comments-open="showCommentsSidebar"
       :variables-open="showVariablesPanel"
       @toggle-companion="toggleCompanion"
-      @open-comments="showCommentsSidebar = !showCommentsSidebar"
+      @open-comments="toggleCommentsSidebar"
       @open-variables="toggleVariablesPanel"
       @toggle-full-width="toggleFullWidth"
     >
@@ -1169,31 +1169,39 @@ watch(showCommentsSidebar, open => {
   // modal. Its highlight/sanitization can invalidate the original DOM Range.
   if (open && !showCommentModal.value) rememberCommentsPosition();
 }, { flush: 'sync' });
+function toggleCommentsSidebar() {
+  if (showCommentsSidebar.value) closeCommentsSidebar();
+  else showCommentsSidebar.value = true;
+}
 function closeCommentsSidebar() {
   const position = commentsReturnSelection;
   commentsReturnSelection = null;
   showCommentsSidebar.value = false;
   nextTick(() => {
-    performWithSelection(root => {
+    // Returning from a discussion is navigation, not an edit. A command's
+    // insertion-point fallback would create a paragraph in an empty document.
+    restoreEditorFocus();
+    const root = editorContent.value;
+    if (root && position && root.textContent === position.text) {
       // Comment metadata changes preserve text. A different document, or prose
       // edited while the panel was open, must not receive an old text offset.
-      if (!position || root.textContent !== position.text) return;
       // Text offsets cannot distinguish an empty paragraph or a boundary
       // outside emphasis. Prefer surviving DOM points, but reject clamped
       // points when comment markup has split their original text nodes.
-      if (position.bookmark?.restore()) {
-        const restored = getCaretOffsets(root);
-        if (restored?.start === position.offsets.start && restored.end === position.offsets.end) return;
+      const restored = position.bookmark?.restore() ? getCaretOffsets(root) : null;
+      if (restored?.start !== position.offsets.start || restored.end !== position.offsets.end) {
+        if (setCaretOffsets(root, position.offsets) && position.backwards) {
+          const selection = root.ownerDocument.getSelection();
+          const range = selection?.getRangeAt(0);
+          if (range && selection?.setBaseAndExtent) selection.setBaseAndExtent(
+            range.endContainer, range.endOffset, range.startContainer, range.startOffset,
+          );
+        }
       }
-      if (setCaretOffsets(root, position.offsets) && position.backwards) {
-        const selection = root.ownerDocument.getSelection();
-        const range = selection?.getRangeAt(0);
-        if (range && selection?.setBaseAndExtent) selection.setBaseAndExtent(
-          range.endContainer, range.endOffset, range.startContainer, range.startOffset,
-        );
-      }
-    });
+      rememberSelectionBase();
+    }
     keepSelectionVisible(editorContent.value, 24);
+    console.debug('[NextLevelEditor comments] Returned to writing');
   });
 }
 
