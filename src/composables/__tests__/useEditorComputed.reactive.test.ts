@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { ref } from "vue";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import { effectScope, ref, type EffectScope } from "vue";
 import { useEditorComputed } from "../useEditorComputed";
 
 /**
@@ -8,20 +8,27 @@ import { useEditorComputed } from "../useEditorComputed";
  * playground did nothing). They are now refs.
  */
 describe("useEditorComputed reactivity", () => {
-  const make = (over: Record<string, unknown> = {}) =>
-    useEditorComputed({
-      theme: ref<"light" | "dark">("light"),
-      width: ref<string | undefined>(undefined),
-      height: ref<string | undefined>(undefined),
-      modelValue: ref(""),
-      editorContent: ref<HTMLElement | null>(null),
-      htmlContent: ref(""),
-      isApplyingHistory: ref(false),
-      applySanitizedContent: vi.fn(),
-      captureSnapshot: vi.fn(),
-      triggerAutoSave: vi.fn(),
-      ...over,
-    });
+  const scopes: EffectScope[] = [];
+  afterEach(() => { scopes.splice(0).forEach(scope => scope.stop()); });
+  const make = (over: Record<string, unknown> = {}) => {
+    const scope = effectScope();
+    scopes.push(scope);
+    return scope.run(() =>
+      useEditorComputed({
+        theme: ref<"light" | "dark">("light"),
+        width: ref<string | undefined>(undefined),
+        height: ref<string | undefined>(undefined),
+        modelValue: ref(""),
+        editorContent: ref<HTMLElement | null>(null),
+        htmlContent: ref(""),
+        isApplyingHistory: ref(false),
+        applySanitizedContent: vi.fn(),
+        captureSnapshot: vi.fn(),
+        triggerAutoSave: vi.fn(),
+        ...over,
+      })
+    )!;
+  };
 
   it("recomputes editorStyles when the height ref changes", () => {
     const height = ref<string | undefined>("620px");

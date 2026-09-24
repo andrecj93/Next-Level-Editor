@@ -1,5 +1,5 @@
 import { computed, watch, nextTick, type Ref, type ComputedRef } from "vue";
-import { getTextStatistics } from "../utils/commands";
+import { useDocumentStatistics } from "./useDocumentStatistics";
 import { useHtmlSanitizer } from "./useHtmlSanitizer";
 
 interface EditorComputedOptions {
@@ -57,23 +57,6 @@ export function useEditorComputed(options: EditorComputedOptions) {
   });
 
   /**
-   * Computed word count from editor content
-   */
-  const textStatistics = computed(() => {
-    const content = htmlContent.value || editorContent.value?.innerHTML || "";
-    const root = editorContent.value;
-    // Ordinary input has already produced this DOM. Read it without cloning
-    // it; source/preview and externally changed HTML still use the string.
-    return getTextStatistics(content, root && root.innerHTML === content ? root : undefined);
-  });
-  const wordCount: ComputedRef<number> = computed(() => textStatistics.value.wordCount);
-
-  /**
-   * Computed character count from editor content
-   */
-  const characterCount: ComputedRef<number> = computed(() => textStatistics.value.characterCount);
-
-  /**
    * Watch modelValue changes and update editor content
    */
   watch(
@@ -106,6 +89,19 @@ export function useEditorComputed(options: EditorComputedOptions) {
   // Saving belongs to useEditorContent's edit paths. innerHTML is not reactive:
   // watching it here only observed surface mount/recreation and incorrectly
   // marked a restored document as edited (including restored comments).
+
+  /**
+   * Computed word count from editor content
+   */
+  // Subscribe after initial model reconciliation, so counting does not queue
+  // a render before the initial history guard is released.
+  const textStatistics = useDocumentStatistics(htmlContent, editorContent);
+  const wordCount: ComputedRef<number> = computed(() => textStatistics.value.wordCount);
+
+  /**
+   * Computed character count from editor content
+   */
+  const characterCount: ComputedRef<number> = computed(() => textStatistics.value.characterCount);
 
   return {
     themeClass,

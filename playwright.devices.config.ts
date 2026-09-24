@@ -6,7 +6,7 @@ import base from './playwright.config';
 export default defineConfig({
   ...base,
   testIgnore: [],
-  testMatch: '**/device-matrix.spec.ts',
+  testMatch: ['**/device-matrix.spec.ts', '**/document-counts.spec.ts'],
   globalSetup: undefined,
   outputDir: 'test-results/devices',
   reporter: [
