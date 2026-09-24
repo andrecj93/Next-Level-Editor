@@ -11,8 +11,13 @@ import { exerciseFontSizeTyping } from './helpers/fontSizeTyping';
 import { exerciseUndoWritingPosition } from './helpers/undoWritingPosition';
 import { exerciseCrossParagraphEnter } from './helpers/crossParagraphEnter';
 import { exerciseCompanionReturn } from './helpers/companionReturn';
+import { exerciseVariablesReturn } from './helpers/variablesReturn';
 
 const editorFor = (page: Page) => page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+
+test('closing variables returns to the sentence and saves continued typing', async ({ page }) => {
+  await exerciseVariablesReturn(page);
+});
 
 test('closing writing notes returns to the sentence and saves continued typing', async ({ page }) => {
   await exerciseCompanionReturn(page);

@@ -215,7 +215,7 @@
       :variables-open="showVariablesPanel"
       @toggle-companion="toggleCompanion"
       @open-comments="showCommentsSidebar = !showCommentsSidebar"
-      @open-variables="showVariablesPanel = !showVariablesPanel"
+      @open-variables="toggleVariablesPanel"
       @toggle-full-width="toggleFullWidth"
     >
       <PdfExportStatus v-if="pdfProgress" v-bind="pdfProgress" @cancel="cancelPdfExport(); performWithSelection(() => {})" />
@@ -570,7 +570,7 @@
         aria-label="Toggle variables panel"
         :aria-expanded="showVariablesPanel"
         :title="showVariablesPanel ? 'Hide variables' : 'Show variables'"
-        @click="showVariablesPanel = !showVariablesPanel"
+        @click="toggleVariablesPanel"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path
@@ -597,7 +597,7 @@
         "
         class="variables-panel"
         :style="{
-          bottom: `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
+          '--nle-variables-panel-bottom': `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
         }"
         role="region"
         aria-label="Template variables"
@@ -607,7 +607,7 @@
           <button
             class="variables-panel-close"
             aria-label="Close variables panel"
-            @click="showVariablesPanel = false"
+            @click="closeVariablesPanel"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path
@@ -3316,16 +3316,38 @@ function closeVariableAutocomplete() {
   showVariableAutocomplete.value = false;
 }
 
-// Insert a variable from the variables panel. The panel items use
-// @mousedown.prevent so the editor selection survives the click; if the caret
-// was never placed in the editor, the pill is appended at the end instead.
+function toggleVariablesPanel() {
+  if (showVariablesPanel.value) {
+    closeVariablesPanel();
+    return;
+  }
+  if (!props.enableVariables || props.readonly) return;
+  rememberSelectionBase();
+  showVariablesPanel.value = true;
+  nextTick(() => rootEl.value?.querySelector<HTMLButtonElement>('.variables-panel-close')?.focus({ preventScroll: true }));
+  console.debug('[NextLevelEditor] Variables panel opened');
+}
+
+function closeVariablesPanel() {
+  // Preserve the latest writing position too: the panel can stay open while
+  // someone inserts a variable and continues their sentence.
+  rememberSelectionBase();
+  showVariablesPanel.value = false;
+  nextTick(restoreEditorFocus);
+  console.debug('[NextLevelEditor] Variables panel closed');
+}
+
+// Both pointer and keyboard browsing must insert at the saved writing position.
+// If the caret was never placed in the editor, focus restoration uses its end.
 function handlePanelInsert(variable: Variable) {
   // A read-only document must not be editable through ANY affordance. The FAB
   // and panel are hidden in readonly, but guard the mutation itself too — this
   // path inserted a pill into the locked content and emitted it to the host.
   // #r21-2
-  if (props.readonly) return;
+  if (!canEditRichText()) return;
   if (!variablesComposable || !editorContent.value) return;
+  rememberSelectionBase();
+  restoreEditorFocus();
   const editor = editorContent.value;
   const selection = window.getSelection();
 
@@ -3379,7 +3401,7 @@ function closeTopMostOverlay(): boolean {
     return true;
   }
   if (showVariablesPanel.value) {
-    showVariablesPanel.value = false;
+    closeVariablesPanel();
     return true;
   }
   // The writing-stats panel becomes a bottom sheet on mobile that can cover its
@@ -4235,9 +4257,10 @@ onUnmounted(() => {
    shadow, accent used only as a signal. */
 .variables-panel {
   position: fixed;
+  bottom: var(--nle-variables-panel-bottom);
   right: 28px;
   width: 320px;
-  max-height: 420px;
+  max-height: min(420px, calc(100dvh - var(--nle-variables-panel-bottom) - 12px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -4255,6 +4278,7 @@ onUnmounted(() => {
 
 .variables-panel-header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
@@ -4289,6 +4313,7 @@ onUnmounted(() => {
 
 .variables-panel-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 6px;
 }
@@ -4342,6 +4367,7 @@ onUnmounted(() => {
 }
 
 .variables-panel-footer {
+  flex-shrink: 0;
   padding: 8px 16px;
   border-top: 1px solid var(--color-border);
   font-size: 11px;
@@ -4382,7 +4408,7 @@ onUnmounted(() => {
    can't be scrolled into the visible area). Reflow it into a bottom sheet that
    spans the width with margins and is capped to a safe fraction of the
    viewport, so every variable stays reachable via the list's internal scroll.
-   The `bottom` is set inline, so the mobile override needs !important. */
+   The bottom offset is shared with the height cap. */
 @media (max-width: 640px) {
   /* Same clip class as the variables panel: fixed 360px at right:32px puts
      the history panel's left edge at -17px on a 375px phone, cutting off
@@ -4398,9 +4424,22 @@ onUnmounted(() => {
     left: 12px;
     right: 12px;
     width: auto;
-    max-height: 70vh;
-    bottom: calc(16px + var(--nle-mobile-toolbar-clearance, 0px)) !important;
+    max-height: min(70dvh, calc(100dvh - var(--nle-variables-panel-bottom) - 12px));
+    --nle-variables-panel-bottom: calc(16px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px)) !important;
   }
+}
+
+/* Landscape phones need the same bounded panel even above the width breakpoint.
+   Keep the header/Close visible and let only the variable list scroll. */
+@media (max-height: 600px) {
+  .variables-panel {
+    --nle-variables-panel-bottom: calc(12px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px)) !important;
+  }
+}
+
+@media (pointer: coarse) {
+  .variables-panel-close { width: 44px; height: 44px; }
+  .variables-panel-item { min-height: 44px; align-items: center; }
 }
 
 /* ---------------------------------------------------------------------------
