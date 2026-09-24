@@ -31,6 +31,18 @@ function setup(count: number, afterDismiss?: () => void) {
 }
 
 describe('writing companion review and focus', () => {
+  it.each(['review', 'outline'] as const)('opens the remembered %s view and reports a deliberate change', async initialView => {
+    wrapper = mount(WritingCompanion, {
+      props: { review: reviewWriting('<h2>Chapter one</h2><p>A quiet beginning.</p>'), dismissedNotes: new Set<string>(), initialView },
+    });
+    expect(wrapper.get('.companion-tabs [aria-pressed="true"]').text()).toContain(initialView === 'outline' ? 'Outline' : 'Writing notes');
+    expect(wrapper.find('[aria-label="Document outline"]').exists()).toBe(initialView === 'outline');
+    const nextView = initialView === 'outline' ? 'review' : 'outline';
+    await wrapper.get(`.companion-tabs button:nth-child(${nextView === 'outline' ? 2 : 1})`).trigger('click');
+    expect(wrapper.emitted('changeView')).toEqual([[nextView]]);
+    expect(wrapper.find('[aria-label="Document outline"]').exists()).toBe(nextView === 'outline');
+  });
+
   it('continues at the next note without skipping it', async () => {
     setup(3);
     const button = wrapper.get<HTMLButtonElement>('[aria-label^="Dismiss note"]');

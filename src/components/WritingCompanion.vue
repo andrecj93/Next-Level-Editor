@@ -10,8 +10,8 @@
       <button type="button" aria-label="Close writing companion" @click="$emit('close')">×</button>
     </header>
     <div class="companion-tabs" role="group" aria-label="Writing companion views">
-      <button ref="reviewButton" type="button" :aria-pressed="tab === 'review'" @click="tab = 'review'">Writing notes <span v-if="visibleNotes.length">{{ visibleNotes.length }}</span></button>
-      <button type="button" :aria-pressed="tab === 'outline'" @click="tab = 'outline'">Outline</button>
+      <button ref="reviewButton" type="button" :aria-pressed="tab === 'review'" @click="changeView('review')">Writing notes <span v-if="visibleNotes.length">{{ visibleNotes.length }}</span></button>
+      <button type="button" :aria-pressed="tab === 'outline'" @click="changeView('outline')">Outline</button>
     </div>
     <div ref="body" class="companion-body">
       <template v-if="tab === 'review'">
@@ -54,12 +54,16 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { writingNoteContext, type WritingReview, type WritingNote } from '../utils/writingReview';
-const props = defineProps<{ review: WritingReview; dismissedNotes: ReadonlySet<string>; readonly?: boolean; startNoteId?: string }>();
-const emit = defineEmits<{ close: []; leave: []; locate: [note: WritingNote]; apply: [note: WritingNote]; dismiss: [note: WritingNote]; navigate: [block: number]; reviewKept: [] }>();
+const props = defineProps<{ review: WritingReview; dismissedNotes: ReadonlySet<string>; readonly?: boolean; startNoteId?: string; initialView?: 'review' | 'outline' }>();
+const emit = defineEmits<{ close: []; leave: []; locate: [note: WritingNote]; apply: [note: WritingNote]; dismiss: [note: WritingNote]; navigate: [block: number]; reviewKept: []; changeView: [view: 'review' | 'outline'] }>();
 const panel = ref<HTMLElement | null>(null);
 const body = ref<HTMLElement | null>(null);
 const reviewButton = ref<HTMLButtonElement | null>(null);
-const tab = ref<'review' | 'outline'>('review');
+const tab = ref<'review' | 'outline'>(props.initialView ?? 'review');
+const changeView = (view: 'review' | 'outline') => {
+  tab.value = view;
+  emit('changeView', view);
+};
 const onFocusOut = (event: FocusEvent) => {
   const target = event.relatedTarget as Node | null;
   if (target && panel.value && !panel.value.contains(target) && getComputedStyle(panel.value).position === 'fixed') {

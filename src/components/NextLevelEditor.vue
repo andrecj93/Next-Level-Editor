@@ -187,7 +187,9 @@
       :review="writingReview"
       :dismissed-notes="dismissedWritingNotes"
       :start-note-id="writingReviewStart"
+      :initial-view="companionView"
       :readonly="readonly"
+      @change-view="companionView = $event"
       @review-kept="reviewKeptWritingNotes"
       @close="closeCompanion"
       @leave="companionOpen = false"
@@ -1364,6 +1366,7 @@ const reviewKeptWritingNotes = () => {
   console.debug('[NextLevelEditor] Kept writing notes reopened', { count });
 };
 const companionOpen = ref(false);
+const companionView = ref<'review' | 'outline'>('review');
 const writingSearchRef = ref<InstanceType<typeof WritingSearch> | null>(null);
 const writingSearchInitiallyReplace = ref(false);
 const closeWritingSearch = (range?: Range) => {
@@ -1419,7 +1422,7 @@ const toggleCompanion = () => {
   companionOpen.value = true;
   nextTick(() => {
     keepPlace();
-    rootEl.value?.querySelector<HTMLButtonElement>('.companion-tabs button')?.focus({ preventScroll: true });
+    rootEl.value?.querySelector<HTMLButtonElement>('.companion-tabs button[aria-pressed="true"]')?.focus({ preventScroll: true });
   });
 };
 const closeCompanion = () => {

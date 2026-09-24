@@ -15,6 +15,11 @@ import { exerciseVariablesReturn } from './helpers/variablesReturn';
 import { exerciseCommentsReturn } from './helpers/commentsReturn';
 import { exerciseFocusModeReturn, exerciseWritingBeforeFocusExit } from './helpers/focusModeReturn';
 import { exerciseWordContextMenu } from './helpers/wordContextMenu';
+import { exerciseCompanionViewMemory } from './helpers/companionViewMemory';
+
+test('the companion keeps the chosen view when returning to a chapter', async ({ page }) => {
+  await exerciseCompanionViewMemory(page);
+});
 
 test('right-click word editing preserves accented prose', async ({ page }) => {
   await exerciseWordContextMenu(page);
