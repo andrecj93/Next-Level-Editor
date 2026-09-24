@@ -70,6 +70,9 @@ Enter and Shift+Enter move through results while focus stays in search. Replace
 one occurrence or all, undo in the document, and keep writing with search open.
 Changing a heading or list keeps your caret and selected passage in place, so
 you can continue the sentence or apply another style without selecting it again.
+Copy and Cut keep a selected word's inline formatting. Cut removes it only after
+copying succeeds and your selection is still current, so a delayed permission
+response cannot delete newer writing.
 
 **It exports what you actually see.** PDF, Word, Markdown and HTML round-trip
 your tables, checklists, page breaks, code blocks and embeds. Videos that no
@@ -97,8 +100,8 @@ scheme-obfuscation variants — with no script execution produced. Style
 *values* are bounded too, so pasted content cannot paint a clickable overlay
 over your UI.
 
-**It is tested like something you'd put in production.** 4,917 unit checks
-across 380 files, plus end-to-end checks on Chromium and mobile Safari. Both
+**It is tested like something you'd put in production.** 4,952 unit checks
+across 386 files, plus end-to-end checks on Chromium and mobile Safari. Both
 suites gate the npm publish; neither is decoration.
 
 ---
@@ -278,22 +281,22 @@ unverified; these checks do not establish full WCAG conformance. Implemented sup
 
 ### 📦 Bundle Size
 
-Measured from `npm run build` on 2026-09-20, with sizes divided by 1,024. The ES core includes the entry module and its implementation chunk. The heavy parts are split
+Measured from `npm run build` on 2026-09-24, with sizes divided by 1,024. The ES core includes the entry module and its implementation chunk. The heavy parts are split
 into chunks your bundler only fetches when the feature is first used, so what
 you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 942.2 KB | **228.7 KB** | On import |
+| **Core (ES)** | 948.8 KB | **230.3 KB** | On import |
 | **CSS** | 259.6 KB | **41.8 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
-| **UMD** | 1,687.3 KB | 503.3 KB | On import (no splitting) |
+| **UMD** | 1,692.2 KB | 504.9 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **270.5 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **272.1 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 
@@ -838,22 +841,23 @@ npm run test:e2e:debug
 
 ### Test Coverage Statistics
 
-Measured in [CI run 35886211595](https://github.com/andrecj93/Next-Level-Editor/actions/runs/35886211595), 2026-09-23:
+Measured in [CI run 36021609703](https://github.com/andrecj93/Next-Level-Editor/actions/runs/36021609703), 2026-09-24:
 
 | Scope | Statements | Branches | Functions | Lines |
 | --- | --- | --- | --- | --- |
-| Overall | 88.66% | 82.08% | 84.07% | 90.60% |
+| Overall | 89.14% | 82.77% | 84.93% | 91.10% |
 
 ### Test Suites Overview
 
-The linked CI checkpoint passed 4,780 unit checks, with four bundle-dependent
+The linked CI checkpoint passed 4,913 unit checks, with four bundle-dependent
 checks deferred to the seven-check package build gate. Browser results were
-200 Chromium and 67 mobile WebKit passes, with 133 explicit mobile exclusions.
-The separate device matrix passed all 360 cases on 18 profiles with no skips,
-failures, or retries. Subsequent changes add a comment lifecycle scenario to
-each profile. See the CI reports for the result of the revision being reviewed.
+221 Chromium and 88 mobile WebKit passes, with 133 explicit mobile exclusions.
+The separate device matrix passed all 450 cases on 18 profiles with no skips,
+failures, or retries. Subsequent changes add delayed Cut protection, styled-word
+clipboard checks, and accurate counts after inline editing. See the CI reports
+for the result of the revision being reviewed.
 
-#### Unit Tests (385 files, with Vitest)
+#### Unit Tests (386 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color

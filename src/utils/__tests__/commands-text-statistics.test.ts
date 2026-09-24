@@ -23,6 +23,21 @@ describe('manuscript text statistics', () => {
     });
   });
 
+  it('does not count empty formatting markers as authored words or characters', () => {
+    expect(getTextStatistics('<p>Keep this <strong>\u200b</strong><strong></strong></p>'))
+      .toEqual({ wordCount: 2, characterCount: 'Keep this'.length });
+    expect(getTextStatistics('<p><em>\u200b</em></p>'))
+      .toEqual({ wordCount: 0, characterCount: 0 });
+    expect(getTextStatistics('<p>un<strong>\u200bbeliev</strong>able</p>'))
+      .toEqual({ wordCount: 1, characterCount: 'unbelievable'.length });
+  });
+
+  it('preserves joiners used by prose and emoji when ignoring caret markers', () => {
+    const text = 'می\u200cروم 👩\u200d💻';
+    expect(getTextStatistics('<p>' + text + '</p>'))
+      .toEqual({ wordCount: 2, characterCount: text.length });
+  });
+
   it('can count the live document without disturbing its selected text or formatting nodes', () => {
     const editor = document.createElement('div');
     editor.innerHTML = '<p>un<em>believ</em>able weather</p>';

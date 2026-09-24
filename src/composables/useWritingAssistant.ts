@@ -259,7 +259,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
     temp.childNodes.forEach(walk);
     // The block boundaries above wrap the whole doc in leading/trailing "\n\n";
     // those are structural, not content, so trim them (internal separators kept).
-    return out.trim();
+    return out.replace(/\u200b/g, '').trim();
   };
 
   /**

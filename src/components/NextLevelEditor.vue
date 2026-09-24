@@ -1778,10 +1778,10 @@ const handleInlineAction = (tag: string) => {
 
 // Insert actions - Defined after composable initialization
 
-const canClearFormatting = () => !props.readonly &&
+const canEditRichText = () => !props.readonly &&
   (viewMode.value === 'editor' || (viewMode.value === 'split' && splitRightMode.value === 'editor'));
 const handleClearFormatting = () => {
-  if (!canClearFormatting()) return;
+  if (!canEditRichText()) return;
   performWithSelection(root => {
     if (clearFormatting(root)) {
       captureSnapshot();
@@ -2004,6 +2004,10 @@ const {
   captureSnapshot,
   emitUpdate: (value: string) => emit("update:modelValue", value),
   pasteClipboard: pasteFromContextMenu,
+  canEdit: canEditRichText,
+  beforeCut: () => captureSnapshot(false),
+  notify: message => notify(message, 'info'),
+  clearNotification: dismissToastNotification,
 });
 
 // Export actions using composable. The toolbar's "Format HTML" button is only
@@ -2139,7 +2143,7 @@ const {
   handlePasteFormat,
   hasFormatCopied,
   handleClearFormatting,
-  canClearFormatting,
+  canClearFormatting: canEditRichText,
   spellCheckEnabled,
   captureSnapshot,
   toggleHistoryTimeline: () => {

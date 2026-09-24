@@ -5,6 +5,7 @@ import { exerciseRichClipboard } from './helpers/clipboard';
 import { exerciseFormatCopy } from './helpers/formatPainter';
 import { exerciseClearFormatting } from './helpers/clearFormatting';
 import { exerciseWritingContinuation } from './helpers/writingContinuation';
+import { exerciseMovingFormattedText } from './helpers/cutClipboard';
 
 const editorFor = (page: Page) => page.getByRole('textbox', { name: 'Rich text editor', exact: true });
 const toolbarFor = (page: Page) => page.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true });
@@ -109,6 +110,11 @@ test.afterEach(async ({ page }, info) => {
 
 test('menu clipboard preserves rich text, undo and draft recovery', async ({ page }) => {
   await exerciseRichClipboard(page);
+  await noHorizontalOverflow(page);
+});
+
+test('moving formatted text preserves Cut, Paste, undo and draft recovery', async ({ page }) => {
+  await exerciseMovingFormattedText(page);
   await noHorizontalOverflow(page);
 });
 

@@ -159,7 +159,9 @@ function htmlToPlainText(html: string, source?: Element): string {
       if (boundary) parts.push(' ');
     };
     read(temp);
-    return parts.join('').replace(/\s+/g, ' ').trim();
+    // Empty inline styles use a zero-width caret marker. It is not prose;
+    // retaining it after Cut made an empty style count as another word.
+    return parts.join('').replace(/\u200b/g, '').replace(/\s+/g, ' ').trim();
   }
   // SSR fallback: turn block-closing tags and <br> into spaces so words across
   // block boundaries don't fuse, strip the rest, then decode the few entities a
@@ -172,6 +174,7 @@ function htmlToPlainText(html: string, source?: Element): string {
     .replace(/&amp;/gi, "&")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
+    .replace(/\u200b/g, "")
     // Collapse + trim to mirror the DOM's innerText normalization, so the count
     // matches the client value that replaces it on hydration.
     .replace(/\s+/g, " ")

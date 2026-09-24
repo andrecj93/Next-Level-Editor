@@ -2,6 +2,7 @@
  * Cross-browser clipboard utilities
  * Provides fallbacks for Safari iOS and Firefox compatibility
  */
+import { captureSelectionBookmark } from './selectionBookmark';
 
 /**
  * Copy text to clipboard with fallback
@@ -10,19 +11,21 @@
  * @param text - Text to copy
  * @returns Promise<boolean> - Success status
  */
-export async function copyToClipboard(text: string): Promise<boolean> {
+export async function copyToClipboard(text: string, canContinue: () => boolean = () => true): Promise<boolean> {
+  if (!canContinue()) return false;
   // Try modern Clipboard API first
   if (navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);
-      return true;
+      return canContinue();
     } catch (error) {
+      if (!canContinue()) return false;
       console.warn("Clipboard API failed, trying fallback:", error);
     }
   }
 
   // Fallback: Create temporary textarea (works in all browsers)
-  return copyWithTextarea(text);
+  return canContinue() && copyWithTextarea(text);
 }
 
 /**
@@ -35,8 +38,10 @@ export async function copyToClipboard(text: string): Promise<boolean> {
  */
 export async function copyHtmlToClipboard(
   html: string,
-  plainText: string
+  plainText: string,
+  canContinue: () => boolean = () => true
 ): Promise<boolean> {
+  if (!canContinue()) return false;
   // Prefer rich copy when the browser exposes the API.
   if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
     try {
@@ -49,14 +54,15 @@ export async function copyHtmlToClipboard(
       });
 
       await navigator.clipboard.write([item]);
-      return true;
+      return canContinue();
     } catch (error) {
+      if (!canContinue()) return false;
       console.warn("HTML clipboard failed, trying text fallback:", error);
     }
   }
 
   // Fallback: Copy as plain text
-  return copyToClipboard(plainText);
+  return copyToClipboard(plainText, canContinue);
 }
 
 /**
@@ -170,6 +176,11 @@ export function isClipboardReadSupported(): boolean {
  * @returns boolean - Success status
  */
 function copyWithTextarea(text: string): boolean {
+  const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const bookmark = captureSelectionBookmark(document.body);
+  const input = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement ? active : null;
+  const fieldSelection = input && input.selectionStart !== null && input.selectionEnd !== null
+    ? { start: input.selectionStart, end: input.selectionEnd, direction: input.selectionDirection ?? 'none' } : null;
   const textarea = document.createElement("textarea");
 
   // Styling to make it invisible but still focusable
@@ -204,13 +215,17 @@ function copyWithTextarea(text: string): boolean {
 
   let success = false;
   try {
-    // execCommand still works for copy (not for other commands)
+    // The legacy copy command reads the temporary field's selection.
     success = document.execCommand("copy");
   } catch (error) {
     console.error("Copy fallback failed:", error);
+  } finally {
+    textarea.remove();
+    if (active?.isConnected) active.focus({ preventScroll: true });
+    bookmark?.restore();
+    if (input?.isConnected && fieldSelection) input.setSelectionRange(fieldSelection.start, fieldSelection.end, fieldSelection.direction);
   }
 
-  textarea.remove();
   return success;
 }
 
