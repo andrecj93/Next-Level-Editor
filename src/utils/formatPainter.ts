@@ -34,6 +34,30 @@ const elementAt = (node: Node): HTMLElement | null =>
     ? (node as HTMLElement)
     : node.parentElement
 
+/** A selection can start at the end of the preceding text node without
+ * selecting any of it. Sample the first character actually inside the range,
+ * including when the boundary is expressed as a parent/child offset. */
+const firstSelectedElement = (range: Range): HTMLElement | null => {
+  if (!range.collapsed) {
+    const doc = range.startContainer.ownerDocument ?? document
+    const walker = doc.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT)
+    walker.currentNode = range.startContainer
+    let node: Node | null = walker.currentNode
+    while (node) {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent?.length) {
+        const text = doc.createRange()
+        text.selectNodeContents(node)
+        if (range.compareBoundaryPoints(Range.START_TO_END, text) > 0
+          && range.compareBoundaryPoints(Range.END_TO_START, text) < 0) {
+          return elementAt(node)
+        }
+      }
+      node = walker.nextNode()
+    }
+  }
+  return elementAt(range.startContainer)
+}
+
 /**
  * Whether `el` sits inside one of `tags` — but never one ABOVE the editor
  * root: a host page wrapping the editor in <b> is page styling, not document
@@ -129,10 +153,13 @@ export function copyFormat(
   }
 
   const range = selection.getRangeAt(0)
+  if (root && (!root.contains(range.startContainer) || !root.contains(range.endContainer))) {
+    return null
+  }
   // Sample the ACTUAL formatted text at the selection's start, not the
   // commonAncestorContainer (which for a multi-run selection is a parent whose
   // computed style reflects none of the inner runs).
-  const startEl = elementAt(range.startContainer)
+  const startEl = firstSelectedElement(range)
   if (!startEl) {
     return null
   }

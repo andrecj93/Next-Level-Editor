@@ -62,6 +62,39 @@ afterEach(() => {
 })
 
 describe('copyFormat', () => {
+  it('samples selected emphasis when the range begins at the preceding text boundary', () => {
+    const root = mount('<p>She wrote <em>back</em>.</p><p>The gate.</p>')
+    const source = root.querySelector('p')!
+    const leading = source.firstChild!
+    const selection = selectAcross(leading, leading.textContent!.length, source.querySelector('em')!.firstChild!, 4)
+    expect(selection.toString()).toBe('back')
+    expect(copyFormat(selection, root)?.italic).toBe(true)
+    selectContents(root.lastElementChild!.firstChild!)
+    expect(pasteFormat(selection, root)).toBe(true)
+    expect(root.lastElementChild!.innerHTML).toBe('<em>The gate.</em>')
+  })
+
+  it('samples the selected child when its range starts at a parent offset', () => {
+    const root = mount('<p>She wrote <strong><em>back</em></strong>.</p>')
+    const paragraph = root.querySelector('p')!
+    const selection = selectAcross(paragraph, 1, paragraph, 2)
+    expect(copyFormat(selection, root)).toMatchObject({ bold: true, italic: true })
+  })
+
+  it('does not skip plain characters genuinely included before an emphasized word', () => {
+    const root = mount('<p>She wrote <em>back</em>.</p>')
+    const leading = root.querySelector('p')!.firstChild!
+    const selection = selectAcross(leading, leading.textContent!.length - 1, root.querySelector('em')!.firstChild!, 4)
+    expect(selection.toString()).toBe(' back')
+    expect(copyFormat(selection, root)?.italic).toBe(false)
+  })
+
+  it('does not copy a format from outside the supplied editor', () => {
+    const root = mount('<p>This editor</p>')
+    const other = mount('<p><em>Other editor</em></p>')
+    expect(copyFormat(selectContents(other.querySelector('em')!), root)).toBeNull()
+  })
+
   it('returns null with no selection', () => {
     window.getSelection()?.removeAllRanges()
     expect(copyFormat(window.getSelection())).toBeNull()

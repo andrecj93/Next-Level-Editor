@@ -1699,7 +1699,8 @@ const {
   applyTextColor,
   applyBackgroundColor,
   applyFontSize,
-  performWithSelection
+  performWithSelection,
+  notify
 );
 
 // Active state detection using composable (declared before the formatting

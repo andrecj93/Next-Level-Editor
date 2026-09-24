@@ -17,7 +17,8 @@ export function useFormattingActions(
   applyTextColor: (root: HTMLElement, color: string) => void,
   applyBackgroundColor: (root: HTMLElement, color: string) => void,
   applyFontSize: (root: HTMLElement, size: FontSize) => void,
-  performWithSelection?: PerformWithSelection
+  performWithSelection?: PerformWithSelection,
+  notify?: (message: string, type?: "success" | "info") => void
 ) {
   /**
    * Is there a live selection anchored OUTSIDE this editor instance? That is
@@ -119,7 +120,7 @@ export function useFormattingActions(
     captureSnapshot();
   };
 
-  const handleCopyFormat = () => {
+  const copySelectedFormat = () => {
     if (!editorContent.value) return;
     const selection = globalThis.getSelection();
     if (!selection || selection.rangeCount === 0) {
@@ -129,18 +130,15 @@ export function useFormattingActions(
     // page wrapping the editor in <b> or an inline color must not become part
     // of the copied format. #r16-6
     const result = copyFormat(selection, editorContent.value);
-    if (result && editorContent.value) {
-      // Change cursor to indicate format painter is active
-      editorContent.value.style.cursor = "copy";
-      setTimeout(() => {
-        if (editorContent.value) {
-          editorContent.value.style.cursor = "";
-        }
-      }, 3000);
+    if (result) {
+      console.debug('[NextLevelEditor] Formatting copied');
+      notify?.('Formatting copied. Select text, then choose Paste Format.', 'info');
+    } else {
+      notify?.('Select text in the editor to copy its formatting.', 'info');
     }
   };
 
-  const handlePasteFormat = () => {
+  const pasteSelectedFormat = () => {
     if (!editorContent.value) return;
     const selection = globalThis.getSelection();
     if (!selection || selection.rangeCount === 0) {
@@ -160,11 +158,23 @@ export function useFormattingActions(
     const success = pasteFormat(selection, editorContent.value);
     if (success) {
       captureSnapshot();
-      // Reset cursor
-      if (editorContent.value) {
-        editorContent.value.style.cursor = "";
-      }
+      console.debug('[NextLevelEditor] Formatting applied');
+      notify?.('Formatting applied.');
+    } else {
+      console.debug('[NextLevelEditor] Formatting not applied', { reason: 'selection-or-format-unavailable' });
+      notify?.('This formatting could not be applied to the selection.', 'info');
     }
+  };
+
+  // Copy/Paste Format are toolbar commands too: restore the remembered range
+  // and return focus to the manuscript before reading or changing its marks.
+  const handleCopyFormat = () => {
+    if (performWithSelection) performWithSelection(copySelectedFormat);
+    else copySelectedFormat();
+  };
+  const handlePasteFormat = () => {
+    if (performWithSelection) performWithSelection(pasteSelectedFormat);
+    else pasteSelectedFormat();
   };
 
   return {
