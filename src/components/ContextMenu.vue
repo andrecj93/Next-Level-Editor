@@ -42,6 +42,9 @@
             }}</span>
           </button>
         </div>
+        <p class="context-menu-hint">
+          Shift + right-click for spelling and browser tools
+        </p>
       </div>
     </transition>
   </teleport>
@@ -340,7 +343,7 @@ onBeforeUnmount(() => {
 
 .context-menu-shortcut {
   font-size: 12px;
-  opacity: 0.6;
+  color: var(--color-text-secondary);
   font-family: "Courier New", monospace;
 }
 
@@ -348,6 +351,20 @@ onBeforeUnmount(() => {
   height: 1px;
   background: var(--color-border);
   margin: 4px 8px;
+}
+
+.context-menu-hint {
+  max-width: 230px;
+  margin: 4px 8px;
+  padding: 8px 4px 4px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (pointer: coarse) {
+  .context-menu-hint { display: none; }
 }
 
 .context-menu-enter-active,
@@ -363,5 +380,9 @@ onBeforeUnmount(() => {
 .context-menu-leave-to {
   opacity: 0;
   transform: scale(0.95);
+}
+
+.context-menu-leave-active {
+  pointer-events: none;
 }
 </style>

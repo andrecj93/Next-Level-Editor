@@ -49,6 +49,37 @@ const ESTIMATED_MENU_WIDTH = 220;
 const ESTIMATED_MENU_HEIGHT = 320;
 const VIEWPORT_MARGIN = 8;
 
+// Keep UTF-16 offsets for DOM ranges while recognizing complete Unicode words.
+// The library's ES2020 types do not yet declare Intl.Segmenter.
+interface WordSegment { index: number; segment: string; isWordLike?: boolean }
+type WordSegmenter = new (locale: undefined, options: { granularity: 'word' }) => {
+  segment(text: string): { containing(offset: number): WordSegment | undefined };
+};
+function wordAtOffset(text: string, offset: number): { start: number; end: number } | null {
+  const Segmenter = (Intl as unknown as { Segmenter?: WordSegmenter }).Segmenter;
+  if (typeof Segmenter === 'function') {
+    const segments = new Segmenter(undefined, { granularity: 'word' }).segment(text);
+    // Some Firefox/ICU builds segment CJK correctly but mark it non-word-like.
+    const isWord = (part: WordSegment | undefined): part is WordSegment =>
+      Boolean(part && (part.isWordLike || /[\p{L}\p{N}_]/u.test(part.segment)));
+    let word = segments.containing(offset);
+    // Hit testing may return the trailing edge of the letter under the pointer.
+    if (!isWord(word) && offset > 0) {
+      const previous = segments.containing(offset - 1);
+      if (isWord(previous) && previous.index + previous.segment.length === offset) word = previous;
+    }
+    return isWord(word) ? { start: word.index, end: word.index + word.segment.length } : null;
+  }
+  // Older engines still support accents, combining marks and astral letters.
+  const words = /[\p{L}\p{M}\p{N}_]+(?:['’][\p{L}\p{M}\p{N}_]+)*/gu;
+  let word: RegExpExecArray | null;
+  while ((word = words.exec(text))) {
+    const end = word.index + word[0].length;
+    if (offset >= word.index && offset <= end) return { start: word.index, end };
+  }
+  return null;
+}
+
 /**
  * When the selection is collapsed, select the word under the given pointer
  * position so a right-click formatting action targets the clicked word (like
@@ -79,20 +110,16 @@ function selectWordUnderPointer(event: MouseEvent, root: HTMLElement | null): vo
       range.collapse(true);
     }
   }
-  if (!range) return;
+  if (!range || !root?.contains(range.startContainer)) return;
 
   const node = range.startContainer;
   if (node.nodeType === Node.TEXT_NODE) {
     const text = node.textContent || "";
-    const isWordChar = (c: string) => /\w/.test(c);
-    let start = range.startOffset;
-    let end = range.startOffset;
-    while (start > 0 && isWordChar(text[start - 1])) start--;
-    while (end < text.length && isWordChar(text[end])) end++;
-    if (end > start) {
+    const word = wordAtOffset(text, range.startOffset);
+    if (word) {
       const wordRange = document.createRange();
-      wordRange.setStart(node, start);
-      wordRange.setEnd(node, end);
+      wordRange.setStart(node, word.start);
+      wordRange.setEnd(node, word.end);
       selection.removeAllRanges();
       selection.addRange(wordRange);
       return;
@@ -402,6 +429,13 @@ export function useContextMenu(options: ContextMenuOptions) {
    * Handle right-click context menu
    */
   const handleContextMenu = (event: MouseEvent) => {
+    // Retain native spelling/clipboard tools for touch long-press and provide
+    // the same Shift+right-click escape hatch Firefox offers by default.
+    if (event.shiftKey || ('pointerType' in event && event.pointerType === 'touch')) {
+      showContextMenu.value = false;
+      showTableDesigner.value = false;
+      return;
+    }
     event.preventDefault();
 
     // Resolve the right-clicked link/image so the menu can offer target-specific

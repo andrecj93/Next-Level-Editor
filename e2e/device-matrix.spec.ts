@@ -14,6 +14,12 @@ import { exerciseCompanionReturn } from './helpers/companionReturn';
 import { exerciseVariablesReturn } from './helpers/variablesReturn';
 import { exerciseCommentsReturn } from './helpers/commentsReturn';
 import { exerciseFocusModeReturn, exerciseWritingBeforeFocusExit } from './helpers/focusModeReturn';
+import { exerciseWordContextMenu } from './helpers/wordContextMenu';
+
+test('right-click word editing preserves accented prose', async ({ page }) => {
+  await exerciseWordContextMenu(page);
+  await exerciseWordContextMenu(page, true);
+});
 
 test('focus mode enters and exits without interrupting writing', async ({ page }) => {
   await exerciseFocusModeReturn(page);
