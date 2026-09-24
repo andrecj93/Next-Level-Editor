@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
-import { useClipboardPaste } from '../useClipboardPaste';
+import { useClipboardPaste, type ClipboardPasteInput } from '../useClipboardPaste';
 import { readClipboardData } from '../../utils/clipboard';
 vi.mock('../../utils/clipboard', () => ({ readClipboardData: vi.fn() }));
 
@@ -17,7 +17,7 @@ describe('context-menu paste intent', () => {
   const setup = () => {
     const editorContent = ref<HTMLElement | null>(root);
     const readonly = ref(false);
-    const onPaste = vi.fn((event: ClipboardEvent) => event.preventDefault());
+    const onPaste = vi.fn((event: ClipboardPasteInput) => event.preventDefault());
     const captureSnapshot = vi.fn();
     const notify = vi.fn();
     return { editorContent, readonly, onPaste, captureSnapshot, notify, paste: useClipboardPaste({ editorContent, readonly, onPaste, captureSnapshot, notify }) };

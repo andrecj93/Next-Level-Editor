@@ -58,6 +58,12 @@ describe("ContextMenu - scroll/resize/Escape dismissal (#31)", () => {
     expect(w.emitted("close")).toBeTruthy();
   });
 
+  it("keeps an overflowing menu open while its own items scroll", async () => {
+    const w = await mountOpen();
+    document.querySelector('.context-menu')!.dispatchEvent(new Event('scroll'));
+    expect(w.emitted('close')).toBeUndefined();
+  });
+
   it("emits close on Escape keydown while open", async () => {
     const w = await mountOpen();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));

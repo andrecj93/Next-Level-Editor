@@ -314,7 +314,7 @@ const sanitizeStyleValue = (styleValue: string): string => {
  * Provides secure HTML cleaning and validation
  */
 export function useHtmlSanitizer() {
-  const sanitizeHtml = (input: string | null = ""): string => {
+  const sanitizeHtml = (input: string | null = "", options: { fragment?: boolean } = {}): string => {
     const value = input ?? "";
     if (!value.trim()) return "";
     // No DOM (SSR / Node): we cannot sanitize, so never echo raw untrusted HTML
@@ -1010,7 +1010,10 @@ export function useHtmlSanitizer() {
     };
 
     sanitizeTree(workingDocument.body);
-    wrapOrphanTextNodes(workingDocument.body);
+    // An inline clipboard fragment belongs at the caret in the current block.
+    // Adding a paragraph here makes Firefox split that block and leave an
+    // unwanted blank paragraph after it. Full documents still normalize text.
+    if (!options.fragment) wrapOrphanTextNodes(workingDocument.body);
     convertDivsToParagraphs(workingDocument.body);
     normalizeLists(workingDocument.body);
     ensureBlockLineBreaks(workingDocument.body);

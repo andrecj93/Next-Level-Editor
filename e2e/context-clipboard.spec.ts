@@ -5,6 +5,31 @@ test('menu Copy and Paste preserve rich text, writing, undo and recovery', async
   await exerciseRichClipboard(page);
 });
 
+test('a short-screen menu keeps every item reachable by keyboard', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 256 });
+  await installClipboard(page);
+  await page.goto('/?empty=true#playground');
+  const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+  await editor.fill('A short draft.');
+  const before = await editor.innerHTML();
+  await editor.press('ControlOrMeta+a');
+  await editor.click({ button: 'right' });
+  const menu = page.getByRole('menu', { name: 'Context menu', exact: true });
+  await menu.press('End');
+  const last = menu.getByRole('menuitem').last();
+  await expect(last).toBeFocused();
+  const bounds = await last.boundingBox();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(256);
+  await expect(menu).toBeVisible();
+  await page.keyboard.press('Home');
+  await expect(menu.getByRole('menuitem').first()).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(editor).toBeFocused();
+  expect(await editor.innerHTML()).toBe(before);
+});
+
 test('menu Paste sanitizes rich HTML and keeps its formatting', async ({ page }) => {
   await installClipboard(page, {
     'text/html': '<p><strong>A quieter ending.</strong><a href="javascript:alert(1)"> Read on.</a><img src="x" onerror="alert(1)"><script>alert(1)</script></p>',
@@ -33,6 +58,37 @@ test('menu Paste uses literal text when only the text API is available', async (
   await pasteWithContextMenu(page);
   await expect(editor).toHaveText('<strong>Literal words</strong>');
   await expect(editor.locator('strong')).toHaveCount(0);
+});
+
+test('pasting a formatted phrase keeps the sentence together while revising', async ({ page }) => {
+  await installClipboard(page, { 'text/html': '<strong>old wooden</strong> door', 'text/plain': 'old wooden door' });
+  await page.goto('/?empty=true#playground');
+  const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+  await editor.fill('The door opened.');
+  const before = await editor.innerHTML();
+  const blocksBefore = await editor.locator('p,div,br').count();
+  const selectedPhrase = await editor.evaluate(root => {
+    const range = document.createRange();
+    range.setStart(root.firstChild!, 4);
+    range.setEnd(root.firstChild!, 8);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    const bounds = range.getBoundingClientRect();
+    const editorBounds = root.getBoundingClientRect();
+    return { x: bounds.x + bounds.width / 2 - editorBounds.x, y: bounds.y + bounds.height / 2 - editorBounds.y };
+  });
+  await editor.click({ button: 'right', position: selectedPhrase });
+  await pasteWithContextMenu(page);
+  await expect(editor).toHaveText('The old wooden door opened.');
+  await expect(editor.locator('strong')).toHaveText('old wooden');
+  await expect(editor.locator('p,div,br')).toHaveCount(blocksBefore);
+  await editor.press('ControlOrMeta+z');
+  expect(await editor.innerHTML()).toBe(before);
+  await editor.press('ControlOrMeta+Shift+z');
+  await editor.press('ControlOrMeta+End');
+  await page.keyboard.type(' Nobody entered.');
+  await expect(editor).toHaveText('The old wooden door opened. Nobody entered.');
+  await expect(editor.locator('p,div,br')).toHaveCount(blocksBefore);
 });
 
 test('menu Paste inserts a decodable image that survives undo and draft recovery', async ({ page }) => {

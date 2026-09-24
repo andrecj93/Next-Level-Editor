@@ -22,4 +22,14 @@ describe('paragraph continuity in inline clipboard fragments', () => {
     expect(result).toBe('<p>Keep <em>this</em> sentence.</p>');
     expect(sanitizeHtml(result)).toBe(result);
   });
+
+  it('keeps inline paste fragments and their boundary spaces in the current paragraph', () => {
+    expect(sanitizeHtml(' a <em>quieter</em> ending ', { fragment: true }))
+      .toBe(' a <em>quieter</em> ending ');
+  });
+
+  it('sanitizes fragments without flattening intentional block structure', () => {
+    expect(sanitizeHtml('<p>First <em onclick="alert(1)">thought</em>.</p><p>Next.</p><script>alert(1)</script>', { fragment: true }))
+      .toBe('<p>First <em>thought</em>.</p><p>Next.</p>');
+  });
 });

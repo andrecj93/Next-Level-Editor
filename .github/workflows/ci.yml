@@ -151,6 +151,19 @@ jobs:
         run: npm run test:devices -- --workers=2 --retries=0
         env:
           CI: true
+      - name: Summarize every device outcome without inline screenshots
+        if: always()
+        run: node scripts/summarize-device-results.mjs
+      - name: Preserve compact device outcomes and failure context
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-devices-summary
+          path: |
+            playwright-report/devices/summary.json
+            test-results/devices/**/error-context.md
+            test-results/devices/**/test-failed-*.png
+          retention-days: 7
       - name: Preserve device screenshots and failure evidence
         if: always()
         uses: actions/upload-artifact@v4

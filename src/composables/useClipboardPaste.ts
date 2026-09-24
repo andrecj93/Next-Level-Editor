@@ -1,10 +1,12 @@
 import type { Ref } from 'vue';
 import { readClipboardData } from '../utils/clipboard';
 
+export type ClipboardPasteInput = Pick<ClipboardEvent, 'clipboardData' | 'preventDefault'>;
+
 interface ClipboardPasteOptions {
   editorContent: Ref<HTMLElement | null>;
   readonly: Ref<boolean>;
-  onPaste: (event: ClipboardEvent) => void;
+  onPaste: (event: ClipboardPasteInput) => void;
   captureSnapshot: () => void;
   notify: (message: string) => void;
 }
@@ -42,7 +44,15 @@ export function useClipboardPaste(options: ClipboardPasteOptions) {
     if (!root.isConnected || root !== options.editorContent.value || options.readonly.value
       || root.innerHTML !== before || !root.contains(range.startContainer) || !root.contains(range.endContainer)
       || moved || (focus && focus !== root.ownerDocument.body && !root.contains(focus))) {
-      console.debug('[NextLevelEditor] Clipboard paste cancelled', { reason: 'writing-context-changed' });
+      console.debug('[NextLevelEditor] Clipboard paste cancelled', {
+        reason: 'writing-context-changed',
+        changed: [
+          !root.isConnected && 'disconnected', root !== options.editorContent.value && 'document',
+          options.readonly.value && 'readonly', root.innerHTML !== before && 'content',
+          (!root.contains(range.startContainer) || !root.contains(range.endContainer)) && 'range',
+          moved && 'selection', (focus && focus !== root.ownerDocument.body && !root.contains(focus)) && 'focus',
+        ].filter(Boolean).join(','),
+      });
       options.notify('Your writing position changed. Paste again where you want it.');
       return;
     }
@@ -55,9 +65,11 @@ export function useClipboardPaste(options: ClipboardPasteOptions) {
       current?.removeAllRanges();
       current?.addRange(range);
       options.captureSnapshot();
-      const event = new ClipboardEvent('paste', { clipboardData: data, cancelable: true });
-      options.onPaste(event);
-      if (!event.defaultPrevented && !root.ownerDocument.execCommand('insertText', false, data.getData('text/plain'))) {
+      // Pass data directly: Firefox discards the supplied DataTransfer when
+      // constructing a ClipboardEvent, losing both formatting and image files.
+      let handled = false;
+      options.onPaste({ clipboardData: data, preventDefault: () => { handled = true; } });
+      if (!handled && !root.ownerDocument.execCommand('insertText', false, data.getData('text/plain'))) {
         throw new Error('Paste command unavailable');
       }
       options.captureSnapshot();

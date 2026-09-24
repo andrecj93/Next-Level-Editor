@@ -698,7 +698,7 @@ import WritingSearch from './WritingSearch.vue';
 import SaveStatus from './SaveStatus.vue';
 import PdfExportStatus from './PdfExportStatus.vue';
 import { useWritingWorkspace } from '../composables/useWritingWorkspace';
-import { useClipboardPaste } from '../composables/useClipboardPaste';
+import { useClipboardPaste, type ClipboardPasteInput } from '../composables/useClipboardPaste';
 import { writingBlocks, writingNoteRange, writingNoteNearSelection, type WritingNote } from '../utils/writingReview';
 import { keepSelectionVisible, preserveVisibleSelection } from '../utils/caretVisibility';
 import { useWritingReflow } from '../composables/useWritingReflow';
@@ -2555,7 +2555,7 @@ const insertImageFromFile = async (file: File) => {
   }
 };
 
-const onPaste = (event: ClipboardEvent) => {
+const onPaste = (event: ClipboardPasteInput) => {
   if (props.readonly) return;
   const clipboard = event.clipboardData;
   if (!clipboard) return;
@@ -2608,7 +2608,7 @@ const onPaste = (event: ClipboardEvent) => {
   // Rebuild Word/Docs list paragraphs into real <ul>/<ol> BEFORE sanitizing
   // (which strips the mso-list markup they're detected by), else they paste as
   // flat paragraphs with literal bullet glyphs.
-  const clean = sanitizeHtml(reconstructWordLists(html));
+  const clean = sanitizeHtml(reconstructWordLists(html), { fragment: true });
 
   // Real visible content (text or media) → insert it directly.
   if (htmlHasVisibleContent(clean)) {
@@ -2777,7 +2777,7 @@ const onDrop = (event: DragEvent) => {
     return;
   }
 
-  const clean = sanitizeHtml(reconstructWordLists(html));
+  const clean = sanitizeHtml(reconstructWordLists(html), { fragment: true });
   document.execCommand("insertHTML", false, clean);
 };
 
