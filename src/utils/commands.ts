@@ -15,6 +15,7 @@ import {
   rangeTouchesElement,
 } from "./rangeContact";
 import { buildTableGrid } from "./tableGrid";
+import { createTypingPlaceholder } from './typingPlaceholder';
 
 /**
  * Wrap a non-collapsed range's content in styled `<span>`s WITHOUT ever nesting
@@ -293,10 +294,11 @@ export function applyFontSize(
     // At caret position, wrap future text
     const span = document.createElement("span");
     span.style.fontSize = targetSize;
-    span.textContent = "\u200B"; // Zero-width space
+    const placeholder = createTypingPlaceholder(root.ownerDocument);
+    span.appendChild(placeholder);
     range.insertNode(span);
-    range.selectNodeContents(span);
-    range.collapse(false);
+    range.setStart(placeholder.firstChild!, 1);
+    range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
     return;
@@ -550,10 +552,11 @@ export function applyTextColor(root: HTMLElement, color: string) {
     // Insert a span with color at caret position
     const span = document.createElement("span");
     span.style.color = color;
-    span.textContent = "\u200B"; // Zero-width space
+    const placeholder = createTypingPlaceholder(root.ownerDocument);
+    span.appendChild(placeholder);
     range.insertNode(span);
-    range.selectNodeContents(span);
-    range.collapse(false);
+    range.setStart(placeholder.firstChild!, 1);
+    range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
   } else {
@@ -723,10 +726,11 @@ export function applyBackgroundColor(root: HTMLElement, color: string) {
     span.style.color = getContrastColor(color);
     span.style.padding = "2px 4px";
     span.style.borderRadius = "2px";
-    span.textContent = "\u200B";
+    const placeholder = createTypingPlaceholder(root.ownerDocument);
+    span.appendChild(placeholder);
     range.insertNode(span);
-    range.selectNodeContents(span);
-    range.collapse(false);
+    range.setStart(placeholder.firstChild!, 1);
+    range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
   } else {

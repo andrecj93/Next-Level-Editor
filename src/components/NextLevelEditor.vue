@@ -164,6 +164,7 @@
       :html-content="htmlContent"
       :split-right-mode="splitRightMode"
       @input="onInput"
+      @before-input="onBeforeInput"
       @paste="onPaste"
       @drop="onDrop"
       @dragstart="onDragStart"
@@ -804,6 +805,7 @@ import { useComments } from "../composables/useComments";
 import { getCaretOffsets, setCaretOffsets, type CaretOffsets } from "../utils/caretOffset";
 import { preserveSelectionAfterTextReplacement } from '../utils/selectionAfterReplacement';
 import { captureSelectionBookmark } from "../utils/selectionBookmark";
+import { removeTypingPlaceholders, prepareTypingPlaceholdersForKey, prepareTypingPlaceholdersForInput } from '../utils/typingPlaceholder';
 import { useVariables, type Variable } from "../composables/useVariables";
 import { usePlugin } from "../composables/usePlugin";
 import { useSmartAutocomplete } from "../composables/useSmartAutocomplete";
@@ -2822,6 +2824,13 @@ const onDrop = (event: DragEvent) => {
   document.execCommand("insertHTML", false, clean);
 };
 
+const onBeforeInput = (event: Event) => {
+  if (canEditRichText() && editorContent.value) {
+    prepareTypingPlaceholdersForInput(editorContent.value, event as InputEvent);
+    handleKeyboardBeforeInput(event as InputEvent);
+  }
+};
+
 const onInput = (event?: Event) => {
   // IME guard: while a composition is live the browser fires input events
   // (inputType "insertCompositionText"); running the mutating passes below
@@ -2832,6 +2841,7 @@ const onInput = (event?: Event) => {
   if ((event as InputEvent | undefined)?.isComposing) {
     return;
   }
+  if (event && canEditRichText() && editorContent.value) removeTypingPlaceholders(editorContent.value, true);
 
   // (Placeholder recovery for <br>/<p><br></p> residues is handled purely in
   // CSS via :has() — see NextLevelEditor.css. A JS innerHTML-wipe here would
@@ -2919,6 +2929,7 @@ function onSplitEditorInput(event: Event) {
   // compositionend runs this pipeline once with the committed text.
   if ((event as InputEvent).isComposing) return;
   const target = event.target as HTMLElement;
+  if (canEditRichText()) removeTypingPlaceholders(target, true);
   const hidden = editorPanelsRef.value?.editorRef;
   if (hidden && hidden !== target) {
     hidden.innerHTML = target.innerHTML;
@@ -2946,7 +2957,7 @@ watch(htmlContent, (newHtml) => {
 });
 
 // Keyboard Shortcuts - Using useKeyboardShortcuts composable
-const { handleKeydown } = useKeyboardShortcuts({
+const { handleKeydown, handleBeforeInput: handleKeyboardBeforeInput } = useKeyboardShortcuts({
   editorContent,
   onInput,
   onCaptureSnapshot: captureSnapshot,
@@ -3025,6 +3036,7 @@ function onEditorKeydown(event: KeyboardEvent) {
     }
   }
   if (variableAutocompleteRef.value?.handleEditorKeydown(event)) return;
+  if (canEditRichText() && editorContent.value) prepareTypingPlaceholdersForKey(editorContent.value, event);
 
   // Backspace after a pill unwraps it to editable token text. Model synced
   // WITHOUT an input dispatch: the input pipeline runs the wrap pass, which

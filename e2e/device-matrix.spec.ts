@@ -6,7 +6,7 @@ import { exerciseFormatCopy } from './helpers/formatPainter';
 import { exerciseClearFormatting } from './helpers/clearFormatting';
 import { exerciseWritingContinuation } from './helpers/writingContinuation';
 import { exerciseMovingFormattedText } from './helpers/cutClipboard';
-import { exerciseInlineTyping } from './helpers/inlineTyping';
+import { exerciseInlineTyping, exerciseInlineDeletion, exerciseParagraphTyping } from './helpers/inlineTyping';
 
 const editorFor = (page: Page) => page.getByRole('textbox', { name: 'Rich text editor', exact: true });
 const toolbarFor = (page: Page) => page.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true });
@@ -121,6 +121,12 @@ test('moving formatted text preserves Cut, Paste, undo and draft recovery', asyn
 
 test('turning emphasis off keeps continued typing and the next paragraph plain', async ({ page }) => {
   await exerciseInlineTyping(page);
+  await noHorizontalOverflow(page);
+});
+
+test('Backspace after emphasis changes edits visible text through native input', async ({ page }) => {
+  await exerciseInlineDeletion(page, true);
+  await exerciseParagraphTyping(page, true);
   await noHorizontalOverflow(page);
 });
 

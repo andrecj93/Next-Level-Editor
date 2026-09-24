@@ -1,6 +1,7 @@
 import { type Ref } from "vue";
 import { indentListItem, outdentListItem } from "../utils/formatting";
 import { applyChecklistItemA11y } from "../utils/checklist";
+import { captureTypingStyles, continueTypingIn, removeTypingPlaceholders } from '../utils/typingPlaceholder';
 import {
   MERGEABLE_BLOCKS,
   isVisuallyEmptyBlock,
@@ -131,7 +132,8 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
   const handleEnterInListItem = (
     range: Range,
     currentBlock: HTMLElement,
-    selection: Selection
+    selection: Selection,
+    typingStyles: HTMLElement[]
   ) => {
     // Check if current list item is empty
     const isCurrentEmpty = isEmptyContent(currentBlock);
@@ -242,11 +244,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       currentBlock.parentNode?.appendChild(newLi);
     }
 
-    const newRange = document.createRange();
-    newRange.setStart(newLi, 0);
-    newRange.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
+    continueTypingIn(newLi, typingStyles, selection);
 
     if (editorContent.value) {
       editorContent.value.dispatchEvent(new Event("input", { bubbles: true }));
@@ -414,10 +412,17 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
   /**
    * Handle Enter key to create new paragraphs/list items
    */
-  const handleEnterKey = (event: KeyboardEvent) => {
-    event.preventDefault();
+  const handleEnterKey = (event: Event) => {
     const selection = globalThis.getSelection();
     if (!selection || selection.rangeCount === 0) return;
+
+    const root = editorContent.value;
+    const initialRange = selection.getRangeAt(0);
+    if (!root || root.getAttribute('contenteditable') === 'false'
+      || !root.contains(initialRange.startContainer) || !root.contains(initialRange.endContainer)) return;
+    event.preventDefault();
+    const typingStyles = captureTypingStyles(root);
+    removeTypingPlaceholders(root);
 
     const range = selection.getRangeAt(0);
 
@@ -481,7 +486,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     // (snapshot + sanitize + emit + auto-save), so no extra snapshot call
     // is needed here — it would double-emit per Enter.
     if (currentBlock && currentBlockTag === "li") {
-      handleEnterInListItem(range, currentBlock, selection);
+      handleEnterInListItem(range, currentBlock, selection, typingStyles);
       return;
     }
 
@@ -494,7 +499,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       : (handleEnterWithoutBlock(range, newParagraph), newParagraph);
 
     // Move cursor to the new block.
-    moveCursorToElement(target, selection);
+    continueTypingIn(target, typingStyles, selection);
 
     // The dispatched input event runs the host's full @input pipeline
     // (snapshot + sanitize + emit + auto-save) and also drives the floating
@@ -978,5 +983,11 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
 
   return {
     handleKeydown,
+    // Software keyboards can send beforeinput without keydown. Use the same
+    // structural paragraph split so their typing style and undo agree.
+    handleBeforeInput: (event: InputEvent) => {
+      if (event.inputType === 'insertParagraph' && event.cancelable
+        && !event.defaultPrevented && !event.isComposing) handleEnterKey(event);
+    },
   };
 }

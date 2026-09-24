@@ -1,5 +1,6 @@
 import { buildEmbedContainerStyle } from "../utils/embeddedResizable";
 import { EMBED_IFRAME_STYLE, getEmbedPlayerChrome } from "../utils/embed";
+import { removeTypingPlaceholders } from '../utils/typingPlaceholder';
 
 const ALLOWED_TAGS = new Set([
   "A",
@@ -325,6 +326,7 @@ export function useHtmlSanitizer() {
     const workingDocument =
       document.implementation.createHTMLDocument("sanitizer");
     workingDocument.body.innerHTML = value;
+    removeTypingPlaceholders(workingDocument.body);
 
     const sanitizeTree = (root: HTMLElement) => {
       let child: ChildNode | null = root.firstChild;

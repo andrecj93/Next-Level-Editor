@@ -224,7 +224,7 @@ readable — click any section to open it.
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **4,808 Unit Checks** - Across 372 files, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run after the library build.
+- **4,983 Unit Checks** - Across 389 files after the library build, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run in the package build gate.
 - **Browser Gates** - Playwright on Chromium and mobile WebKit, plus the same writing scenarios on 18 desktop, tablet, phone, landscape, and reflow profiles
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
@@ -287,16 +287,16 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 949.5 KB | **230.5 KB** | On import |
+| **Core (ES)** | 955.8 KB | **232.2 KB** | On import |
 | **CSS** | 259.6 KB | **41.8 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
-| **UMD** | 1,692.8 KB | 505.0 KB | On import (no splitting) |
+| **UMD** | 1,697.7 KB | 506.5 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **272.3 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **274.0 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 
@@ -841,23 +841,23 @@ npm run test:e2e:debug
 
 ### Test Coverage Statistics
 
-Measured in [CI run 36021609703](https://github.com/andrecj93/Next-Level-Editor/actions/runs/36021609703), 2026-09-24:
+Measured in [CI run 36029239591](https://github.com/andrecj93/Next-Level-Editor/actions/runs/36029239591), 2026-09-24:
 
 | Scope | Statements | Branches | Functions | Lines |
 | --- | --- | --- | --- | --- |
-| Overall | 89.14% | 82.77% | 84.93% | 91.10% |
+| Overall | 89.25% | 82.95% | 84.99% | 91.20% |
 
 ### Test Suites Overview
 
-The linked CI checkpoint passed 4,913 unit checks, with four bundle-dependent
+The linked CI checkpoint passed 4,960 unit checks, with four bundle-dependent
 checks deferred to the seven-check package build gate. Browser results were
-221 Chromium and 88 mobile WebKit passes, with 133 explicit mobile exclusions.
-The separate device matrix passed all 450 cases on 18 profiles with no skips,
-failures, or retries. Subsequent changes add delayed Cut protection, styled-word
-clipboard checks, and accurate counts after inline editing. See the CI reports
+230 Chromium and 97 mobile WebKit passes, with 133 explicit mobile exclusions.
+The separate device matrix passed all 486 cases on 18 profiles with no skips,
+failures, or retries. Subsequent changes improve deletion at formatting boundaries,
+Unicode character deletion, and pending styles across Enter. See the CI reports
 for the result of the revision being reviewed.
 
-#### Unit Tests (387 files, with Vitest)
+#### Unit Tests (389 files, with Vitest)
 
 - **ContextMenu** (9 tests) - Component rendering, interactions, disabled states
 - **Selection Management** (10 tests) - Font size, text color, background color
@@ -1086,7 +1086,8 @@ npx playwright install --with-deps chromium firefox webkit
 npm run test:devices
 ```
 
-Every profile exercises typing, heading formatting, suggestions and undo,
+Every profile exercises typing, emphasis changes followed by continued typing
+and deletion, heading formatting, suggestions and undo,
 recovery, links, search, downloads, insert dialogs, source/preview, chapter
 navigation, mixed scripts, light/dark accessibility, keyboard access, and resizing
 with menus open. The device job gates demo deployment and package publication.

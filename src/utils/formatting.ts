@@ -1,6 +1,7 @@
 import { CHECKLIST_CLASS } from "./checklist";
 import { rangeCapturesContent, rangeForEditableFormatting, rangeTouchesElement } from "./rangeContact";
 import { captureSelectionBookmark, type RememberReplacement } from "./selectionBookmark";
+import { createTypingPlaceholder } from './typingPlaceholder';
 
 export interface SelectionSnapshot {
   range: Range | null;
@@ -137,12 +138,13 @@ const wrapRangeWithElement = (range: Range, element: HTMLElement): Range => {
 };
 
 const createPlaceholderRange = (range: Range, element: HTMLElement): Range => {
-  element.appendChild(document.createTextNode("\u200b"));
+  const placeholder = createTypingPlaceholder(element.ownerDocument);
+  element.appendChild(placeholder);
   range.insertNode(element);
   const selection = getSelection();
   const newRange = document.createRange();
-  newRange.selectNodeContents(element);
-  newRange.collapse(false);
+  newRange.setStart(placeholder.firstChild!, 1);
+  newRange.collapse(true);
   if (selection) {
     selection.removeAllRanges();
     selection.addRange(newRange);
@@ -450,8 +452,9 @@ const removeInlineStyleAtCaret = (
       element => element.tagName.toLowerCase() === tagName.toLowerCase(), root);
   }
 
-  const caret = document.createTextNode('\u200b');
-  let continuation: Node = caret;
+  const placeholder = createTypingPlaceholder(root.ownerDocument);
+  const caret = placeholder.firstChild as Text;
+  let continuation: Node = placeholder;
   let ancestor = range.startContainer.nodeType === Node.ELEMENT_NODE
     ? range.startContainer as HTMLElement : range.startContainer.parentElement;
   while (ancestor && ancestor !== existing) {
@@ -1464,7 +1467,7 @@ const toggleListContent = (root: HTMLElement, listTag: "ul" | "ol", remember?: R
   const listItem = document.createElement("li");
   const contents = range.extractContents();
   if (contents.childNodes.length === 0) {
-    listItem.appendChild(document.createTextNode("\u200b"));
+    listItem.appendChild(document.createElement('br'));
   } else {
     listItem.appendChild(contents);
   }
@@ -1900,14 +1903,14 @@ export const insertImage = (
 
   // Insert a paragraph after the image for typing
   const para = document.createElement("p");
-  para.appendChild(document.createTextNode("\u200B")); // Zero-width space
+  para.appendChild(document.createElement('br'));
   wrapper.parentNode?.insertBefore(para, wrapper.nextSibling);
 
   // Position cursor in the new paragraph
   const selection = getSelection();
   if (selection && para.firstChild) {
     const newRange = document.createRange();
-    newRange.setStart(para.firstChild, 0);
+    newRange.setStart(para, 0);
     newRange.collapse(true);
     selection.removeAllRanges();
     selection.addRange(newRange);

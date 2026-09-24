@@ -1050,8 +1050,9 @@ describe('Formatting Tests', () => {
 
       const li = root.querySelector('li')!
       expect(li).toBeTruthy()
-      // Empty extracted contents -> zero-width placeholder.
-      expect(li.textContent).toBe('​')
+      // Empty blocks remain editable without invisible authored characters.
+      expect(li.textContent).toBe('')
+      expect(li.querySelector('br')).toBeTruthy()
     })
 
     it('returns early when there is no selection', () => {
@@ -1375,7 +1376,8 @@ describe('Formatting Tests', () => {
       expect(img.getAttribute('alt')).toBe('A picture')
       // A paragraph with a zero-width space is inserted after the wrapper.
       expect(wrapper.nextElementSibling!.tagName.toLowerCase()).toBe('p')
-      expect(wrapper.nextElementSibling!.textContent).toBe('​')
+      expect(wrapper.nextElementSibling!.textContent).toBe('')
+      expect(wrapper.nextElementSibling!.querySelector('br')).toBeTruthy()
     })
 
     it('insertImage throws when the selection is outside the root', () => {

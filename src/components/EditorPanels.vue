@@ -31,6 +31,7 @@
         :aria-controls="commandMenuOpen ? commandListboxId : undefined"
         :aria-activedescendant="commandActiveOptionId"
         @input="$emit('input', $event)"
+        @beforeinput="$emit('before-input', $event)"
         @compositionend="$emit('input', $event)"
         @paste="$emit('paste', $event)"
         @drop="$emit('drop', $event)"
@@ -69,6 +70,7 @@
         :placeholder="placeholder"
         style="display: none"
         @input="$emit('input', $event)"
+        @beforeinput="$emit('before-input', $event)"
         @compositionend="$emit('input', $event)"
         @paste="$emit('paste', $event)"
         @drop="$emit('drop', $event)"
@@ -146,6 +148,7 @@
           :aria-readonly="!editable"
           aria-label="Rich text editor"
           @input="$emit('split-editor-input', $event)"
+          @beforeinput="$emit('before-input', $event)"
           @compositionend="$emit('split-editor-input', $event)"
           @paste="$emit('paste', $event)"
           @drop="$emit('drop', $event)"
@@ -208,6 +211,7 @@ withDefaults(defineProps<Props>(), {
 
 defineEmits<{
   input: [event: Event];
+  'before-input': [event: Event];
   blur: [event: FocusEvent];
   focus: [event: FocusEvent];
   mousedown: [event: MouseEvent];
