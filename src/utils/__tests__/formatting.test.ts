@@ -708,12 +708,12 @@ describe('Formatting Tests', () => {
 
       applyInlineStyle(root, 'strong')
 
-      // Caret at offset 0 leaves an empty before-wrapper and the whole word in
-      // the after-wrapper: <strong></strong><strong>Word</strong>.
+      // The next typed character belongs outside the remaining styled word.
+      // An empty before-wrapper would let native typing re-enter that style.
       const strongs = root.querySelectorAll('strong')
-      expect(strongs.length).toBe(2)
-      expect(strongs[0].textContent).toBe('')
-      expect(strongs[1].textContent).toBe('Word')
+      expect(strongs.length).toBe(1)
+      expect(strongs[0].textContent).toBe('Word')
+      expect(isInlineStyleActive(root, 'strong')).toBe(false)
     })
 
     it('preserves attributes on both halves when splitting at a caret', () => {

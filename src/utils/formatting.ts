@@ -429,7 +429,7 @@ const removeInlineStyleAtCaret = (
   attributes: Record<string, string>,
   root: HTMLElement
 ) => {
-  const existing = getClosestElement(
+  let existing = getClosestElement(
     range.startContainer,
     (element) => element.tagName.toLowerCase() === tagName.toLowerCase(),
     root
@@ -438,6 +438,31 @@ const removeInlineStyleAtCaret = (
   if (!existing) {
     wrapSelection(root, tagName, attributes);
     return;
+  }
+
+  // Imported prose can nest the same mark. Turning it off must leave all of
+  // those ancestors, while keeping any other active styles at the caret.
+  let outer = getClosestElement(existing.parentNode,
+    element => element.tagName.toLowerCase() === tagName.toLowerCase(), root);
+  while (outer) {
+    existing = outer;
+    outer = getClosestElement(existing.parentNode,
+      element => element.tagName.toLowerCase() === tagName.toLowerCase(), root);
+  }
+
+  const caret = document.createTextNode('\u200b');
+  let continuation: Node = caret;
+  let ancestor = range.startContainer.nodeType === Node.ELEMENT_NODE
+    ? range.startContainer as HTMLElement : range.startContainer.parentElement;
+  while (ancestor && ancestor !== existing) {
+    if (ancestor.tagName.toLowerCase() !== tagName.toLowerCase()) {
+      const wrapper = ancestor.cloneNode(false);
+      // The original anchor stays with the adjacent authored content.
+      (wrapper as HTMLElement).removeAttribute('id');
+      wrapper.appendChild(continuation);
+      continuation = wrapper;
+    }
+    ancestor = ancestor.parentElement;
   }
 
   const parent = existing.parentNode;
@@ -459,22 +484,23 @@ const removeInlineStyleAtCaret = (
 
   existing.remove();
 
-  const beforeWrapper = wrapNodes(
-    collectFragmentNodes(beforeFragment),
-    tagName,
-    attributes
-  );
-  const afterWrapper = wrapNodes(
-    collectFragmentNodes(afterFragment),
-    tagName,
-    attributes
-  );
+  const keepStyledContent = (fragment: DocumentFragment) => {
+    const wrapper = existing.cloneNode(false) as HTMLElement;
+    Object.entries(attributes).forEach(([key, value]) => wrapper.setAttribute(key, value));
+    wrapper.appendChild(fragment);
+    return isEmptyInlineHusk(wrapper) ? null : wrapper;
+  };
+  const beforeWrapper = keepStyledContent(beforeFragment);
+  const afterWrapper = keepStyledContent(afterFragment);
+  if (beforeWrapper && afterWrapper) afterWrapper.removeAttribute('id');
 
   if (beforeWrapper && referenceNode) {
     referenceNode.before(beforeWrapper);
   } else if (beforeWrapper) {
     parent.appendChild(beforeWrapper);
   }
+
+  parent.insertBefore(continuation, referenceNode);
 
   if (afterWrapper && referenceNode) {
     referenceNode.before(afterWrapper);
@@ -485,13 +511,10 @@ const removeInlineStyleAtCaret = (
   const selection = getSelection();
   if (selection) {
     const newRange = document.createRange();
-    if (afterWrapper) {
-      newRange.setStartBefore(afterWrapper);
-    } else if (referenceNode) {
-      newRange.setStartBefore(referenceNode);
-    } else {
-      newRange.setStart(parent, parent.childNodes.length);
-    }
+    // A boundary between inline elements is ambiguous to native typing: the
+    // browser can continue the previous mark even after the toolbar says off.
+    // A concrete text point outside that mark gives typing a stable owner.
+    newRange.setStart(caret, caret.length);
     newRange.collapse(true);
     selection.removeAllRanges();
     selection.addRange(newRange);
