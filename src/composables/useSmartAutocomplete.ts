@@ -812,7 +812,10 @@ export function useSmartAutocomplete(
       template.innerHTML = result.replacement;
       lastInserted = template.content.lastChild;
       if (lastInserted) {
-        const paragraph = fragmentHasBlockLevel(template.content)
+        // Firefox can leave the first line directly under the editor root.
+        // Continue inside the new block even when no paragraph was replaced.
+        insertedBlockLevel = fragmentHasBlockLevel(template.content);
+        const paragraph = insertedBlockLevel
           ? closestParagraph(node, editor)
           : null;
         if (paragraph && paragraph.parentNode) {
@@ -837,7 +840,6 @@ export function useSmartAutocomplete(
           if (!hasRenderableContent(paragraph)) {
             parent.removeChild(paragraph);
           }
-          insertedBlockLevel = true;
         } else {
           range.insertNode(template.content);
         }

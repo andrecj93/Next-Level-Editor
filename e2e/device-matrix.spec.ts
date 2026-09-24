@@ -16,6 +16,11 @@ import { exerciseCommentsReturn } from './helpers/commentsReturn';
 import { exerciseFocusModeReturn, exerciseWritingBeforeFocusExit } from './helpers/focusModeReturn';
 import { exerciseWordContextMenu } from './helpers/wordContextMenu';
 import { exerciseCompanionViewMemory } from './helpers/companionViewMemory';
+import { exerciseBlockShortcutContinuation } from './helpers/blockShortcutContinuation';
+
+test('block shortcuts keep typing inside the new heading or list', async ({ page }) => {
+  await exerciseBlockShortcutContinuation(page);
+});
 
 test('the companion keeps the chosen view when returning to a chapter', async ({ page }) => {
   await exerciseCompanionViewMemory(page);

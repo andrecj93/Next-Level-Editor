@@ -1,14 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// The rich-text modals + pickers are desktop-oriented; the mobile toolbar is a
-// separate surface with its own coverage.
-test.beforeEach(() => {
-  test.skip(
-    test.info().project.name === "mobile-safari",
-    "Insert menu is exercised on desktop projects"
-  );
-});
-
 const openInsert = async (page: Page, item: string) => {
   await page.getByRole("button", { name: "Insert" }).first().click();
   await page
