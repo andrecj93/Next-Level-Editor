@@ -7,6 +7,7 @@ import { exerciseClearFormatting } from './helpers/clearFormatting';
 import { exerciseWritingContinuation } from './helpers/writingContinuation';
 import { exerciseMovingFormattedText } from './helpers/cutClipboard';
 import { exerciseInlineTyping, exerciseInlineDeletion, exerciseParagraphTyping } from './helpers/inlineTyping';
+import { exerciseFontSizeTyping } from './helpers/fontSizeTyping';
 
 const editorFor = (page: Page) => page.getByRole('textbox', { name: 'Rich text editor', exact: true });
 const toolbarFor = (page: Page) => page.getByRole('toolbar', { name: 'Text formatting toolbar', exact: true });
@@ -127,6 +128,11 @@ test('turning emphasis off keeps continued typing and the next paragraph plain',
 test('Backspace after emphasis changes edits visible text through native input', async ({ page }) => {
   await exerciseInlineDeletion(page, true);
   await exerciseParagraphTyping(page, true);
+  await noHorizontalOverflow(page);
+});
+
+test('text size changes and Normal keep natural typing, undo and draft recovery', async ({ page }) => {
+  await exerciseFontSizeTyping(page);
   await noHorizontalOverflow(page);
 });
 

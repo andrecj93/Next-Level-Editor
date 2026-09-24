@@ -1952,15 +1952,16 @@ const canClearInlineElement = (element: HTMLElement): boolean =>
 
 /** Split only the inline formatting around a boundary. The unselected side
  * keeps a shallow clone of the original wrapper and all of its attributes. */
-const isolateFormattingBoundary = (
+export const isolateFormattingBoundary = (
   marker: Comment,
   root: HTMLElement,
-  side: "start" | "end"
+  side: "start" | "end",
+  matches: (element: HTMLElement) => boolean = canClearInlineElement
 ) => {
   let outer: HTMLElement | null = null;
   let ancestor = marker.parentElement;
   while (ancestor && ancestor !== root && !BLOCK_OR_CELL_TAGS.has(ancestor.tagName.toLowerCase())) {
-    if (canClearInlineElement(ancestor)) outer = ancestor;
+    if (matches(ancestor)) outer = ancestor;
     ancestor = ancestor.parentElement;
   }
   if (!outer?.parentNode) return;
@@ -1976,6 +1977,12 @@ const isolateFormattingBoundary = (
   const fragment = outside.extractContents();
   const clone = outer.cloneNode(false) as HTMLElement;
   clone.appendChild(fragment);
+  // Partial extraction clones ancestor IDs. Keep the original anchor once;
+  // fully moved descendants retain their IDs because they have left root.
+  const retainedIds = new Set(Array.from(root.querySelectorAll('[id]'), element => element.id));
+  for (const element of [clone, ...clone.querySelectorAll<HTMLElement>('[id]')]) {
+    if (element.id && retainedIds.has(element.id)) element.removeAttribute('id');
+  }
   const hasContent = clone.textContent || clone.querySelector("img, br, hr, iframe, video, [contenteditable]");
   if (side === "end") {
     outer.after(marker);

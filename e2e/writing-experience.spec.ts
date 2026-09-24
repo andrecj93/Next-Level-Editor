@@ -71,7 +71,7 @@ test.describe('Manuscript writing workspace', () => {
     await page.getByRole('group', { name: 'More formatting options' }).getByRole('button', { name: 'Bold', exact: true }).click();
     await expect(editor.locator('b,strong')).toContainText('A sentence worth keeping.');
     await page.getByRole('button', { name: 'Close more formatting', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'More formatting', exact: true })).toBeFocused();
+    await expect(editor).toBeFocused();
     await page.getByRole('button', { name: 'Tools', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Find & Replace', exact: true }).click();
     const search = page.getByRole('search', { name: 'Find & Replace' });

@@ -8,14 +8,17 @@ import {
   getBlockSlicesInRange,
   snapshotEmptyInlineHusks,
   removeNewEmptyInlineHusks,
+  isolateFormattingBoundary,
 } from "./formatting";
 import {
   clampRangeToElement,
   rangeCapturesContent,
   rangeTouchesElement,
+  rangeForEditableFormatting,
 } from "./rangeContact";
 import { buildTableGrid } from "./tableGrid";
 import { createTypingPlaceholder } from './typingPlaceholder';
+import { captureSelectionBookmark } from './selectionBookmark';
 
 /**
  * Wrap a non-collapsed range's content in styled `<span>`s WITHOUT ever nesting
@@ -219,25 +222,26 @@ export function getCharacterCountWithoutSpaces(html: string): number {
   return htmlToPlainText(html).replace(/\s/g, "").length;
 }
 
-/** True for a <span> that carries an inline font-size. */
-function isFontSizeSpan(node: Node): node is HTMLElement {
+/** Imported inline marks may carry the size directly, without a span. */
+const FONT_SIZE_INLINE_TAGS = new Set(['SPAN', 'A', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'SUB', 'SUP', 'CODE', 'MARK', 'SMALL', 'BIG']);
+function hasInlineFontSize(node: Node): node is HTMLElement {
   return (
     node instanceof HTMLElement &&
-    node.tagName.toLowerCase() === "span" &&
+    FONT_SIZE_INLINE_TAGS.has(node.tagName) &&
     node.style.fontSize !== ""
   );
 }
 
 /**
- * Remove the font-size from a span; drop the empty style attribute and unwrap
- * the span entirely if that leaves it carrying nothing else.
+ * Remove an inline mark's font size and drop its empty style attribute.
+ * Unwrap empty spans while preserving semantic marks and their attributes.
  */
-function clearFontSizeSpan(span: HTMLElement): void {
+function clearInlineFontSize(span: HTMLElement): void {
   span.style.fontSize = "";
   if (!span.getAttribute("style")) {
     span.removeAttribute("style");
   }
-  if (span.attributes.length === 0 && span.parentNode) {
+  if (span.tagName === 'SPAN' && span.attributes.length === 0 && span.parentNode) {
     const parent = span.parentNode;
     while (span.firstChild) {
       parent.insertBefore(span.firstChild, span);
@@ -246,13 +250,13 @@ function clearFontSizeSpan(span: HTMLElement): void {
   }
 }
 
-/** Strip font-size styling from every span inside a fragment or element. */
-function removeFontSizeSpansWithin(
+/** Strip sizing from editable inline marks inside a fragment or element. */
+function removeInlineFontSizesWithin(
   container: DocumentFragment | HTMLElement
 ): void {
-  container.querySelectorAll("span").forEach((span) => {
-    if (isFontSizeSpan(span)) {
-      clearFontSizeSpan(span);
+  container.querySelectorAll<HTMLElement>('[style]').forEach((span) => {
+    if (hasInlineFontSize(span) && !span.closest('[contenteditable="false"]')) {
+      clearInlineFontSize(span);
     }
   });
 }
@@ -260,10 +264,9 @@ function removeFontSizeSpansWithin(
 /**
  * Apply font size to selected text or block.
  *
- * Idempotent by design: re-sizing a selection that exactly covers a
- * previously sized span restyles that span in place (no nested spans, no
- * multiplicative em compounding), and "normal" is a CLEAR operation \u2014 it
- * removes font sizes instead of wrapping a redundant 1em span.
+ * Re-sizing first isolates the intended run and removes its inherited size,
+ * avoiding nested spans and multiplicative em compounding. "normal" clears
+ * sizing from selected text or future typing without inserting a 1em wrapper.
  *
  * @param root - Editor root element (bounds the sized-ancestor search)
  * @param size - Font size (small, normal, large, huge)
@@ -282,101 +285,74 @@ export function applyFontSize(
   const selection = globalThis.getSelection();
   if (!selection || selection.rangeCount === 0) return;
 
-  const range = selection.getRangeAt(0);
+  const originalRange = selection.getRangeAt(0);
+  if (!root.contains(originalRange.startContainer) || !root.contains(originalRange.endContainer)) return;
+  const range = rangeForEditableFormatting(originalRange, root);
+  if (!range) return;
+  const collapsed = range.collapsed;
+  const backwards = selection.anchorNode === originalRange.endContainer && selection.anchorOffset === originalRange.endOffset;
 
   // "normal" clears sizing; it never wraps a 1em span.
   const targetSize = size === "normal" ? null : sizeMap[size];
 
-  if (range.collapsed) {
-    // Nothing is selected, so a CLEAR has nothing to remove.
-    if (!targetSize) return;
-
-    // At caret position, wrap future text
-    const span = document.createElement("span");
-    span.style.fontSize = targetSize;
-    const placeholder = createTypingPlaceholder(root.ownerDocument);
-    span.appendChild(placeholder);
-    range.insertNode(span);
-    range.setStart(placeholder.firstChild!, 1);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    return;
-  }
-
-  // Re-size of a selection that exactly covers a previously sized span:
-  // restyle that span in place instead of nesting a new one inside it. Walk
-  // up to the OUTERMOST sized span whose text matches the selection so that
-  // pre-existing nested (compounding) spans collapse onto a single wrapper.
-  const selectedText = range.toString();
-  let sizedAncestor: HTMLElement | null = null;
-  let current: Node | null = range.commonAncestorContainer;
-  while (
-    current &&
-    current !== root &&
-    current.nodeType !== Node.DOCUMENT_NODE
-  ) {
-    if (isFontSizeSpan(current) && current.textContent === selectedText) {
-      sizedAncestor = current;
+  const doc = root.ownerDocument;
+  const emptyBefore = snapshotEmptyInlineHusks(root);
+  let placeholder: HTMLElement | null = null;
+  if (collapsed) {
+    let ancestor = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer as HTMLElement : range.startContainer.parentElement;
+    let hasSize = false;
+    while (ancestor && ancestor !== root) {
+      if (hasInlineFontSize(ancestor)) hasSize = true;
+      ancestor = ancestor.parentElement;
     }
-    current = current.parentNode;
-  }
+    if (!targetSize && !hasSize) return;
+    const point = range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer as Element : range.startContainer.parentElement;
+    const pending = point?.closest<HTMLElement>('[data-nle-typing-placeholder="true"]');
+    placeholder = pending?.textContent === '\u200b' ? pending : createTypingPlaceholder(doc);
+    if (!placeholder.parentNode) range.insertNode(placeholder);
+    range.selectNode(placeholder);
+  } else if (!rangeCapturesContent(range)) return;
 
-  if (sizedAncestor) {
-    // Collapse any sized spans nested inside the wrapper first.
-    removeFontSizeSpansWithin(sizedAncestor);
-    const firstChild = sizedAncestor.firstChild;
-    const lastChild = sizedAncestor.lastChild;
-
+  // Isolate the selected run from inherited sizes before clearing/applying.
+  // This also lets a collapsed caret leave a sized span without changing the
+  // letters on either side, or multiplying em units on repeated choices.
+  const start = doc.createComment('size-start');
+  const end = doc.createComment('size-end');
+  const endRange = range.cloneRange();
+  endRange.collapse(false);
+  endRange.insertNode(end);
+  const startRange = range.cloneRange();
+  startRange.collapse(true);
+  startRange.insertNode(start);
+  let bookmark: ReturnType<typeof captureSelectionBookmark> = null;
+  try {
+    isolateFormattingBoundary(end, root, 'end', hasInlineFontSize);
+    isolateFormattingBoundary(start, root, 'start', hasInlineFontSize);
+    const selected = doc.createRange();
+    selected.setStartAfter(start);
+    selected.setEndBefore(end);
     if (targetSize) {
-      sizedAncestor.style.fontSize = targetSize;
+      wrapRangeSlicesPerBlock(selected, root, span => { span.style.fontSize = targetSize; }, removeInlineFontSizesWithin);
     } else {
-      clearFontSizeSpan(sizedAncestor); // may unwrap the span entirely
+      clearRangeSlicesPerBlock(selected, root, removeInlineFontSizesWithin);
     }
-
-    const newRange = document.createRange();
-    if (sizedAncestor.parentNode) {
-      newRange.selectNodeContents(sizedAncestor);
-    } else if (firstChild && lastChild) {
-      // The span was unwrapped; reselect the released children.
-      newRange.setStartBefore(firstChild);
-      newRange.setEndAfter(lastChild);
-    } else {
-      return;
+    removeNewEmptyInlineHusks(root, emptyBefore);
+    if (!collapsed) {
+      const restored = doc.createRange();
+      restored.setStartAfter(start);
+      restored.setEndBefore(end);
+      selection.setBaseAndExtent(
+        backwards ? restored.endContainer : restored.startContainer, backwards ? restored.endOffset : restored.startOffset,
+        backwards ? restored.startContainer : restored.endContainer, backwards ? restored.startOffset : restored.endOffset);
+      bookmark = captureSelectionBookmark(root);
     }
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-    return;
+  } finally {
+    end.remove();
+    start.remove();
+    if (placeholder?.firstChild) selection.collapse(placeholder.firstChild, 1);
+    else bookmark?.restore();
   }
-
-  // CLEAR: strip sized spans PER BLOCK so a multi-paragraph selection never
-  // runs extractContents across a block boundary (which cloned the
-  // partially-contained <p>s into ghost empty paragraphs with orphaned emptied
-  // spans). Each block's slice is extracted, its sized spans removed, and the
-  // bare contents re-inserted. #r19-1
-  if (!targetSize) {
-    const nodes = clearRangeSlicesPerBlock(range, root, removeFontSizeSpansWithin);
-    if (nodes.length > 0) {
-      const newRange = document.createRange();
-      newRange.setStartBefore(nodes[0]);
-      newRange.setEndAfter(nodes[nodes.length - 1]);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-    }
-    return;
-  }
-
-  // Wrap per block so a multi-paragraph selection never nests <p> in a <span>;
-  // strip any nested sized spans within each slice so sizes don't compound.
-  const spans = wrapRangeSlicesPerBlock(
-    range,
-    root,
-    (span) => {
-      span.style.fontSize = targetSize;
-    },
-    removeFontSizeSpansWithin
-  );
-  reselectWrappers(selection, spans);
 }
 
 /**
