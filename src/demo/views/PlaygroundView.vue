@@ -222,6 +222,7 @@ import EditorSheet from "../components/EditorSheet.vue";
 import ConfirmDialog from "../../components/ConfirmDialog.vue";
 import { useConfirmDialog } from "../../composables/useConfirmDialog";
 import { usePlaygroundDocument } from "../composables/usePlaygroundDocument";
+import { useManuscriptTitle } from "../composables/useManuscriptTitle";
 import {
   getAllTemplates,
   getTemplateById,
@@ -264,10 +265,9 @@ const urlParams = new URLSearchParams(window.location.search);
 const startEmpty = urlParams.get("empty") === "true";
 const { content, commentThreads, keptWritingNotes, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft } = usePlaygroundDocument(startEmpty);
 const { isOpen: confirmOpen, options: confirmOptions, requestConfirm, handleConfirm, handleCancel } = useConfirmDialog();
-const documentName = computed(() => {
-  const doc = new DOMParser().parseFromString(content.value, 'text/html');
-  return doc.querySelector('h1')?.textContent?.trim().slice(0, 100) || (selectedTemplate.value === 'empty' ? 'Untitled document' : getTemplateById(selectedTemplate.value)?.name ?? 'Your document');
-});
+const manuscriptTitle = useManuscriptTitle(content, documentRevision);
+const documentName = computed(() => manuscriptTitle.value ||
+  (selectedTemplate.value === 'empty' ? 'Untitled document' : getTemplateById(selectedTemplate.value)?.name ?? 'Your document'));
 
 type ViewMode = "editor" | "code" | "split" | "preview";
 const DEFAULT_CONFIG = {
