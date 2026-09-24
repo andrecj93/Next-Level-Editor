@@ -180,3 +180,21 @@ test('a delayed menu Paste cannot overwrite a newer revision', async ({ page }) 
   expect(await editor.innerHTML()).toBe(beforeCompletion);
   await expect(editor.locator('strong')).toHaveCount(0);
 });
+
+test('a stalled clipboard permission gives feedback and a keyboard fallback', async ({ page }) => {
+  await installClipboard(page);
+  await page.goto('/?empty=true#playground');
+  const editor = page.getByRole('textbox', { name: 'Rich text editor', exact: true });
+  await editor.fill('Keep this paragraph.');
+  const before = await editor.innerHTML();
+  await page.evaluate(() => {
+    navigator.clipboard.read = () => new Promise(() => {});
+  });
+  await editor.press('ControlOrMeta+a');
+  await editor.click({ button: 'right' });
+  await pasteWithContextMenu(page);
+  await expect(page.locator('.toast-notification')).toHaveText('Waiting for clipboard access. You can also paste with Ctrl+V or ⌘V.');
+  await expect(page.locator('.toast-notification')).toHaveText('Clipboard access took too long. Use Ctrl+V or ⌘V to paste.', { timeout: 15_000 });
+  await expect(editor).toBeFocused();
+  expect(await editor.innerHTML()).toBe(before);
+});

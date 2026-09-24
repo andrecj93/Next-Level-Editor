@@ -38,6 +38,7 @@ describe('context-menu paste intent', () => {
     vi.mocked(readClipboardData).mockResolvedValue(transfer('<em>Pasted</em>'));
   });
   afterEach(() => {
+    vi.useRealTimers();
     root.remove();
     window.getSelection()!.removeAllRanges();
     if (originalExec) Object.defineProperty(document, 'execCommand', originalExec);
@@ -111,5 +112,25 @@ describe('context-menu paste intent', () => {
     expect(state.onPaste).not.toHaveBeenCalled();
     expect(state.captureSnapshot).not.toHaveBeenCalled();
     expect(state.notify).toHaveBeenCalledTimes(2);
+  });
+
+  it('explains a stalled permission request and never applies a late clipboard result after timeout', async () => {
+    vi.useFakeTimers();
+    let resolve!: (value: DataTransfer) => void;
+    vi.mocked(readClipboardData).mockReturnValue(new Promise(done => { resolve = done; }));
+    const state = setup();
+    const before = root.innerHTML;
+    const pending = state.paste();
+    await vi.advanceTimersByTimeAsync(800);
+    expect(state.notify).toHaveBeenCalledWith('Waiting for clipboard access. You can also paste with Ctrl+V or ⌘V.');
+    await vi.advanceTimersByTimeAsync(9_200);
+    await pending;
+    expect(state.notify).toHaveBeenLastCalledWith('Clipboard access took too long. Use Ctrl+V or ⌘V to paste.');
+    resolve(transfer('<em>Too late</em>'));
+    await Promise.resolve();
+    expect(root.innerHTML).toBe(before);
+    expect(state.onPaste).not.toHaveBeenCalled();
+    expect(state.captureSnapshot).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -30,8 +30,31 @@ export function useClipboardPaste(options: ClipboardPasteOptions) {
       end: range.endContainer, endOffset: range.endOffset,
     };
     console.debug('[NextLevelEditor] Clipboard paste requested');
-    const data = await readClipboardData();
+    let timedOut = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const waiting = setTimeout(() => {
+      if (token === request && root.isConnected && root === options.editorContent.value) {
+        options.notify('Waiting for clipboard access. You can also paste with Ctrl+V or ⌘V.');
+      }
+    }, 800);
+    let data: DataTransfer | null;
+    try {
+      data = await Promise.race([
+        readClipboardData(),
+        new Promise<null>(resolve => {
+          timeout = setTimeout(() => { timedOut = true; resolve(null); }, 10_000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(waiting);
+      clearTimeout(timeout);
+    }
     if (token !== request) return;
+    if (timedOut) {
+      console.debug('[NextLevelEditor] Clipboard paste cancelled', { reason: 'clipboard-read-timeout' });
+      options.notify('Clipboard access took too long. Use Ctrl+V or ⌘V to paste.');
+      return;
+    }
     if (!data) {
       options.notify('Clipboard access is unavailable. Use Ctrl+V or ⌘V to paste.');
       return;
