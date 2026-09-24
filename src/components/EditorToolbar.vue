@@ -18,14 +18,14 @@
       <button type="button" class="toolbar-btn-modern writing-theme" aria-label="Toggle dark/light theme" :aria-pressed="theme === 'dark'" title="Toggle theme" @click="$emit('toggle-theme')">◐</button>
     </div>
     <div v-if="writingFormattingOpen" class="writing-format-row" role="group" aria-label="More formatting options">
-      <ToolbarSection type="buttons" :items="inlineFormatActions" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="buttons" native-tooltips :items="inlineFormatActions" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
       <span class="writing-toolbar-divider" />
       <ToolbarSection type="dropdown" label="Align" preserve-label tooltip="Text alignment" :items="alignmentDropdownItems" :visible="isToolbarSectionVisible('alignment')" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection type="dropdown" label="Size" preserve-label tooltip="Text size" :items="fontSizeDropdownItems" @remember-selection="$emit('remember-selection')" />
-      <ToolbarSection type="buttons" :items="listActions" :visible="isToolbarSectionVisible('lists')" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="buttons" native-tooltips :items="listActions" :visible="isToolbarSectionVisible('lists')" @remember-selection="$emit('remember-selection')" />
       <label class="writing-color" @mousedown="$emit('remember-selection')">Text <input type="color" aria-label="Text color" :disabled="!isToolbarSectionVisible('colors')" :value="textColor || '#333333'" @input="$emit('text-color-change', ($event.target as HTMLInputElement).value)"></label>
       <label class="writing-color" @mousedown="$emit('remember-selection')">Highlight <input type="color" aria-label="Highlight color" :disabled="!isToolbarSectionVisible('colors')" :value="backgroundColor === 'transparent' ? '#fff1a8' : backgroundColor" @input="$emit('background-color-change', ($event.target as HTMLInputElement).value)"></label>
-      <ToolbarSection type="buttons" :items="toolActions.filter(item => item.id === 'clear-formatting')" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="buttons" native-tooltips :items="toolActions.filter(item => item.id === 'clear-formatting')" @remember-selection="$emit('remember-selection')" />
       <button type="button" class="toolbar-btn-modern" aria-label="Close more formatting" @click="closeWritingFormatting">×</button>
     </div>
   </nav>

@@ -39,7 +39,12 @@ export async function exerciseClearFormatting(page: Page, options: {
     await activate(page.getByRole('menuitem', { name: 'Clear Formatting', exact: true }));
   } else {
     await activate(toolbar.getByRole('button', { name: 'More formatting', exact: true }));
-    await activate(toolbar.getByRole('group', { name: 'More formatting options', exact: true }).getByRole('button', { name: 'Clear Formatting', exact: true }));
+    const styles = toolbar.getByRole('group', { name: 'More formatting options', exact: true });
+    const width = await styles.evaluate(el => ({ client: el.clientWidth, scroll: el.scrollWidth }));
+    expect(width.scroll, 'Open Style controls must fit without a horizontal scrollbar').toBeLessThanOrEqual(width.client + 1);
+    const clear = styles.getByRole('button', { name: 'Clear Formatting', exact: true });
+    await expect(clear).toHaveAttribute('title', 'Clear selected text formatting (Ctrl+\\)');
+    await activate(clear);
   }
   await expect(editor).toBeFocused();
   await expect(page.locator('.toast-notification')).toHaveText('Formatting cleared.');

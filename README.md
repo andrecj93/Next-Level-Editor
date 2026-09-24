@@ -108,7 +108,7 @@ suites gate the npm publish; neither is decoration.
 |  |  |
 | --- | --- |
 | ✍️ **Writing** | Bold/italic/underline/strike, 6 heading levels, lists, checklists, alignment, colours, font sizes, format painter |
-| ⚡ **Speed** | Slash commands, command palette, 80+ keyboard shortcuts, find & replace, auto-save |
+| ⚡ **Speed** | Slash commands, command palette, discoverable keyboard shortcuts, find & replace, auto-save |
 | 📊 **Structure** | Tables with a designer, page breaks, table of contents, code blocks in 22 languages |
 | 🖼️ **Media** | Images, file manager, YouTube/Vimeo embeds, resizable & draggable containers |
 | 💬 **Collaboration** | Threaded comments with mentions and resolution |
