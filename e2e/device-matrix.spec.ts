@@ -617,7 +617,8 @@ test('PDF progress and cancellation stay reachable without losing the draft', as
 
 test('write, format, revise, undo and recover without losing prose', async ({ page, hasTouch }) => {
   const editor = editorFor(page);
-  await activate(editor, hasTouch);
+  await activate(page.getByRole('button', { name: 'New document', exact: true }), hasTouch);
+  await expect(editor).toBeFocused();
   await page.keyboard.type('A map of the ordinary');
   const insert = toolbarFor(page).getByRole('button', { name: 'Insert', exact: true });
   const insertBefore = await insert.boundingBox();

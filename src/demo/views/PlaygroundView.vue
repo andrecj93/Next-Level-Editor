@@ -177,7 +177,7 @@
           :readonly="editorConfig.readonly"
           :show-toolbar="editorConfig.showToolbar"
           :default-view-mode="editorConfig.defaultViewMode"
-          :autofocus="editorConfig.autofocus"
+          :autofocus="editorConfig.autofocus || (documentRevision > 0 && selectedTemplate === 'empty')"
           :adaptive-chrome="editorConfig.adaptiveChrome"
           :toolbar-position="editorConfig.toolbarPosition"
           :toolbar-mode="editorConfig.toolbarMode"
@@ -331,6 +331,12 @@ const chooseTemplate = async (id: string) => {
     if (!confirmed) return;
   }
   applyTemplate(id);
+  if (id === 'empty') {
+    // Starting a page is an explicit writing action; loading the workspace is
+    // not. The new editor handles caret placement and respects read-only mode.
+    editorConfig.value.defaultViewMode = 'editor';
+    showConfig.value = false;
+  }
   // A new document gets fresh undo/comment/save state. Dispose the old
   // editor's debounce before persisting the replacement, including blanks.
   documentRevision.value++;
