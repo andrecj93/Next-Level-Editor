@@ -18,7 +18,7 @@
         <p v-if="!visibleNotes.length" class="companion-intro">A second pair of eyes.<br><span>Your words, your decisions.</span></p>
         <p v-if="!review.words" class="companion-empty">Start with a sentence. When you pause, I’ll point out a few places you might want to revisit.</p>
         <p v-else-if="!visibleNotes.length" class="companion-empty">{{ review.notes.length ? 'You’ve considered every note. Keep your voice.' : 'No notes for now. Keep going — there’s room for your next thought.' }}</p>
-        <article v-if="currentNote && currentContext" :key="currentNote.id" class="writing-note">
+        <article v-if="currentNote && currentContext" class="writing-note">
           <p class="note-location">{{ currentContext.location }}</p>
           <h3>{{ currentNote.title }}</h3>
           <button type="button" class="note-passage" :aria-label="`Show passage in ${currentContext.location}: ${currentContext.before}${currentNote.quote}${currentContext.after}`" @click="$emit('locate', currentNote)">“{{ currentContext.before }}<mark>{{ currentNote.quote }}</mark>{{ currentContext.after }}” <span aria-hidden="true">↗</span></button>
@@ -39,7 +39,7 @@
         </nav>
       </template>
     </div>
-    <div v-if="tab === 'review' && currentNote" :key="currentNote.id" class="note-actions">
+    <div v-if="tab === 'review' && currentNote" class="note-actions">
       <button v-if="currentNote.replacement" type="button" class="note-apply" :disabled="readonly" @click="$emit('apply', currentNote)">Use “{{ currentNote.replacement }}”</button>
       <button v-else type="button" @click="$emit('locate', currentNote)">Go to sentence</button>
       <button type="button" :aria-label="`Dismiss note: ${currentNote.title}`" @click="dismiss(currentNote, $event)">Keep as is</button>
@@ -73,7 +73,21 @@ const keptCount = computed(() => props.review.notes.length - visibleNotes.value.
 const noteIndex = ref(0);
 const currentNote = computed(() => visibleNotes.value[noteIndex.value]);
 const currentContext = computed(() => currentNote.value && writingNoteContext(currentNote.value, props.review.outline));
-watch(() => visibleNotes.value.length, count => { noteIndex.value = Math.max(0, Math.min(noteIndex.value, count - 1)); });
+watch(visibleNotes, (notes, previous) => {
+  const current = previous[noteIndex.value];
+  if (current) {
+    // A delayed review may add/remove earlier notes while this panel has focus.
+    // Keep the actual passage, including its occurrence among repeated prose;
+    // block-based IDs change when the writer inserts a chapter before it.
+    const matches = (note: WritingNote) => note.blockText === current.blockText &&
+      note.start === current.start && note.quote === current.quote && note.title === current.title;
+    const occurrence = previous.slice(0, noteIndex.value).filter(matches).length;
+    const index = notes.map((note, index) => ({ note, index })).filter(({ note }) => matches(note))[occurrence]?.index;
+    if (index !== undefined) { noteIndex.value = index; return; }
+  }
+  // When this note was resolved, continue with the next (or previous last) one.
+  noteIndex.value = Math.max(0, Math.min(noteIndex.value, notes.length - 1));
+});
 const scrollToNote = () => {
   if (body.value) body.value.scrollTop = 0;
 };

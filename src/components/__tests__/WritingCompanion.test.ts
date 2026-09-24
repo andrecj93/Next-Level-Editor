@@ -118,6 +118,38 @@ describe('writing companion review and focus', () => {
     expect(wrapper.find('.note-pagination').text()).toContain('11 of 12');
   });
 
+  it('keeps the passage being read when an earlier paragraph gains a note', async () => {
+    setup(3);
+    await wrapper.get('[aria-label="Next note"]').trigger('click');
+    const passage = wrapper.get<HTMLButtonElement>('.note-passage').element;
+    passage.focus();
+    await wrapper.setProps({ review: reviewWriting('<p>The the visitor returned in order to find house 0.</p><p>She returned in order to find house 1.</p><p>She returned in order to find house 2.</p>') });
+    expect(wrapper.get('.note-passage').text()).toContain('house 1');
+    expect(wrapper.get('.note-pagination').text()).toContain('3 of 4');
+    expect(document.activeElement).toBe(passage);
+  });
+
+  it('keeps the passage being read when an earlier note disappears', async () => {
+    setup(3);
+    await wrapper.get('[aria-label="Next note"]').trigger('click');
+    await wrapper.setProps({ review: reviewWriting('<p>She returned to find house 0.</p><p>She returned in order to find house 1.</p><p>She returned in order to find house 2.</p>') });
+    expect(wrapper.get('.note-passage').text()).toContain('house 1');
+    expect(wrapper.get('.note-pagination').text()).toContain('1 of 2');
+  });
+
+  it('retains focus and the same repeated passage when inserted blocks change note IDs', async () => {
+    const repeated = '<p>She returned in order to find the house.</p>';
+    setup(1);
+    await wrapper.setProps({ review: reviewWriting(repeated.repeat(3)) });
+    await wrapper.get('[aria-label="Next note"]').trigger('click');
+    const passage = wrapper.get<HTMLButtonElement>('.note-passage').element;
+    passage.focus();
+    await wrapper.setProps({ review: reviewWriting('<h2>A new chapter</h2>' + repeated.repeat(3)) });
+    expect(wrapper.get('.note-pagination').text()).toContain('2 of 3');
+    expect(wrapper.get('.note-location').text()).toBe('A new chapter · Paragraph 2');
+    expect(document.activeElement).toBe(passage);
+  });
+
   it('keeps actions outside the scrolling passage and disables edits in read-only mode', async () => {
     const review = setup(1);
     await wrapper.setProps({ readonly: true });
