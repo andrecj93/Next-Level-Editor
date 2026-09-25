@@ -1,5 +1,6 @@
 import { ref, computed, onScopeDispose } from "vue";
 import { splitWords, countCharacters } from "../utils/wordSegmentation";
+import { writingBlocks } from "../utils/writingReview";
 
 /**
  * Text statistics
@@ -326,6 +327,21 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
       readingTime: Math.ceil(readingTime),
       speakingTime: Math.ceil(speakingTimeVal),
     };
+  };
+
+  /** Count authored prose blocks, using the same boundaries as the companion.
+   * Headings still contribute words, but are not paragraphs. Soft line breaks
+   * do not create extra paragraphs; nested containers do not count twice.
+   * Keep calculateStats(text)'s plain-text API unchanged for consumers.
+   */
+  const calculateDocumentStats = (html: string, text: string): TextStats => {
+    if (!html) return calculateStats(text);
+    const root = document.createElement("div");
+    root.innerHTML = html;
+    root.querySelectorAll(".table-of-contents,.page-break").forEach(el => el.remove());
+    const paragraphs = writingBlocks(root).filter(block =>
+      !/^H[1-6]$/.test(block.element.tagName)).length;
+    return { ...calculateStats(text), paragraphs };
   };
 
   // ============================================
@@ -807,7 +823,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
       textContent.value = plainText;
       htmlContent.value = html;
 
-      const stats = calculateStats(plainText);
+      const stats = calculateDocumentStats(html, plainText);
       const readability = calculateReadability(plainText);
       const sentenceAnalysis = analyzeSentences(plainText);
       const wordAnalysis = analyzeWords(plainText);
@@ -861,7 +877,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
 
   const stats = computed(() => {
     if (!textContent.value) return null;
-    return calculateStats(textContent.value);
+    return calculateDocumentStats(htmlContent.value, textContent.value);
   });
 
   const readability = computed(() => {

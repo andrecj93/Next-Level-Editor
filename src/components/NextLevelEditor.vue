@@ -453,6 +453,7 @@
       :sentence-analysis="writingAssistant.sentenceAnalysis.value"
       :word-analysis="writingAssistant.wordAnalysis.value"
       :issues="writingAssistant.issues.value"
+      :text="writingAssistant.textContent.value"
       :seo="writingAssistant.seo.value"
       @close="closeWritingStatistics"
     />

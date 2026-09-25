@@ -24,6 +24,11 @@ import { exerciseListIndentContinuation } from './helpers/listIndentContinuation
 import { exerciseCompanionPrompt } from './helpers/companionPrompt';
 import { exerciseWritingStatistics } from './helpers/writingStatistics';
 import { exerciseHistoryWriting } from './helpers/historyWriting';
+import { exerciseStyleFeedback } from './helpers/styleFeedback';
+
+test('style feedback shows passages without judging recurring names', async ({ page }) => {
+  await exerciseStyleFeedback(page);
+});
 
 test('history supports comparing revisions and continuing the manuscript', async ({ page }) => {
   await exerciseHistoryWriting(page);

@@ -66,7 +66,7 @@
             <span class="stat-value">{{ stats.sentences }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Number of paragraphs — blocks separated by blank lines.">Paragraphs</span>
+            <span class="stat-label" title="Prose blocks, including list items. Headings and code blocks are excluded; soft line breaks stay in the same paragraph.">Paragraphs</span>
             <span class="stat-value">{{ stats.paragraphs }}</span>
           </div>
           <div class="stat-item">
@@ -88,6 +88,7 @@
         <h4 class="section-title">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg> Readability
         </h4>
+        <p class="analysis-note">English formula estimates, not a measure of your writing’s quality or voice.</p>
 
         <div class="readability-main">
           <div
@@ -120,7 +121,7 @@
             <strong>Grade {{ readability.fleschKincaidGrade.toFixed(1) }}</strong>
           </div>
           <div class="detail-item">
-            <span title="Years of schooling needed to read it on the first try. Aim below 12.">Gunning Fog:</span>
+            <span title="Estimated years of schooling from sentence length and complex words.">Gunning Fog:</span>
             <strong>{{ readability.gunningFog.toFixed(1) }}</strong>
           </div>
           <div class="detail-item">
@@ -184,7 +185,7 @@
             }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label" title="Length of the longest sentence — watch for run-ons.">Longest Sentence</span>
+            <span class="stat-label" title="Length alone does not tell whether a sentence is a run-on.">Longest Sentence</span>
             <span class="stat-value">{{ sentenceAnalysis.longestSentence }} words</span>
           </div>
         </div>
@@ -229,6 +230,7 @@
           <div class="common-words-title">
             Most Common:
           </div>
+          <p class="analysis-note">Names and recurring words are normal in a story. Frequency alone is not an editing issue.</p>
           <div class="word-tags">
             <span
               v-for="item in wordAnalysis.mostCommonWords"
@@ -241,92 +243,29 @@
         </div>
       </div>
 
-      <!-- Writing Issues -->
-      <div
-        v-if="issues"
-        class="stats-section issues-section"
-      >
-        <h4 class="section-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg> Issues
-        </h4>
-
-        <div
-          v-if="issues.passiveVoice.length > 0"
-          class="issue-group"
-        >
-          <div class="issue-header">
-            <span class="issue-icon">🔄</span>
-            <span class="issue-title">Passive Voice ({{ issues.passiveVoice.length }})</span>
-          </div>
-          <div class="issue-hint">
-            Consider using active voice for clearer writing
-          </div>
-        </div>
-
-        <div
-          v-if="issues.adverbs.length > 0"
-          class="issue-group"
-        >
-          <div class="issue-header">
-            <span class="issue-icon">💭</span>
-            <span class="issue-title">Weak Adverbs ({{ issues.adverbs.length }})</span>
-          </div>
-          <div class="issue-hint">
-            Remove or replace with stronger verbs
-          </div>
-        </div>
-
-        <div
-          v-if="issues.complexWords.length > 0"
-          class="issue-group"
-        >
-          <div class="issue-header">
-            <span class="issue-icon">📖</span>
-            <span class="issue-title">Complex Words ({{ issues.complexWords.length }})</span>
-          </div>
-          <div class="issue-hint">
-            Consider simpler alternatives
-          </div>
-        </div>
-
-        <div
-          v-if="issues.repeatedWords.length > 0"
-          class="issue-group"
-        >
-          <div class="issue-header">
-            <span class="issue-icon">🔁</span>
-            <span class="issue-title">Repeated Words ({{ issues.repeatedWords.length }})</span>
-          </div>
-          <div class="repeated-words">
-            <span
-              v-for="item in issues.repeatedWords.slice(0, 5)"
-              :key="item.word"
-              class="repeated-word"
-            >
-              {{ item.word }} ({{ item.count }}×)
-            </span>
-          </div>
-        </div>
-
-        <div
-          v-if="issues.cliches.length > 0"
-          class="issue-group"
-        >
-          <div class="issue-header">
-            <span class="issue-icon">🎭</span>
-            <span class="issue-title">Clichés ({{ issues.cliches.length }})</span>
-          </div>
-          <div class="issue-hint">
-            Find more original expressions
-          </div>
-        </div>
-
-        <div
-          v-if="getTotalIssues() === 0"
-          class="no-issues"
-        >
-          ✅ No major writing issues detected
-        </div>
+      <!-- Optional style checks are observations, not a verdict on the author. -->
+      <div v-if="issues" class="stats-section issues-section">
+        <h4 class="section-title">Style to consider</h4>
+        <p class="analysis-note">Local English pattern checks can miss context. Keep any wording that serves your voice.</p>
+        <details v-for="group in styleGroups" :key="group.id" class="style-group">
+          <summary>{{ group.title }} ({{ group.matches.length }})</summary>
+          <p class="analysis-note">{{ group.hint }}</p>
+          <ul class="style-passages">
+            <li v-for="(match, index) in visibleMatches(group)" :key="index">
+              <p class="style-context"><span>{{ match.before }}</span><strong>{{ match.quote }}</strong><span>{{ match.after }}</span></p>
+              <p v-if="match.suggestion" class="analysis-note">Alternative: “{{ match.suggestion }}”</p>
+            </li>
+          </ul>
+          <button
+            v-if="group.matches.length > (visibleCounts[group.id] || 5)"
+            class="more-matches"
+            :aria-label="'Show more ' + group.title.toLowerCase()"
+            @click="visibleCounts[group.id] = (visibleCounts[group.id] || 5) + 5"
+          >
+            Show more ({{ group.matches.length - (visibleCounts[group.id] || 5) }} remaining)
+          </button>
+        </details>
+        <p v-if="styleGroups.length === 0" class="analysis-note">No matches for these style checks. This is not a full grammar or spelling review.</p>
       </div>
 
       <!-- SEO Analysis -->
@@ -418,7 +357,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import type {
   TextStats,
   ReadabilityScores,
@@ -434,6 +373,7 @@ interface Props {
   sentenceAnalysis?: SentenceAnalysis | null;
   wordAnalysis?: WordAnalysis | null;
   issues?: WritingIssues | null;
+  text?: string;
   seo?: SEOAnalysis | null;
 }
 
@@ -507,24 +447,40 @@ const getSentencePercentage = (type: "short" | "medium" | "long"): number => {
   return (count / total) * 100;
 };
 
-/**
- * Get total issues count
- */
-const getTotalIssues = (): number => {
-  if (!props.issues) return 0;
+interface StyleMatch { quote: string; position: number; suggestion?: string }
+interface StyleGroup { id: string; title: string; hint: string; matches: StyleMatch[] }
+const visibleCounts = ref<Record<string, number>>({});
+watch(() => props.issues, () => { visibleCounts.value = {}; });
+const styleGroups = computed<StyleGroup[]>(() => {
+  const issues = props.issues;
+  if (!issues) return [];
+  return [
+    { id: 'passive', title: 'Possible passive voice', hint: 'Passive voice can keep attention on what happened. Consider an active version when the person acting matters.', matches: issues.passiveVoice.map(item => ({ quote: item.text, position: item.position })) },
+    { id: 'adverbs', title: 'Adverbs and intensifiers', hint: 'Does this word add meaning or rhythm? Keep it when it does.', matches: issues.adverbs.map(item => ({ quote: item.word, position: item.position })) },
+    { id: 'complex', title: 'Simpler word options', hint: 'Use an alternative only if it keeps your intended meaning and tone.', matches: issues.complexWords.map(item => ({ quote: item.word, position: item.position, suggestion: item.suggestion })) },
+    { id: 'cliches', title: 'Familiar phrases', hint: 'A familiar expression may fit a character or scene. Review it in context before changing it.', matches: issues.cliches.map(item => ({ quote: item.phrase, position: item.position })) },
+  ].filter(group => group.matches.length > 0);
+});
 
-  return (
-    props.issues.passiveVoice.length +
-    props.issues.adverbs.length +
-    props.issues.complexWords.length +
-    props.issues.repeatedWords.length +
-    props.issues.cliches.length
-  );
-};
+function visibleMatches(group: StyleGroup) {
+  return group.matches.slice(0, visibleCounts.value[group.id] || 5).map(match => {
+    const text = props.text ?? '';
+    const start = match.position;
+    // External consumers may provide counts without source text. Never display
+    // unrelated context when their issue offsets and text are out of sync.
+    const valid = text.slice(start, start + match.quote.length).toLowerCase() === match.quote.toLowerCase();
+    const before = valid ? text.slice(0, start).split(/\n{2,}/).pop() ?? '' : '';
+    const after = valid ? text.slice(start + match.quote.length).split(/\n{2,}/)[0] : '';
+    return {
+      ...match,
+      quote: valid ? text.slice(start, start + match.quote.length) : match.quote,
+      before: before.length > 64 ? '…' + before.slice(-64).replace(/^\S*\s/, '') : before,
+      after: after.length > 64 ? after.slice(0, 64).replace(/\s\S*$/, '') + '…' : after,
+    };
+  });
+}
 
-/**
- * Get SEO score class
- */
+/** Get the existing publishing score class. */
 const getSEOClass = (score: number): string => {
   if (score >= 80) return "excellent";
   if (score >= 60) return "good";
@@ -902,58 +858,70 @@ const getSEOClass = (score: number): string => {
   padding: 12px;
 }
 
-.issue-group {
-  margin-bottom: 12px;
-}
-
-.issue-group:last-child {
-  margin-bottom: 0;
-}
-
-.issue-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.issue-icon {
-  font-size: 16px;
-}
-
-.issue-title {
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--toolbar-accent-ink, #1d4ed8);
-}
-
-.issue-hint {
-  font-size: 11px;
+.analysis-note {
+  margin: 0 0 12px;
   color: var(--color-text-secondary, #6b7280);
-  margin-left: 24px;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
-.repeated-words {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-left: 24px;
-  margin-top: 6px;
+.style-group + .style-group {
+  border-top: 1px solid var(--color-border, #e5e7eb);
 }
 
-.repeated-word {
-  padding: 3px 8px;
-  background: var(--color-background, #f9fafb);
-  color: var(--toolbar-accent-ink, #1d4ed8);
-  border-radius: 10px;
-  font-size: 11px;
-}
-
-.no-issues {
-  text-align: center;
-  padding: 16px;
+.style-group summary {
+  min-height: 44px;
+  padding: 12px 0;
+  box-sizing: border-box;
+  cursor: pointer;
   color: var(--color-text, #1f2937);
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.style-group summary:focus-visible,
+.more-matches:focus-visible {
+  outline: 2px solid var(--toolbar-accent, #3b82f6);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.style-passages {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.style-passages li {
+  padding: 10px;
+  margin-bottom: 8px;
+  border-left: 2px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface, #fff);
+  overflow-wrap: anywhere;
+}
+
+.style-context {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.style-passages .analysis-note {
+  margin: 6px 0 0;
+}
+
+.more-matches {
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  color: var(--color-text, #1f2937);
+  background: var(--color-surface, #fff);
+  cursor: pointer;
+  font: inherit;
   font-size: 13px;
 }
 
