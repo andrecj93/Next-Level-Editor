@@ -50,6 +50,8 @@ export function useModalDialog(options: ModalDialogOptions): void {
   };
 
   const handleKeydown = (event: KeyboardEvent) => {
+    // Escape/Tab belong to the candidate picker while text is being composed.
+    if (event.isComposing || event.keyCode === 229) return;
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();

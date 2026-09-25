@@ -4,17 +4,23 @@
 
 import { splitBlockAtCaret, placeCaretInside } from "./blockInsertion";
 import { applyChecklistItemA11y } from "./checklist";
+import { countWords, countCharacters } from "./wordSegmentation";
 import {
   getBlockSlicesInRange,
   snapshotEmptyInlineHusks,
   removeNewEmptyInlineHusks,
+  isolateFormattingBoundary,
 } from "./formatting";
 import {
   clampRangeToElement,
   rangeCapturesContent,
   rangeTouchesElement,
+  rangeForEditableFormatting,
 } from "./rangeContact";
 import { buildTableGrid } from "./tableGrid";
+import { createTypingPlaceholder } from './typingPlaceholder';
+import { captureSelectionBookmark } from './selectionBookmark';
+import { getCaretOffsets, setCaretOffsets } from './caretOffset';
 
 /**
  * Wrap a non-collapsed range's content in styled `<span>`s WITHOUT ever nesting
@@ -138,11 +144,30 @@ export interface EditorCommand {
  * reads during render, so a bare `document.createElement` here crashed SSR with
  * `document is not defined`; the client re-computes the exact value on hydration.
  */
-function htmlToPlainText(html: string): string {
+function htmlToPlainText(html: string, source?: Element): string {
   if (typeof document !== "undefined") {
-    const temp = document.createElement("div");
-    temp.innerHTML = html;
-    return temp.innerText || temp.textContent || "";
+    const temp = source ?? document.createElement("div");
+    if (!source) temp.innerHTML = html;
+    // Preserve block boundaries without creating thousands of temporary text
+    // nodes on every keystroke in a manuscript. Inline marks stay within words.
+    const blocks = new Set(['P', 'DIV', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'MAIN', 'ASIDE', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TABLE', 'TR', 'TD', 'TH', 'BLOCKQUOTE', 'PRE', 'BR', 'FIGURE', 'HR']);
+    const parts: string[] = [];
+    const read = (node: Node): void => {
+      if (node.nodeType === Node.TEXT_NODE) { parts.push(node.textContent || ''); return; }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const element = node as Element;
+      const tag = element.localName.toUpperCase();
+      if (tag === 'SCRIPT' || tag === 'STYLE'
+        || element.classList.contains('table-of-contents') || element.classList.contains('page-break')) return;
+      const boundary = blocks.has(tag);
+      if (boundary) parts.push(' ');
+      for (let child = node.firstChild; child; child = child.nextSibling) read(child);
+      if (boundary) parts.push(' ');
+    };
+    read(temp);
+    // Empty inline styles use a zero-width caret marker. It is not prose;
+    // retaining it after Cut made an empty style count as another word.
+    return parts.join('').replace(/\u200b/g, '').replace(/\s+/g, ' ').trim();
   }
   // SSR fallback: turn block-closing tags and <br> into spaces so words across
   // block boundaries don't fuse, strip the rest, then decode the few entities a
@@ -155,6 +180,7 @@ function htmlToPlainText(html: string): string {
     .replace(/&amp;/gi, "&")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
+    .replace(/\u200b/g, "")
     // Collapse + trim to mirror the DOM's innerText normalization, so the count
     // matches the client value that replaces it on hydration.
     .replace(/\s+/g, " ")
@@ -167,9 +193,13 @@ function htmlToPlainText(html: string): string {
  * @returns Word count
  */
 export function getWordCount(html: string): number {
-  const text = htmlToPlainText(html);
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  return words.length;
+  return getTextStatistics(html).wordCount;
+}
+
+/** Shared counts avoid parsing the same manuscript twice during a render. */
+export function getTextStatistics(html: string, source?: Element): { wordCount: number; characterCount: number } {
+  const text = htmlToPlainText(html, source);
+  return { wordCount: countWords(text), characterCount: countCharacters(text) };
 }
 
 /**
@@ -178,7 +208,7 @@ export function getWordCount(html: string): number {
  * @returns Character count with spaces
  */
 export function getCharacterCount(html: string): number {
-  return htmlToPlainText(html).length;
+  return countCharacters(htmlToPlainText(html));
 }
 
 /**
@@ -187,28 +217,29 @@ export function getCharacterCount(html: string): number {
  * @returns Character count without spaces
  */
 export function getCharacterCountWithoutSpaces(html: string): number {
-  return htmlToPlainText(html).replace(/\s/g, "").length;
+  return countCharacters(htmlToPlainText(html).replace(/\s/g, ""));
 }
 
-/** True for a <span> that carries an inline font-size. */
-function isFontSizeSpan(node: Node): node is HTMLElement {
+/** Imported inline marks may carry the size directly, without a span. */
+const FONT_SIZE_INLINE_TAGS = new Set(['SPAN', 'A', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'SUB', 'SUP', 'CODE', 'MARK', 'SMALL', 'BIG']);
+function hasInlineFontSize(node: Node): node is HTMLElement {
   return (
     node instanceof HTMLElement &&
-    node.tagName.toLowerCase() === "span" &&
+    FONT_SIZE_INLINE_TAGS.has(node.tagName) &&
     node.style.fontSize !== ""
   );
 }
 
 /**
- * Remove the font-size from a span; drop the empty style attribute and unwrap
- * the span entirely if that leaves it carrying nothing else.
+ * Remove an inline mark's font size and drop its empty style attribute.
+ * Unwrap empty spans while preserving semantic marks and their attributes.
  */
-function clearFontSizeSpan(span: HTMLElement): void {
+function clearInlineFontSize(span: HTMLElement): void {
   span.style.fontSize = "";
   if (!span.getAttribute("style")) {
     span.removeAttribute("style");
   }
-  if (span.attributes.length === 0 && span.parentNode) {
+  if (span.tagName === 'SPAN' && span.attributes.length === 0 && span.parentNode) {
     const parent = span.parentNode;
     while (span.firstChild) {
       parent.insertBefore(span.firstChild, span);
@@ -217,13 +248,13 @@ function clearFontSizeSpan(span: HTMLElement): void {
   }
 }
 
-/** Strip font-size styling from every span inside a fragment or element. */
-function removeFontSizeSpansWithin(
+/** Strip sizing from editable inline marks inside a fragment or element. */
+function removeInlineFontSizesWithin(
   container: DocumentFragment | HTMLElement
 ): void {
-  container.querySelectorAll("span").forEach((span) => {
-    if (isFontSizeSpan(span)) {
-      clearFontSizeSpan(span);
+  container.querySelectorAll<HTMLElement>('[style]').forEach((span) => {
+    if (hasInlineFontSize(span) && !span.closest('[contenteditable="false"]')) {
+      clearInlineFontSize(span);
     }
   });
 }
@@ -231,10 +262,9 @@ function removeFontSizeSpansWithin(
 /**
  * Apply font size to selected text or block.
  *
- * Idempotent by design: re-sizing a selection that exactly covers a
- * previously sized span restyles that span in place (no nested spans, no
- * multiplicative em compounding), and "normal" is a CLEAR operation \u2014 it
- * removes font sizes instead of wrapping a redundant 1em span.
+ * Re-sizing first isolates the intended run and removes its inherited size,
+ * avoiding nested spans and multiplicative em compounding. "normal" clears
+ * sizing from selected text or future typing without inserting a 1em wrapper.
  *
  * @param root - Editor root element (bounds the sized-ancestor search)
  * @param size - Font size (small, normal, large, huge)
@@ -253,100 +283,74 @@ export function applyFontSize(
   const selection = globalThis.getSelection();
   if (!selection || selection.rangeCount === 0) return;
 
-  const range = selection.getRangeAt(0);
+  const originalRange = selection.getRangeAt(0);
+  if (!root.contains(originalRange.startContainer) || !root.contains(originalRange.endContainer)) return;
+  const range = rangeForEditableFormatting(originalRange, root);
+  if (!range) return;
+  const collapsed = range.collapsed;
+  const backwards = selection.anchorNode === originalRange.endContainer && selection.anchorOffset === originalRange.endOffset;
 
   // "normal" clears sizing; it never wraps a 1em span.
   const targetSize = size === "normal" ? null : sizeMap[size];
 
-  if (range.collapsed) {
-    // Nothing is selected, so a CLEAR has nothing to remove.
-    if (!targetSize) return;
-
-    // At caret position, wrap future text
-    const span = document.createElement("span");
-    span.style.fontSize = targetSize;
-    span.textContent = "\u200B"; // Zero-width space
-    range.insertNode(span);
-    range.selectNodeContents(span);
-    range.collapse(false);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    return;
-  }
-
-  // Re-size of a selection that exactly covers a previously sized span:
-  // restyle that span in place instead of nesting a new one inside it. Walk
-  // up to the OUTERMOST sized span whose text matches the selection so that
-  // pre-existing nested (compounding) spans collapse onto a single wrapper.
-  const selectedText = range.toString();
-  let sizedAncestor: HTMLElement | null = null;
-  let current: Node | null = range.commonAncestorContainer;
-  while (
-    current &&
-    current !== root &&
-    current.nodeType !== Node.DOCUMENT_NODE
-  ) {
-    if (isFontSizeSpan(current) && current.textContent === selectedText) {
-      sizedAncestor = current;
+  const doc = root.ownerDocument;
+  const emptyBefore = snapshotEmptyInlineHusks(root);
+  let placeholder: HTMLElement | null = null;
+  if (collapsed) {
+    let ancestor = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer as HTMLElement : range.startContainer.parentElement;
+    let hasSize = false;
+    while (ancestor && ancestor !== root) {
+      if (hasInlineFontSize(ancestor)) hasSize = true;
+      ancestor = ancestor.parentElement;
     }
-    current = current.parentNode;
-  }
+    if (!targetSize && !hasSize) return;
+    const point = range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer as Element : range.startContainer.parentElement;
+    const pending = point?.closest<HTMLElement>('[data-nle-typing-placeholder="true"]');
+    placeholder = pending?.textContent === '\u200b' ? pending : createTypingPlaceholder(doc);
+    if (!placeholder.parentNode) range.insertNode(placeholder);
+    range.selectNode(placeholder);
+  } else if (!rangeCapturesContent(range)) return;
 
-  if (sizedAncestor) {
-    // Collapse any sized spans nested inside the wrapper first.
-    removeFontSizeSpansWithin(sizedAncestor);
-    const firstChild = sizedAncestor.firstChild;
-    const lastChild = sizedAncestor.lastChild;
-
+  // Isolate the selected run from inherited sizes before clearing/applying.
+  // This also lets a collapsed caret leave a sized span without changing the
+  // letters on either side, or multiplying em units on repeated choices.
+  const start = doc.createComment('size-start');
+  const end = doc.createComment('size-end');
+  const endRange = range.cloneRange();
+  endRange.collapse(false);
+  endRange.insertNode(end);
+  const startRange = range.cloneRange();
+  startRange.collapse(true);
+  startRange.insertNode(start);
+  let bookmark: ReturnType<typeof captureSelectionBookmark> = null;
+  try {
+    isolateFormattingBoundary(end, root, 'end', hasInlineFontSize);
+    isolateFormattingBoundary(start, root, 'start', hasInlineFontSize);
+    const selected = doc.createRange();
+    selected.setStartAfter(start);
+    selected.setEndBefore(end);
     if (targetSize) {
-      sizedAncestor.style.fontSize = targetSize;
+      wrapRangeSlicesPerBlock(selected, root, span => { span.style.fontSize = targetSize; }, removeInlineFontSizesWithin);
     } else {
-      clearFontSizeSpan(sizedAncestor); // may unwrap the span entirely
+      clearRangeSlicesPerBlock(selected, root, removeInlineFontSizesWithin);
     }
-
-    const newRange = document.createRange();
-    if (sizedAncestor.parentNode) {
-      newRange.selectNodeContents(sizedAncestor);
-    } else if (firstChild && lastChild) {
-      // The span was unwrapped; reselect the released children.
-      newRange.setStartBefore(firstChild);
-      newRange.setEndAfter(lastChild);
-    } else {
-      return;
+    removeNewEmptyInlineHusks(root, emptyBefore);
+    if (!collapsed) {
+      const restored = doc.createRange();
+      restored.setStartAfter(start);
+      restored.setEndBefore(end);
+      selection.setBaseAndExtent(
+        backwards ? restored.endContainer : restored.startContainer, backwards ? restored.endOffset : restored.startOffset,
+        backwards ? restored.startContainer : restored.endContainer, backwards ? restored.startOffset : restored.endOffset);
+      bookmark = captureSelectionBookmark(root);
     }
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-    return;
+  } finally {
+    end.remove();
+    start.remove();
+    if (placeholder?.firstChild) selection.collapse(placeholder.firstChild, 1);
+    else bookmark?.restore();
   }
-
-  // CLEAR: strip sized spans PER BLOCK so a multi-paragraph selection never
-  // runs extractContents across a block boundary (which cloned the
-  // partially-contained <p>s into ghost empty paragraphs with orphaned emptied
-  // spans). Each block's slice is extracted, its sized spans removed, and the
-  // bare contents re-inserted. #r19-1
-  if (!targetSize) {
-    const nodes = clearRangeSlicesPerBlock(range, root, removeFontSizeSpansWithin);
-    if (nodes.length > 0) {
-      const newRange = document.createRange();
-      newRange.setStartBefore(nodes[0]);
-      newRange.setEndAfter(nodes[nodes.length - 1]);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-    }
-    return;
-  }
-
-  // Wrap per block so a multi-paragraph selection never nests <p> in a <span>;
-  // strip any nested sized spans within each slice so sizes don't compound.
-  const spans = wrapRangeSlicesPerBlock(
-    range,
-    root,
-    (span) => {
-      span.style.fontSize = targetSize;
-    },
-    removeFontSizeSpansWithin
-  );
-  reselectWrappers(selection, spans);
 }
 
 /**
@@ -361,7 +365,61 @@ export function applyTextAlignment(
   const selection = globalThis.getSelection();
   if (!selection || selection.rangeCount === 0) return;
 
-  const range = selection.getRangeAt(0);
+  let range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
+
+  // A browser's first typed line is often bare text (with inline marks) at
+  // the editor root. Give touched inline runs their own paragraphs so block
+  // alignment is saved with the document, never on the editing surface.
+  const structural = 'p,div,h1,h2,h3,h4,h5,h6,li,blockquote,pre,br,hr,table,ul,ol,figure,td,th';
+  const runs: Node[][] = [];
+  let run: Node[] = [];
+  const flush = () => { if (run.length) runs.push(run); run = []; };
+  for (const child of Array.from(root.childNodes)) {
+    if (child.nodeType === Node.ELEMENT_NODE &&
+        ((child as Element).matches(structural) || (child as Element).querySelector(structural))) flush();
+    else run.push(child);
+  }
+  flush();
+  const touched = runs.filter(nodes => {
+    // Whitespace between serialized blocks is not another authored paragraph.
+    if (!range.collapsed && nodes.every(node => node.nodeType === Node.TEXT_NODE && !node.textContent?.trim())) return false;
+    const content = root.ownerDocument.createRange();
+    content.setStartBefore(nodes[0]);
+    content.setEndAfter(nodes[nodes.length - 1]);
+    if (range.collapsed) return range.compareBoundaryPoints(Range.START_TO_START, content) >= 0 &&
+      range.compareBoundaryPoints(Range.END_TO_END, content) <= 0;
+    const slice = range.cloneRange();
+    if (slice.compareBoundaryPoints(Range.START_TO_START, content) < 0) slice.setStart(content.startContainer, content.startOffset);
+    if (slice.compareBoundaryPoints(Range.END_TO_END, content) > 0) slice.setEnd(content.endContainer, content.endOffset);
+    return !slice.collapsed && rangeCapturesContent(slice);
+  });
+  if (touched.length) {
+    const point = (node: Node, offset: number) => ({ node, offset,
+      next: node === root ? root.childNodes[offset] : undefined,
+      previous: node === root ? root.childNodes[offset - 1] : undefined });
+    const anchor = point(selection.anchorNode!, selection.anchorOffset);
+    const focus = point(selection.focusNode!, selection.focusOffset);
+    for (const nodes of touched) {
+      const paragraph = root.ownerDocument.createElement('p');
+      root.insertBefore(paragraph, nodes[0]);
+      nodes.forEach(node => paragraph.appendChild(node));
+    }
+    const restorePoint = (saved: ReturnType<typeof point>): [Node, number] => {
+      if (saved.node !== root) return [saved.node, saved.offset];
+      const adjacent = saved.next ?? saved.previous;
+      const parent = adjacent?.parentNode;
+      return parent ? [parent, Array.from(parent.childNodes).indexOf(adjacent!) + (saved.next ? 0 : 1)] : [root, 0];
+    };
+    selection.setBaseAndExtent(...restorePoint(anchor), ...restorePoint(focus));
+    range = selection.getRangeAt(0);
+  } else if (!root.childNodes.length && range.collapsed) {
+    const paragraph = root.ownerDocument.createElement('p');
+    paragraph.appendChild(root.ownerDocument.createElement('br'));
+    root.appendChild(paragraph);
+    selection.collapse(paragraph, 0);
+    range = selection.getRangeAt(0);
+  }
 
   // Get the element - if commonAncestorContainer is a text node, use its parent
   let element = range.commonAncestorContainer;
@@ -468,10 +526,11 @@ export function applyTextColor(root: HTMLElement, color: string) {
     // Insert a span with color at caret position
     const span = document.createElement("span");
     span.style.color = color;
-    span.textContent = "\u200B"; // Zero-width space
+    const placeholder = createTypingPlaceholder(root.ownerDocument);
+    span.appendChild(placeholder);
     range.insertNode(span);
-    range.selectNodeContents(span);
-    range.collapse(false);
+    range.setStart(placeholder.firstChild!, 1);
+    range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
   } else {
@@ -562,7 +621,8 @@ function removeHighlight(range: Range, root: HTMLElement) {
     el.style.removeProperty("padding");
     el.style.removeProperty("border-radius");
     el.style.removeProperty("color");
-    if (!el.getAttribute("style") && el.attributes.length === 0) {
+    if (!el.getAttribute("style")) el.removeAttribute('style');
+    if (el.attributes.length === 0) {
       const parent = el.parentNode;
       if (!parent) return;
       while (el.firstChild) parent.insertBefore(el.firstChild, el);
@@ -623,6 +683,7 @@ export function applyBackgroundColor(root: HTMLElement, color: string) {
   if (!selection || selection.rangeCount === 0) return;
 
   const range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
 
   // "None" swatch / transparent → remove the highlight instead of painting a
   // transparent span (which forced white, invisible text).
@@ -630,7 +691,29 @@ export function applyBackgroundColor(root: HTMLElement, color: string) {
     typeof color !== "string" ||
     HIGHLIGHT_CLEAR_VALUES.has(color.trim().toLowerCase())
   ) {
+    if (range.collapsed) {
+      const point = range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? range.startContainer as Element : range.startContainer.parentElement;
+      let highlighted = false;
+      for (let ancestor = point; ancestor && ancestor !== root; ancestor = ancestor.parentElement) {
+        if (ancestor instanceof HTMLElement && ancestor.tagName === 'SPAN' && ancestor.style.backgroundColor) highlighted = true;
+      }
+      if (!highlighted) return;
+      // Give future typing its own unhighlighted position without repainting
+      // the authored letters on either side of the caret.
+      const pending = point?.closest<HTMLElement>('[data-nle-typing-placeholder="true"]');
+      const placeholder = pending?.textContent === '\u200b' ? pending : createTypingPlaceholder(root.ownerDocument);
+      if (!placeholder.parentNode) range.insertNode(placeholder);
+      range.selectNode(placeholder);
+      removeHighlight(range, root);
+      selection.collapse(placeholder.firstChild, 1);
+      return;
+    }
+    // Splitting a highlighted run extracts its text, collapsing the live
+    // range. Keep the same words selected so the next revision replaces them.
+    const position = getCaretOffsets(root, true);
     removeHighlight(range, root);
+    setCaretOffsets(root, position);
     return;
   }
 
@@ -641,10 +724,11 @@ export function applyBackgroundColor(root: HTMLElement, color: string) {
     span.style.color = getContrastColor(color);
     span.style.padding = "2px 4px";
     span.style.borderRadius = "2px";
-    span.textContent = "\u200B";
+    const placeholder = createTypingPlaceholder(root.ownerDocument);
+    span.appendChild(placeholder);
     range.insertNode(span);
-    range.selectNodeContents(span);
-    range.collapse(false);
+    range.setStart(placeholder.firstChild!, 1);
+    range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
   } else {

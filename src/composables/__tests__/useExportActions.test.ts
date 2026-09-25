@@ -221,7 +221,7 @@ describe("useExportActions", () => {
 
       await exportPdf();
 
-      expect(exportUtils.exportAsPdf).toHaveBeenCalledWith(editorElement);
+      expect(exportUtils.exportAsPdf).toHaveBeenCalledWith(editorElement, undefined, expect.objectContaining({ signal: expect.any(AbortSignal), onProgress: expect.any(Function) }));
       expect(mockShowToast).toHaveBeenCalledWith(
         "✓ Document downloaded as PDF! Check your Downloads folder",
         "success"
@@ -282,7 +282,7 @@ describe("useExportActions", () => {
 
       await handleExportPdf();
 
-      expect(exportUtils.exportAsPdf).toHaveBeenCalledWith(editorElement);
+      expect(exportUtils.exportAsPdf).toHaveBeenCalledWith(editorElement, undefined, expect.objectContaining({ signal: expect.any(AbortSignal), onProgress: expect.any(Function) }));
       expect(mockShowToast).toHaveBeenCalledWith(
         "✓ Document downloaded as PDF! Check your Downloads folder",
         "success"

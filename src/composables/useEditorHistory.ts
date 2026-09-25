@@ -16,8 +16,8 @@ export interface HistoryEntry {
   /** Capture time (epoch ms) — shown by the history timeline. */
   timestamp: number;
   /**
-   * Caret/selection at capture time, as text offsets within the editor. Lets
-   * undo/redo put the cursor back where it was instead of at the document top.
+   * Caret/selection at capture time, including DOM boundaries and direction.
+   * Text offsets provide a fallback if restored inline markup changes.
    */
   selection?: CaretOffsets | null;
   /** Set on burst-coalesced entries (typing/deleting runs). */
@@ -61,14 +61,43 @@ export function useEditorHistory() {
   /**
    * Build a preview text from HTML content
    */
-  const buildPreview = (html: string): string => {
-    const temp = document.createElement("div");
-    temp.innerHTML = html;
-    // Normalize whitespace
-    const text = temp.innerText.replace(/\s+/g, " ").trim();
-    return text.length > 60
+  const buildPreview = (html: string, plainText?: string, caret?: number): string => {
+    if (plainText === undefined) {
+      const temp = document.createElement("div");
+      temp.innerHTML = html;
+      if (caret === undefined) {
+        // The initial version has no editing position. Separate block text so
+        // its title and first paragraph do not appear as one fused word.
+        temp.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, br, td, th')
+          .forEach(block => block.before(document.createTextNode(' ')));
+      }
+      plainText = temp.textContent || "";
+    }
+    // Show the passage being revised, not the same opening of a long book in
+    // every row. Slice before normalization to keep capture work bounded.
+    let start = Math.max(0, Math.min(caret ?? 0, plainText.length) - 45);
+    if (start) {
+      const windowStart = Math.max(0, start - 60);
+      const boundary = /\s[^\s]*$/.exec(plainText.slice(windowStart, start));
+      // Begin at a whole word; never bisect an emoji or combining sequence.
+      start = boundary ? windowStart + boundary.index + 1 : 0;
+    }
+    const prefix = start > 0 ? '… ' : '';
+    if (start) plainText = plainText.slice(start);
+    // A timeline label needs only its first 61 normalized characters. Do not
+    // normalize a whole book on every key when the preview ends on line one.
+    let text = "";
+    let space = false;
+    for (const character of plainText) {
+      if (/\s/.test(character)) { space = text.length > 0; continue; }
+      if (space) text += " ";
+      text += character;
+      space = false;
+      if (text.length > 60) break;
+    }
+    return prefix + (text.length > 60
       ? `${text.slice(0, 57)}...`
-      : text || "Empty content";
+      : text || "Empty content");
   };
 
   /**
@@ -77,20 +106,30 @@ export function useEditorHistory() {
   const captureSnapshot = (
     html: string,
     selection?: CaretOffsets | null,
-    coalesceKey?: HistoryCoalesceKey
+    coalesceKey?: HistoryCoalesceKey,
+    /** Already available from the live editor; avoids reparsing its HTML. */
+    plainText?: string
   ): void => {
     if (isApplyingHistory.value) return;
 
-    const preview = buildPreview(html);
     const current = history.value[historyIndex.value];
 
     if (current?.html === html) {
       // Same content, but the caret may have moved since — keep the latest
       // caret so an undo landing here restores the most recent position.
       if (current && selection) current.selection = selection;
+      // A command can establish a boundary before editing unchanged content.
+      // Close the typing burst now, or execCommand's synchronous input event
+      // can merge the command into the prose the writer just typed.
+      if (!coalesceKey) {
+        delete current.coalesceKey;
+        delete current.burstStart;
+        delete current.lastInputAt;
+      }
       return;
     }
 
+    const preview = buildPreview(html, plainText, selection?.end);
     const now = Date.now();
 
     // Continue the current keystroke burst: fold this capture into the tail

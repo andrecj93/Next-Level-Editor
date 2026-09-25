@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { applyTextAlignment } from "../commands";
 
 /**
@@ -17,6 +17,7 @@ describe("applyTextAlignment — multi-block selection scope", () => {
       "<p id='p1'>One</p><p id='p2'>Two</p><p id='p3'>Three</p><p id='p4'>Four</p>";
     document.body.appendChild(root);
   });
+  afterEach(() => { window.getSelection()?.removeAllRanges(); root.remove(); });
 
   const selectAcross = (startId: string, endId: string) => {
     const startP = root.querySelector(`#${startId}`)!;
@@ -31,6 +32,89 @@ describe("applyTextAlignment — multi-block selection scope", () => {
 
   const align = (id: string) =>
     (root.querySelector(`#${id}`) as HTMLElement).style.textAlign;
+
+  it('aligns the first typed line and preserves its selected text', () => {
+    root.textContent = 'A sentence worth keeping.';
+    const selection = window.getSelection()!;
+    selection.selectAllChildren(root);
+    applyTextAlignment(root, 'center');
+    expect(root.innerHTML).toBe('<p style="text-align: center;">A sentence worth keeping.</p>');
+    expect(root.style.textAlign).toBe('');
+    expect(selection.toString()).toBe('A sentence worth keeping.');
+  });
+
+  it('keeps inline marks and a backwards word selection in a loose paragraph', () => {
+    root.innerHTML = 'A <em>quiet</em> morning';
+    const word = root.querySelector('em')!.firstChild!;
+    const selection = window.getSelection()!;
+    selection.setBaseAndExtent(word, 5, word, 0);
+    applyTextAlignment(root, 'right');
+    expect(root.innerHTML).toBe('<p style="text-align: right;">A <em>quiet</em> morning</p>');
+    expect(selection.toString()).toBe('quiet');
+    expect(selection.anchorNode).toBe(word);
+    expect(selection.anchorOffset).toBe(5);
+    expect(selection.focusOffset).toBe(0);
+  });
+
+  it('keeps a caret at the root boundary after a first line ready to continue', () => {
+    root.textContent = 'An opening';
+    const selection = window.getSelection()!;
+    selection.collapse(root, 1);
+    applyTextAlignment(root, 'center');
+    expect(root.innerHTML).toBe('<p style="text-align: center;">An opening</p>');
+    expect(selection.isCollapsed).toBe(true);
+    expect(selection.focusNode).toBe(root.firstChild);
+    expect(selection.focusOffset).toBe(1);
+  });
+
+  it('aligns the touched loose line without absorbing breaks or adjacent blocks', () => {
+    root.innerHTML = '<p>Before</p>One<br>Two <strong>words</strong><p>After</p>';
+    window.getSelection()!.collapse(root.querySelector('strong')!.firstChild!, 3);
+    applyTextAlignment(root, 'right');
+    expect(root.innerHTML).toBe('<p>Before</p>One<br><p style="text-align: right;">Two <strong>words</strong></p><p>After</p>');
+  });
+
+  it('aligns mixed loose and existing paragraphs while preserving outside prose', () => {
+    root.innerHTML = 'Before<p>One</p>Loose <em>line</em><p>Two</p>After';
+    const paragraphs = root.querySelectorAll('p');
+    window.getSelection()!.setBaseAndExtent(paragraphs[0].firstChild!, 0, paragraphs[1].firstChild!, 3);
+    applyTextAlignment(root, 'center');
+    expect(root.innerHTML).toBe('Before<p style="text-align: center;">One</p><p style="text-align: center;">Loose <em>line</em></p><p style="text-align: center;">Two</p>After');
+    expect(window.getSelection()!.toString()).toBe('OneLoose lineTwo');
+  });
+
+  it('does not wrap the next loose line at a zero-content selection boundary', () => {
+    root.innerHTML = '<p>Selected</p>Untouched';
+    window.getSelection()!.setBaseAndExtent(root.firstChild!.firstChild!, 0, root.lastChild!, 0);
+    applyTextAlignment(root, 'center');
+    expect(root.innerHTML).toBe('<p style="text-align: center;">Selected</p>Untouched');
+  });
+
+  it('keeps serialized whitespace between paragraphs without creating blank blocks', () => {
+    root.innerHTML = '<p>One</p>\n  <p>Two</p>';
+    window.getSelection()!.selectAllChildren(root);
+    applyTextAlignment(root, 'center');
+    expect(root.innerHTML).toBe('<p style="text-align: center;">One</p>\n  <p style="text-align: center;">Two</p>');
+  });
+
+  it('sets alignment before the first character without styling the editor root', () => {
+    root.replaceChildren();
+    window.getSelection()!.collapse(root, 0);
+    applyTextAlignment(root, 'right');
+    expect(root.innerHTML).toBe('<p style="text-align: right;"><br></p>');
+    expect(window.getSelection()!.isCollapsed).toBe(true);
+  });
+
+  it('does not change text selected outside this editor', () => {
+    const outside = document.createElement('p');
+    outside.textContent = 'Another document';
+    document.body.append(outside);
+    window.getSelection()!.selectAllChildren(outside);
+    applyTextAlignment(root, 'right');
+    expect(outside.style.textAlign).toBe('');
+    expect(root.querySelectorAll('[style]')).toHaveLength(0);
+    outside.remove();
+  });
 
   it("aligns only the blocks the selection spans, not the whole document", () => {
     selectAcross("p2", "p3");

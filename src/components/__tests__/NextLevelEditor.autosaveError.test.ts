@@ -77,6 +77,38 @@ describe("NextLevelEditor — auto-save surfaces a failing saveHandler", () => {
     expect(saveStatus()).toBe("saved");
   });
 
+  it("cancels a stale pending write when the host replaces the document", async () => {
+    const handler = vi.fn(() => true);
+    const editor = await mountEditor(handler);
+    editor.innerHTML = "<p>Old pending edit</p>";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    await nextTick();
+    await wrapper!.setProps({ modelValue: "<p>New host document</p>" });
+    await nextTick();
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(handler).not.toHaveBeenCalled();
+    expect(editor.innerHTML).toBe("<p>New host document</p>");
+    expect(wrapper!.findComponent(ModalsContainer).props("hasPendingChanges")).toBe(false);
+    await editAndSettle(editor, "<p>New host document edited</p>");
+    expect(handler).toHaveBeenCalledExactlyOnceWith("<p>New host document edited</p>");
+  });
+
+  it("retries a failed save with the current document", async () => {
+    const handler = vi.fn().mockReturnValueOnce(false).mockReturnValue(true);
+    const editor = await mountEditor(handler);
+    await editAndSettle(editor, "<p>First draft</p>");
+    expect(saveStatus()).toBe("error");
+    editor.innerHTML = "<p>Latest draft</p>";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    await nextTick();
+    await wrapper!.get(".save-retry").trigger("click");
+    await flushPromises();
+    expect(handler).toHaveBeenLastCalledWith("<p>Latest draft</p>");
+    expect(saveStatus()).toBe("saved");
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
   it("the indicator renders error wording, never 'Saved at', after a failure", async () => {
     const saveHandler = vi.fn((): boolean => {
       throw new Error("nope");

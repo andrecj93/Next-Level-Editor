@@ -10,6 +10,7 @@
       class="dropdown-trigger"
       :class="{ active: hasActiveItem }"
       :data-tooltip="tooltip"
+      :title="tooltip"
       :aria-label="label"
       :aria-expanded="isOpen"
       aria-haspopup="menu"
@@ -27,13 +28,14 @@
       <span class="dropdown-arrow">▼</span>
     </button>
 
-    <transition name="dropdown-fade">
+    <transition name="dropdown-fade" @after-enter="clampMenu" @after-leave="resetClosedMenuPosition">
       <div
         v-if="isOpen"
         ref="menuRef"
         class="dropdown-menu"
         :style="menuStyle"
         role="menu"
+        tabindex="0"
         :aria-label="label"
         @keydown="onMenuKeydown"
       >
@@ -131,34 +133,43 @@ const menuRef = ref<HTMLElement | null>(null);
 const triggerRef = ref<HTMLButtonElement | null>(null);
 const isOpen = ref(false);
 
-// Viewport clamping — the menu is left-aligned to its trigger, so triggers
-// near the right edge of a narrow viewport would push the 200px menu
-// off-screen. Measured on open (after the v-if renders) and applied via
-// `left` (not transform: the enter transition animates transform).
-const menuLeft = ref(0);
+// Keep the CSS anchor (including bottom/left toolbar variants) and adjust its
+// insets. A transform can move a menu visually but retains its original
+// scrollable footprint, widening mobile pages even when the menu looks inside.
+const menuShift = ref({ x: 0, y: 0 });
+const menuMaxHeight = ref(400);
 
-const clampMenu = () => {
+const clampMenu = async () => {
   const menu = menuRef.value;
-  if (!menu) return;
+  if (!menu || !isOpen.value) return;
   const margin = 8;
-  // Measure at the natural position first (no inline `left`, so the
-  // position-variant CSS decides the anchor).
-  menuLeft.value = 0;
+  const viewport = window.visualViewport;
+  const left = (viewport?.offsetLeft ?? 0) + margin;
+  const top = (viewport?.offsetTop ?? 0) + margin;
+  const right = left + (viewport?.width ?? window.innerWidth) - margin * 2;
+  const bottom = top + (viewport?.height ?? window.innerHeight) - margin * 2;
+  menuMaxHeight.value = Math.min(400, bottom - top);
+  await nextTick();
+  if (menu !== menuRef.value || !isOpen.value) return;
   const r = menu.getBoundingClientRect();
-  let shift = 0;
-  if (r.right > window.innerWidth - margin) {
-    shift = window.innerWidth - margin - r.right;
-  }
-  if (r.left + shift < margin) {
-    shift = margin - r.left;
-  }
-  menuLeft.value = Math.round(shift);
+  const naturalLeft = r.left - menuShift.value.x;
+  const naturalTop = r.top - menuShift.value.y;
+  menuShift.value = {
+    x: Math.max(left - naturalLeft, Math.min(0, right - naturalLeft - r.width)),
+    y: Math.max(top - naturalTop, Math.min(0, bottom - naturalTop - r.height)),
+  };
 };
 
 watch(isOpen, (open) => {
   if (open) nextTick(clampMenu);
-  else menuLeft.value = 0;
 });
+
+const resetClosedMenuPosition = () => {
+  // Vue keeps the menu in the DOM during its exit transition. Removing the
+  // viewport offset before it leaves would widen the page again. Retain the
+  // clamped position until removal finishes.
+  if (!isOpen.value) menuShift.value = { x: 0, y: 0 };
+};
 
 const hasActiveItem = computed(() => {
   return props.items.some((item) => item.isActive?.());
@@ -175,16 +186,18 @@ const displayLabel = computed(() => {
 });
 
 const menuStyle = computed(() => {
-  const style: Record<string, string> = { minWidth: "200px" };
-  // Only override `left` when the clamp actually needs to shift the menu.
-  // Emitting `left: 0` unconditionally would defeat the position-variant CSS
-  // (the left-rail right-flyout at `left: calc(100% + 4px)` and the Export
-  // right-anchor at `right: 0`), pinning those menus to the wrong edge.
-  if (menuLeft.value !== 0) style.left = `${menuLeft.value}px`;
-  return style;
+  return {
+    minWidth: "200px",
+    maxHeight: `${menuMaxHeight.value}px`,
+    "--nle-menu-shift-x": `${menuShift.value.x}px`,
+    "--nle-menu-shift-y": `${menuShift.value.y}px`,
+  };
 });
 
 const toggle = () => {
+  // Mousedown preserves the text selection. Once it is captured, hand focus
+  // to this trigger so the next arrow key cannot reopen a previous menu.
+  triggerRef.value?.focus({ preventScroll: true });
   isOpen.value = !isOpen.value;
   emit("update:modelValue", isOpen.value);
 };
@@ -238,6 +251,7 @@ const focusItemAt = (index: number) => {
 
 /** Open (if needed) and land on the first or last item. */
 const enterMenu = (edge: "first" | "last") => {
+  emit("remember-selection");
   const land = () => focusItemAt(edge === "first" ? 0 : focusableItems().length - 1);
   if (isOpen.value) {
     land();
@@ -250,7 +264,9 @@ const enterMenu = (edge: "first" | "last") => {
 
 const onTriggerKeydown = (event: KeyboardEvent) => {
   if (props.disabled) return;
-  if (event.key === "ArrowDown") {
+  if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+    // Suppress the native button click on Enter/Space: it would toggle the
+    // menu again after focus has already moved into its first item.
     event.preventDefault();
     enterMenu("first");
   } else if (event.key === "ArrowUp") {
@@ -329,11 +345,19 @@ onMounted(() => {
   // Capture phase so an open dropdown wins over the editor's document-level
   // bubble-phase Escape handler.
   document.addEventListener("keydown", handleKeydown, true);
+  window.addEventListener("resize", clampMenu);
+  window.addEventListener("scroll", clampMenu, true);
+  window.visualViewport?.addEventListener("resize", clampMenu);
+  window.visualViewport?.addEventListener("scroll", clampMenu);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener("pointerdown", handleClickOutside, true);
   document.removeEventListener("keydown", handleKeydown, true);
+  window.removeEventListener("resize", clampMenu);
+  window.removeEventListener("scroll", clampMenu, true);
+  window.visualViewport?.removeEventListener("resize", clampMenu);
+  window.visualViewport?.removeEventListener("scroll", clampMenu);
 });
 
 watch(
@@ -367,6 +391,7 @@ watch(
   color: var(--toolbar-text-secondary, var(--color-text-secondary, #6b7280));
   border-radius: var(--radius-md, 6px);
   cursor: pointer;
+  font-family: inherit;
   font-size: 14px;
   transition: background-color var(--nle-motion-quick, 120ms)
       var(--nle-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
@@ -451,8 +476,8 @@ watch(
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  top: calc(100% + 4px + var(--nle-menu-shift-y, 0px));
+  left: var(--nle-menu-shift-x, 0px);
   background: var(--color-surface, white);
   /* Soft surface: hairline edge; the shadow carries the elevation. */
   border: 1px solid var(--color-divider, #e5e7eb);
@@ -474,6 +499,7 @@ watch(
   background: transparent;
   color: var(--color-text, #333);
   cursor: pointer;
+  font-family: inherit;
   font-size: 14px;
   text-align: left;
   transition: background-color var(--nle-motion-quick, 120ms)
@@ -491,7 +517,7 @@ watch(
 
 .dropdown-item.active {
   background: var(--toolbar-hover, #e8f0fe);
-  color: var(--toolbar-accent, #4285f4);
+  color: var(--toolbar-accent-ink, var(--toolbar-accent, #4285f4));
   font-weight: 500;
 }
 

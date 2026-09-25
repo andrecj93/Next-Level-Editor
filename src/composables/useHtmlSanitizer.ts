@@ -1,5 +1,6 @@
 import { buildEmbedContainerStyle } from "../utils/embeddedResizable";
 import { EMBED_IFRAME_STYLE, getEmbedPlayerChrome } from "../utils/embed";
+import { removeTypingPlaceholders } from '../utils/typingPlaceholder';
 
 const ALLOWED_TAGS = new Set([
   "A",
@@ -314,7 +315,7 @@ const sanitizeStyleValue = (styleValue: string): string => {
  * Provides secure HTML cleaning and validation
  */
 export function useHtmlSanitizer() {
-  const sanitizeHtml = (input: string | null = ""): string => {
+  const sanitizeHtml = (input: string | null = "", options: { fragment?: boolean } = {}): string => {
     const value = input ?? "";
     if (!value.trim()) return "";
     // No DOM (SSR / Node): we cannot sanitize, so never echo raw untrusted HTML
@@ -325,6 +326,7 @@ export function useHtmlSanitizer() {
     const workingDocument =
       document.implementation.createHTMLDocument("sanitizer");
     workingDocument.body.innerHTML = value;
+    removeTypingPlaceholders(workingDocument.body);
 
     const sanitizeTree = (root: HTMLElement) => {
       let child: ChildNode | null = root.firstChild;
@@ -906,19 +908,32 @@ export function useHtmlSanitizer() {
     };
 
     const wrapOrphanTextNodes = (root: HTMLElement) => {
-      const nodes = Array.from(root.childNodes);
-      for (const node of nodes) {
-        if (node.nodeType === Node.TEXT_NODE) {
-          const textContent = node.textContent ?? "";
-          if (!textContent.trim()) {
-            node.remove();
-            continue;
-          }
-          const paragraph = workingDocument.createElement("p");
-          paragraph.textContent = textContent.trim();
-          node.replaceWith(paragraph);
+      const inlineTags = new Set(['A', 'B', 'BR', 'CODE', 'EM', 'I', 'IMG', 'S', 'SPAN', 'STRONG', 'SUB', 'SUP', 'U']);
+      let run: ChildNode[] = [];
+      const flush = () => {
+        // Ignore indentation between blocks, but retain spaces BETWEEN inline
+        // marks. Wrapping each orphan text node separately splits one sentence
+        // around its emphasis and moves punctuation into another paragraph.
+        const first = run[0];
+        const last = run[run.length - 1];
+        if (first?.nodeType === Node.TEXT_NODE) first.textContent = first.textContent?.trimStart() ?? '';
+        if (last?.nodeType === Node.TEXT_NODE) last.textContent = last.textContent?.trimEnd() ?? '';
+        run = run.filter(node => {
+          if (node.nodeType === Node.TEXT_NODE && !node.textContent) { node.remove(); return false; }
+          return true;
+        });
+        if (run.some(node => node.nodeType === Node.TEXT_NODE)) {
+          const paragraph = workingDocument.createElement('p');
+          root.insertBefore(paragraph, run[0]);
+          for (const node of run) paragraph.appendChild(node);
         }
+        run = [];
+      };
+      for (const node of Array.from(root.childNodes)) {
+        if (node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && inlineTags.has((node as Element).tagName))) run.push(node);
+        else flush();
       }
+      flush();
     };
 
     const convertDivsToParagraphs = (root: HTMLElement) => {
@@ -997,7 +1012,10 @@ export function useHtmlSanitizer() {
     };
 
     sanitizeTree(workingDocument.body);
-    wrapOrphanTextNodes(workingDocument.body);
+    // An inline clipboard fragment belongs at the caret in the current block.
+    // Adding a paragraph here makes Firefox split that block and leave an
+    // unwanted blank paragraph after it. Full documents still normalize text.
+    if (!options.fragment) wrapOrphanTextNodes(workingDocument.body);
     convertDivsToParagraphs(workingDocument.body);
     normalizeLists(workingDocument.body);
     ensureBlockLineBreaks(workingDocument.body);

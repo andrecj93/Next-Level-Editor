@@ -87,7 +87,11 @@ export function useEditorEvents({
     rememberSelection();
     // Delay hiding floating toolbar to allow clicks
     setTimeout(() => {
-      showFloatingToolbar.value = false;
+      // Search can focus the manuscript briefly to select a match, then return
+      // to its input. A pending blur must not hide a newly restored toolbar
+      // after Escape has already put the writer back in the manuscript.
+      const root = editorContent.value;
+      if (!root?.contains(root.ownerDocument.activeElement)) showFloatingToolbar.value = false;
     }, 200);
     emit("blur");
   };

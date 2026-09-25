@@ -11,7 +11,7 @@ test.describe("Cinematic adaptive chrome (letterbox)", () => {
   test.beforeEach(async ({ page }) => {
     // adaptiveChrome now defaults to "off" (a static toolbar); opt into the
     // letterbox mode explicitly via the playground deep-link to exercise it.
-    await page.goto("/?empty=true&adaptiveChrome=letterbox");
+    await page.goto("/?writingMode=false&empty=true&adaptiveChrome=letterbox");
     await page.waitForSelector(".editor-content");
   });
 

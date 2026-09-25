@@ -16,6 +16,8 @@ interface UseEditorContentOptions {
   modelValue: Ref<string>;
   onUpdate: (value: string) => void;
   triggerAutoSave?: (content: string) => void;
+  /** Cancel saves for the previous document when the host replaces its model. */
+  onExternalUpdate?: () => void;
   /**
    * Called after the editor's innerHTML has been replaced wholesale, for
    * subsystems that bind listeners to live nodes and must re-attach them.
@@ -47,6 +49,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
 
   const htmlContent = ref("");
   const codeContent = ref("");
+  let lastPassiveSnapshot: string | undefined;
 
   // Re-bind interactivity to embedded media (images/videos) after any innerHTML
   // reset. Setting innerHTML discards the JS listeners attached at insert time,
@@ -87,11 +90,14 @@ export function useEditorContent(options: UseEditorContentOptions) {
     if (!editorContent.value || isApplyingHistory.value) return;
 
     const html = editorContent.value.innerHTML;
+    // Hydrating a host snapshot (including comment anchors) is not an edit.
+    // The htmlContent watcher must not turn captureAndEmit(false) into a save.
+    if (!emitUpdate) lastPassiveSnapshot = html;
     htmlContent.value = html;
 
     // Record the caret alongside the snapshot so undo/redo can restore it
     // instead of dropping the cursor to the top of the document.
-    captureSnapshot(html, getCaretOffsets(editorContent.value), coalesceKey);
+    captureSnapshot(html, getCaretOffsets(editorContent.value, true), coalesceKey, editorContent.value.textContent || "");
 
     if (emitUpdate) {
       const sanitized = sanitizeHtml(html);
@@ -102,6 +108,24 @@ export function useEditorContent(options: UseEditorContentOptions) {
         triggerAutoSave(sanitized);
       }
     }
+  };
+
+  /** Keep the undo destination at the position where this edit begins.
+   * A loaded document has no caret yet, and navigation alone is not an edit.
+   * Recording only the post-input caret loses the first edit's destination.
+   * This updates history metadata without emitting content or scheduling saves.
+   */
+  const captureBeforeEdit = (coalesceKey?: HistoryCoalesceKey) => {
+    const root = editorContent.value;
+    if (!root || isApplyingHistory.value) return;
+    const selection = getCaretOffsets(root, true);
+    if (!selection) return;
+    const previous = history.value[historyIndex.value]?.selection;
+    const samePosition = previous?.start === selection.start && previous.end === selection.end
+      && JSON.stringify(previous.points) === JSON.stringify(selection.points);
+    // Moving to another passage starts a new burst even without a pause.
+    // Uninterrupted typing still coalesces into a word/sentence undo step.
+    captureSnapshot(root.innerHTML, selection, samePosition ? coalesceKey : undefined, root.textContent || '');
   };
 
   /**
@@ -215,6 +239,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
         // A LATER surface-less update (Preview receiving a host modelValue):
         // shielded — receiving an update is not an edit, and the autosave
         // watcher must not save (and re-emit) it back. #R26-2
+        if (htmlContent.value !== sanitizeHtml(newValue)) options.onExternalUpdate?.();
         isApplyingHistory.value = true;
         htmlContent.value = sanitizeHtml(newValue);
         nextTick(() => {
@@ -223,10 +248,14 @@ export function useEditorContent(options: UseEditorContentOptions) {
         return;
       }
 
+      // captureAndEmit has already sanitized the outbound model. An exact
+      // echo cannot change the DOM; avoid parsing the entire book twice again.
+      if (newValue === editorContent.value.innerHTML) return;
       const currentSanitized = sanitizeHtml(editorContent.value.innerHTML);
       const newSanitized = sanitizeHtml(newValue);
 
       if (currentSanitized !== newSanitized) {
+        options.onExternalUpdate?.();
         isApplyingHistory.value = true;
         applySanitizedContent(newValue);
         nextTick(() => {
@@ -243,7 +272,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
   // Watch for content changes and trigger auto-save
   if (triggerAutoSave) {
     watch(htmlContent, (newContent) => {
-      if (newContent && !isApplyingHistory.value) {
+      if (newContent && newContent !== lastPassiveSnapshot && !isApplyingHistory.value) {
         triggerAutoSave(newContent);
       }
     });
@@ -257,6 +286,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
     isApplyingHistory,
     applySanitizedContent,
     captureAndEmit,
+    captureBeforeEdit,
     undo,
     redo,
     jumpToHistory,

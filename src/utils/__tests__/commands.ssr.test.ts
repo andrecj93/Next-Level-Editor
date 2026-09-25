@@ -40,4 +40,12 @@ describe("word/char counts are SSR-safe (no document)", () => {
     vi.stubGlobal("document", undefined);
     expect(getCharacterCountWithoutSpaces("<p>a b c</p>")).toBe(3);
   });
+
+  it('ignores empty inline caret markers without document', () => {
+    vi.stubGlobal('document', undefined);
+    const html = '<p>Keep this <strong>\u200b</strong></p>';
+    expect(getWordCount(html)).toBe(2);
+    expect(getCharacterCount(html)).toBe(9);
+    expect(getCharacterCountWithoutSpaces(html)).toBe(8);
+  });
 });

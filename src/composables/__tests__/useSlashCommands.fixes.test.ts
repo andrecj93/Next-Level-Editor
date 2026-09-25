@@ -5,9 +5,8 @@ import { insertHorizontalRule } from "../../utils/commands";
 
 /**
  * Regression tests for the slash-menu QA cluster:
- * 1. Menu position must be relative to the editor container (its
- *    offsetParent), not document-absolute, or the viewport clamp is defeated
- *    whenever the editor is not at the top of the page.
+ * 1. The body-teleported menu uses viewport coordinates, so editor offsets
+ *    and clipping containers cannot defeat the viewport clamp.
  * 2. Typing while the menu is open filters the items instead of leaking
  *    keystrokes into the document.
  * 3. Quote/Divider insert block elements as siblings of the paragraph
@@ -72,7 +71,7 @@ describe("useSlashCommands (QA fixes)", () => {
         ...partial,
       }) as DOMRect;
 
-    it("positions the menu relative to the editor container, not the document", async () => {
+    it("keeps fixed menu coordinates independent of the editor container", async () => {
       (window as unknown as { innerHeight: number }).innerHeight = 900;
       (window as unknown as { innerWidth: number }).innerWidth = 1200;
 
@@ -93,14 +92,9 @@ describe("useSlashCommands (QA fixes)", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(showCommandMenu.value).toBe(true);
-      // Viewport-clamped top: min(620 + 8, 900 - 320 - 8) = 572, then
-      // converted into container space: 572 - 500 = 72 (NOT 572 + scrollY,
-      // which rendered ~500px below the caret on the playground page).
-      expect(commandMenuPosition.value.top).toBe(72);
-      // left: 150 clamped, minus container left 100.
-      expect(commandMenuPosition.value.left).toBe(50);
-      // Rendered viewport position stays above the fold.
-      expect(commandMenuPosition.value.top + 500).toBeLessThan(900);
+      expect(commandMenuPosition.value.top).toBe(572);
+      expect(commandMenuPosition.value.left).toBe(150);
+      expect(commandMenuPosition.value.top + 320).toBeLessThan(900);
     });
   });
 

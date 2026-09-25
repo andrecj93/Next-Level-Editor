@@ -1,5 +1,8 @@
 import { ref, computed, type Ref } from "vue";
 import type { ContextMenuItem } from "../types/contextMenu";
+import { useClipboardCut } from './useClipboardCut';
+import { serializeEditorSelection } from '../utils/selectionClipboard';
+import { rangeCapturesContent } from '../utils/rangeContact';
 import { getSelectedTable, getSelectedCell } from "../utils/commands";
 import {
   copyToClipboard,
@@ -28,6 +31,13 @@ interface ContextMenuOptions {
    * reason as captureSnapshot.
    */
   emitUpdate?: (html: string) => void;
+  /** Use the editor's complete paste pipeline when the menu belongs to it. */
+  pasteClipboard?: () => Promise<void>;
+  /** Host editing-mode/readonly guard, rechecked before a delayed mutation. */
+  canEdit?: () => boolean;
+  beforeCut?: () => void;
+  notify?: (message: string) => void;
+  clearNotification?: (message: string) => void;
 }
 
 /**
@@ -39,15 +49,47 @@ const ESTIMATED_MENU_WIDTH = 220;
 const ESTIMATED_MENU_HEIGHT = 320;
 const VIEWPORT_MARGIN = 8;
 
+// Keep UTF-16 offsets for DOM ranges while recognizing complete Unicode words.
+// The library's ES2020 types do not yet declare Intl.Segmenter.
+interface WordSegment { index: number; segment: string; isWordLike?: boolean }
+type WordSegmenter = new (locale: undefined, options: { granularity: 'word' }) => {
+  segment(text: string): { containing(offset: number): WordSegment | undefined };
+};
+function wordAtOffset(text: string, offset: number): { start: number; end: number } | null {
+  const Segmenter = (Intl as unknown as { Segmenter?: WordSegmenter }).Segmenter;
+  if (typeof Segmenter === 'function') {
+    const segments = new Segmenter(undefined, { granularity: 'word' }).segment(text);
+    // Some Firefox/ICU builds segment CJK correctly but mark it non-word-like.
+    const isWord = (part: WordSegment | undefined): part is WordSegment =>
+      Boolean(part && (part.isWordLike || /[\p{L}\p{N}_]/u.test(part.segment)));
+    let word = segments.containing(offset);
+    // Hit testing may return the trailing edge of the letter under the pointer.
+    if (!isWord(word) && offset > 0) {
+      const previous = segments.containing(offset - 1);
+      if (isWord(previous) && previous.index + previous.segment.length === offset) word = previous;
+    }
+    return isWord(word) ? { start: word.index, end: word.index + word.segment.length } : null;
+  }
+  // Older engines still support accents, combining marks and astral letters.
+  const words = /[\p{L}\p{M}\p{N}_]+(?:['’][\p{L}\p{M}\p{N}_]+)*/gu;
+  let word: RegExpExecArray | null;
+  while ((word = words.exec(text))) {
+    const end = word.index + word[0].length;
+    if (offset >= word.index && offset <= end) return { start: word.index, end };
+  }
+  return null;
+}
+
 /**
  * When the selection is collapsed, select the word under the given pointer
  * position so a right-click formatting action targets the clicked word (like
  * native editors). An existing non-empty selection is left untouched.
  */
-function selectWordUnderPointer(event: MouseEvent): void {
+function selectWordUnderPointer(event: MouseEvent, root: HTMLElement | null): void {
   const selection = globalThis.getSelection?.();
   if (!selection) return;
-  if (!selection.isCollapsed && selection.toString().trim().length > 0) return;
+  if (!selection.isCollapsed && root && Array.from({ length: selection.rangeCount }, (_, i) => selection.getRangeAt(i))
+    .some(range => root.contains(range.startContainer) && root.contains(range.endContainer) && rangeCapturesContent(range))) return;
 
   const doc = document as Document & {
     caretRangeFromPoint?: (x: number, y: number) => Range | null;
@@ -68,20 +110,16 @@ function selectWordUnderPointer(event: MouseEvent): void {
       range.collapse(true);
     }
   }
-  if (!range) return;
+  if (!range || !root?.contains(range.startContainer)) return;
 
   const node = range.startContainer;
   if (node.nodeType === Node.TEXT_NODE) {
     const text = node.textContent || "";
-    const isWordChar = (c: string) => /\w/.test(c);
-    let start = range.startOffset;
-    let end = range.startOffset;
-    while (start > 0 && isWordChar(text[start - 1])) start--;
-    while (end < text.length && isWordChar(text[end])) end++;
-    if (end > start) {
+    const word = wordAtOffset(text, range.startOffset);
+    if (word) {
       const wordRange = document.createRange();
-      wordRange.setStart(node, start);
-      wordRange.setEnd(node, end);
+      wordRange.setStart(node, word.start);
+      wordRange.setEnd(node, word.end);
       selection.removeAllRanges();
       selection.addRange(wordRange);
       return;
@@ -91,19 +129,6 @@ function selectWordUnderPointer(event: MouseEvent): void {
   // No word to expand to: at least place the caret where the user clicked.
   selection.removeAllRanges();
   selection.addRange(range);
-}
-
-/**
- * Serialize the current selection to an HTML string, preserving inline
- * formatting (bold/italic/links/etc.) rather than flattening to plain text.
- */
-function getSelectionHtml(selection: Selection): string {
-  if (selection.rangeCount === 0) return "";
-  const container = document.createElement("div");
-  for (let i = 0; i < selection.rangeCount; i++) {
-    container.appendChild(selection.getRangeAt(i).cloneContents());
-  }
-  return container.innerHTML;
 }
 
 /**
@@ -153,6 +178,7 @@ export function useContextMenu(options: ContextMenuOptions) {
     tableDesignerPosition,
     captureSnapshot,
     emitUpdate,
+    pasteClipboard,
   } = options;
 
   /**
@@ -167,6 +193,14 @@ export function useContextMenu(options: ContextMenuOptions) {
     }
   };
 
+  const canEdit = () => Boolean(editorContent.value
+    && editorContent.value.getAttribute('contenteditable') !== 'false'
+    && (options.canEdit?.() ?? true));
+  const cutSelection = useClipboardCut({
+    editorContent, canEdit, beforeCut: options.beforeCut, commit: commitContentChange,
+    notify: options.notify, clearNotification: options.clearNotification,
+  });
+
   const showContextMenu = ref(false);
   const contextMenuPosition = ref({ top: 0, left: 0 });
 
@@ -179,11 +213,10 @@ export function useContextMenu(options: ContextMenuOptions) {
 
   const computeSelectionActive = (): boolean => {
     const selection = globalThis.getSelection();
-    return Boolean(
-      selection &&
-        !selection.isCollapsed &&
-        selection.toString().trim().length > 0
-    );
+    const root = editorContent.value;
+    return Boolean(selection && root && !selection.isCollapsed &&
+      Array.from({ length: selection.rangeCount }, (_, i) => selection.getRangeAt(i))
+        .some(range => root.contains(range.startContainer) && root.contains(range.endContainer) && rangeCapturesContent(range)));
   };
 
   // The element that was right-clicked, so the menu can offer target-specific
@@ -197,8 +230,7 @@ export function useContextMenu(options: ContextMenuOptions) {
   const contextMenuItems = computed<ContextMenuItem[]>(() => {
     const hasSelection = selectionActive.value;
 
-    // #28: programmatic paste requires the async Clipboard read API, which is
-    // only available in secure contexts on Chromium browsers.
+    // Programmatic paste requires a supported async Clipboard read API.
     // `typeof` guard, not `navigator?.`: this computed is EVALUATED DURING THE
     // SSR RENDER, and `navigator` is not a global in Node before v21, so a
     // bare reference throws ReferenceError (optional chaining does not help —
@@ -206,7 +238,7 @@ export function useContextMenu(options: ContextMenuOptions) {
     // on Node 20 LTS. #R32-10
     const pasteSupported =
       typeof navigator !== "undefined" &&
-      Boolean(navigator.clipboard?.readText);
+      Boolean(navigator.clipboard?.readText || (pasteClipboard && navigator.clipboard?.read));
 
     const items: ContextMenuItem[] = [
       {
@@ -216,32 +248,7 @@ export function useContextMenu(options: ContextMenuOptions) {
         shortcut: "Ctrl+X",
         disabled: !hasSelection,
          
-        onClick: async () => {
-          const sel = globalThis.getSelection();
-          if (!sel || sel.rangeCount === 0) return;
-
-          try {
-            const text = sel.toString();
-            // #13: preserve formatting by copying HTML (falls back to text
-            // when the ClipboardItem API is unavailable).
-            const html = getSelectionHtml(sel);
-
-            // Copy to clipboard first
-            const copied = html
-              ? await copyHtmlToClipboard(html, text)
-              : await copyToClipboard(text);
-
-            if (copied) {
-              // Delete the selected content using Selection API
-              sel.deleteFromDocument();
-              // #14: capture an undo snapshot and emit the content change so
-              // the cut is recorded in history and persisted to the parent.
-              commitContentChange();
-            }
-          } catch (error) {
-            console.error("Cut operation failed:", error);
-          }
-        },
+        onClick: cutSelection,
       },
       {
         id: "copy",
@@ -252,13 +259,13 @@ export function useContextMenu(options: ContextMenuOptions) {
          
         onClick: async () => {
           const sel = globalThis.getSelection();
-          if (!sel || sel.rangeCount === 0) return;
+          const root = editorContent.value;
+          if (!root || !sel || sel.rangeCount === 0) return;
 
           try {
-            const text = sel.toString();
-            // #13: copy the HTML of the selection so formatting survives the
-            // round-trip, falling back to plain text where HTML is empty.
-            const html = getSelectionHtml(sel);
+            const data = serializeEditorSelection(sel, root);
+            if (!data) return;
+            const { text, html } = data;
             if (html) {
               await copyHtmlToClipboard(html, text);
             } else {
@@ -274,13 +281,15 @@ export function useContextMenu(options: ContextMenuOptions) {
         label: "Paste",
         icon: "📄",
         shortcut: "Ctrl+V",
-        // #28: enable paste when the async Clipboard read API is available
-        // (Chrome/Edge). Where it is not (Safari/Firefox), keep it disabled -
-        // those browsers require a real paste event (Ctrl+V/Cmd+V).
+        // Older browsers without an async read API still need keyboard paste.
         disabled: !pasteSupported,
          
         onClick: async () => {
           if (!pasteSupported) return;
+          if (pasteClipboard) {
+            await pasteClipboard();
+            return;
+          }
 
           try {
             const text = await readClipboard();
@@ -408,13 +417,25 @@ export function useContextMenu(options: ContextMenuOptions) {
       );
     }
 
-    return items;
+    const editable = canEdit();
+    return items.map(item => {
+      if (item.divider || ['copy', 'open-link', 'copy-link'].includes(item.id ?? '')) return item;
+      const action = item.onClick;
+      return { ...item, disabled: item.disabled || !editable, onClick: () => { if (canEdit()) return action?.(); } };
+    });
   });
 
   /**
    * Handle right-click context menu
    */
   const handleContextMenu = (event: MouseEvent) => {
+    // Retain native spelling/clipboard tools for touch long-press and provide
+    // the same Shift+right-click escape hatch Firefox offers by default.
+    if (event.shiftKey || ('pointerType' in event && event.pointerType === 'touch')) {
+      showContextMenu.value = false;
+      showTableDesigner.value = false;
+      return;
+    }
     event.preventDefault();
 
     // Resolve the right-clicked link/image so the menu can offer target-specific
@@ -429,7 +450,7 @@ export function useContextMenu(options: ContextMenuOptions) {
 
     // Check if the right-click is on a table element
     const target = event.target;
-    if (target instanceof Element && target.closest("table, td, th")) {
+    if (canEdit() && target instanceof Element && target.closest("table, td, th")) {
       // Show the TableDesigner at the cursor position for table-specific actions
       const table = getSelectedTable();
       const cell = getSelectedCell();
@@ -480,7 +501,7 @@ export function useContextMenu(options: ContextMenuOptions) {
     // formatting items (Bold/Italic/Underline) act on what the user actually
     // right-clicked, matching native editors. An existing non-empty selection
     // is left untouched. [#15]
-    selectWordUnderPointer(event);
+    selectWordUnderPointer(event, editorContent.value);
 
     // Capture the selection state now so the menu's disabled gating reflects
     // what is actually selected at open time (see selectionActive). [#15]

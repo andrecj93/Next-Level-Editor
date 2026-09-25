@@ -10,10 +10,8 @@ import type { SlashCommandOption } from "../../composables/useSlashCommands";
  * Notes on test strategy:
  * - VTU v2 stubs <Transition> by default and renders its slot synchronously, so
  *   the `v-if="show"` branch is observable without waiting on animation.
- * - The component's selectedIndex watcher calls `document.querySelector` against
- *   the *real* document, so tests that exercise that path mount with
- *   `attachTo: document.body` and stub `Element.prototype.scrollIntoView`
- *   (a happy-dom no-op we assert on).
+ * - Geometry is mocked because happy-dom has no layout. The scrolling tests
+ *   ensure only this list moves, without a document-wide scrollIntoView.
  */
 
 const makeOption = (
@@ -236,17 +234,27 @@ describe("CommandMenu.vue", () => {
       Element.prototype.scrollIntoView = originalScroll;
     });
 
-    it("scrolls the newly-selected row into view when open", async () => {
+    it("scrolls only its own list to reveal the selected row", async () => {
       const wrapper = factory({ selectedIndex: 0 }, document.body);
+      const other = factory({ selectedIndex: 0 }, document.body);
+      const geometry = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect")
+        .mockImplementation(function (this: HTMLElement) {
+          return this.tagName === "UL"
+            ? { top: 100, bottom: 200 } as DOMRect
+            : { top: 220, bottom: 260 } as DOMRect;
+        });
       scrollSpy.mockClear();
 
       await wrapper.setProps({ selectedIndex: 2 });
       await nextTick(); // watcher schedules its query inside nextTick
 
-      expect(scrollSpy).toHaveBeenCalledTimes(1);
-      expect(scrollSpy).toHaveBeenCalledWith({ block: "nearest" });
+      expect(wrapper.get("ul").element.scrollTop).toBe(60);
+      expect(other.get("ul").element.scrollTop).toBe(0);
+      expect(scrollSpy).not.toHaveBeenCalled();
 
       wrapper.unmount();
+      other.unmount();
+      geometry.mockRestore();
     });
 
     it("does not scroll while the menu is closed", async () => {

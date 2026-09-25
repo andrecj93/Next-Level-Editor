@@ -27,6 +27,15 @@ describe("writing stats ignore decorative TOC / page-break DOM", () => {
     expect(withDecor.stats.words).toBe(withoutDecor.stats.words);
   });
 
+  it('ignores empty inline caret markers after a formatted word is cut', async () => {
+    const assistant = useWritingAssistant();
+    const marked = await assistant.analyze('<p>Keep this <strong>\u200b</strong></p>');
+    const plain = await assistant.analyze('<p>Keep this</p>');
+    expect(marked.stats.words).toBe(plain.stats.words);
+    expect(marked.stats.characters).toBe(plain.stats.characters);
+    expect(assistant.extractPlainText('<p><strong>\u200b</strong></p>')).toBe('');
+  });
+
   it("SEO heading structure ignores the TOC's own h2 (#3)", async () => {
     const wa = useWritingAssistant();
     const seo = wa.analyzeSEO(

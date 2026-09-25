@@ -5,10 +5,13 @@
       ref="textareaRef"
       v-model="content"
       class="comment-reply-textarea"
+      aria-label="Write a reply"
       placeholder="Write a reply... (use @ to mention)"
       rows="3"
       @input="handleInput"
       @keydown="handleKeydown"
+      @compositionstart="startComposition"
+      @compositionend="finishComposition"
     />
 
     <!-- Mention Autocomplete Dropdown -->
@@ -64,10 +67,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onBeforeUnmount } from "vue";
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from "vue";
 import type { MentionSuggestion } from "../composables/useComments";
 
 interface Props {
+  initialContent?: string;
+  autofocus?: boolean;
   /**
    * Host-supplied mention provider (e.g. useComments.searchMentions or the
    * onMentionTriggered callback). When absent, the dropdown stays empty.
@@ -78,11 +83,14 @@ interface Props {
 }
 
 interface Emits {
+  (e: "draft-change", content: string): void;
   (e: "submit", content: string, mentions: string[]): void;
   (e: "cancel"): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  initialContent: "",
+  autofocus: true,
   mentionSearch: undefined,
 });
 
@@ -93,11 +101,14 @@ const MENTION_SEARCH_DEBOUNCE_MS = 150;
 
 // Refs
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
-const content = ref("");
+const content = ref(props.initialContent);
+const composing = ref(false);
 const showMentions = ref(false);
 const mentionQuery = ref("");
 const selectedMentionIndex = ref(0);
 const mentionSuggestions = ref<MentionSuggestion[]>([]);
+
+onMounted(() => { if (props.autofocus) textareaRef.value?.focus(); });
 
 let mentionSearchTimer: ReturnType<typeof setTimeout> | null = null;
 let mentionSearchToken = 0;
@@ -134,7 +145,9 @@ async function runMentionSearch(query: string) {
 }
 
 function queueMentionSearch(query: string) {
-  cancelMentionSearch();
+  // Invalidate the previous query before the debounce, not only when the next
+  // request starts. A late response must never offer a different name to Enter.
+  resetMentions();
 
   if (!props.mentionSearch) {
     mentionSuggestions.value = [];
@@ -156,11 +169,25 @@ const mentionDropdownStyle = computed(() => {
 });
 
 onBeforeUnmount(() => {
-  cancelMentionSearch();
+  resetMentions();
 });
 
 // Methods
+function startComposition() {
+  composing.value = true;
+  showMentions.value = false;
+  resetMentions();
+}
+
+function finishComposition() {
+  composing.value = false;
+  // Vue commits the textarea's composition value through its input handler.
+  nextTick(handleInput);
+}
+
 function handleInput() {
+  if (composing.value) return;
+  emit("draft-change", content.value);
   // Detect @ mentions
   const cursorPos = textareaRef.value?.selectionStart ?? 0;
   const textBeforeCursor = content.value.slice(0, cursorPos);
@@ -179,7 +206,10 @@ function handleInput() {
 }
 
 function handleKeydown(event: KeyboardEvent) {
-  if (!showMentions.value) {
+  if (composing.value || event.isComposing || event.keyCode === 229) return;
+  // A mention query is not a popup. With no selectable result (including a
+  // pending/failed provider), Enter, Tab and arrows still belong to writing.
+  if (!showMentions.value || !mentionSuggestions.value.length) {
     // Submit on Cmd/Ctrl + Enter
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
@@ -221,6 +251,7 @@ function selectMention(suggestion: MentionSuggestion) {
     `@${suggestion.name} `
   );
   content.value = newTextBefore + textAfterCursor;
+  emit("draft-change", content.value);
 
   showMentions.value = false;
   mentionQuery.value = "";
@@ -249,7 +280,7 @@ function extractMentions(text: string): string[] {
 }
 
 function handleSubmit() {
-  if (!content.value.trim()) return;
+  if (composing.value || !content.value.trim()) return;
 
   const mentions = extractMentions(content.value);
   emit("submit", content.value.trim(), mentions);

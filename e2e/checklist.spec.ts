@@ -1,10 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { switchViewMode } from "./helpers/toolbar";
 
 // The checklist is a plain contenteditable interaction (markdown shortcut +
 // gutter click), no desktop-only toolbar/modal, so it runs on both projects.
 test.describe("Checklist block", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/?empty=true");
+    await page.goto("/?writingMode=false&empty=true");
     await page.waitForSelector(".editor-content");
   });
 
@@ -72,10 +73,6 @@ test.describe("Checklist block", () => {
   });
 
   test("checked state survives a code-view round-trip", async ({ page }) => {
-    test.skip(
-      test.info().project.name === "mobile-safari",
-      "code view toggle lives on the desktop toolbar"
-    );
     const editor = page.locator(".editor-content").first();
     await editor.click();
     await page.keyboard.type("[x] Persist me");
@@ -85,8 +82,8 @@ test.describe("Checklist block", () => {
     );
 
     // Toggle to Code view and back — the sanitizer runs on the way back.
-    await page.getByRole("button", { name: "Code view" }).click();
-    await page.getByRole("button", { name: "Editor view" }).click();
+    await switchViewMode(page, "Code");
+    await switchViewMode(page, "Editor");
 
     const item = page.locator(".editor-content ul.checklist > li").first();
     await expect(item).toHaveAttribute("data-checked", "true");

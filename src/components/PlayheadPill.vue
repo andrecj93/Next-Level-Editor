@@ -47,9 +47,15 @@
           <span class="playhead-sr">{{
             saveStatus === "error"
               ? "Couldn't save changes"
+              : saveStatus === "conflict"
+                ? "Save conflict"
               : isSaving
-                ? "Saving…"
-                : "All changes saved"
+                ? (persistentSave ? "Saving…" : "Updating…")
+                : hasPendingChanges
+                  ? (persistentSave ? "Unsaved changes" : "Updating…")
+                  : saveStatus === "unsaved"
+                    ? "Ready to write"
+                    : (persistentSave ? "All changes saved" : "All changes updated")
           }}</span>
         </div>
 
@@ -414,6 +420,8 @@ interface Props {
   /** Auto-save lifecycle; 'error' flips the ambient dot + SR text to a failure
    *  state so a silent save failure never reads as "All changes saved". #r20-2 */
   saveStatus?: "saving" | "conflict" | "error" | "saved" | "unsaved";
+  persistentSave?: boolean;
+  hasPendingChanges?: boolean;
   /**
    * Inline formatting set (the host's floating/inline actions — e.g.
    * B/I/U + link) — same objects EditorToolbar/FloatingToolbar use. Rendered

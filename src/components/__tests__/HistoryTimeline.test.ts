@@ -28,6 +28,22 @@ describe('HistoryTimeline', () => {
   }
 
   describe('Rendering', () => {
+    it('offers an optional Close control without changing history', async () => {
+      const wrapper = mount(HistoryTimeline, { props: { ...defaultProps, showCloseButton: true } })
+      await wrapper.get('[aria-label="Close history"]').trigger('click')
+      expect(wrapper.emitted('close')).toHaveLength(1)
+      expect(wrapper.emitted('goToEntry')).toBeUndefined()
+    })
+
+    it('allows reading versions but prevents restoring a read-only document', async () => {
+      const wrapper = mount(HistoryTimeline, { props: { ...defaultProps, readonly: true } })
+      for (const button of wrapper.findAll('.nav-btn')) expect(button.attributes('disabled')).toBeDefined()
+      const entry = wrapper.find('.timeline-entry')
+      expect(entry.attributes('aria-disabled')).toBe('true')
+      await entry.trigger('click')
+      await entry.trigger('keydown', { key: 'Enter' })
+      expect(wrapper.emitted('goToEntry')).toBeUndefined()
+    })
     it('should render timeline with history', () => {
       const wrapper = mount(HistoryTimeline, { props: defaultProps })
       
@@ -333,13 +349,13 @@ describe('HistoryTimeline', () => {
   })
 
   describe('Content Preview', () => {
-    it('should show preview for current entry when showPreview is true', () => {
+    it('shows each preview so revisions can be compared before restoring', () => {
       const wrapper = mount(HistoryTimeline, {
         props: { ...defaultProps, showPreview: true }
       })
       
       expect(wrapper.find('.entry-preview').exists()).toBe(true)
-      expect(wrapper.find('.entry-preview').text()).toBe('Content 3')
+      expect(wrapper.findAll('.entry-preview').map(entry => entry.text())).toEqual(['Content 1', 'Content 2', 'Content 3'])
     })
 
     it('should hide preview when showPreview is false', () => {

@@ -563,8 +563,10 @@ describe("useFormattingActions", () => {
     });
 
     it("should paste format to selection", () => {
-      // Mock pasteFormat to return true (successful paste)
-      vi.mocked(formatPainter.pasteFormat).mockReturnValue(true);
+      vi.mocked(formatPainter.pasteFormat).mockImplementation((_selection, root) => {
+        root!.querySelector('p')!.innerHTML = '<strong>Test</strong> content';
+        return true;
+      });
 
       const { handlePasteFormat } = useFormattingActions(
         editorContent,
@@ -585,6 +587,16 @@ describe("useFormattingActions", () => {
         editorContent.value
       );
       expect(captureSnapshot).toHaveBeenCalled();
+    });
+
+    it("does not create a history entry when the format is already identical", () => {
+      vi.mocked(formatPainter.pasteFormat).mockReturnValue(true);
+      const { handlePasteFormat } = useFormattingActions(
+        editorContent, fontSize, captureSnapshot, applyTextAlignment,
+        applyTextColor, applyBackgroundColor, applyFontSize
+      );
+      handlePasteFormat();
+      expect(captureSnapshot).not.toHaveBeenCalled();
     });
 
     it("should not paste format when editorContent is null", () => {

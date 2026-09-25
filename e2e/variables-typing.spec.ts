@@ -88,7 +88,7 @@ test.describe("Variables", () => {
     await expect(pill).toHaveAttribute("contenteditable", "false");
   });
 
-  test("variables FAB opens a panel that lists variables and inserts on click", async ({
+  test("the variables control opens a panel and inserts at the cursor", async ({
     page,
   }) => {
     const editor = page.locator(".editor-content").first();
@@ -97,7 +97,7 @@ test.describe("Variables", () => {
     await page.keyboard.press("Delete");
     await editor.pressSequentially("Dear ", { delay: 15 });
 
-    const fab = page.locator(".variables-toggle-fab");
+    const fab = page.getByRole('button', { name: 'Variables', exact: true });
     await expect(fab).toBeVisible();
     await fab.click();
 

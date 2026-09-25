@@ -155,6 +155,7 @@ describe("EditorToolbar roving tabindex", () => {
       .findAll("button")
       .find((b) => b.attributes("aria-label") === "Undo")!.element;
     expect(undo.hasAttribute("disabled")).toBe(true);
+    expect((undo as HTMLElement).tabIndex).toBe(-1);
 
     const controls = managedControls(wrapper);
     expect(controls).not.toContain(undo);
@@ -200,6 +201,7 @@ describe("EditorToolbar roving tabindex", () => {
 
       const controls = managedControls(compact);
       expect(controls).not.toContain(themeToggle);
+      expect(themeToggle.tabIndex).toBe(-1);
       const stops = controls.filter((el) => el.tabIndex === 0);
       expect(stops.length).toBe(1);
     } finally {
@@ -211,6 +213,49 @@ describe("EditorToolbar roving tabindex", () => {
     const nav = wrapper.find('[role="toolbar"]');
     expect(nav.exists()).toBe(true);
     expect(nav.attributes("aria-label")).toBe("Text formatting toolbar");
+  });
+
+  it("moves the tab stop when a responsive layout hides its control", async () => {
+    const controls = managedControls(wrapper);
+    controls[0].focus();
+    controls[0].style.display = "none";
+    window.dispatchEvent(new Event("resize"));
+    await wrapper.vm.$nextTick();
+
+    expect(controls[0].tabIndex).toBe(-1);
+    expect(controls[1].tabIndex).toBe(0);
+    expect(document.activeElement).toBe(controls[1]);
+    expect(wrapper.findAll('button[tabindex="0"]')).toHaveLength(1);
+  });
+
+  it("includes writing colors in the toolbar's single keyboard sequence", async () => {
+    await wrapper.setProps({ writingMode: true });
+    await wrapper.get('.writing-more-format').trigger('click');
+    await wrapper.vm.$nextTick();
+    const close = wrapper.get('[aria-label="Close more formatting"]').element as HTMLElement;
+    const text = wrapper.get('[aria-label="Text color"]').element as HTMLElement;
+    const highlight = wrapper.get('[aria-label="Highlight color"]').element as HTMLElement;
+    const remove = wrapper.get('[aria-label="Remove highlight"]').element as HTMLButtonElement;
+    close.focus();
+
+    await wrapper.get('[aria-label="Close more formatting"]').trigger('keydown', { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(remove);
+    await wrapper.get('[aria-label="Remove highlight"]').trigger('keydown', { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(highlight);
+    await wrapper.get('[aria-label="Highlight color"]').trigger('keydown', { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(text);
+    await wrapper.get('[aria-label="Text color"]').trigger('keydown', { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(highlight);
+    expect(wrapper.findAll('[tabindex="0"]')).toHaveLength(1);
+    expect(highlight.tabIndex).toBe(0);
+
+    await wrapper.setProps({ isToolbarSectionVisible: (section: string) => section !== 'colors' });
+    await wrapper.vm.$nextTick();
+    expect(highlight.tabIndex).toBe(-1);
+    expect(text.tabIndex).toBe(-1);
+    expect(remove.tabIndex).toBe(-1);
+    expect(remove.disabled).toBe(true);
+    expect(document.activeElement).not.toBe(highlight);
   });
 
   it("survives a smart-toolbar context change disabling the stop holder (#r21-a11y-1)", async () => {

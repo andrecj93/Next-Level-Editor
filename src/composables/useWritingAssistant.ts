@@ -1,25 +1,6 @@
 import { ref, computed, onScopeDispose } from "vue";
-
-/**
- * Minimal structural types for `Intl.Segmenter`. The es2015 lib target this
- * package builds against doesn't ship the `Intl.Segmenter` type, so we describe
- * just the surface we use and feature-detect it at runtime.
- */
-interface SegmentDataLike {
-  segment: string;
-  isWordLike?: boolean;
-}
-interface SegmenterLike {
-  segment(input: string): Iterable<SegmentDataLike>;
-}
-interface SegmenterCtor {
-  new (
-    locales?: string | string[],
-    options?: { granularity?: "grapheme" | "word" | "sentence" }
-  ): SegmenterLike;
-}
-const getSegmenter = (): SegmenterCtor | undefined =>
-  (Intl as unknown as { Segmenter?: SegmenterCtor }).Segmenter;
+import { splitWords, countCharacters } from "../utils/wordSegmentation";
+import { writingBlocks } from "../utils/writingReview";
 
 /**
  * Text statistics
@@ -241,6 +222,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
       // link) and the page-break widgets — or their text inflates every
       // word/char/reading-time/readability stat. #r14b-2
       if (
+        el.tagName.toLowerCase() === "script" || el.tagName.toLowerCase() === "style" ||
         el.classList.contains("table-of-contents") ||
         el.classList.contains("page-break")
       ) {
@@ -259,7 +241,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
     temp.childNodes.forEach(walk);
     // The block boundaries above wrap the whole doc in leading/trailing "\n\n";
     // those are structural, not content, so trim them (internal separators kept).
-    return out.trim();
+    return out.replace(/\u200b/g, '').trim();
   };
 
   /**
@@ -291,31 +273,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
    * zero words. Prefer Intl.Segmenter (segments CJK correctly); fall back to a
    * Unicode property regex.
    */
-  const splitIntoWords = (text: string): string[] => {
-    const lower = text.toLowerCase();
-    const Segmenter = getSegmenter();
-    if (typeof Segmenter === "function") {
-      const seg = new Segmenter(undefined, { granularity: "word" });
-      const words: string[] = [];
-      for (const part of seg.segment(lower)) {
-        if (part.isWordLike) words.push(part.segment);
-      }
-      return words;
-    }
-    return lower.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu) ?? [];
-  };
-
-  /**
-   * Grapheme-cluster length: emoji and astral characters count as 1, not their
-   * UTF-16 code-unit length (`"👍".length === 2`).
-   */
-  const graphemeLength = (text: string): number => {
-    const Segmenter = getSegmenter();
-    if (typeof Segmenter === "function") {
-      return Array.from(new Segmenter().segment(text)).length;
-    }
-    return [...text].length;
-  };
+  const splitIntoWords = splitWords;
 
   /**
    * Count syllables in a word (approximate)
@@ -345,11 +303,9 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
     const words = splitIntoWords(text);
     const paragraphs = text.split(/\n{2,}/).filter((p) => p.trim().length > 0);
 
-    // Grapheme counts, so an emoji counts as one character (not 2 UTF-16 units).
-    // The \n boundaries this pass inserts between blocks are structural, not
-    // real characters, so drop them (keeping real spaces) before counting.
-    const characters = graphemeLength(text.replace(/\n/g, ""));
-    const charactersNoSpaces = graphemeLength(text.replace(/\s/g, ""));
+    // Match the footer: visible characters, with one space between blocks.
+    const characters = countCharacters(text.replace(/\s+/g, " ").trim());
+    const charactersNoSpaces = countCharacters(text.replace(/\s/g, ""));
 
     // Count syllables
     const syllables = words.reduce(
@@ -371,6 +327,21 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
       readingTime: Math.ceil(readingTime),
       speakingTime: Math.ceil(speakingTimeVal),
     };
+  };
+
+  /** Count authored prose blocks, using the same boundaries as the companion.
+   * Headings still contribute words, but are not paragraphs. Soft line breaks
+   * do not create extra paragraphs; nested containers do not count twice.
+   * Keep calculateStats(text)'s plain-text API unchanged for consumers.
+   */
+  const calculateDocumentStats = (html: string, text: string): TextStats => {
+    if (!html) return calculateStats(text);
+    const root = document.createElement("div");
+    root.innerHTML = html;
+    root.querySelectorAll(".table-of-contents,.page-break").forEach(el => el.remove());
+    const paragraphs = writingBlocks(root).filter(block =>
+      !/^H[1-6]$/.test(block.element.tagName)).length;
+    return { ...calculateStats(text), paragraphs };
   };
 
   // ============================================
@@ -852,7 +823,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
       textContent.value = plainText;
       htmlContent.value = html;
 
-      const stats = calculateStats(plainText);
+      const stats = calculateDocumentStats(html, plainText);
       const readability = calculateReadability(plainText);
       const sentenceAnalysis = analyzeSentences(plainText);
       const wordAnalysis = analyzeWords(plainText);
@@ -906,7 +877,7 @@ export function useWritingAssistant(options: WritingAssistantOptions = {}) {
 
   const stats = computed(() => {
     if (!textContent.value) return null;
-    return calculateStats(textContent.value);
+    return calculateDocumentStats(htmlContent.value, textContent.value);
   });
 
   const readability = computed(() => {

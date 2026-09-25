@@ -1,5 +1,5 @@
 <template>
-  <div class="site" :class="{ 'site-dark': dark }">
+  <div class="site" :class="{ 'site-dark': dark, 'site-workspace': view === 'playground' }">
     <SiteNav :current="view" :dark="dark" @navigate="navigate" @toggle-theme="toggleTheme" />
 
     <main>
@@ -8,7 +8,7 @@
       </keep-alive>
     </main>
 
-    <SiteFooter @navigate="navigate" />
+    <SiteFooter v-if="view !== 'playground'" @navigate="navigate" />
   </div>
 </template>
 
@@ -19,8 +19,7 @@ import SiteFooter from "./components/SiteFooter.vue";
 import HomeView from "./views/HomeView.vue";
 import PlaygroundView from "./views/PlaygroundView.vue";
 import DocsView from "./views/DocsView.vue";
-
-type ViewId = "home" | "playground" | "docs";
+import { useDemoNavigation } from "./composables/useDemoNavigation";
 
 const views = {
   home: HomeView,
@@ -28,18 +27,6 @@ const views = {
   docs: DocsView,
 } as const;
 
-// Resolve the initial view synchronously so a deep link (?view=… or the legacy
-// ?empty=true the e2e suite uses) renders the right view on the very first
-// paint — no Home flash, and no second stray .editor-content for tests to race.
-const initialView = ((): ViewId => {
-  const params = new URLSearchParams(window.location.search);
-  const v = params.get("view");
-  if (v && v in views) return v as ViewId;
-  if (params.get("empty") === "true") return "playground";
-  return "home";
-})();
-
-const view = ref<ViewId>(initialView);
 const dark = ref(false);
 
 const applyTheme = () => {
@@ -74,13 +61,7 @@ const toggleTheme = () => {
   syncEditorTheme();
 };
 
-const navigate = (id: string) => {
-  if (id in views) {
-    view.value = id as ViewId;
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-    syncEditorTheme();
-  }
-};
+const { view, navigate } = useDemoNavigation(syncEditorTheme);
 
 onMounted(() => {
   try {
@@ -98,4 +79,13 @@ onMounted(() => {
 <style>
 .site { min-height: 100vh; display: flex; flex-direction: column; font-family: var(--font-sans); }
 .site > main { flex: 1; }
+.site-workspace { height: 100dvh; min-height: 0; overflow: hidden; }
+.site-workspace > main { display: flex; min-height: 0; }
+.site-workspace .site-nav { position: relative; flex: 0 0 auto; }
+.site-workspace .nav-inner { height: 56px; }
+.site-workspace .try-btn { display: none; }
+@media (max-height: 500px) {
+  .site-workspace { height: auto; min-height: 100dvh; overflow: visible; }
+  .site-workspace > main { flex: 0 0 auto; }
+}
 </style>

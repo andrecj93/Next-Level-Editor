@@ -211,6 +211,29 @@ describe("useEditorEvents", () => {
       expect(showFloatingToolbar.value).toBe(false);
     });
 
+    it("keeps restored selection controls when focus returns before a pending blur expires", () => {
+      const { onBlur, onFocus } = useEditorEvents({ editorContent, codeContent, htmlContent,
+        sanitizeHtml, captureSnapshot, updateFloatingToolbar, updateToolbarContext,
+        rememberSelection, showFloatingToolbar, showTableDesigner, currentTable,
+        currentCell, tableDesignerPosition, emit });
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+      try {
+        input.focus();
+        onBlur();
+        editorElement.tabIndex = 0;
+        editorElement.focus();
+        onFocus();
+        showFloatingToolbar.value = true;
+        vi.advanceTimersByTime(200);
+        expect(showFloatingToolbar.value).toBe(true);
+        input.focus();
+        onBlur();
+        vi.advanceTimersByTime(200);
+        expect(showFloatingToolbar.value).toBe(false);
+      } finally { input.remove(); }
+    });
+
     it("should emit blur event", () => {
       const { onBlur } = useEditorEvents({
         editorContent,

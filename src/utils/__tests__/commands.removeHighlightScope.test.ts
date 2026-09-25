@@ -38,6 +38,18 @@ beforeEach(() => {
 });
 
 describe('highlight "None" only clears the selection (#R23-10)', () => {
+  it('places future typing outside the highlight while retaining emphasis', () => {
+    root.innerHTML = `<p><em><span style="background-color: ${HIGHLIGHT};">alpha beta</span></em></p>`;
+    selectText(root.querySelector('span')!.firstChild!, 3, 3);
+    applyBackgroundColor(root, 'transparent');
+    const selection = window.getSelection()!;
+    expect(selection.isCollapsed).toBe(true);
+    const typing = selection.anchorNode!.parentElement!;
+    expect(typing.closest('em')).not.toBeNull();
+    expect(typing.closest('span[style*="background-color"]')).toBeNull();
+    expect(highlightedTexts()).toEqual(['alp', 'ha beta']);
+  });
+
   it("keeps the rest of the run highlighted when only a word is selected", () => {
     root.innerHTML = `<p><span style="background-color: ${HIGHLIGHT};">alpha beta gamma</span></p>`;
     const text = root.querySelector("span")!.firstChild!;
@@ -51,6 +63,7 @@ describe('highlight "None" only clears the selection (#R23-10)', () => {
     expect(still).toContain("alpha ");
     expect(still).toContain(" gamma");
     expect(still).not.toContain("beta");
+    expect(window.getSelection()!.toString()).toBe('beta');
   });
 
   it("does not clear a highlight in the next block that was merely touched", () => {
@@ -82,6 +95,7 @@ describe('highlight "None" only clears the selection (#R23-10)', () => {
 
     expect(highlightedTexts()).toEqual([]);
     expect(root.textContent).toBe("whole");
+    expect(window.getSelection()!.toString()).toBe('whole');
   });
 
   it("clears every highlight a multi-word selection really covers", () => {
@@ -98,5 +112,20 @@ describe('highlight "None" only clears the selection (#R23-10)', () => {
     applyBackgroundColor(root, "transparent");
 
     expect(highlightedTexts()).toEqual([]);
+    expect(window.getSelection()!.toString()).toBe('one two');
+  });
+
+  it('preserves a backward selection inside emphasized highlighted prose', () => {
+    root.innerHTML = `<p><em><span style="background-color: ${HIGHLIGHT};">alpha beta gamma</span></em></p>`;
+    const text = root.querySelector('span')!.firstChild!;
+    const selection = window.getSelection()!;
+    selection.setBaseAndExtent(text, 10, text, 6);
+    applyBackgroundColor(root, 'transparent');
+    expect(selection.toString()).toBe('beta');
+    const range = selection.getRangeAt(0);
+    expect(selection.anchorNode).toBe(range.endContainer);
+    expect(selection.anchorOffset).toBe(range.endOffset);
+    expect(root.querySelector('em')!.textContent).toBe('alpha beta gamma');
+    expect(highlightedTexts()).toEqual(['alpha ', ' gamma']);
   });
 });

@@ -1,0 +1,115 @@
+/* The document owns the available height; its margins never cover the prose. */
+.nle-document-workspace { position: relative; display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; overflow: hidden; }
+.nle-document-workspace > .editor-container { min-width: 0; }
+.is-writing-workspace { --content-measure: 760px; padding-bottom: var(--nle-mobile-toolbar-clearance, 0px); overflow: visible; }
+.is-writing-workspace .nle-document-workspace { container: nle-writing-area / size; }
+.is-writing-workspace .nle-document-workspace.has-writing-search { min-height: 96px; }
+.is-writing-workspace .editor-content {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 19px; line-height: 1.7; letter-spacing: normal;
+  max-width: none; padding: 56px max(32px, calc((100% - 680px) / 2)) 38vh;
+  scrollbar-gutter: stable; scroll-padding-block: 40px 100px;
+  caret-color: var(--primary-color);
+}
+.is-writing-workspace .editor-content p { margin: 0 0 .85em; }
+.is-writing-workspace .editor-content h1 { font-family: inherit; font-size: 2.15em; font-weight: 500; letter-spacing: -.035em; line-height: 1.15; margin: .15em 0 .8em; }
+.is-writing-workspace .editor-content h2 { font-family: inherit; font-size: 1.5em; font-weight: 500; letter-spacing: -.025em; margin: 1.75em 0 .8em; }
+.is-writing-workspace .editor-content h3 { font-family: inherit; font-size: 1.15em; font-weight: 600; margin: 1.6em 0 .7em; }
+.is-writing-workspace .editor-content ::selection { background: var(--selection-bg, #d8ccab80); }
+.editor-content::highlight(nle-find-matches) { color: #422006; background-color: #fde68a; }
+.editor-content::highlight(nle-find-current) { color: #fff; background-color: #92400e; }
+.is-writing-workspace .editor-content:empty:before { font-style: italic; color: var(--text-secondary); opacity: 1; }
+.is-writing-workspace .editor-container { border-top: 0; }
+.is-writing-workspace .editor-container.view-mode-editor,
+.is-writing-workspace .editor-container.view-mode-code { display: flex; flex-direction: column; overflow: hidden; }
+.is-writing-workspace .editor-panel { height: auto; min-height: 0; }
+.is-writing-workspace .nle-resize-grip { display: none; }
+.is-writing-workspace .editor-footer { background: var(--background-color); flex-shrink: 0; }
+.is-writing-workspace .footer-counts { min-height: 18px; }
+.is-writing-workspace .auto-save-indicator { position: static; display: flex; align-items: center; min-height: 18px; line-height: 18px; padding: 0; border: 0; background: none; box-shadow: none; font-size: 11px; backdrop-filter: none; white-space: nowrap; }
+.is-writing-workspace .nle-toolbar-shell { flex: 0 0 auto; }
+.editor-toolbar-modern.writing-toolbar { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 0; background: var(--background-color); border-bottom: 1px solid var(--border-color); min-height: 52px; border-radius: 0; }
+.writing-toolbar-row { display: flex; align-items: center; gap: 4px; width: 100%; min-width: 0; padding: 7px 16px; }
+.writing-toolbar-row .toolbar-group, .writing-history { display: flex; gap: 2px; align-items: center; }
+.writing-toolbar-row .dropdown-trigger { min-height: 36px; padding: 6px 9px; font-family: inherit; font-size: 12px; gap: 6px; }
+.writing-toolbar .dropdown-label { display: inline; }
+.writing-toolbar-row .writing-paragraph-format .dropdown-trigger { width: 104px; justify-content: space-between; }
+.writing-toolbar-row .dropdown-arrow { font-size: 8px; opacity: .6; }
+/* Native titles provide the supplementary hint without invisible pseudo
+   elements widening the page when a menu must escape the editor's edge. */
+.writing-toolbar .dropdown-trigger[data-tooltip]::before,
+.writing-toolbar .dropdown-trigger[data-tooltip]::after { display: none; }
+.writing-toolbar-row .toolbar-btn-modern { width: 34px; height: 36px; min-width: 34px; padding: 6px; font-size: 22px; }
+.writing-toolbar-divider { width: 1px; height: 19px; background: var(--border-color); margin: 0 5px; flex-shrink: 0; }
+.writing-toolbar-spacer { flex: 1; }
+.writing-toolbar .writing-more-format { display: flex; align-items: center; justify-content: center; gap: 4px; font: 12px var(--font-family, sans-serif); color: var(--toolbar-text); border: 0; background: transparent; border-radius: 6px; padding: 8px; min-width: 44px; min-height: 36px; cursor: pointer; white-space: nowrap; }
+.writing-more-format[aria-expanded='true'], .writing-more-format:hover { background: var(--toolbar-hover); }
+.writing-more-format:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+.writing-export .dropdown-trigger { background: var(--background-alt); border: 1px solid var(--border-color); }
+.writing-format-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 18px; border-top: 1px solid var(--border-color); background: var(--background-alt); }
+.writing-format-row .dropdown-trigger { min-height: 40px; padding: 6px 8px; font-size: 12px; }
+.writing-color { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); }
+.writing-color input { width: 26px; height: 26px; border: 0; padding: 0; cursor: pointer; background: transparent; }
+.writing-remove-highlight { min-width: 44px; min-height: 44px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; background: transparent; color: var(--text-color); font: inherit; font-size: 12px; cursor: pointer; }
+.writing-remove-highlight:hover:not(:disabled) { background: var(--background-alt); }
+.writing-remove-highlight[aria-pressed="true"] { border-color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--primary-color); }
+.writing-remove-highlight:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.writing-remove-highlight:disabled { opacity: .45; cursor: not-allowed; }
+.writing-toolbar .toolbar-btn-modern:disabled { opacity: .3; }
+.mobile-toolbar.writing-dock { padding: 0 8px env(safe-area-inset-bottom, 0px); }
+.quick-writing-tools { display: flex; justify-content: space-around; gap: 4px; padding: 4px 0; }
+.quick-writing-tools .toolbar-button { width: 44px; height: 44px; min-height: 44px; padding: 8px; margin: 0; font-size: 22px; border: 0; background: transparent; }
+.quick-writing-tools .toolbar-button[aria-pressed='true'] { color: var(--toolbar-accent-ink); background: var(--toolbar-hover); }
+.quick-writing-tools .toolbar-button span { display: flex; align-items: center; justify-content: center; }
+@media (max-width: 1000px) { .writing-toolbar-row { padding-inline: 8px; gap: 2px; } }
+@media (max-width: 900px) {
+  .writing-toolbar-row .writing-history, .writing-toolbar-row .writing-theme,
+  .writing-toolbar-row .writing-inline, .writing-toolbar-row .writing-toolbar-divider { display: none; }
+}
+@media (max-width: 700px) {
+  .is-writing-workspace .nle-document-workspace { flex-direction: column; }
+  .is-writing-workspace .editor-content { font-size: 17px; line-height: 1.7; padding: 28px 24px 64px; }
+  .is-writing-workspace .editor-content h1 { font-size: 1.9em; }
+  .writing-toolbar-row { flex-wrap: wrap; gap: 2px; padding: 4px 6px; }
+  .writing-toolbar-row .writing-history, .writing-toolbar-row .writing-theme, .writing-toolbar-row .writing-toolbar-divider { display: none; }
+  .writing-toolbar-row .dropdown-trigger { min-height: 40px; padding: 7px 5px; gap: 4px; font-size: 12px; }
+  .writing-toolbar-row .writing-paragraph-format .dropdown-trigger { width: 84px; }
+  .writing-toolbar-row .writing-inline { display: none; }
+  .writing-toolbar-row .writing-toolbar-spacer { display: none; }
+  .writing-toolbar-row .writing-export { margin-left: auto; }
+  .writing-toolbar-row .writing-more-format { min-height: 40px; padding: 7px 5px; }
+  .writing-format-row { padding: 8px; gap: 6px; }
+  .is-writing-workspace .editor-footer { flex-wrap: wrap; gap: 4px; padding: 5px 10px; }
+  /* Reserve the status row before the first edit. Showing Unsaved/Saved must
+     not wrap the footer and shrink the page underneath the writing caret. */
+  .is-writing-workspace .footer-counts { flex-basis: 100%; gap: 10px; font-size: 11px; }
+  .is-writing-workspace .editor-footer .char-count { display: none; }
+}
+
+@media (max-width: 450px) {
+  /* Two balanced rows keep each label and arrow inside its own tap target. */
+  .writing-toolbar-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .writing-toolbar-row .writing-export { margin-left: 0; }
+  .writing-toolbar-row .dropdown-trigger,
+  .writing-toolbar-row .writing-paragraph-format .dropdown-trigger { width: 100%; }
+}
+/* A short window (landscape, enlarged UI, or keyboard) still needs actual lines
+   of prose. The host can scroll its surrounding chrome out of the way. */
+@media (max-height: 500px) {
+  /* Let search scroll into view without the pinned toolbar covering its
+     focused input when the window is shorter than the combined controls. */
+  .is-writing-workspace.has-writing-search .nle-toolbar-shell { position: relative; }
+  .is-writing-workspace .editor-content { padding-block: 16px 32px; scroll-padding-block: 16px; }
+  .is-writing-workspace .nle-document-workspace { min-height: 96px; }
+  .writing-format-row { max-height: 38dvh; overflow-y: auto; }
+}
+
+/* Expanded controls can leave a short page even in a tall viewport. Keep
+   padding smaller than the actual writing surface: a zero-height content box
+   makes WebKit report empty rendered text and selections despite visible ink. */
+@container nle-writing-area (max-height: 240px) {
+  .is-writing-workspace .editor-content {
+    padding-block: min(16px, 10cqh) min(32px, 20cqh);
+    scroll-padding-block: 12px;
+  }
+}

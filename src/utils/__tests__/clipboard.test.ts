@@ -88,6 +88,48 @@ describe("clipboard utilities", () => {
   // copyToClipboard
   // -------------------------------------------------------------------------
   describe("copyToClipboard", () => {
+    it('keeps editor focus and backwards selection through the textarea fallback', async () => {
+      setClipboard(undefined);
+      const editor = document.createElement('div');
+      editor.contentEditable = 'true'; editor.textContent = 'A quiet town.';
+      document.body.appendChild(editor); editor.focus();
+      const selection = window.getSelection()!;
+      selection.setBaseAndExtent(editor.firstChild!, 7, editor.firstChild!, 2);
+      document.execCommand = vi.fn(() => true);
+      try {
+        expect(await copyToClipboard('quiet')).toBe(true);
+        expect(document.activeElement).toBe(editor);
+        expect(selection.toString()).toBe('quiet');
+        expect(selection.anchorOffset).toBe(7);
+        expect(selection.focusOffset).toBe(2);
+      } finally { editor.remove(); selection.removeAllRanges(); }
+    });
+
+    it('restores an input selection when the fallback copy fails', async () => {
+      setClipboard(undefined);
+      const input = document.createElement('input'); input.value = 'A quiet town.';
+      document.body.appendChild(input); input.focus(); input.setSelectionRange(2, 7, 'backward');
+      document.execCommand = vi.fn(() => false);
+      try {
+        expect(await copyToClipboard('quiet')).toBe(false);
+        expect(document.activeElement).toBe(input);
+        expect([input.selectionStart, input.selectionEnd, input.selectionDirection]).toEqual([2, 7, 'backward']);
+      } finally { input.remove(); }
+    });
+
+    it('does not enter a fallback when a pending text write is no longer current', async () => {
+      let reject!: (reason: Error) => void;
+      const writeText = vi.fn(() => new Promise<void>((_, fail) => { reject = fail; }));
+      setClipboard({ writeText });
+      document.execCommand = vi.fn(() => true);
+      let current = true;
+      const pending = copyToClipboard('Old text', () => current);
+      current = false; reject(new Error('Access denied'));
+      expect(await pending).toBe(false);
+      expect(document.execCommand).not.toHaveBeenCalled();
+      expect(document.querySelector('textarea')).toBeNull();
+    });
+
     it("writes via the Clipboard API and returns true on success", async () => {
       const writeText = vi.fn().mockResolvedValue(undefined);
       setClipboard({ writeText });
@@ -212,6 +254,25 @@ describe("clipboard utilities", () => {
   // copyHtmlToClipboard
   // -------------------------------------------------------------------------
   describe("copyHtmlToClipboard", () => {
+    it('does not retry as text after the writing intent was cancelled', async () => {
+      let reject!: (reason: Error) => void;
+      const write = vi.fn(() => new Promise<void>((_, fail) => { reject = fail; }));
+      const writeText = vi.fn(); setClipboard({ write, writeText });
+      document.execCommand = vi.fn(() => true);
+      let current = true;
+      const pending = copyHtmlToClipboard('<b>Old</b>', 'Old', () => current);
+      current = false; reject(new Error('Access denied'));
+      expect(await pending).toBe(false);
+      expect(writeText).not.toHaveBeenCalled();
+      expect(document.execCommand).not.toHaveBeenCalled();
+    });
+
+    it('does not begin a cancelled write', async () => {
+      const write = vi.fn(); const writeText = vi.fn(); setClipboard({ write, writeText });
+      expect(await copyHtmlToClipboard('<b>Old</b>', 'Old', () => false)).toBe(false);
+      expect(write).not.toHaveBeenCalled(); expect(writeText).not.toHaveBeenCalled();
+    });
+
     it("writes an HTML+text ClipboardItem when ClipboardItem and write exist", async () => {
       const write = vi.fn().mockResolvedValue(undefined);
       setClipboard({ write });

@@ -152,4 +152,85 @@ describe('applyFontSize re-size and clear behaviour', () => {
     expect(root.querySelector('span')).toBeFalsy()
     expect(root.innerHTML).toBe('<p>Hello</p>')
   })
+
+  it.each([0, 2, 4])('returns future typing to normal at offset %s without resizing adjacent prose', offset => {
+    root.innerHTML = '<p><span style="font-size: 1.25em">word</span></p>'
+    const text = root.querySelector('span')!.firstChild!
+    selectRange(text, offset, text, offset)
+    applyFontSize(root, 'normal')
+    const point = window.getSelection()!.anchorNode!
+    let ancestor = point.parentElement
+    while (ancestor && ancestor !== root) {
+      expect(ancestor.style.fontSize).toBe('')
+      ancestor = ancestor.parentElement
+    }
+    expect(point.nodeType).toBe(Node.TEXT_NODE)
+    expect(root.textContent!.replace(/\u200b/g, '')).toBe('word')
+    expect([...root.querySelectorAll('span[style]')].map(span => span.textContent).join('')).toBe('word')
+  })
+
+  it('changes pending sizes without multiplying relative units', () => {
+    root.innerHTML = '<p><span style="font-size: 1.25em"><strong>word</strong></span></p>'
+    const text = root.querySelector('strong')!.firstChild!
+    selectRange(text, 2, text, 2)
+    applyFontSize(root, 'huge')
+    applyFontSize(root, 'huge')
+    const point = window.getSelection()!.anchorNode!
+    const sizes: string[] = []
+    for (let el = point.parentElement; el && el !== root; el = el.parentElement) {
+      if (el.style.fontSize) sizes.push(el.style.fontSize)
+    }
+    expect(sizes).toEqual(['1.75em'])
+    expect(point.parentElement!.closest('strong')).toBeTruthy()
+  })
+
+  it.each(['normal', 'huge'] as const)('resizes only the selected middle of a sized run to %s', size => {
+    root.innerHTML = '<p><span style="font-size: 1.25em; color: red"><em id="voice">word</em></span></p>'
+    const text = root.querySelector('em')!.firstChild!
+    selectRange(text, 1, text, 3)
+    applyFontSize(root, size)
+    expect(window.getSelection()!.toString()).toBe('or')
+    const range = window.getSelection()!.getRangeAt(0)
+    const fragment = range.cloneContents()
+    const sizes = [...fragment.querySelectorAll<HTMLElement>('[style]')].filter(el => el.style.fontSize)
+    expect(sizes.map(el => el.style.fontSize)).toEqual(size === 'normal' ? [] : ['1.75em'])
+    expect([...root.querySelectorAll<HTMLElement>('[style]')].filter(el => el.style.fontSize === '1.25em').map(el => el.textContent).join('')).toBe('wd')
+    expect(root.textContent).toBe('word')
+    expect(root.querySelectorAll('#voice')).toHaveLength(1)
+    expect(fragment.querySelector('em')).toBeTruthy()
+    expect([...fragment.querySelectorAll<HTMLElement>('[style]')].some(el => el.style.color === 'red')).toBe(true)
+  })
+
+  it('keeps links, comments and other styles when changing future text size', () => {
+    root.innerHTML = '<p><a href="https://example.com"><span data-thread-id="note" id="anchor" style="font-size: 1.25em; color: red"><em>word</em></span></a></p>'
+    const text = root.querySelector('em')!.firstChild!
+    selectRange(text, 2, text, 2)
+    applyFontSize(root, 'normal')
+    const parent = window.getSelection()!.anchorNode!.parentElement!
+    expect(parent.closest('em')).toBeTruthy()
+    expect(parent.closest('a')!.getAttribute('href')).toBe('https://example.com')
+    expect(parent.closest('[data-thread-id="note"]')).toBeTruthy()
+    expect(root.querySelectorAll('#anchor')).toHaveLength(1)
+  })
+
+  it('does not resize a selection outside this editor', () => {
+    const outside = document.createElement('p')
+    outside.textContent = 'Outside'
+    document.body.appendChild(outside)
+    selectRange(outside.firstChild!, 0, outside.firstChild!, 7)
+    applyFontSize(root, 'large')
+    expect(outside.innerHTML).toBe('Outside')
+    outside.remove()
+  })
+
+  it('clears imported sizes on inline marks without removing their meaning', () => {
+    root.innerHTML = '<p><strong style="font-size: 1.25em"><em style="font-size: 1.75em">word</em></strong></p>'
+    const text = root.querySelector('em')!.firstChild!
+    selectRange(text, 2, text, 2)
+    applyFontSize(root, 'normal')
+    const point = window.getSelection()!.anchorNode!
+    expect(point.parentElement!.closest('strong em')).toBeTruthy()
+    for (let el = point.parentElement; el && el !== root; el = el.parentElement) expect(el.style.fontSize).toBe('')
+    expect(root.textContent!.replace(/\u200b/g, '')).toBe('word')
+  })
 })

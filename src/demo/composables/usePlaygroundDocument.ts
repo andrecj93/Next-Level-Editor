@@ -1,0 +1,111 @@
+import { computed, ref, watch } from "vue";
+import { useHtmlSanitizer } from "../../composables/useHtmlSanitizer";
+import { getTemplateById } from "../examples/exampleTemplates";
+import { MAX_COMMENT_DATA_LENGTH, parseCommentThreads, serializeCommentThreads } from "../../composables/useComments";
+import { MAX_WRITING_DECISION_DATA_LENGTH, parseWritingDecisions, serializeWritingDecisions } from "../../utils/writingDecisions";
+
+export const PLAYGROUND_DRAFT_KEY = "next-level-editor:playground-draft:v1";
+const MAX_DRAFT_LENGTH = 2_000_000;
+const MAX_STORED_LENGTH = MAX_DRAFT_LENGTH * 2 + MAX_COMMENT_DATA_LENGTH * 2 + MAX_WRITING_DECISION_DATA_LENGTH * 2 + 2000;
+
+/** One local draft, bounded in size. No document content is sent to a server. */
+export function usePlaygroundDocument(startEmpty: boolean) {
+  const { sanitizeHtml } = useHtmlSanitizer();
+  const initial = "";
+  const content = ref(initial);
+  const commentThreads = ref("[]");
+  const keptWritingNotes = ref("[]");
+  const selectedTemplate = ref("empty");
+  const baseline = ref(initial);
+  const notice = ref("");
+  const restoreFailed = ref(false);
+
+  if (!startEmpty) {
+    try {
+      const stored = localStorage.getItem(PLAYGROUND_DRAFT_KEY);
+      if (stored) {
+        if (stored.length > MAX_STORED_LENGTH) throw new Error("Draft is too large");
+        const draft: unknown = JSON.parse(stored);
+        if (draft && typeof draft === "object" && "content" in draft &&
+            typeof draft.content === "string" && draft.content.length <= MAX_DRAFT_LENGTH &&
+            "version" in draft && (draft.version === 1 || draft.version === 2 || draft.version === 3)) {
+          content.value = sanitizeHtml(draft.content);
+          if ("template" in draft && typeof draft.template === "string" && getTemplateById(draft.template)) {
+            selectedTemplate.value = draft.template;
+            baseline.value = draft.template === "empty" ? "" : sanitizeHtml(getTemplateById(draft.template)!.content);
+          }
+          if (content.value !== initial) notice.value = "Draft restored.";
+          const recoveryProblems: string[] = [];
+          if ("commentThreads" in draft) {
+            try {
+              if (typeof draft.commentThreads !== "string") throw new Error("Invalid comments");
+              commentThreads.value = serializeCommentThreads(parseCommentThreads(draft.commentThreads));
+            } catch {
+              recoveryProblems.push('comments');
+              console.warn("[NextLevelEditor playground] Comment recovery unavailable");
+            }
+          }
+          if ('keptWritingNotes' in draft) {
+            try {
+              if (typeof draft.keptWritingNotes !== 'string') throw new Error('Invalid writing decisions');
+              keptWritingNotes.value = serializeWritingDecisions(parseWritingDecisions(draft.keptWritingNotes));
+            } catch {
+              recoveryProblems.push('writing decisions');
+              console.warn('[NextLevelEditor playground] Writing decision recovery unavailable');
+            }
+          }
+          if (recoveryProblems.length) {
+            restoreFailed.value = true;
+            notice.value = `Your writing was restored, but its ${recoveryProblems.join(' and ')} could not be recovered.`;
+          }
+          console.debug("[NextLevelEditor playground] Draft restored", { characters: content.value.length });
+        } else throw new Error("Invalid draft");
+      }
+    } catch {
+      restoreFailed.value = true;
+      notice.value = "Your previous draft could not be restored. You can still write and export.";
+      console.warn("[NextLevelEditor playground] Draft restore unavailable");
+    }
+  }
+
+  const hasEdits = computed(() => content.value !== baseline.value || commentThreads.value !== "[]" || keptWritingNotes.value !== "[]");
+  watch([content, commentThreads, keptWritingNotes], () => {
+    if (hasEdits.value && !restoreFailed.value) notice.value = "";
+  });
+  const applyTemplate = (id: string) => {
+    const template = getTemplateById(id);
+    if (!template) return;
+    selectedTemplate.value = id;
+    content.value = id === "empty" ? "" : sanitizeHtml(template.content);
+    commentThreads.value = "[]";
+    keptWritingNotes.value = "[]";
+    baseline.value = content.value;
+    notice.value = "";
+    restoreFailed.value = false;
+    console.debug("[NextLevelEditor playground] Template loaded", { template: id });
+  };
+
+  const saveDraft = async (html: string) => {
+    console.debug("[NextLevelEditor playground] Saving local draft", { characters: html.length });
+    try {
+      if (html.length > MAX_DRAFT_LENGTH) throw new Error("Draft is too large for local storage");
+      const discussion = serializeCommentThreads(parseCommentThreads(commentThreads.value));
+      const decisions = serializeWritingDecisions(parseWritingDecisions(keptWritingNotes.value));
+      localStorage.setItem(PLAYGROUND_DRAFT_KEY, JSON.stringify({
+        version: 3,
+        content: html,
+        commentThreads: discussion,
+        keptWritingNotes: decisions,
+        template: selectedTemplate.value,
+        savedAt: new Date().toISOString(),
+      }));
+      console.debug("[NextLevelEditor playground] Local draft saved");
+      return true;
+    } catch {
+      console.warn("[NextLevelEditor playground] Local draft save unavailable");
+      throw new Error("Local draft could not be saved. Export your document to keep a copy.");
+    }
+  };
+
+  return { content, commentThreads, keptWritingNotes, selectedTemplate, hasEdits, notice, restoreFailed, applyTemplate, saveDraft };
+}

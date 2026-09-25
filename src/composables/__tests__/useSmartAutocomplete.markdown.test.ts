@@ -81,6 +81,26 @@ afterEach(() => {
 });
 
 describe("useSmartAutocomplete - markdown shortcuts (live typing)", () => {
+  it.each([
+    ['# ', 'h1'], ['## ', 'h2'], ['### ', 'h3'], ['#### ', 'h4'],
+    ['- ', 'ul > li'], ['* ', 'ul > li'], ['1. ', 'ol > li'],
+    ['[] ', 'ul.checklist > li'], ['[x] ', 'ul.checklist > li'],
+    ['> ', 'blockquote'],
+  ])('keeps typing inside %s converted from an unwrapped first line', (prefix, selector) => {
+    const { div, editorRef } = createEditor();
+    const text = document.createTextNode('');
+    div.appendChild(text);
+    setCaret(text, 0);
+    const { handleInput } = useSmartAutocomplete(editorRef);
+
+    typeText(prefix + 'Keep writing here.', handleInput);
+
+    const block = div.querySelector(selector)!;
+    expect(block?.textContent).toBe('Keep writing here.');
+    expect(block.contains(window.getSelection()!.focusNode)).toBe(true);
+    expect(div.textContent).toBe('Keep writing here.');
+  });
+
   describe("bold vs italic marker precedence", () => {
     it("typing **bold** character by character produces <strong>, never <em>", () => {
       const { div, editorRef } = createParagraphEditor("");

@@ -89,7 +89,7 @@ async function hasInlineHandler(page: Page): Promise<boolean> {
 test.describe('Copy/paste sanitization — real clipboard paste', () => {
   test.beforeEach(async ({ page, context }) => {
     await grantClipboard(context)
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
   })
 
@@ -283,7 +283,7 @@ test.describe('Copy/paste sanitization — sanitizer hardening (input pipeline)'
   // would otherwise pre-sanitize. We assert on the emitted v-model (Source tab).
   test.beforeEach(async ({ page, context }) => {
     await grantClipboard(context)
-    await page.goto('/?empty=true')
+    await page.goto('/?writingMode=false&empty=true')
     await page.waitForSelector('.editor-content')
     await page.locator('.editor-content').click()
   })

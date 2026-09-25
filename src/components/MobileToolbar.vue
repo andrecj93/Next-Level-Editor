@@ -9,13 +9,20 @@
         {
           'toolbar-collapsed': isCollapsed,
           'theme-dark': isDark,
+          'theme-light': !isDark,
           'is-fullscreen': isFullscreen,
+          'writing-dock': writingMode,
         },
       ]"
       :style="{ bottom: `${keyboardInset}px` }"
     >
+    <div v-if="writingMode" class="quick-writing-tools" role="group" aria-label="Quick formatting">
+      <button v-for="action in formatActions.filter(item => ['bold', 'italic', 'underline', 'link'].includes(item.id))" :key="action.id" type="button" class="toolbar-button" :aria-label="action.label" :aria-pressed="action.isActive?.()" @mousedown.prevent @click="action.onClick"><span v-html="action.icon" /></button>
+      <button type="button" class="toolbar-button" aria-label="Undo" @mousedown.prevent @click="emit('action', 'undo')">↶</button>
+      <button type="button" class="toolbar-button" aria-label="Close toolbar" @click="emit('close')">×</button>
+    </div>
     <!-- Toolbar Header -->
-    <div class="toolbar-header">
+    <div v-if="!writingMode" class="toolbar-header">
       <button
         class="toolbar-toggle touch-target"
         :aria-label="isCollapsed ? 'Expand toolbar' : 'Collapse toolbar'"
@@ -66,7 +73,7 @@
 
     <!-- Tab Navigation -->
     <div
-      v-show="!isCollapsed"
+      v-show="!isCollapsed && !writingMode"
       class="toolbar-tabs"
       role="tablist"
     >
@@ -90,7 +97,7 @@
 
     <!-- Tab Content -->
     <div
-      v-show="!isCollapsed"
+      v-show="!isCollapsed && !writingMode"
       class="toolbar-content"
     >
       <!-- Format Tab -->
@@ -200,12 +207,14 @@
 </template>
 
 <script setup lang="ts">
+import { keepCaretAboveToolbar } from "../utils/caretVisibility";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useDeviceDetection } from "../composables/useDeviceDetection";
 import { nextInstanceToken } from "../utils/instanceToken";
 
 // Props
 interface Props {
+  writingMode?: boolean;
   visible?: boolean;
   defaultTab?: string;
   enableHaptics?: boolean;
@@ -287,6 +296,7 @@ const updateClearance = () => {
     clearanceOwnerId
   );
   document.documentElement.style.setProperty(CLEARANCE_PROP, `${clearance}px`);
+  keepCaretAboveToolbar(el, resolveEditorRoot());
 };
 
 const clearClearance = () => {
@@ -353,6 +363,14 @@ const updateKeyboardInset = () => {
     0,
     Math.round(window.innerHeight - vv.height - vv.offsetTop)
   );
+  void nextTick(updateClearance);
+};
+
+const onEditorInput = (event: Event) => {
+  if (!showToolbar.value || !toolbarEl.value ||
+      !(event.target instanceof Node) || !resolveEditorRoot()?.contains(event.target) ||
+      (event as InputEvent).isComposing) return;
+  keepCaretAboveToolbar(toolbarEl.value, resolveEditorRoot());
 };
 
 // Because the toolbar teleports to <body>, it escapes the editor's
@@ -412,6 +430,7 @@ watch(
 );
 
 onMounted(() => {
+  document.addEventListener("input", onEditorInput);
   syncEditorClasses();
   observeEditorClasses();
 
@@ -424,6 +443,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  document.removeEventListener("input", onEditorInput);
   editorClassObserver?.disconnect();
   editorClassObserver = null;
   clearClearance();
@@ -729,8 +749,8 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
      this root, keeping the whole toolbar theme-correct. */
   --toolbar-bg: var(--color-surface-raised); /* chrome (header/tabs) surface */
   --toolbar-border: var(--color-border);
-  --toolbar-header-bg: var(--secondary-bg);
-  --toolbar-tabs-bg: var(--secondary-bg);
+  --toolbar-header-bg: var(--color-surface);
+  --toolbar-tabs-bg: var(--color-surface);
   --toolbar-content-bg: var(--color-surface); /* content surface */
   --tab-active-bg: var(--color-surface); /* active tab connects to content surface */
   --button-bg: var(--color-surface);
@@ -739,6 +759,7 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
   --text-secondary: var(--color-text-secondary);
 
   position: fixed;
+  font-family: var(--font-sans);
   bottom: 0;
   left: 0;
   right: 0;
@@ -768,7 +789,7 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
 }
 
 .toolbar-collapsed {
-  transform: translateY(calc(100% - 56px));
+  transform: translateY(calc(100% - 44px));
 }
 
 /* ============================================
@@ -779,8 +800,8 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  min-height: 56px;
+  padding: 0 8px;
+  min-height: 44px;
   background: var(--toolbar-header-bg, #f9fafb);
   border-bottom: 1px solid var(--toolbar-border, #e5e7eb);
 }
@@ -816,7 +837,7 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
 .toolbar-tabs {
   display: flex;
   gap: 4px;
-  padding: 8px 12px;
+  padding: 4px 8px;
   background: var(--toolbar-tabs-bg, #f9fafb);
   overflow-x: auto;
   scrollbar-width: none;
@@ -829,7 +850,7 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
 .toolbar-tab {
   flex: 1;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 4px;
   background: transparent;
@@ -838,15 +859,15 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
   color: var(--text-secondary, #6b7280);
   cursor: pointer;
   transition: all 0.2s;
-  padding: 8px 12px;
+  padding: 4px 8px;
 }
 
 /* Filled accent pill: an explicit background keeps the label at >=4.5:1 (WCAG
    AA) regardless of theme — a light accent-on-surface pill fails AA in both
    light (~3.7:1) and dark (~4.0:1). White on primary-600 is ~5.2:1. */
 .toolbar-tab.tab-active {
-  background: var(--color-primary-600, #2563eb);
-  color: #ffffff;
+  background: var(--toolbar-accent-strong, var(--color-primary-600));
+  color: var(--toolbar-accent-contrast, #ffffff);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
 }
 
@@ -870,7 +891,7 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
 .toolbar-content {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 8px 12px max(8px, env(safe-area-inset-bottom));
   background: var(--toolbar-content-bg, #ffffff);
 }
 
@@ -882,7 +903,12 @@ const triggerHaptic = (intensity: "light" | "medium" | "heavy" = "light") => {
 .button-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+}
+
+.toolbar-button.touch-target-lg {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .toolbar-button {

@@ -1,5 +1,37 @@
 <template>
+  <nav v-if="writingMode" ref="rootEl" class="editor-toolbar-modern writing-toolbar" role="toolbar" aria-label="Text formatting toolbar" @keydown="onRovingKeydown" @focusin="onRovingFocusin">
+    <div class="writing-toolbar-row">
+      <div class="writing-history" role="group" aria-label="History">
+        <button type="button" class="toolbar-btn-modern" aria-label="Undo" title="Undo (Ctrl+Z)" :disabled="historyIndex <= 0" @mousedown.prevent="$emit('remember-selection')" @click="$emit('undo')">↶</button>
+        <button type="button" class="toolbar-btn-modern" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" :disabled="historyIndex >= historyLength - 1" @mousedown.prevent="$emit('remember-selection')" @click="$emit('redo')">↷</button>
+      </div>
+      <span class="writing-toolbar-divider" />
+      <ToolbarSection class="writing-paragraph-format" type="dropdown" label="Format" tooltip="Paragraph style" :items="formatDropdownItems" :visible="isToolbarSectionVisible('format')" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection class="writing-inline" type="buttons" :items="inlineFormatActions.filter(item => ['bold', 'italic', 'underline'].includes(item.id))" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
+      <span class="writing-toolbar-divider" />
+      <ToolbarSection type="dropdown" label="Insert" preserve-label tooltip="Add a link, image, list, or other content" :items="writingInsertItems" :visible="isToolbarSectionVisible('insert')" @remember-selection="$emit('remember-selection')" />
+      <button type="button" class="writing-more-format" aria-label="More formatting" title="Text style, alignment, and colors" :aria-expanded="writingFormattingOpen" @mousedown.prevent="$emit('remember-selection')" @click="toggleWritingFormatting">Style <span class="dropdown-arrow" aria-hidden="true">▾</span></button>
+      <div class="writing-toolbar-spacer" />
+      <ToolbarSection type="dropdown" label="Tools" preserve-label tooltip="Find, history, and document tools" :items="writingToolItems" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="dropdown" label="View" preserve-label tooltip="Editor, source, preview, and focus" :items="writingViewItems" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection class="writing-export" type="dropdown" label="Export" preserve-label tooltip="Download your document" :items="exportDropdownItems" @remember-selection="$emit('remember-selection')" />
+      <button type="button" class="toolbar-btn-modern writing-theme" aria-label="Toggle dark/light theme" :aria-pressed="theme === 'dark'" title="Toggle theme" @click="$emit('toggle-theme')">◐</button>
+    </div>
+    <div v-if="writingFormattingOpen" class="writing-format-row" role="group" aria-label="More formatting options">
+      <ToolbarSection type="buttons" native-tooltips :items="inlineFormatActions" :visible="isToolbarSectionVisible('textFormatting')" @remember-selection="$emit('remember-selection')" />
+      <span class="writing-toolbar-divider" />
+      <ToolbarSection type="dropdown" label="Align" preserve-label tooltip="Text alignment" :items="alignmentDropdownItems" :visible="isToolbarSectionVisible('alignment')" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="dropdown" label="Size" preserve-label tooltip="Text size" :items="fontSizeDropdownItems" @remember-selection="$emit('remember-selection')" />
+      <ToolbarSection type="buttons" native-tooltips :items="listActions" :visible="isToolbarSectionVisible('lists')" @remember-selection="$emit('remember-selection')" />
+      <label class="writing-color" @mousedown="$emit('remember-selection')">Text <input type="color" aria-label="Text color" :disabled="!isToolbarSectionVisible('colors')" :value="writingTextColor" @input="pickTextColor(($event.target as HTMLInputElement).value)"></label>
+      <label class="writing-color" @mousedown="$emit('remember-selection')">Highlight <input type="color" aria-label="Highlight color" :disabled="!isToolbarSectionVisible('colors')" :value="writingHighlightColor" @input="pickHighlightColor(($event.target as HTMLInputElement).value)"></label>
+      <button type="button" class="writing-remove-highlight" aria-label="Remove highlight" title="Remove highlight, keeping other formatting" :aria-pressed="noHighlightActive" :disabled="!isToolbarSectionVisible('colors')" @mousedown.prevent="$emit('remember-selection')" @click="pickHighlightColor('transparent')">None</button>
+      <ToolbarSection type="buttons" native-tooltips :items="toolActions.filter(item => item.id === 'clear-formatting')" @remember-selection="$emit('remember-selection')" />
+      <button type="button" class="toolbar-btn-modern" aria-label="Close more formatting" @mousedown.prevent="$emit('remember-selection')" @click="closeWritingFormatting">×</button>
+    </div>
+  </nav>
   <nav
+    v-else
     ref="rootEl"
     :class="[
       'editor-toolbar-modern',
@@ -505,6 +537,7 @@ import type { ToolbarAction } from "../types/toolbar";
 import type { ToolbarConfig } from "../composables/useSmartToolbar";
 import ToolbarSection from "./ToolbarSection.vue";
 import ColorPicker from "./ColorPicker.vue";
+import { preserveVisibleSelection } from "../utils/caretVisibility";
 
 interface Props {
   isToolbarSectionVisible: (section: keyof ToolbarConfig) => boolean;
@@ -527,6 +560,8 @@ interface Props {
   isFullScreen: boolean;
   isFocusMode?: boolean;
   toolbarLayout?: "comfortable" | "compact";
+  writingMode?: boolean;
+  writingToolActions?: ToolbarAction[];
 }
 
 const props = defineProps<Props>();
@@ -539,6 +574,7 @@ const props = defineProps<Props>();
  * surface wins. Comfortable layout ignores this entirely.
  */
 const expanded = ref(false);
+const writingFormattingOpen = ref(false);
 const isMini = computed(() => props.toolbarLayout === "compact" && !expanded.value);
 
 /**
@@ -609,6 +645,12 @@ watch(
  * state. The class only toggles on real scroll events — never at mount.
  */
 const rootEl = ref<HTMLElement | null>(null);
+const toggleWritingFormatting = () => {
+  const editor = rootEl.value?.closest('.next-level-editor')?.querySelector<HTMLElement>('.editor-content');
+  const keepPlace = preserveVisibleSelection(editor ?? null);
+  writingFormattingOpen.value = !writingFormattingOpen.value;
+  nextTick(keepPlace);
+};
 const isElevated = ref(false);
 let elevationRaf = 0;
 
@@ -645,6 +687,7 @@ onMounted(() => {
  * pattern roves across top-level controls only; menus own their navigation.
  */
 const ROVING_KEYS = ["ArrowLeft", "ArrowRight", "Home", "End"];
+const TOOLBAR_CONTROL_SELECTOR = 'button, [href], input[type="color"]';
 let rovingStop: HTMLElement | null = null;
 
 const isRovingVisible = (el: HTMLElement, root: HTMLElement): boolean => {
@@ -661,50 +704,82 @@ const isRovingVisible = (el: HTMLElement, root: HTMLElement): boolean => {
   return true;
 };
 
+const getToolbarControls = (): HTMLElement[] =>
+  Array.from(rootEl.value?.querySelectorAll<HTMLElement>(TOOLBAR_CONTROL_SELECTOR) ?? [])
+    .filter(el => !el.closest(".dropdown-menu"));
+
 const getRovingControls = (): HTMLElement[] => {
   const root = rootEl.value;
   if (!root) return [];
-  return Array.from(
-    root.querySelectorAll<HTMLElement>("button, [href]")
-  ).filter(
+  return getToolbarControls().filter(
     (el) =>
       !el.hasAttribute("disabled") &&
-      !el.closest(".dropdown-menu") &&
       isRovingVisible(el, root)
   );
 };
 
 const applyRovingTabindex = () => {
+  const previousStop = rovingStop;
+  const hadFocus = previousStop !== null && document.activeElement === previousStop;
   const controls = getRovingControls();
-  if (!controls.length) return;
   if (!rovingStop || !controls.includes(rovingStop)) {
-    rovingStop = controls[0];
+    rovingStop = controls[0] ?? null;
   }
-  for (const el of controls) {
+  // Clear unavailable controls too. A hidden/disabled former stop must not
+  // compete with the visible entry point when the layout changes again.
+  for (const el of getToolbarControls()) {
     el.tabIndex = el === rovingStop ? 0 : -1;
   }
+  if (hadFocus && previousStop !== rovingStop) rovingStop?.focus();
 };
+
+const onToolbarResize = () => nextTick(applyRovingTabindex);
+
+const focusToolbar = (): boolean => {
+  // Refresh synchronously: the shortcut can arrive before a resize observer
+  // or a reactive layout update has repaired the old tab stop.
+  applyRovingTabindex();
+  if (!rovingStop) return false;
+  emit("remember-selection");
+  rovingStop.focus();
+  return document.activeElement === rovingStop;
+};
+
+defineExpose({ focusToolbar });
 
 const onRovingFocusin = (event: FocusEvent) => {
   const target = (event.target as HTMLElement | null)?.closest?.(
-    "button, [href]"
+    TOOLBAR_CONTROL_SELECTOR
   ) as HTMLElement | null;
   if (!target || target.closest(".dropdown-menu")) return;
   rovingStop = target;
   applyRovingTabindex();
 };
 
+const closeWritingFormatting = () => {
+  writingFormattingOpen.value = false;
+  nextTick(() => emit('return-editor'));
+};
+
 const onRovingKeydown = (event: KeyboardEvent) => {
+  if (props.writingMode && event.key === 'Escape' && !(event.target as HTMLElement)?.closest('.dropdown-menu')) {
+    event.preventDefault();
+    event.stopPropagation();
+    writingFormattingOpen.value = false;
+    emit('return-editor');
+    return;
+  }
   if (!ROVING_KEYS.includes(event.key)) return;
   const target = event.target as HTMLElement | null;
-  // Menus (and any future text inputs) keep their own arrow behavior.
+  // Text fields and menus own their arrows. A closed native color control is
+  // a toolbar control; its browser-owned picker handles keys after opening.
   if (!target || target.closest(".dropdown-menu")) return;
-  if (target.matches?.("input, textarea, select")) return;
+  if (target.matches?.('input:not([type="color"]), textarea, select')) return;
   const controls = getRovingControls();
   if (!controls.length) return;
 
   const current = controls.indexOf(
-    (target.closest("button, [href]") as HTMLElement | null) ?? target
+    (target.closest(TOOLBAR_CONTROL_SELECTOR) as HTMLElement | null) ?? target
   );
   let next: number;
   if (event.key === "Home") {
@@ -752,7 +827,10 @@ const sectionVisibilitySignature = () =>
     props.isToolbarSectionVisible(section) ? "1" : "0"
   ).join("");
 
-onMounted(applyRovingTabindex);
+onMounted(() => {
+  applyRovingTabindex();
+  window.addEventListener("resize", onToolbarResize);
+});
 watch(
   [
     isMini,
@@ -760,6 +838,8 @@ watch(
     () => props.viewMode,
     () => props.historyIndex,
     () => props.historyLength,
+    () => props.writingMode,
+    writingFormattingOpen,
     sectionVisibilitySignature,
   ],
   () => {
@@ -794,6 +874,7 @@ const emit = defineEmits<{
   "toggle-theme": [];
   "toggle-fullscreen": [];
   "toggle-focus": [];
+  "return-editor": [];
 }>();
 
 /**
@@ -843,6 +924,24 @@ const compactMoreItems = computed(() => [
     ),
     onClick: () => emit("toggle-fullscreen"),
   },
+]);
+
+const writingInsertItems = computed(() => [
+  ...props.listActions.filter(item => ['bullet-list', 'numbered-list'].includes(item.id)).map(item => ({ ...item, isDisabled: () => !props.isToolbarSectionVisible('lists') || Boolean(item.isDisabled?.()) })),
+  { divider: true },
+  ...props.insertDropdownItems,
+]);
+const writingToolItems = computed(() => [
+  ...props.toolActions, ...(props.writingToolActions ?? []), { divider: true },
+  { id: 'writing-undo', label: 'Undo', shortcut: 'Ctrl+Z', isDisabled: () => props.historyIndex <= 0, onClick: () => emit('undo') },
+  { id: 'writing-redo', label: 'Redo', shortcut: 'Ctrl+Shift+Z', isDisabled: () => props.historyIndex >= props.historyLength - 1, onClick: () => emit('redo') },
+  { divider: true }, ...props.productivityDropdownItems,
+]);
+const writingViewItems = computed(() => [
+  ...compactMoreItems.value.filter(item => !props.toolActions.includes(item as ToolbarAction)),
+  { divider: true },
+  { id: 'writing-theme', label: props.theme === 'dark' ? 'Light appearance' : 'Dark appearance', onClick: () => emit('toggle-theme') },
+  ...(props.viewMode === 'code' || props.viewMode === 'split' ? [{ id: 'writing-format-html', label: 'Format HTML', onClick: () => emit('format-html') }] : []),
 ]);
 
 // Curated quick-pick palettes for the Colors menu (custom picker still available).
@@ -969,8 +1068,23 @@ const isTransparent = (value: string): boolean => {
 };
 
 const readSelectionColors = () => {
+  // Some engines expose the native color field as an editable text control.
+  // Its own selection must not reset the controlled value while the writer
+  // is choosing a color (which can also cancel the field's selected text).
+  if (document.activeElement instanceof HTMLInputElement && rootEl.value?.contains(document.activeElement)) return;
   const selection = window.getSelection?.();
-  const node = selection?.anchorNode ?? null;
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  let node = range?.startContainer ?? null;
+  // Formatting commands select their new wrapper with an element boundary.
+  // Read inside that wrapper, not the parent whose old color it overrides.
+  if (node?.nodeType === Node.ELEMENT_NODE && range) {
+    const next = node.childNodes[range.startOffset];
+    const previous = node.childNodes[range.startOffset - 1];
+    if (next || previous) {
+      node = next ?? previous;
+      while (next ? node.firstChild : node.lastChild) node = (next ? node.firstChild : node.lastChild)!;
+    }
+  }
   const start: Element | null =
     node instanceof Element ? node : node?.parentElement ?? null;
   const editableRoot = start?.closest(EDITABLE_SELECTOR) ?? null;
@@ -998,11 +1112,11 @@ const readSelectionColors = () => {
   selectionHighlightColor.value = highlight;
 };
 
-// Track the selection only while the menu is open (the swatches don't render
-// otherwise). `immediate` covers a menu that is already open at mount.
+// Read the passage while either color surface is visible. The writing inputs
+// must not display the initial picker props after the caret moves elsewhere.
 watch(
-  () => props.showColorsDropdown,
-  (open) => {
+  [() => props.showColorsDropdown, () => props.writingMode && writingFormattingOpen.value],
+  ([colorsOpen, writingOpen]) => {
     // Runs immediately at setup, so it executes during SSR where there is no
     // document. The selection listeners are client-only anyway.
     if (typeof document === "undefined") return;
@@ -1010,9 +1124,11 @@ watch(
     // Capture phase: a ToolbarDropdown trigger's @click.stop cannot hide the
     // pointerdown from us, so opening another menu closes this panel. #R24-11
     document.removeEventListener("pointerdown", onColorsOutsidePointerdown, true);
-    if (open) {
+    if (colorsOpen || writingOpen) {
       readSelectionColors();
       document.addEventListener("selectionchange", readSelectionColors);
+    }
+    if (colorsOpen) {
       document.addEventListener("pointerdown", onColorsOutsidePointerdown, true);
       nextTick(clampColorsMenu);
     } else {
@@ -1022,7 +1138,12 @@ watch(
   { immediate: true }
 );
 
+watch(() => props.theme, () => {
+  if (props.showColorsDropdown || (props.writingMode && writingFormattingOpen.value)) nextTick(readSelectionColors);
+});
+
 onBeforeUnmount(() => {
+  window.removeEventListener("resize", onToolbarResize);
   document.removeEventListener("selectionchange", readSelectionColors);
   document.removeEventListener("pointerdown", onColorsOutsidePointerdown, true);
   document.removeEventListener("scroll", onAnyScroll, { capture: true });
@@ -1058,6 +1179,15 @@ const pickHighlightColor = (color: string) => {
 const noHighlightActive = computed(() =>
   isTransparent(selectionHighlightColor.value)
 );
+
+const pickerHex = (value: string, fallback: string): string => {
+  const channels = parseColor(value);
+  return /^\d+,\d+,\d+$/.test(channels)
+    ? '#' + channels.split(',').map(channel => Math.min(255, Number(channel)).toString(16).padStart(2, '0')).join('')
+    : fallback;
+};
+const writingTextColor = computed(() => pickerHex(selectionTextColor.value, pickerHex(props.textColor, '#333333')));
+const writingHighlightColor = computed(() => pickerHex(selectionHighlightColor.value, pickerHex(props.backgroundColor, '#fff1a8')));
 
 /**
  * Normalize a CSS color to a comparable "r,g,b" key: presets are hex while

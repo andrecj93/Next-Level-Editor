@@ -42,6 +42,9 @@
             }}</span>
           </button>
         </div>
+        <p class="context-menu-hint">
+          Shift + right-click for spelling and browser tools
+        </p>
       </div>
     </transition>
   </teleport>
@@ -66,6 +69,30 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const menuRef = ref<HTMLElement | null>(null);
+const openingScroll = new Map<EventTarget, { x: number; y: number }>();
+
+const scrollPosition = (target: EventTarget | null) => {
+  if (target === window || target === document) return { x: window.scrollX, y: window.scrollY };
+  return target instanceof HTMLElement ? { x: target.scrollLeft, y: target.scrollTop } : null;
+};
+
+const settleOpeningScroll = () => {
+  openingScroll.clear();
+  // Opening a menu interrupts an in-flight smooth scroll, just as a native
+  // context menu does. Keep the current position instead of chasing the caret.
+  window.scrollTo({ left: window.scrollX, top: window.scrollY, behavior: 'instant' });
+  openingScroll.set(window, scrollPosition(window)!);
+  openingScroll.set(document, scrollPosition(document)!);
+  let element = previouslyFocused;
+  while (element) {
+    const position = scrollPosition(element)!;
+    if (element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth) {
+      element.scrollTo?.({ left: position.x, top: position.y, behavior: 'instant' });
+    }
+    openingScroll.set(element, position);
+    element = element.parentElement;
+  }
+};
 
 // Focusable (enabled) menu items, in DOM order.
 const getMenuItems = (): HTMLButtonElement[] =>
@@ -81,7 +108,17 @@ const focusItemAt = (index: number) => {
   const items = getMenuItems();
   if (items.length === 0) return;
   const wrapped = (index + items.length) % items.length;
-  items[wrapped].focus();
+  const item = items[wrapped];
+  item.focus({ preventScroll: true });
+  // Keep keyboard navigation inside the menu's own scroll area. Native focus
+  // scrolling can move a short host page and immediately dismiss this menu.
+  const menu = menuRef.value;
+  if (menu) {
+    if (item.offsetTop < menu.scrollTop) menu.scrollTop = item.offsetTop;
+    else if (item.offsetTop + item.offsetHeight > menu.scrollTop + menu.clientHeight) {
+      menu.scrollTop = item.offsetTop + item.offsetHeight - menu.clientHeight;
+    }
+  }
 };
 
 const handleItemClick = (item: ContextMenuItem) => {
@@ -96,7 +133,7 @@ const handleItemClick = (item: ContextMenuItem) => {
   // async restoreFocus() on the close path is too late for this. #R23-36
   const preMenuTarget = previouslyFocused;
   if (preMenuTarget?.isConnected) {
-    preMenuTarget.focus();
+    preMenuTarget.focus({ preventScroll: true });
     previouslyFocused = null; // the close-path restore is now a no-op
   }
 
@@ -116,7 +153,15 @@ const handleDocumentClick = () => {
 
 // #31: close the menu when the underlying page scrolls or the window resizes -
 // in both cases the anchor point the menu was positioned at is no longer valid.
-const handleDismiss = () => {
+const handleDismiss = (event: Event) => {
+  if (event.type === 'scroll' && event.target instanceof Node && menuRef.value?.contains(event.target)) return;
+  if (event.type === 'scroll' && event.target) {
+    const before = openingScroll.get(event.target);
+    const current = scrollPosition(event.target);
+    // A queued event from before opening must not close the new menu when
+    // nothing has moved since it opened. Real subsequent scrolling still does.
+    if (before && current && before.x === current.x && before.y === current.y) return;
+  }
   if (props.show) {
     emit("close");
   }
@@ -162,15 +207,27 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 };
 
+let openingDismissTimer: ReturnType<typeof setTimeout> | null = null;
+
 const addDismissListeners = () => {
-  document.addEventListener("click", handleDocumentClick);
-  // `scroll` fires on inner scrollable elements too, so capture it.
-  window.addEventListener("scroll", handleDismiss, true);
-  window.addEventListener("resize", handleDismiss);
   document.addEventListener("keydown", handleKeydown);
+  // Let the opening pointer event and its viewport adjustments settle before
+  // outside dismissal. Keyboard navigation is ready as soon as the menu opens.
+  openingDismissTimer = setTimeout(() => {
+    openingDismissTimer = null;
+    if (!props.show) return;
+    document.addEventListener("click", handleDocumentClick);
+    // `scroll` fires on inner scrollable elements too, so capture it.
+    window.addEventListener("scroll", handleDismiss, true);
+    window.addEventListener("resize", handleDismiss);
+  }, 0);
 };
 
 const removeDismissListeners = () => {
+  if (openingDismissTimer !== null) {
+    clearTimeout(openingDismissTimer);
+    openingDismissTimer = null;
+  }
   document.removeEventListener("click", handleDocumentClick);
   window.removeEventListener("scroll", handleDismiss, true);
   window.removeEventListener("resize", handleDismiss);
@@ -197,7 +254,7 @@ const restoreFocus = () => {
   const active = document.activeElement;
   const insideMenu = menuRef.value?.contains(active as Node) ?? false;
   if (active && active !== document.body && !insideMenu) return;
-  nextTick(() => target.focus());
+  nextTick(() => target.focus({ preventScroll: true }));
 };
 
 watch(
@@ -208,14 +265,13 @@ watch(
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null;
-      // Defer so the opening right-click/keypress does not immediately close it.
-      setTimeout(() => {
-        addDismissListeners();
-      }, 0);
+      settleOpeningScroll();
+      addDismissListeners();
       // Move focus into the menu so keyboard/screen-reader users can operate it.
       nextTick(() => focusItemAt(0));
     } else {
       removeDismissListeners();
+      openingScroll.clear();
       restoreFocus();
     }
   }
@@ -226,6 +282,7 @@ watch(
 // back on that path too.
 onBeforeUnmount(() => {
   removeDismissListeners();
+  openingScroll.clear();
   restoreFocus();
 });
 </script>
@@ -234,6 +291,11 @@ onBeforeUnmount(() => {
 .context-menu {
   position: fixed;
   min-width: 200px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -281,7 +343,7 @@ onBeforeUnmount(() => {
 
 .context-menu-shortcut {
   font-size: 12px;
-  opacity: 0.6;
+  color: var(--color-text-secondary);
   font-family: "Courier New", monospace;
 }
 
@@ -289,6 +351,20 @@ onBeforeUnmount(() => {
   height: 1px;
   background: var(--color-border);
   margin: 4px 8px;
+}
+
+.context-menu-hint {
+  max-width: 230px;
+  margin: 4px 8px;
+  padding: 8px 4px 4px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (pointer: coarse) {
+  .context-menu-hint { display: none; }
 }
 
 .context-menu-enter-active,
@@ -304,5 +380,9 @@ onBeforeUnmount(() => {
 .context-menu-leave-to {
   opacity: 0;
   transform: scale(0.95);
+}
+
+.context-menu-leave-active {
+  pointer-events: none;
 }
 </style>

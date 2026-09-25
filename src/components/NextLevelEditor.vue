@@ -10,6 +10,8 @@
         'is-focus': isFocusMode,
         'is-full-width': isFullWidth,
         'is-resizing': isResizing,
+        'is-writing-workspace': writingMode,
+        'has-writing-search': writingMode && showFindReplaceModal,
       },
     ]"
     :style="
@@ -22,6 +24,7 @@
         ? effectiveToolbarPosition
         : undefined
     "
+    @focusin="rememberEditingSurface"
   >
     <!-- Accessibility: Skip Links -->
     <SkipLinks
@@ -56,6 +59,7 @@
     >
     <EditorToolbar
       :id="toolbarLandmarkId"
+      ref="editorToolbarRef"
       :is-toolbar-section-visible="isToolbarSectionVisible"
       :format-dropdown-items="formatDropdownItems"
       :inline-format-actions="inlineFormatActions"
@@ -76,6 +80,8 @@
       :is-full-screen="isFullScreen"
       :is-focus-mode="isFocusMode"
       :toolbar-layout="effectiveToolbarLayout"
+      :writing-mode="writingMode"
+      :writing-tool-actions="writingToolActions"
       @remember-selection="rememberSelectionFromToolbar"
       @toggle-colors-dropdown="showColorsDropdown = !showColorsDropdown"
       @close-colors-dropdown="showColorsDropdown = false"
@@ -88,6 +94,7 @@
       @toggle-theme="toggleTheme"
       @toggle-fullscreen="toggleFullScreen"
       @toggle-focus="toggleFocusMode"
+      @return-editor="performWithSelection(() => {})"
     />
     <!-- Letterbox band — the toolbar's while-you-write form: three quiet
          signals in place of the buttons. Click (or any pointer intent /
@@ -114,7 +121,10 @@
     </div>
     </div>
 
+    <Teleport to="body">
     <CommandMenu
+      class="nle-chrome"
+      :class="teleportThemeClass"
       :show="showCommandMenu"
       :position="commandMenuPosition"
       :options="commandOptions"
@@ -122,9 +132,26 @@
       :listbox-id="commandListboxId"
       :option-id="commandOptionId"
       @select="handleCommandOption"
+      @dismiss="showCommandMenu = false"
     />
+    </Teleport>
 
+    <WritingSearch
+      v-if="writingMode"
+      ref="writingSearchRef"
+      :show="showFindReplaceModal"
+      :content="htmlContent"
+      :editor="editorContent"
+      :readonly="readonly"
+      :initially-replace="writingSearchInitiallyReplace"
+      :find="handleFind"
+      :replace="handleReplace"
+      :replace-all="handleReplaceAll"
+      :clear="clearFindHighlight"
+      @close="closeWritingSearch"
+    />
     <!-- Editor and Preview Panels -->
+    <div class="nle-document-workspace" :class="{ 'has-writing-search': writingMode && showFindReplaceModal }">
     <EditorPanels
       :id="mainLandmarkId"
       ref="editorPanelsRef"
@@ -138,6 +165,8 @@
       :html-content="htmlContent"
       :split-right-mode="splitRightMode"
       @input="onInput"
+      @before-input="onBeforeInput"
+      @composition-start="onCompositionStart"
       @paste="onPaste"
       @drop="onDrop"
       @dragstart="onDragStart"
@@ -152,6 +181,26 @@
       @split-right-mode-change="handleSplitRightModeChange"
       @split-editor-input="onSplitEditorInput"
     />
+    <WritingCompanion
+      v-if="writingMode && companionOpen && viewMode === 'editor'"
+      v-show="!showFindReplaceModal"
+      :review="writingReview"
+      :dismissed-notes="dismissedWritingNotes"
+      :start-note-id="writingReviewStart"
+      :initial-view="companionView"
+      :initial-prompt-index="companionPromptIndex"
+      :readonly="readonly"
+      @change-view="companionView = $event"
+      @change-prompt="companionPromptIndex = $event"
+      @review-kept="reviewKeptWritingNotes"
+      @close="closeCompanion"
+      @leave="companionOpen = false"
+      @locate="locateWritingNote"
+      @apply="applyWritingNote"
+      @dismiss="dismissWritingNote"
+      @navigate="navigateWritingBlock"
+    />
+    </div>
 
     <!-- Word Count Footer. Hidden while the toolbar docks at the bottom —
          two stacked bottom bands duplicated the word count (the dock's
@@ -162,8 +211,22 @@
       :word-count="wordCount"
       :character-count="characterCount"
       :full-width="isFullWidth"
+      :writing-mode="writingMode"
+      :companion-open="companionOpen && viewMode === 'editor'"
+      :writing-note-count="writingReview.notes.filter(note => !dismissedWritingNotes.has(note.id)).length"
+      :enable-comments="enableComments"
+      :enable-variables="enableVariables && !readonly"
+      :comments-open="showCommentsSidebar"
+      :variables-open="showVariablesPanel"
+      @toggle-companion="toggleCompanion"
+      @open-comments="toggleCommentsSidebar"
+      @open-variables="toggleVariablesPanel"
       @toggle-full-width="toggleFullWidth"
-    />
+    >
+      <PdfExportStatus v-if="pdfProgress" v-bind="pdfProgress" @cancel="cancelPdfExport(); performWithSelection(() => {})" />
+      <SaveStatus v-if="writingMode && (!pdfProgress || saveStatus === 'error' || saveStatus === 'conflict')" :save-status="saveStatus" :is-saving="isSaving" :last-saved="lastSaved" :has-pending-changes="isDirty" :persistent-save="Boolean(props.saveHandler)" @retry-save="forceSave(sanitizeHtml(htmlContent))" />
+    </EditorFooter>
+    <PdfExportStatus v-if="pdfProgress && effectiveToolbarPosition === 'bottom'" v-bind="pdfProgress" @cancel="cancelPdfExport(); performWithSelection(() => {})" />
 
     <!-- Corner resize grip: drag (or focus + arrow keys) to size the editor so
          more text is visible. Hidden in fullscreen (fixed inset) and pill mode
@@ -199,6 +262,7 @@
         showFloatingToolbar && !readonly && !mobileBarOnScreen && !isPillMode
       "
       :actions="floatingActions"
+      :boundary="editorContent"
     />
 
     <!-- Playhead pill (toolbarMode="pill"): the ONE floating capsule that is
@@ -214,6 +278,8 @@
       :word-count="wordCount"
       :is-saving="isSaving || letterboxSavePulse"
       :save-status="saveStatus"
+      :has-pending-changes="isDirty"
+      :persistent-save="Boolean(props.saveHandler)"
       :inline-actions="floatingActions"
       :format-items="formatDropdownItems"
       :insert-items="insertDropdownItems"
@@ -239,6 +305,7 @@
          working in shows a toolbar, so multi-editor pages never stack N
          identical fixed bars. -->
     <MobileToolbar
+      :writing-mode="writingMode"
       :visible="mobileToolbarVisible && !readonly"
       :is-active="mobileIsActive"
       :editor-root="rootEl"
@@ -268,11 +335,14 @@
         :has-history="history.length > 0"
         :history-size="history.length"
         :timeline-progress="timelineProgress"
-        @go-to-entry="jumpToHistory"
-        @go-back="undo"
-        @go-forward="redo"
-        @go-to-first="jumpToHistory(0)"
-        @go-to-latest="jumpToHistory(history.length - 1)"
+        :readonly="readonly"
+        show-close-button
+        @close="showHistoryTimeline = false"
+        @go-to-entry="navigateHistory($event)"
+        @go-back="navigateHistory(historyIndex - 1)"
+        @go-forward="navigateHistory(historyIndex + 1)"
+        @go-to-first="navigateHistory(0)"
+        @go-to-latest="navigateHistory(history.length - 1)"
         @clear="handleClearHistory"
         @export="handleExportHistory"
       />
@@ -289,15 +359,17 @@
 
     <!-- Modals Container -->
     <ModalsContainer
+      :inline-save="writingMode"
       :theme="teleportThemeClass"
       :owns-fixed-chrome="ownsFixedChrome"
       :show-table-modal="showTableModal"
-      :show-find-replace-modal="showFindReplaceModal"
+      :show-find-replace-modal="showFindReplaceModal && !writingMode"
       :show-code-block-modal="showCodeBlockModal"
       :show-table-designer="showTableDesigner"
       :show-table-properties-modal="showTablePropertiesModal"
       :show-emoji-picker="showEmojiPicker"
       :show-link-modal="showLinkModal"
+      :link-context="linkContext"
       :show-image-upload-modal="showImageUploadModal"
       :show-embed-modal="showEmbedModal"
       :show-file-manager-modal="showFileManagerModal"
@@ -312,14 +384,17 @@
       :initial-cell-props="initialCellProps"
       :initial-table-props="initialTableProps"
       :formatted-html-content="
-        formatHtml(htmlContent || editorContent?.innerHTML || '')
+        showHtmlCodeModal ? formatHtml(htmlContent || editorContent?.innerHTML || '') : ''
       "
       :command-palette-commands="commandPaletteCommands"
       :recent-command-ids="recentCommands"
       :last-saved="lastSaved"
       :save-status="saveStatus"
       :toast-message="toastMessage"
+      :has-pending-changes="isDirty"
+      :persistent-save="Boolean(props.saveHandler)"
       :toast-type="toastType"
+      @retry-save="forceSave(sanitizeHtml(htmlContent))"
       @close-table-modal="closeTableModal"
       @insert-table="handleInsertTable"
       @close-find-replace-modal="closeFindReplaceModal"
@@ -378,18 +453,20 @@
       :sentence-analysis="writingAssistant.sentenceAnalysis.value"
       :word-analysis="writingAssistant.wordAnalysis.value"
       :issues="writingAssistant.issues.value"
+      :text="writingAssistant.textContent.value"
       :seo="writingAssistant.seo.value"
-      @close="showWritingStatsPanel = false"
+      @close="closeWritingStatistics"
     />
 
     <!-- Comments Sidebar (opt-in feature) -->
     <CommentsSidebar
       v-if="enableComments && comments"
+      ref="commentsSidebarRef"
       :threads="comments.threads.value"
       :active-thread-id="comments.activeThread.value?.id ?? null"
       :is-open="showCommentsSidebar"
       :mention-search="mentionSearch"
-      @close="showCommentsSidebar = false"
+      @close="closeCommentsSidebar"
       @select-thread="handleSelectThread"
       @resolve-thread="handleResolveThread"
       @reopen-thread="handleReopenThread"
@@ -437,7 +514,7 @@
          fixed column: see useFloatingChromeOwner. #R23-30 -->
     <Transition name="fab-fade">
       <button
-        v-if="enableComments && !showCommentsSidebar && comments && ownsFixedChrome"
+        v-if="!writingMode && enableComments && !showCommentsSidebar && comments && ownsFixedChrome"
         class="comments-toggle-fab"
         aria-label="Open comments"
         title="Open comments"
@@ -464,7 +541,7 @@
     <!-- Writing Stats Toggle FAB (opt-in feature) -->
     <Transition name="fab-fade">
       <button
-        v-if="showWritingStats && writingAssistant && ownsFixedChrome"
+        v-if="!writingMode && showWritingStats && writingAssistant && ownsFixedChrome"
         class="writing-stats-toggle-fab"
         :aria-label="
           showWritingStatsPanel
@@ -477,7 +554,7 @@
             ? 'Hide writing statistics'
             : 'Show writing statistics'
         "
-        @click="showWritingStatsPanel = !showWritingStatsPanel"
+        @click="toggleWritingStatistics"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path
@@ -494,7 +571,7 @@
     <!-- Variables Toggle FAB (opt-in feature) -->
     <Transition name="fab-fade">
       <button
-        v-if="enableVariables && variablesComposable && !readonly && ownsFixedChrome"
+        v-if="!writingMode && enableVariables && variablesComposable && !readonly && ownsFixedChrome"
         class="variables-toggle-fab"
         :style="{
           bottom: `calc(${variablesFabBottom}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
@@ -502,7 +579,7 @@
         aria-label="Toggle variables panel"
         :aria-expanded="showVariablesPanel"
         :title="showVariablesPanel ? 'Hide variables' : 'Show variables'"
-        @click="showVariablesPanel = !showVariablesPanel"
+        @click="toggleVariablesPanel"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path
@@ -529,7 +606,7 @@
         "
         class="variables-panel"
         :style="{
-          bottom: `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
+          '--nle-variables-panel-bottom': `calc(${variablesFabBottom + 64}px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px))`,
         }"
         role="region"
         aria-label="Template variables"
@@ -539,7 +616,7 @@
           <button
             class="variables-panel-close"
             aria-label="Close variables panel"
-            @click="showVariablesPanel = false"
+            @click="closeVariablesPanel"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path
@@ -627,6 +704,15 @@ import {
   watchEffect,
 } from "vue";
 import { useStableId } from "../utils/useStableId";
+import WritingCompanion from './WritingCompanion.vue';
+import WritingSearch from './WritingSearch.vue';
+import SaveStatus from './SaveStatus.vue';
+import PdfExportStatus from './PdfExportStatus.vue';
+import { useWritingWorkspace } from '../composables/useWritingWorkspace';
+import { useClipboardPaste, type ClipboardPasteInput } from '../composables/useClipboardPaste';
+import { writingBlocks, writingNoteRange, writingNoteNearSelection, type WritingNote } from '../utils/writingReview';
+import { keepSelectionVisible, preserveVisibleSelection } from '../utils/caretVisibility';
+import { useWritingReflow } from '../composables/useWritingReflow';
 
 import {
   applyTextAlignment,
@@ -670,6 +756,7 @@ import { selectionTick } from "../composables/useActiveStates";
 import { useDeviceDetection } from "../composables/useDeviceDetection";
 import { useTheme } from "../composables/useTheme";
 import { useAutoSave } from "../composables/useAutoSave";
+import { usePendingSaveGuard } from "../composables/usePendingSaveGuard";
 import { useSmartToolbar } from "../composables/useSmartToolbar";
 import { useEditorContent } from "../composables/useEditorContent";
 import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
@@ -702,6 +789,7 @@ import {
 } from "../composables/useEditorEvents";
 import { useFormattingHandlers } from "../composables/useFormattingHandlers";
 import { hasFormatCopied, clearCopiedFormat } from "../utils/formatPainter";
+import { clearFormatting } from "../utils/formatting";
 import { formatHtml } from "../utils/export";
 import { useCommandPalette } from "../composables/useCommandPalette";
 import { useSlashCommands } from "../composables/useSlashCommands";
@@ -724,6 +812,10 @@ import ConfirmDialog from "./ConfirmDialog.vue";
 import VariableAutocomplete from "./VariableAutocomplete.vue";
 import { useWritingAssistant } from "../composables/useWritingAssistant";
 import { useComments } from "../composables/useComments";
+import { getCaretOffsets, setCaretOffsets, type CaretOffsets } from "../utils/caretOffset";
+import { preserveSelectionAfterTextReplacement } from '../utils/selectionAfterReplacement';
+import { captureSelectionBookmark } from "../utils/selectionBookmark";
+import { removeTypingPlaceholders, prepareTypingPlaceholdersForKey, prepareTypingPlaceholdersForInput } from '../utils/typingPlaceholder';
 import { useVariables, type Variable } from "../composables/useVariables";
 import { usePlugin } from "../composables/usePlugin";
 import { useSmartAutocomplete } from "../composables/useSmartAutocomplete";
@@ -742,6 +834,7 @@ const props = withDefaults(defineProps<NextLevelEditorProps>(), {
   mentionSearch: undefined,
   themePreset: "default",
   toolbarLayout: "comfortable",
+  writingMode: false,
   // Default to a rock-solid static bar: the toolbar never dissolves into the
   // ambient letterbox band while you write, and never reshuffles because of
   // scrolling. letterbox/recede remain fully available as an opt-in prop for
@@ -780,6 +873,7 @@ const mainLandmarkId = `${landmarkBaseId}-main`;
 const footerLandmarkId = `${landmarkBaseId}-footer`;
 
 const editorPanelsRef = ref<InstanceType<typeof EditorPanels> | null>(null);
+const editorToolbarRef = ref<InstanceType<typeof EditorToolbar> | null>(null);
 
 // This instance's root element — the ownership scope for document-level
 // listeners (e.g. the selection toolbar's selectionchange handling).
@@ -855,7 +949,7 @@ onUnmounted(() => {
 // both claim the bottom edge. (deviceShowsMobileToolbar is declared later
 // in setup; computeds are lazy, so the forward reference is safe.)
 const effectiveToolbarPosition = computed(() =>
-  rootWidth.value <= 640 || deviceShowsMobileToolbar.value
+  props.writingMode || rootWidth.value <= 640 || deviceShowsMobileToolbar.value
     ? "top"
     : props.toolbarPosition
 );
@@ -867,7 +961,7 @@ const effectiveToolbarPosition = computed(() =>
 // surface: in code/preview views the docked bar returns (it carries the
 // view-mode switch, which the pill deliberately doesn't).
 const effectiveToolbarMode = computed(() =>
-  rootWidth.value <= 640 || deviceShowsMobileToolbar.value
+  props.writingMode || rootWidth.value <= 640 || deviceShowsMobileToolbar.value
     ? "bar"
     : props.toolbarMode
 );
@@ -895,7 +989,7 @@ watchEffect(() => {
 });
 // Zen IS the letterbox, permanently — it overrides adaptiveChrome="off".
 const effectiveAdaptiveChrome = computed(() =>
-  isZen.value ? "letterbox" : props.adaptiveChrome
+  props.writingMode ? 'off' : isZen.value ? "letterbox" : props.adaptiveChrome
 );
 
 // Auto-compact with hysteresis. A single threshold at 640px made the toolbar
@@ -934,6 +1028,11 @@ const viewMode = ref<"editor" | "code" | "split" | "preview">(
   props.defaultViewMode
 );
 const splitRightMode = ref<"preview" | "editor">("preview");
+let lastEditingSurface: 'rich' | 'code' = 'rich';
+const rememberEditingSurface = (event: FocusEvent) => {
+  if (event.target === editorPanelsRef.value?.codeEditorRef) lastEditingSurface = 'code';
+  else if (event.target === editorContent.value) lastEditingSurface = 'rich';
+};
 
 // The ACTIVE editable surface. In split view with the right pane in editor
 // mode, the visible surface is splitEditorRef — the classic editorRef is a
@@ -954,7 +1053,7 @@ const { handleInput: handleSmartAutocomplete } =
   useSmartAutocomplete(editorContent);
 
 // Selection management using composable
-const { rememberSelection: rememberSelectionBase, performWithSelection } =
+const { rememberSelection: rememberSelectionBase, performWithSelection, restoreEditorFocus } =
   useSelection(editorContent);
 
 // Extend rememberSelection to hide floating toolbar
@@ -985,6 +1084,25 @@ const { announce } = useAccessibility();
 
 // Writing Assistant (opt-in feature) - local state for toggle
 const showWritingStatsPanel = ref(false);
+const writingToolActions = computed(() => props.showWritingStats ? [{
+  id: 'writing-statistics', label: 'Writing statistics', tooltip: 'Readability, word analysis, and SEO',
+  onClick: toggleWritingStatistics,
+}] : []);
+
+function toggleWritingStatistics() {
+  if (showWritingStatsPanel.value) { closeWritingStatistics(); return; }
+  rememberSelectionBase();
+  showWritingStatsPanel.value = true;
+  nextTick(() => rootEl.value?.querySelector<HTMLButtonElement>('.writing-stats-panel .close-btn')?.focus({ preventScroll: true }));
+  console.debug('[NextLevelEditor] Writing statistics opened');
+}
+
+function closeWritingStatistics() {
+  rememberSelectionBase();
+  showWritingStatsPanel.value = false;
+  nextTick(restoreEditorFocus);
+  console.debug('[NextLevelEditor] Writing statistics closed');
+}
 
 // History Timeline panel visibility (toggled from the Tools dropdown). [#14]
 const showHistoryTimeline = ref(false);
@@ -992,29 +1110,24 @@ const showHistoryTimeline = ref(false);
 // Focus follows the panel: the Tools menu item that opened it is destroyed when
 // the dropdown closes, so without this focus fell to <body> and the panel's own
 // controls were only reachable by Tab-ing from the top of the page. On close,
-// hand focus back to whatever had it before. #R23-26
+// resume the manuscript at its saved or newly restored editing position.
 const historyPanelRef = ref<HTMLElement | null>(null);
-let historyPanelReturnFocus: HTMLElement | null = null;
 
 watch(showHistoryTimeline, (open) => {
   if (open) {
-    const active = document.activeElement;
-    historyPanelReturnFocus =
-      active instanceof HTMLElement && active !== document.body ? active : null;
-    nextTick(() => historyPanelRef.value?.focus());
+    rememberSelectionBase();
+    nextTick(() => historyPanelRef.value?.querySelector<HTMLButtonElement>('.btn-close')?.focus({ preventScroll: true }));
+    console.debug('[NextLevelEditor] History opened');
     return;
   }
-  const target = historyPanelReturnFocus;
-  historyPanelReturnFocus = null;
-  // Only reclaim focus if the panel still holds it — if something else took
-  // focus meanwhile (a click elsewhere), leave it there.
+  // Closing from this editor resumes writing. A different editor or host
+  // control that has taken focus must keep it.
   const active = document.activeElement;
   const insidePanel = historyPanelRef.value?.contains(active as Node) ?? false;
-  if (!insidePanel && active && active !== document.body) return;
-  nextTick(() => {
-    if (target?.isConnected) target.focus();
-    else editorContent.value?.focus();
-  });
+  if (!insidePanel && active && active !== document.body && !rootEl.value?.contains(active)) return;
+  rememberSelectionBase();
+  nextTick(restoreEditorFocus);
+  console.debug('[NextLevelEditor] History closed');
 });
 const writingAssistant = props.showWritingStats ? useWritingAssistant() : null;
 
@@ -1047,13 +1160,74 @@ const comments = props.enableComments
       onMentionTriggered: props.mentionSearch
         ? async (query: string) => props.mentionSearch!(query)
         : undefined,
+      onThreadActivated: handleThreadActivation,
     })
   : (null as ReturnType<typeof useComments> | null);
 
 // Comments UI state
 const showCommentsSidebar = ref(false);
+const commentsSidebarRef = ref<InstanceType<typeof CommentsSidebar> | null>(null);
 const showCommentModal = ref(false);
 const selectedTextForComment = ref("");
+let commentsReturnSelection: {
+  offsets: CaretOffsets;
+  text: string;
+  backwards: boolean;
+  bookmark: ReturnType<typeof captureSelectionBookmark>;
+} | null = null;
+function rememberCommentsPosition() {
+  const root = editorContent.value;
+  const offsets = root && getCaretOffsets(root);
+  const selection = root?.ownerDocument.getSelection();
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  commentsReturnSelection = root && offsets && range ? {
+    offsets,
+    bookmark: captureSelectionBookmark(root),
+    text: root.textContent || '',
+    backwards: !range.collapsed && selection?.anchorNode === range.endContainer
+      && selection.anchorOffset === range.endOffset,
+  } : null;
+}
+watch(showCommentsSidebar, open => {
+  // A newly submitted comment already saved its position before opening the
+  // modal. Its highlight/sanitization can invalidate the original DOM Range.
+  if (open && !showCommentModal.value) rememberCommentsPosition();
+}, { flush: 'sync' });
+function toggleCommentsSidebar() {
+  if (showCommentsSidebar.value) closeCommentsSidebar();
+  else showCommentsSidebar.value = true;
+}
+function closeCommentsSidebar() {
+  const position = commentsReturnSelection;
+  commentsReturnSelection = null;
+  showCommentsSidebar.value = false;
+  nextTick(() => {
+    // Returning from a discussion is navigation, not an edit. A command's
+    // insertion-point fallback would create a paragraph in an empty document.
+    restoreEditorFocus();
+    const root = editorContent.value;
+    if (root && position && root.textContent === position.text) {
+      // Comment metadata changes preserve text. A different document, or prose
+      // edited while the panel was open, must not receive an old text offset.
+      // Text offsets cannot distinguish an empty paragraph or a boundary
+      // outside emphasis. Prefer surviving DOM points, but reject clamped
+      // points when comment markup has split their original text nodes.
+      const restored = position.bookmark?.restore() ? getCaretOffsets(root) : null;
+      if (restored?.start !== position.offsets.start || restored.end !== position.offsets.end) {
+        if (setCaretOffsets(root, position.offsets) && position.backwards) {
+          const selection = root.ownerDocument.getSelection();
+          const range = selection?.getRangeAt(0);
+          if (range && selection?.setBaseAndExtent) selection.setBaseAndExtent(
+            range.endContainer, range.endOffset, range.startContainer, range.startOffset,
+          );
+        }
+      }
+      rememberSelectionBase();
+    }
+    keepSelectionVisible(editorContent.value, 24);
+    console.debug('[NextLevelEditor comments] Returned to writing');
+  });
+}
 
 // Variables System (opt-in feature)
 /**
@@ -1134,12 +1308,12 @@ const uncategorizedVariables = computed(() => {
 });
 
 // Auto-save
-const { isSaving, lastSaved, saveStatus, triggerAutoSave } = useAutoSave(
+const { isSaving, isDirty, lastSaved, saveStatus, triggerAutoSave, forceSave, clearHistory: resetSaveState } = useAutoSave(
   async (content: string, version: number) => {
     // With a host-provided saveHandler the "Saved" signal is TRUTHFUL: it
     // asserts real persistence and reports real failures. Without one, the
     // v-model emission IS the handoff — the host owns the content the moment
-    // it is emitted — and the signal keeps its historical meaning.
+    // it is emitted — and the signal describes an update, not persistence.
     if (props.saveHandler) {
       // Let a thrown error propagate to useAutoSave.performSave's catch so the
       // real error surfaces (status 'error', lastError = the thrown error). A
@@ -1162,12 +1336,14 @@ const {
   isApplyingHistory,
   applySanitizedContent,
   captureAndEmit: captureSnapshot,
+  captureBeforeEdit,
   undo: undoBase,
   redo: redoBase,
   jumpToHistory,
   clearHistory,
   sanitizeHtml,
 } = useEditorContent({
+  onExternalUpdate: resetSaveState,
   editorContent,
   modelValue: toRef(props, "modelValue"),
   onUpdate: (value) => emit("update:modelValue", value),
@@ -1181,6 +1357,181 @@ const {
     refreshWritingStats();
   },
 });
+
+usePendingSaveGuard(
+  () => Boolean(props.saveHandler) && isDirty.value,
+  () => forceSave(sanitizeHtml(htmlContent.value))
+);
+
+const {
+  review: writingReview, refresh: refreshWritingReview,
+  dismissedNotes: dismissedWritingNotes, dismissNote,
+  serializedDecisions: keptWritingDecisions, importDecisions: importWritingDecisions,
+  revisitKeptNotes,
+} = useWritingWorkspace(htmlContent, toRef(props, 'writingMode'));
+useWritingReflow(editorContent, toRef(props, 'writingMode'));
+const dismissWritingNote = (note: WritingNote) => {
+  if (!dismissNote(note)) return;
+  announce('Note dismissed. Your words are unchanged.');
+  console.debug('[NextLevelEditor] Writing note dismissed', { kind: note.title });
+};
+const reviewKeptWritingNotes = () => {
+  const count = revisitKeptNotes();
+  if (!count) return;
+  announce('Kept notes are ready to review again. Your words are unchanged.');
+  console.debug('[NextLevelEditor] Kept writing notes reopened', { count });
+};
+const companionOpen = ref(false);
+const companionView = ref<'review' | 'outline'>('review');
+const companionPromptIndex = ref(0);
+const writingSearchRef = ref<InstanceType<typeof WritingSearch> | null>(null);
+const writingSearchInitiallyReplace = ref(false);
+const closeWritingSearch = (range?: Range) => {
+  closeFindReplaceModal();
+  nextTick(() => {
+    const root = editorContent.value;
+    root?.focus({ preventScroll: true });
+    if (range && root?.contains(range.startContainer) && root.contains(range.endContainer)) {
+      const selection = root.ownerDocument.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+    keepSelectionVisible(editorContent.value, 24);
+    rememberSelectionBase();
+  });
+  console.debug('[NextLevelEditor] Writing search closed');
+};
+const writingReviewStart = ref<string>();
+const startReviewNearWriting = () => {
+  const root = editorContent.value;
+  if (!root) return;
+  writingReviewStart.value = writingNoteNearSelection(root, writingReview.value.notes.filter(note => !dismissedWritingNotes.value.has(note.id)));
+};
+watch(writingReview, () => {
+  const root = editorContent.value;
+  // New feedback follows a writing pause. Reading or navigating existing
+  // notes must never move the panel out from under the writer's controls.
+  if (root && root.ownerDocument.activeElement === root) startReviewNearWriting();
+});
+onMounted(() => {
+  refreshWritingReview();
+});
+watch(rootWidth, (width, previousWidth) => {
+  // A small resize must not dismiss notes the writer deliberately opened.
+  // Only collapse the desktop sidebar when crossing into the compact layout.
+  if (width >= 900 || previousWidth < 900 || !companionOpen.value) return;
+  const panel = rootEl.value?.querySelector('.writing-companion');
+  const hadFocus = panel?.contains(panel.ownerDocument.activeElement);
+  companionOpen.value = false;
+  console.debug('[NextLevelEditor] Writing companion collapsed', { reason: 'compact-layout', focusRestored: Boolean(hadFocus) });
+  if (hadFocus) nextTick(() => rootEl.value?.querySelector<HTMLButtonElement>('.writing-footer-actions button')?.focus({ preventScroll: true }));
+});
+const toggleCompanion = () => {
+  if (companionOpen.value && viewMode.value === 'editor') {
+    closeCompanion();
+    return;
+  }
+  const keepPlace = preserveVisibleSelection(editorContent.value);
+  rememberSelectionBase();
+  refreshWritingReview();
+  startReviewNearWriting();
+  viewMode.value = 'editor';
+  companionOpen.value = true;
+  nextTick(() => {
+    keepPlace();
+    rootEl.value?.querySelector<HTMLButtonElement>('.companion-tabs button[aria-pressed="true"]')?.focus({ preventScroll: true });
+  });
+};
+const closeCompanion = () => {
+  // Closing a reading aid should return to the sentence, including a backward
+  // selection. Tab leaving the compact panel uses @leave and keeps its target.
+  rememberSelectionBase();
+  companionOpen.value = false;
+  nextTick(restoreEditorFocus);
+};
+const revealWritingPassage = (root: HTMLElement, navigating = false) => {
+  const panel = rootEl.value?.querySelector('.writing-companion');
+  // Explicit navigation hands the available space back to the manuscript.
+  // A stacked panel otherwise leaves a narrow editor with only a few lines.
+  // Applying a note may keep the stacked review open for the next suggestion.
+  const stacked = panel?.parentElement && getComputedStyle(panel.parentElement).flexDirection === 'column';
+  if (panel && (getComputedStyle(panel).position === 'fixed' || (navigating && stacked))) {
+    companionOpen.value = false;
+    console.debug('[NextLevelEditor] Writing companion collapsed', { reason: 'passage-revealed' });
+    nextTick(() => keepSelectionVisible(root, 24));
+  }
+  // A paragraph can be taller than the editing surface. Reveal the exact
+  // selected words rather than an unrelated line in the middle of the block.
+  keepSelectionVisible(root, 24);
+};
+const locateWritingNote = (note: WritingNote) => {
+  const root = editorContent.value;
+  if (!root) return false;
+  const range = writingNoteRange(root, note);
+  if (!range) {
+    refreshWritingReview();
+    announce('That passage has changed. The writing notes have been refreshed.');
+    console.debug('[NextLevelEditor] Writing suggestion refreshed', { reason: 'passage-changed' });
+    return false;
+  }
+  root.focus({ preventScroll: true });
+  const selection = root.ownerDocument.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  const block = writingBlocks(root)[note.block];
+  block?.element.scrollIntoView({ block: 'center', behavior: 'auto' });
+  revealWritingPassage(root, true);
+  rememberSelectionBase();
+  return true;
+};
+const applyWritingNote = (note: WritingNote) => {
+  const root = editorContent.value;
+  if (props.readonly || note.replacement === undefined || !root) return;
+  const range = writingNoteRange(root, note);
+  if (!range) {
+    refreshWritingReview();
+    announce('That passage has changed. The writing notes have been refreshed.');
+    console.debug('[NextLevelEditor] Writing suggestion refreshed', { reason: 'passage-changed' });
+    return;
+  }
+  const replacement = note.replacement;
+  performWithSelection(() => {
+    const restorePosition = preserveSelectionAfterTextReplacement(root, range, replacement);
+    // The before/after history entries retain the writing position, rather
+    // than the temporary selection used by the replacement command.
+    captureSnapshot(false);
+    const selection = root.ownerDocument.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    if (root.ownerDocument.execCommand('insertText', false, replacement)) {
+      const positionRestored = restorePosition?.() ?? false;
+      onInput();
+      captureSnapshot();
+      refreshWritingReview();
+      announce('Suggestion applied. You can undo this change.');
+      console.debug('[NextLevelEditor] Writing suggestion applied', { kind: note.title, positionRestored });
+    } else {
+      announce('The suggestion could not be applied. You can edit the selected passage directly.');
+      console.warn('[NextLevelEditor] Writing suggestion could not be applied', { kind: note.title });
+    }
+    revealWritingPassage(root);
+  });
+};
+const navigateWritingBlock = (index: number) => {
+  const root = editorContent.value;
+  const block = root && writingBlocks(root)[index]?.element;
+  if (!root || !block) return;
+  const range = document.createRange();
+  range.selectNodeContents(block);
+  range.collapse(true);
+  root.focus({ preventScroll: true });
+  const selection = document.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  block.scrollIntoView({ block: 'center', behavior: 'auto' });
+  revealWritingPassage(root, true);
+  rememberSelectionBase();
+};
 
 // Announce undo/redo to screen readers, whatever the trigger (toolbar button,
 // Ctrl+Z/Y, command palette, or an advanced shortcut) — they all call these.
@@ -1207,6 +1558,22 @@ const timelineProgress = computed(() =>
     ? (historyIndex.value / (history.value.length - 1)) * 100
     : 100
 );
+
+function navigateHistory(index: number) {
+  if (props.readonly) return;
+  const active = document.activeElement as HTMLElement | null;
+  jumpToHistory(index);
+  // Restoration updates the DOM and caret. Retain that NEW writing position
+  // before returning focus to the timeline for consecutive keyboard browsing.
+  nextTick(() => {
+    rememberSelectionBase();
+    if (!active || !historyPanelRef.value?.contains(active)) return;
+    if (!active.matches(':disabled')) active.focus({ preventScroll: true });
+    else historyPanelRef.value.querySelector<HTMLButtonElement>('.nav-btn:not(:disabled), .btn-close')?.focus({ preventScroll: true });
+  });
+  announce(`Restored version ${index + 1}`);
+  console.debug('[NextLevelEditor] History version restored', { index });
+}
 
 // Download the full history as JSON (History Timeline "Export").
 function handleExportHistory() {
@@ -1296,6 +1663,12 @@ const commandPaletteCommands = computed(() => [
 const { showCommandPalette, closeCommandPalette, addToRecent, recentCommands } =
   useCommandPalette({ editorRoot: rootEl });
 
+// Capture the final keyboard selection before the palette focuses its input.
+// Safari may deliver selectionchange after that focus move.
+watch(showCommandPalette, open => {
+  if (open) rememberSelectionBase();
+}, { flush: 'sync' });
+
 // Smart Toolbar
 const {
   updateContext: updateToolbarContext,
@@ -1345,12 +1718,24 @@ const {
   closeTableModal,
   openTablePropertiesModal,
   closeTablePropertiesModal,
-  openFindReplaceModal,
+  openFindReplaceModal: openLegacyFindReplaceModal,
   closeFindReplaceModal,
   openCodeBlockModal,
   closeCodeBlockModal,
   toggleEmojiPicker,
 } = useModals({ rememberSelection });
+const openFindReplaceModal = (replace = false) => {
+  const alreadyOpen = showFindReplaceModal.value;
+  writingSearchInitiallyReplace.value = replace;
+  openLegacyFindReplaceModal();
+  if (props.writingMode && alreadyOpen) void writingSearchRef.value?.focusSearch(replace);
+};
+watch(showFindReplaceModal, open => {
+  if (open && props.writingMode) viewMode.value = 'editor';
+}, { flush: 'sync' });
+watch(viewMode, mode => {
+  if (props.writingMode && mode !== 'editor' && showFindReplaceModal.value) closeFindReplaceModal();
+}, { flush: 'sync' });
 
 // Editor UI State using composable
 const {
@@ -1366,14 +1751,38 @@ const {
   toastMessage,
   toastType,
   showToastNotification,
+  dismissToastNotification,
   toggleFullScreen,
   toggleFocusMode,
 } = useEditorUIState({ duration: 3000 });
 
+watch(isFocusMode, () => {
+  // A layout choice should leave the next keystroke in the document, not on
+  // the View trigger. Unrelated host focus must not be stolen on global Esc.
+  if (!showCommandPalette.value && !rootEl.value?.contains(document.activeElement)) return;
+  const mode = viewMode.value;
+  const useCode = mode === 'code' || (mode === 'split' &&
+    (splitRightMode.value !== 'editor' || lastEditingSurface === 'code'));
+  const code = editorPanelsRef.value?.codeEditorRef;
+  const position = code && [code.selectionStart, code.selectionEnd, code.selectionDirection] as const;
+  nextTick(() => {
+    if (viewMode.value !== mode) return;
+    if (useCode && code?.isConnected && position) {
+      code.focus({ preventScroll: true });
+      code.setSelectionRange(...position);
+    } else if (mode === 'editor' || (mode === 'split' && splitRightMode.value === 'editor')) {
+      // Escape can leave the live caret in the document. Restoring the old
+      // toolbar bookmark there would discard everything navigated since entry.
+      if (document.activeElement !== editorContent.value) restoreEditorFocus();
+      else keepSelectionVisible(editorContent.value, 24);
+    }
+  });
+}, { flush: 'sync' });
+
 // A visible toast is also user-facing feedback that screen-reader users must
 // hear. `notify` fires both so every "Table inserted", "Copied", etc. is
 // spoken. Passed to the composables below in place of the bare toast fn.
-const notify = (message: string, type?: "success" | "error") => {
+const notify = (message: string, type?: "success" | "error" | "info") => {
   showToastNotification(message, type);
   announce(message, { priority: type === "error" ? "assertive" : "polite" });
 };
@@ -1402,7 +1811,8 @@ const {
   applyTextColor,
   applyBackgroundColor,
   applyFontSize,
-  performWithSelection
+  performWithSelection,
+  notify
 );
 
 // Active state detection using composable (declared before the formatting
@@ -1459,10 +1869,20 @@ const handleInlineAction = (tag: string) => {
 
 // Insert actions - Defined after composable initialization
 
-// Clear formatting function (for future cleanup toolbar)
-// const clearFormatting = () => {
-//   performWithSelection((root) => clearFormattingUtil(root))
-// }
+const canEditRichText = () => !props.readonly &&
+  (viewMode.value === 'editor' || (viewMode.value === 'split' && splitRightMode.value === 'editor'));
+const handleClearFormatting = () => {
+  if (!canEditRichText()) return;
+  performWithSelection(root => {
+    if (clearFormatting(root)) {
+      captureSnapshot();
+      console.debug('[NextLevelEditor] Selected character formatting cleared');
+      notify('Formatting cleared.');
+    } else {
+      notify('Select formatted text to clear its styling.', 'info');
+    }
+  });
+};
 
 const toggleTheme = () => {
   toggleThemeComposable();
@@ -1600,7 +2020,7 @@ const {
 });
 
 // Find & Replace using composable
-const { handleFind, handleReplace, handleReplaceAll } = useFindReplace({
+const { handleFind, handleReplace, handleReplaceAll, clearPendingHighlight: clearFindHighlight } = useFindReplace({
   editorContent,
   captureSnapshot,
   // Replace All rewrites innerHTML, dropping the listeners on comment highlights
@@ -1617,6 +2037,7 @@ const { handleFind, handleReplace, handleReplaceAll } = useFindReplace({
 
 // Insert actions using composable
 const {
+  linkContext,
   insertLink,
   handleInsertLink,
   insertImage,
@@ -1645,6 +2066,15 @@ const {
   closeEmojiPicker: toggleEmojiPicker,
 });
 
+const pasteFromContextMenu = useClipboardPaste({
+  editorContent,
+  readonly: toRef(props, 'readonly'),
+  onPaste: event => onPaste(event),
+  captureSnapshot,
+  notify: message => notify(message, 'info'),
+  clearNotification: dismissToastNotification,
+});
+
 // Context menu using composable
 const {
   showContextMenu,
@@ -1664,6 +2094,11 @@ const {
   tableDesignerPosition,
   captureSnapshot,
   emitUpdate: (value: string) => emit("update:modelValue", value),
+  pasteClipboard: pasteFromContextMenu,
+  canEdit: canEditRichText,
+  beforeCut: () => captureSnapshot(false),
+  notify: message => notify(message, 'info'),
+  clearNotification: dismissToastNotification,
 });
 
 // Export actions using composable. The toolbar's "Format HTML" button is only
@@ -1677,6 +2112,9 @@ const {
   handleExportPdf,
   handleExportWord,
   formatHtmlCode,
+  pdfProgress,
+  isExportingPdf,
+  cancelPdfExport,
 } = useExportActions({
   editorContent,
   htmlContent,
@@ -1755,7 +2193,7 @@ const {
   alignmentDropdownItems,
   fontSizeDropdownItems,
   listActions,
-  insertDropdownItems,
+  insertDropdownItems: baseInsertDropdownItems,
   toolActions,
   exportDropdownItems,
   productivityDropdownItems,
@@ -1781,9 +2219,7 @@ const {
   openTableModal,
   openCodeBlockModal,
   openHtmlCodeModal,
-  openFindReplaceModal: () => {
-    showFindReplaceModal.value = true;
-  },
+  openFindReplaceModal: () => openFindReplaceModal(),
   openTemplateModal,
   toggleEmojiPicker: () => {
     showEmojiPicker.value = !showEmojiPicker.value;
@@ -1792,10 +2228,13 @@ const {
   handleExportHtml,
   handleExportMarkdown,
   handleExportPdf,
+  isExportingPdf,
   handleExportWord,
   handleCopyFormat,
   handlePasteFormat,
   hasFormatCopied,
+  handleClearFormatting,
+  canClearFormatting: canEditRichText,
   spellCheckEnabled,
   captureSnapshot,
   toggleHistoryTimeline: () => {
@@ -1804,6 +2243,18 @@ const {
   // Adds the Tools > Keyboard Shortcuts item (the item only renders when this
   // handler is provided). Opens the registry-backed help modal.
   openShortcutHelpModal,
+});
+
+// The phone dock replaces the selection bubble, so commenting also needs a
+// permanent toolbar entry. Restore the selected passage before opening its form.
+const insertDropdownItems = computed(() => {
+  const items = baseInsertDropdownItems.value;
+  const comment = floatingActions.value.find(action => action.id === 'comment');
+  if (!comment) return items;
+  return [items[0], {
+    ...comment,
+    onClick: () => performWithSelection(() => handleCreateComment()),
+  }, ...items.slice(1)];
 });
 
 // Command Palette Commands using composable
@@ -1822,6 +2273,7 @@ const { commands: builtInPaletteCommands } = useCommandPaletteCommands({
   openFindReplaceModal,
   handleCopyFormat,
   openTemplateModal,
+  handleClearFormatting,
   handleToggleSpellCheck,
   toggleTheme,
   toggleFullScreen,
@@ -1858,7 +2310,7 @@ const ownsMobileToolbar = ref(false);
 // The toolbar's Close (X) hides it until this editor is focused/tapped again.
 const mobileToolbarClosed = ref(false);
 const mobileToolbarVisible = computed(
-  () => ownsMobileToolbar.value && !mobileToolbarClosed.value
+  () => ownsMobileToolbar.value && !mobileToolbarClosed.value && ownsFixedChrome.value
 );
 
 // Whether the mobile bottom bar is actually ON SCREEN: ownership alone isn't
@@ -1874,10 +2326,13 @@ const updateMobileToolbarOwnership = (event: Event) => {
   const target = event.target;
   if (!(target instanceof Node)) return;
   if (rootEl.value?.contains(target)) {
-    // Interaction inside this editor claims ownership (and re-opens a
-    // toolbar previously dismissed with the X).
-    ownsMobileToolbar.value = true;
-    mobileToolbarClosed.value = false;
+    // Only entering the writing surface opens the dock. A first touch on a
+    // footer/panel control must not insert a fixed toolbar under that finger
+    // between pointerdown and click (Comments could become Underline).
+    if (target === rootEl.value || editorContent.value?.contains(target)) {
+      ownsMobileToolbar.value = true;
+      mobileToolbarClosed.value = false;
+    }
     return;
   }
   const el = target instanceof Element ? target : target.parentElement;
@@ -2232,7 +2687,7 @@ const insertImageFromFile = async (file: File) => {
   }
 };
 
-const onPaste = (event: ClipboardEvent) => {
+const onPaste = (event: ClipboardPasteInput) => {
   if (props.readonly) return;
   const clipboard = event.clipboardData;
   if (!clipboard) return;
@@ -2285,7 +2740,7 @@ const onPaste = (event: ClipboardEvent) => {
   // Rebuild Word/Docs list paragraphs into real <ul>/<ol> BEFORE sanitizing
   // (which strips the mso-list markup they're detected by), else they paste as
   // flat paragraphs with literal bullet glyphs.
-  const clean = sanitizeHtml(reconstructWordLists(html));
+  const clean = sanitizeHtml(reconstructWordLists(html), { fragment: true });
 
   // Real visible content (text or media) → insert it directly.
   if (htmlHasVisibleContent(clean)) {
@@ -2454,8 +2909,22 @@ const onDrop = (event: DragEvent) => {
     return;
   }
 
-  const clean = sanitizeHtml(reconstructWordLists(html));
+  const clean = sanitizeHtml(reconstructWordLists(html), { fragment: true });
   document.execCommand("insertHTML", false, clean);
+};
+
+const onBeforeInput = (event: Event) => {
+  const input = event as InputEvent;
+  if (input.isComposing || input.defaultPrevented) return;
+  if (canEditRichText() && editorContent.value) {
+    if (input.inputType !== 'historyUndo' && input.inputType !== 'historyRedo') captureBeforeEdit(coalesceKeyForInputEvent(event));
+    prepareTypingPlaceholdersForInput(editorContent.value, input);
+    handleKeyboardBeforeInput(input);
+  }
+};
+
+const onCompositionStart = () => {
+  if (canEditRichText()) captureBeforeEdit();
 };
 
 const onInput = (event?: Event) => {
@@ -2468,6 +2937,7 @@ const onInput = (event?: Event) => {
   if ((event as InputEvent | undefined)?.isComposing) {
     return;
   }
+  if (event && canEditRichText() && editorContent.value) removeTypingPlaceholders(editorContent.value, true);
 
   // (Placeholder recovery for <br>/<p><br></p> residues is handled purely in
   // CSS via :has() — see NextLevelEditor.css. A JS innerHTML-wipe here would
@@ -2479,7 +2949,7 @@ const onInput = (event?: Event) => {
   // Runs BEFORE onInputBase so the converted DOM is what gets synced to
   // v-model. Re-entrancy is handled inside the composable (isApplying guard).
   if (viewMode.value === "editor" || viewMode.value === "split") {
-    handleSmartAutocomplete();
+    handleSmartAutocomplete(event);
   }
 
   // Wrap completed variable tokens BEFORE the capture+sanitize+emit pass so
@@ -2551,7 +3021,11 @@ function handleSplitRightModeChange(mode: "preview" | "editor") {
 // (editorContent resolves to the split editor here) and keep the hidden main
 // editor mirrored so switching modes preserves content.
 function onSplitEditorInput(event: Event) {
+  // Keep IME candidates out of history and autosave, as on the main surface.
+  // compositionend runs this pipeline once with the committed text.
+  if ((event as InputEvent).isComposing) return;
   const target = event.target as HTMLElement;
+  if (canEditRichText()) removeTypingPlaceholders(target, true);
   const hidden = editorPanelsRef.value?.editorRef;
   if (hidden && hidden !== target) {
     hidden.innerHTML = target.innerHTML;
@@ -2579,7 +3053,7 @@ watch(htmlContent, (newHtml) => {
 });
 
 // Keyboard Shortcuts - Using useKeyboardShortcuts composable
-const { handleKeydown } = useKeyboardShortcuts({
+const { handleKeydown, handleBeforeInput: handleKeyboardBeforeInput } = useKeyboardShortcuts({
   editorContent,
   onInput,
   onCaptureSnapshot: captureSnapshot,
@@ -2587,9 +3061,7 @@ const { handleKeydown } = useKeyboardShortcuts({
   redo,
   openCommandMenu,
   insertLink,
-  openFindReplaceModal: () => {
-    showFindReplaceModal.value = true;
-  },
+  openFindReplaceModal: () => openFindReplaceModal(),
   handleInlineAction,
   handleBlockAction,
   handleSlashMenuKeydown,
@@ -2612,6 +3084,7 @@ const advancedKeyboard = useAdvancedKeyboardShortcuts(editorContent, {
   code: () => handleInlineAction("code"),
   superscript: () => handleInlineAction("sup"),
   subscript: () => handleInlineAction("sub"),
+  clearFormatting: handleClearFormatting,
   paragraph: () => handleBlockAction("p"),
   heading1: () => handleBlockAction("h1"),
   heading2: () => handleBlockAction("h2"),
@@ -2637,7 +3110,7 @@ const advancedKeyboard = useAdvancedKeyboardShortcuts(editorContent, {
   undo: () => undo(),
   redo: () => redo(),
   find: () => openFindReplaceModal(),
-  replace: () => openFindReplaceModal(),
+  replace: () => openFindReplaceModal(true),
   toggleFullscreen: () => toggleFullScreen(),
   togglePreview: () => {
     viewMode.value = viewMode.value === "preview" ? "editor" : "preview";
@@ -2652,7 +3125,22 @@ const advancedKeyboard = useAdvancedKeyboardShortcuts(editorContent, {
 // NOT consume the event do we offer it to the advanced registry, so the two
 // systems never double-handle a key.
 function onEditorKeydown(event: KeyboardEvent) {
+  if (event.altKey && event.key === 'F10' && props.showToolbar && !props.readonly) {
+    if (editorToolbarRef.value?.focusToolbar()) {
+      event.preventDefault();
+      return;
+    }
+  }
   if (variableAutocompleteRef.value?.handleEditorKeydown(event)) return;
+  // Custom Enter/list/delete handlers can prevent the native beforeinput.
+  // Capture their starting position before either they or typing anchors move it.
+  if (canEditRichText() && !event.defaultPrevented && !event.isComposing && event.keyCode !== 229
+    && ['Enter', 'Tab', 'Backspace', 'Delete'].includes(event.key)) {
+    const deleting = (event.key === 'Backspace' || event.key === 'Delete')
+      && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey;
+    captureBeforeEdit(deleting ? 'deleting' : undefined);
+  }
+  if (canEditRichText() && editorContent.value) prepareTypingPlaceholdersForKey(editorContent.value, event);
 
   // Backspace after a pill unwraps it to editable token text. Model synced
   // WITHOUT an input dispatch: the input pipeline runs the wrap pass, which
@@ -2718,6 +3206,13 @@ const CARET_MOVE_KEYS = new Set([
 ]);
 
 // Comments handlers
+function handleThreadActivation(threadId: string) {
+  rememberCommentsPosition();
+  showCommentsSidebar.value = true;
+  nextTick(() => commentsSidebarRef.value?.revealThread(threadId));
+  console.debug('[NextLevelEditor comments] Discussion opened');
+}
+
 function handleSelectThread(threadId: string) {
   if (!comments) return;
   comments.setActiveThread(threadId);
@@ -2784,6 +3279,8 @@ function handleCreateComment() {
     showToastNotification("Failed to capture selection", "error");
     return;
   }
+
+  rememberCommentsPosition();
 
   // Store the selected text for display in modal
   selectedTextForComment.value = selection.toString();
@@ -2902,16 +3399,38 @@ function closeVariableAutocomplete() {
   showVariableAutocomplete.value = false;
 }
 
-// Insert a variable from the variables panel. The panel items use
-// @mousedown.prevent so the editor selection survives the click; if the caret
-// was never placed in the editor, the pill is appended at the end instead.
+function toggleVariablesPanel() {
+  if (showVariablesPanel.value) {
+    closeVariablesPanel();
+    return;
+  }
+  if (!props.enableVariables || props.readonly) return;
+  rememberSelectionBase();
+  showVariablesPanel.value = true;
+  nextTick(() => rootEl.value?.querySelector<HTMLButtonElement>('.variables-panel-close')?.focus({ preventScroll: true }));
+  console.debug('[NextLevelEditor] Variables panel opened');
+}
+
+function closeVariablesPanel() {
+  // Preserve the latest writing position too: the panel can stay open while
+  // someone inserts a variable and continues their sentence.
+  rememberSelectionBase();
+  showVariablesPanel.value = false;
+  nextTick(restoreEditorFocus);
+  console.debug('[NextLevelEditor] Variables panel closed');
+}
+
+// Both pointer and keyboard browsing must insert at the saved writing position.
+// If the caret was never placed in the editor, focus restoration uses its end.
 function handlePanelInsert(variable: Variable) {
   // A read-only document must not be editable through ANY affordance. The FAB
   // and panel are hidden in readonly, but guard the mutation itself too — this
   // path inserted a pill into the locked content and emitted it to the host.
   // #r21-2
-  if (props.readonly) return;
+  if (!canEditRichText()) return;
   if (!variablesComposable || !editorContent.value) return;
+  rememberSelectionBase();
+  restoreEditorFocus();
   const editor = editorContent.value;
   const selection = window.getSelection();
 
@@ -2965,7 +3484,7 @@ function closeTopMostOverlay(): boolean {
     return true;
   }
   if (showVariablesPanel.value) {
-    showVariablesPanel.value = false;
+    closeVariablesPanel();
     return true;
   }
   // The writing-stats panel becomes a bottom sheet on mobile that can cover its
@@ -2973,7 +3492,7 @@ function closeTopMostOverlay(): boolean {
   // explicit close button). The comments sidebar is intentionally NOT here:
   // it hosts reply inputs, and closing it on Escape mid-reply would be hostile.
   if (showWritingStatsPanel.value) {
-    showWritingStatsPanel.value = false;
+    closeWritingStatistics();
     return true;
   }
   if (showEmojiPicker.value) {
@@ -3094,6 +3613,55 @@ useEditorSetup({
   handleEscape: handleGlobalEscape,
   onSelectionChange,
 });
+
+// A kept note changes the writer's decisions, not the manuscript or its undo
+// history. Save it with the document; hydration and host echoes stay passive.
+let writingDecisionsReady = false;
+let synchronizedWritingDecisions: string | undefined;
+const restoreWritingDecisions = (value: string | undefined) => {
+  if (value === undefined || value === synchronizedWritingDecisions) return;
+  if (importWritingDecisions(value)) synchronizedWritingDecisions = keptWritingDecisions.value;
+};
+onMounted(() => {
+  restoreWritingDecisions(props.keptWritingNotes);
+  writingDecisionsReady = true;
+  // Restore editorial choices before deciding whether to introduce the panel.
+  // New notes never move the page while typing, and kept notes stay quiet.
+  companionOpen.value = window.innerWidth >= 1000 && writingReview.value.notes.some(note => !dismissedWritingNotes.value.has(note.id));
+});
+watch(() => props.keptWritingNotes, restoreWritingDecisions, { flush: 'post' });
+watch(keptWritingDecisions, value => {
+  if (!writingDecisionsReady || value === synchronizedWritingDecisions) return;
+  synchronizedWritingDecisions = value;
+  emit('update:keptWritingNotes', value);
+  triggerAutoSave(sanitizeHtml(htmlContent.value));
+}, { flush: 'post' });
+
+// Keep discussion metadata in the same save lifecycle as the manuscript. The
+// serialized watch tracks data only, never live ranges/elements. Host echoes must
+// not re-import highlights: replacing their nodes would disturb a writing caret.
+if (comments) {
+  let ready = false;
+  let synchronizedThreads: string | undefined;
+  const restoreCommentModel = (value: string | undefined) => {
+    if (value === undefined || value === synchronizedThreads) return;
+    if (comments.importThreads(value)) {
+      synchronizedThreads = comments.exportThreads();
+      captureSnapshot(false);
+    }
+  };
+  onMounted(() => {
+    restoreCommentModel(props.commentThreads);
+    ready = true;
+  });
+  watch(() => props.commentThreads, restoreCommentModel, { flush: "post" });
+  watch(() => comments.exportThreads(), (value) => {
+    if (!ready || value === synchronizedThreads) return;
+    synchronizedThreads = value;
+    emit("update:commentThreads", value);
+    triggerAutoSave(sanitizeHtml(htmlContent.value));
+  }, { flush: "post" });
+}
 
 // ---------------------------------------------------------------------------
 // Cinematic adaptive chrome ("Letterbox") — typing dissolves the toolbar into
@@ -3611,6 +4179,7 @@ onUnmounted(() => {
 <style src="../styles/NextLevelEditor.css"></style>
 <style src="../styles/editor-variables.css"></style>
 <style src="../styles/gap-fallback.css"></style>
+<style src="../styles/writing-workspace.css"></style>
 
 <style scoped>
 /* History Timeline floating panel (toggled from the Tools dropdown) */
@@ -3619,8 +4188,10 @@ onUnmounted(() => {
   top: 140px;
   right: 32px;
   width: 360px;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
+  max-height: calc(100dvh - 160px - var(--nle-mobile-toolbar-clearance, 0px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   /* Open panels sit ABOVE the toolbar shell (9999): a bottom-anchored
      panel can reach into the sticky toolbar's zone, and its items must not
      lose clicks to the bar. FABs stay at 9998 (below the shell); dialog
@@ -3630,6 +4201,14 @@ onUnmounted(() => {
   box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
     0 0 0 1px rgba(0, 0, 0, 0.04);
   background: var(--editor-bg, #ffffff);
+}
+
+@media (max-width: 640px), (max-height: 600px) {
+  .history-timeline-panel {
+    top: auto;
+    bottom: calc(12px + var(--nle-mobile-toolbar-clearance, 0px));
+    max-height: min(70dvh, calc(100dvh - 24px - var(--nle-mobile-toolbar-clearance, 0px)));
+  }
 }
 
 /* FAB Transition */
@@ -3771,9 +4350,10 @@ onUnmounted(() => {
    shadow, accent used only as a signal. */
 .variables-panel {
   position: fixed;
+  bottom: var(--nle-variables-panel-bottom);
   right: 28px;
   width: 320px;
-  max-height: 420px;
+  max-height: min(420px, calc(100dvh - var(--nle-variables-panel-bottom) - 12px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3791,6 +4371,7 @@ onUnmounted(() => {
 
 .variables-panel-header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
@@ -3825,6 +4406,7 @@ onUnmounted(() => {
 
 .variables-panel-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 6px;
 }
@@ -3878,6 +4460,7 @@ onUnmounted(() => {
 }
 
 .variables-panel-footer {
+  flex-shrink: 0;
   padding: 8px 16px;
   border-top: 1px solid var(--color-border);
   font-size: 11px;
@@ -3918,7 +4501,7 @@ onUnmounted(() => {
    can't be scrolled into the visible area). Reflow it into a bottom sheet that
    spans the width with margins and is capped to a safe fraction of the
    viewport, so every variable stays reachable via the list's internal scroll.
-   The `bottom` is set inline, so the mobile override needs !important. */
+   The bottom offset is shared with the height cap. */
 @media (max-width: 640px) {
   /* Same clip class as the variables panel: fixed 360px at right:32px puts
      the history panel's left edge at -17px on a 375px phone, cutting off
@@ -3927,16 +4510,28 @@ onUnmounted(() => {
     left: 12px;
     right: 12px;
     width: auto;
-    max-height: calc(100vh - 160px - var(--nle-mobile-toolbar-clearance, 0px));
   }
 
   .variables-panel {
     left: 12px;
     right: 12px;
     width: auto;
-    max-height: 70vh;
-    bottom: calc(16px + var(--nle-mobile-toolbar-clearance, 0px)) !important;
+    max-height: min(70dvh, calc(100dvh - var(--nle-variables-panel-bottom) - 12px));
+    --nle-variables-panel-bottom: calc(16px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px)) !important;
   }
+}
+
+/* Landscape phones need the same bounded panel even above the width breakpoint.
+   Keep the header/Close visible and let only the variable list scroll. */
+@media (max-height: 600px) {
+  .variables-panel {
+    --nle-variables-panel-bottom: calc(12px + var(--nle-mobile-toolbar-clearance, 0px) + var(--nle-bottom-dock-clearance, 0px)) !important;
+  }
+}
+
+@media (pointer: coarse) {
+  .variables-panel-close { width: 44px; height: 44px; }
+  .variables-panel-item { min-height: 44px; align-items: center; }
 }
 
 /* ---------------------------------------------------------------------------

@@ -64,10 +64,10 @@ describe('exampleTemplates', () => {
         expect(showcase.content).toContain('<hr>')
         expect(showcase.content).toContain('<a href')
         
-        // Check for feature mentions
-        expect(showcase.content).toContain('CKEditor')
-        expect(showcase.content).toContain('Notion')
-        expect(showcase.content).toContain('Medium')
+        // The sample teaches real workflows without stale quality claims.
+        expect(showcase.content).toContain('comment')
+        expect(showcase.content).toContain('Export')
+        expect(showcase.content).toContain('template variables')
       }
     })
 

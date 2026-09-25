@@ -1,5 +1,7 @@
 import { CHECKLIST_CLASS } from "./checklist";
-import { rangeCapturesContent, rangeTouchesElement } from "./rangeContact";
+import { rangeCapturesContent, rangeForEditableFormatting, rangeTouchesElement } from "./rangeContact";
+import { captureSelectionBookmark, type RememberReplacement } from "./selectionBookmark";
+import { createTypingPlaceholder } from './typingPlaceholder';
 
 export interface SelectionSnapshot {
   range: Range | null;
@@ -108,7 +110,7 @@ const wrapNodes = (
   return wrapper;
 };
 
-const replaceTag = (element: HTMLElement, tagName: string): HTMLElement => {
+const replaceTag = (element: HTMLElement, tagName: string, remember?: RememberReplacement): HTMLElement => {
   if (element.tagName.toLowerCase() === tagName.toLowerCase()) {
     return element;
   }
@@ -117,6 +119,7 @@ const replaceTag = (element: HTMLElement, tagName: string): HTMLElement => {
     newElement.appendChild(element.firstChild);
   }
   element.replaceWith(newElement);
+  remember?.(element, newElement);
   return newElement;
 };
 
@@ -135,12 +138,13 @@ const wrapRangeWithElement = (range: Range, element: HTMLElement): Range => {
 };
 
 const createPlaceholderRange = (range: Range, element: HTMLElement): Range => {
-  element.appendChild(document.createTextNode("\u200b"));
+  const placeholder = createTypingPlaceholder(element.ownerDocument);
+  element.appendChild(placeholder);
   range.insertNode(element);
   const selection = getSelection();
   const newRange = document.createRange();
-  newRange.selectNodeContents(element);
-  newRange.collapse(false);
+  newRange.setStart(placeholder.firstChild!, 1);
+  newRange.collapse(true);
   if (selection) {
     selection.removeAllRanges();
     selection.addRange(newRange);
@@ -427,7 +431,7 @@ const removeInlineStyleAtCaret = (
   attributes: Record<string, string>,
   root: HTMLElement
 ) => {
-  const existing = getClosestElement(
+  let existing = getClosestElement(
     range.startContainer,
     (element) => element.tagName.toLowerCase() === tagName.toLowerCase(),
     root
@@ -436,6 +440,32 @@ const removeInlineStyleAtCaret = (
   if (!existing) {
     wrapSelection(root, tagName, attributes);
     return;
+  }
+
+  // Imported prose can nest the same mark. Turning it off must leave all of
+  // those ancestors, while keeping any other active styles at the caret.
+  let outer = getClosestElement(existing.parentNode,
+    element => element.tagName.toLowerCase() === tagName.toLowerCase(), root);
+  while (outer) {
+    existing = outer;
+    outer = getClosestElement(existing.parentNode,
+      element => element.tagName.toLowerCase() === tagName.toLowerCase(), root);
+  }
+
+  const placeholder = createTypingPlaceholder(root.ownerDocument);
+  const caret = placeholder.firstChild as Text;
+  let continuation: Node = placeholder;
+  let ancestor = range.startContainer.nodeType === Node.ELEMENT_NODE
+    ? range.startContainer as HTMLElement : range.startContainer.parentElement;
+  while (ancestor && ancestor !== existing) {
+    if (ancestor.tagName.toLowerCase() !== tagName.toLowerCase()) {
+      const wrapper = ancestor.cloneNode(false);
+      // The original anchor stays with the adjacent authored content.
+      (wrapper as HTMLElement).removeAttribute('id');
+      wrapper.appendChild(continuation);
+      continuation = wrapper;
+    }
+    ancestor = ancestor.parentElement;
   }
 
   const parent = existing.parentNode;
@@ -457,22 +487,23 @@ const removeInlineStyleAtCaret = (
 
   existing.remove();
 
-  const beforeWrapper = wrapNodes(
-    collectFragmentNodes(beforeFragment),
-    tagName,
-    attributes
-  );
-  const afterWrapper = wrapNodes(
-    collectFragmentNodes(afterFragment),
-    tagName,
-    attributes
-  );
+  const keepStyledContent = (fragment: DocumentFragment) => {
+    const wrapper = existing.cloneNode(false) as HTMLElement;
+    Object.entries(attributes).forEach(([key, value]) => wrapper.setAttribute(key, value));
+    wrapper.appendChild(fragment);
+    return isEmptyInlineHusk(wrapper) ? null : wrapper;
+  };
+  const beforeWrapper = keepStyledContent(beforeFragment);
+  const afterWrapper = keepStyledContent(afterFragment);
+  if (beforeWrapper && afterWrapper) afterWrapper.removeAttribute('id');
 
   if (beforeWrapper && referenceNode) {
     referenceNode.before(beforeWrapper);
   } else if (beforeWrapper) {
     parent.appendChild(beforeWrapper);
   }
+
+  parent.insertBefore(continuation, referenceNode);
 
   if (afterWrapper && referenceNode) {
     referenceNode.before(afterWrapper);
@@ -483,13 +514,10 @@ const removeInlineStyleAtCaret = (
   const selection = getSelection();
   if (selection) {
     const newRange = document.createRange();
-    if (afterWrapper) {
-      newRange.setStartBefore(afterWrapper);
-    } else if (referenceNode) {
-      newRange.setStartBefore(referenceNode);
-    } else {
-      newRange.setStart(parent, parent.childNodes.length);
-    }
+    // A boundary between inline elements is ambiguous to native typing: the
+    // browser can continue the previous mark even after the toolbar says off.
+    // A concrete text point outside that mark gives typing a stable owner.
+    newRange.setStart(caret, caret.length);
     newRange.collapse(true);
     selection.removeAllRanges();
     selection.addRange(newRange);
@@ -870,10 +898,10 @@ const drainListItemInto = (
  * Unnest a list item by converting it to a block element outside the list
  * Returns the new block element
  */
-const unnestListItem = (li: HTMLElement, tagName: string): HTMLElement => {
+const unnestListItem = (li: HTMLElement, tagName: string, remember?: RememberReplacement): HTMLElement => {
   const list = li.parentElement;
   if (!list || !["ul", "ol"].includes(list.tagName.toLowerCase())) {
-    return replaceTag(li, tagName);
+    return replaceTag(li, tagName, remember);
   }
 
   const isChecklist = list.classList.contains(CHECKLIST_CLASS);
@@ -938,8 +966,12 @@ const unnestListItem = (li: HTMLElement, tagName: string): HTMLElement => {
   // none remain it is now empty and must go (no stray <ul>/<ol>).
   if (list.children.length === 0) {
     list.remove();
+    remember?.(list, replacement);
+  } else {
+    remember?.(list, [list, ...replacement]);
   }
 
+  remember?.(li, newBlock);
   return newBlock;
 };
 
@@ -948,7 +980,7 @@ const unnestListItem = (li: HTMLElement, tagName: string): HTMLElement => {
  * handling the special case of unnesting a list item when converting to a
  * heading. Returns the resulting block element.
  */
-const convertBlockTo = (block: HTMLElement, newTag: string): HTMLElement => {
+const convertBlockTo = (block: HTMLElement, newTag: string, remember?: RememberReplacement): HTMLElement => {
   // A list item leaves the list WHATEVER it becomes. Retagging it in place put
   // a <p>/<blockquote> directly inside the <ul> (invalid — the parser hoists it
   // out on the next round-trip) and dragged any sublist along inside it. Only
@@ -956,10 +988,10 @@ const convertBlockTo = (block: HTMLElement, newTag: string): HTMLElement => {
   // that. unnestListItem splices the new block, and the sublist it lifts out,
   // beside the list instead. #R23-11
   if (block.tagName.toLowerCase() === "li" && newTag.toLowerCase() !== "li") {
-    return unnestListItem(block, newTag);
+    return unnestListItem(block, newTag, remember);
   }
 
-  return replaceTag(block, newTag);
+  return replaceTag(block, newTag, remember);
 };
 
 /**
@@ -970,17 +1002,59 @@ const convertBlockTo = (block: HTMLElement, newTag: string): HTMLElement => {
 const convertBlock = (
   block: HTMLElement,
   targetTag: string,
-  fallbackTag: string
+  fallbackTag: string,
+  remember?: RememberReplacement
 ): HTMLElement => {
   const currentTag = block.tagName.toLowerCase();
   const newTag = currentTag === targetTag ? fallbackTag : targetTag;
-  return convertBlockTo(block, newTag);
+  return convertBlockTo(block, newTag, remember);
+};
+
+/** Browsers initially type directly into an empty contenteditable. Format the
+ * whole inline paragraph, including its marks, instead of inserting an empty
+ * heading at the caret. Stop at line breaks and neighbouring block elements. */
+const wrapLooseParagraph = (root: HTMLElement, range: Range, tag: string): HTMLElement | null => {
+  let anchor: Node | null = range.startContainer;
+  if (anchor === root) {
+    anchor = root.childNodes[range.startOffset] ?? root.childNodes[range.startOffset - 1] ?? null;
+  }
+  while (anchor?.parentNode && anchor.parentNode !== root) anchor = anchor.parentNode;
+  const inline = (node: Node | null): node is Node => Boolean(node &&
+    (node.nodeType === Node.TEXT_NODE || (isElement(node) &&
+      !BLOCK_OR_CELL_TAGS.has(node.tagName.toLowerCase()) &&
+      !['br', 'hr', 'table', 'ul', 'ol', 'figure'].includes(node.tagName.toLowerCase()))));
+  if (!inline(anchor) || anchor.parentNode !== root) return null;
+  let first = anchor;
+  let last = anchor;
+  while (inline(first.previousSibling)) first = first.previousSibling;
+  while (inline(last.nextSibling)) last = last.nextSibling;
+  const paragraph = document.createRange();
+  paragraph.setStartBefore(first);
+  paragraph.setEndAfter(last);
+  const wrapper = document.createElement(tag);
+  const caret = wrapRangeWithElement(paragraph, wrapper);
+  caret.collapse(false);
+  return wrapper;
 };
 
 export const toggleBlock = (
   root: HTMLElement,
   tagName: string,
   fallbackTag = "p"
+) => {
+  const bookmark = captureSelectionBookmark(root);
+  try {
+    toggleBlockContent(root, tagName, fallbackTag, bookmark?.remember);
+  } finally {
+    bookmark?.restore();
+  }
+};
+
+const toggleBlockContent = (
+  root: HTMLElement,
+  tagName: string,
+  fallbackTag: string,
+  remember?: RememberReplacement
 ) => {
   const range = getSelectionRange();
   if (!range) return;
@@ -989,7 +1063,7 @@ export const toggleBlock = (
   const targetTag = tagName.toLowerCase();
 
   // Multi-block selection: convert every block-level element the range
-  // intersects, then reselect the converted blocks (mirrors applyTextAlignment).
+  // intersects. The caller restores the exact original selection afterward.
   if (!range.collapsed) {
     const blocks = getBlocksInRange(range, root);
     if (blocks.length > 1) {
@@ -1004,21 +1078,24 @@ export const toggleBlock = (
       const decidedTag = everyBlockMatchesTarget ? fallbackTag : targetTag;
       const converted = blocks.map((block) =>
         isTableCell(block)
-          ? convertCellContentTo(block, decidedTag)
-          : convertBlockTo(block, decidedTag)
+          ? convertCellContentTo(block, decidedTag, remember)
+          : convertBlockTo(block, decidedTag, remember)
       );
       selectElements(converted);
       return;
     }
   }
 
-  const block = getBlockAncestor(range.startContainer, root);
+  const block = getBlockOrCellAncestor(range.startContainer, root);
   if (!block) {
+    if (wrapLooseParagraph(root, range, tagName)) return;
     wrapSelection(root, tagName);
     return;
   }
 
-  const replaced = convertBlock(block, targetTag, fallbackTag);
+  const replaced = isTableCell(block)
+    ? convertCellContentTo(block, effectiveBlockTag(block) === targetTag ? fallbackTag : targetTag, remember)
+    : convertBlock(block, targetTag, fallbackTag, remember);
 
   const selection = getSelection();
   if (selection) {
@@ -1032,7 +1109,8 @@ export const toggleBlock = (
 
 const convertBlockToList = (
   block: HTMLElement,
-  listTag: "ul" | "ol"
+  listTag: "ul" | "ol",
+  remember?: RememberReplacement
 ): HTMLElement => {
   const list = document.createElement(listTag);
   const listItem = document.createElement("li");
@@ -1041,10 +1119,11 @@ const convertBlockToList = (
   }
   list.appendChild(listItem);
   block.replaceWith(list);
+  remember?.(block, listItem);
   return listItem;
 };
 
-const unwrapList = (list: HTMLElement) => {
+const unwrapList = (list: HTMLElement, remember?: RememberReplacement) => {
   const parent = list.parentNode;
   if (!parent) return;
   const fragment = document.createDocumentFragment();
@@ -1055,11 +1134,14 @@ const unwrapList = (list: HTMLElement) => {
       const nestedLists = drainListItemInto(child, paragraph);
       fragment.appendChild(paragraph);
       nestedLists.forEach((nested) => fragment.appendChild(nested));
+      remember?.(child, paragraph);
     } else {
       fragment.appendChild(child);
     }
   });
+  const replacement = Array.from(fragment.childNodes);
   list.replaceWith(fragment);
+  remember?.(list, replacement);
 };
 
 const isListTag = (element: HTMLElement | null): element is HTMLElement =>
@@ -1115,15 +1197,17 @@ const effectiveBlockTag = (block: HTMLElement): string =>
  * #R23-2 */
 const convertCellContentTo = (
   cell: HTMLElement,
-  newTag: string
+  newTag: string,
+  remember?: RememberReplacement
 ): HTMLElement => {
   const inner = cellContentBlock(cell);
-  if (inner) return convertBlockTo(inner, newTag);
+  if (inner) return convertBlockTo(inner, newTag, remember);
   const wrapper = document.createElement(newTag);
   while (cell.firstChild) {
     wrapper.appendChild(cell.firstChild);
   }
   cell.appendChild(wrapper);
+  remember?.(cell, wrapper);
   return wrapper;
 };
 
@@ -1133,7 +1217,8 @@ const convertCellContentTo = (
  * obliterating the table. #r20-1 */
 const wrapCellContentInList = (
   cell: HTMLElement,
-  listTag: "ul" | "ol"
+  listTag: "ul" | "ol",
+  remember?: RememberReplacement
 ): HTMLElement => {
   const list = document.createElement(listTag);
   const listItem = document.createElement("li");
@@ -1142,6 +1227,7 @@ const wrapCellContentInList = (
   }
   list.appendChild(listItem);
   cell.appendChild(list);
+  remember?.(cell, listItem);
   return list;
 };
 
@@ -1158,13 +1244,14 @@ const wrapCellContentInList = (
  */
 const wrapBlocksIntoList = (
   blocks: HTMLElement[],
-  listTag: "ul" | "ol"
+  listTag: "ul" | "ol",
+  remember?: RememberReplacement
 ): HTMLElement[] => {
   const lists: HTMLElement[] = [];
   let i = 0;
   while (i < blocks.length) {
     if (isTableCell(blocks[i])) {
-      lists.push(wrapCellContentInList(blocks[i], listTag));
+      lists.push(wrapCellContentInList(blocks[i], listTag, remember));
       i++;
       continue;
     }
@@ -1188,6 +1275,7 @@ const wrapBlocksIntoList = (
         listItem.appendChild(block.firstChild);
       }
       list.appendChild(listItem);
+      remember?.(block, listItem);
     });
     group[0].replaceWith(list);
     group.slice(1).forEach((block) => block.remove());
@@ -1201,10 +1289,19 @@ const wrapBlocksIntoList = (
  * Convert a single list item back into a paragraph, splitting the surrounding
  * list if necessary (via unnestListItem). Returns the created paragraph.
  */
-const convertListItemToParagraph = (li: HTMLElement): HTMLElement =>
-  unnestListItem(li, "p");
+const convertListItemToParagraph = (li: HTMLElement, remember?: RememberReplacement): HTMLElement =>
+  unnestListItem(li, "p", remember);
 
 export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
+  const bookmark = captureSelectionBookmark(root);
+  try {
+    toggleListContent(root, listTag, bookmark?.remember);
+  } finally {
+    bookmark?.restore();
+  }
+};
+
+const toggleListContent = (root: HTMLElement, listTag: "ul" | "ol", remember?: RememberReplacement) => {
   const range = getSelectionRange();
   if (!range) return;
   ensureRangeWithinRoot(range, root);
@@ -1218,22 +1315,21 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
     // Fix #3: switching list type (e.g. caret in a <ul>, click Numbered)
     // retags the list in place instead of nesting one list inside another.
     if (currentListTag !== listTag) {
-      const retagged = replaceTag(listAncestor, listTag);
       // A selection spanning a bullet's own text AND its sub-bullet must
       // switch every level it touches, not just the outermost (Word/Docs
       // behavior) — the sub-list otherwise kept its old type. Only lists the
       // range genuinely touches retag: an untouched sibling sub-list stays,
       // and a selection wholly inside a sub-list never reaches here for the
-      // parent (its listAncestor IS the sub-list). replaceTag moves the
-      // children wholesale, so the range's text-node boundaries — and the
-      // nested list elements themselves — survive the ancestor's retag. #R28-2
-      Array.from(retagged.querySelectorAll("ul, ol"))
+      // parent (its listAncestor IS the sub-list). Collect before reparenting
+      // the children: live Range endpoints move when their nodes are removed.
+      const nestedLists = Array.from(listAncestor.querySelectorAll("ul, ol"))
         .filter(
           (nested): nested is HTMLElement =>
             nested.tagName.toLowerCase() !== listTag &&
             rangeTouchesElement(range, nested)
-        )
-        .forEach((nested) => replaceTag(nested, listTag));
+        );
+      const retagged = replaceTag(listAncestor, listTag, remember);
+      nestedLists.forEach((nested) => replaceTag(nested, listTag, remember));
       const li = getClosestElement(
         range.startContainer,
         (element) => element.tagName.toLowerCase() === "li",
@@ -1265,7 +1361,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
       blocks.filter((block) => block.tagName.toLowerCase() === "li").length > 1;
 
     if (!spansMultipleItems && li) {
-      const paragraph = convertListItemToParagraph(li);
+      const paragraph = convertListItemToParagraph(li, remember);
       const selection = getSelection();
       if (selection) {
         const newRange = document.createRange();
@@ -1293,7 +1389,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
     // Every item selected -> unwrap the whole list (this also frees any non-<li>
     // children and drains nested sublists so nothing lands inside a <p>).
     if (selectedItems.length > 0 && selectedItems.length === directItems.length) {
-      unwrapList(listAncestor);
+      unwrapList(listAncestor, remember);
       return;
     }
 
@@ -1305,7 +1401,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
     if (selectedItems.length > 0) {
       let lastParagraph: HTMLElement | null = null;
       for (const item of selectedItems) {
-        lastParagraph = convertListItemToParagraph(item);
+        lastParagraph = convertListItemToParagraph(item, remember);
       }
       const selection = getSelection();
       if (selection && lastParagraph) {
@@ -1318,7 +1414,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
       return;
     }
 
-    unwrapList(listAncestor);
+    unwrapList(listAncestor, remember);
     return;
   }
 
@@ -1329,7 +1425,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
       (block) => block.tagName.toLowerCase() !== "li"
     );
     if (blocks.length > 1) {
-      const lists = wrapBlocksIntoList(blocks, listTag);
+      const lists = wrapBlocksIntoList(blocks, listTag, remember);
       const items = lists.flatMap(
         (list) => Array.from(list.children) as HTMLElement[]
       );
@@ -1340,7 +1436,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
 
   const block = getBlockAncestor(range.startContainer, root);
   if (block) {
-    const listItem = convertBlockToList(block, listTag);
+    const listItem = convertBlockToList(block, listTag, remember);
     const selection = getSelection();
     if (selection) {
       const newRange = document.createRange();
@@ -1362,7 +1458,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
   // (e.g. the other cell already holds a list). #r21-1 #r21-2
   const cell = getBlockOrCellAncestor(range.startContainer, root);
   if (cell && isTableCell(cell)) {
-    const cellList = wrapCellContentInList(cell, listTag);
+    const cellList = wrapCellContentInList(cell, listTag, remember);
     selectElements(Array.from(cellList.children) as HTMLElement[]);
     return;
   }
@@ -1371,7 +1467,7 @@ export const toggleList = (root: HTMLElement, listTag: "ul" | "ol") => {
   const listItem = document.createElement("li");
   const contents = range.extractContents();
   if (contents.childNodes.length === 0) {
-    listItem.appendChild(document.createTextNode("\u200b"));
+    listItem.appendChild(document.createElement('br'));
   } else {
     listItem.appendChild(contents);
   }
@@ -1397,6 +1493,7 @@ export const isInlineStyleActive = (
   } catch {
     return false;
   }
+  if (!range.collapsed) return isRangeFullyStyled(range, tagName, root);
   return Boolean(
     getClosestElement(
       range.startContainer,
@@ -1479,6 +1576,7 @@ export const indentListItem = (root: HTMLElement): boolean => {
   ).filter((li) => rangeTouchesElement(range, li));
   const targets = selectedItems.length > 0 ? selectedItems : [listItem];
 
+  const bookmark = captureSelectionBookmark(root);
   let indentedAny = false;
   for (const item of targets) {
     const prevSibling = item.previousElementSibling;
@@ -1503,15 +1601,9 @@ export const indentListItem = (root: HTMLElement): boolean => {
 
   if (!indentedAny) return false;
 
-  // Restore selection to the caret's item.
-  const selection = getSelection();
-  if (selection) {
-    const newRange = document.createRange();
-    newRange.selectNodeContents(listItem);
-    newRange.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-  }
+  // Reparenting an item moves live Range endpoints to its old parent. Keep
+  // the original DOM points and direction so drafting continues in place.
+  bookmark?.restore();
 
   return true;
 };
@@ -1571,6 +1663,7 @@ export const outdentListItem = (root: HTMLElement): boolean => {
   ).filter((li) => rangeTouchesElement(range, li));
   const movingItems = selectedItems.length > 0 ? selectedItems : [listItem];
   const lastMoving = movingItems[movingItems.length - 1];
+  const bookmark = captureSelectionBookmark(root);
 
   // Items that follow the outdented ones in the nested list must travel WITH
   // them, becoming children of the LAST one — otherwise they stay under the
@@ -1621,15 +1714,7 @@ export const outdentListItem = (root: HTMLElement): boolean => {
     parentList.remove();
   }
 
-  // Restore selection
-  const selection = getSelection();
-  if (selection) {
-    const newRange = document.createRange();
-    newRange.selectNodeContents(listItem);
-    newRange.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-  }
+  bookmark?.restore();
 
   return true;
 };
@@ -1701,6 +1786,37 @@ const linkSelection = (
   }
 };
 
+/** Resolve a single selected link, including equivalent browser boundary points. */
+export const findLinkForRange = (root: HTMLElement, range: Range): HTMLAnchorElement | null => {
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
+  const container = range.commonAncestorContainer;
+  const element = container.nodeType === Node.ELEMENT_NODE ? container as Element : container.parentElement;
+  const enclosing = element?.closest('a');
+  if (enclosing && root.contains(enclosing)) return enclosing;
+  if (range.collapsed || !element) return null;
+
+  // Safari can place the start at the end of the preceding text node even
+  // though every selected character belongs to the link. Do not mistake this
+  // for a new link, nor treat a genuinely straddling selection as an edit.
+  for (const anchor of element.querySelectorAll('a')) {
+    if (!rangeTouchesElement(range, anchor)) continue;
+    const contents = root.ownerDocument.createRange();
+    contents.selectNodeContents(anchor);
+    if (range.compareBoundaryPoints(Range.START_TO_START, contents) < 0) {
+      const before = range.cloneRange();
+      before.setEnd(contents.startContainer, contents.startOffset);
+      if (rangeCapturesContent(before)) continue;
+    }
+    if (range.compareBoundaryPoints(Range.END_TO_END, contents) > 0) {
+      const after = range.cloneRange();
+      after.setStart(contents.endContainer, contents.endOffset);
+      if (rangeCapturesContent(after)) continue;
+    }
+    return anchor;
+  }
+  return null;
+};
+
 export const insertLink = (root: HTMLElement, url: string, text = "") => {
   const range = getSelectionRange();
   if (!range) return;
@@ -1710,24 +1826,24 @@ export const insertLink = (root: HTMLElement, url: string, text = "") => {
   // (`<a href="old">He<a href="new">x</a>llo</a>`) — invalid DOM the browser
   // reparses into stray/duplicated links on the next round-trip, so the URL
   // could never actually be changed.
-  const existingAnchor = getClosestElement(
-    range.commonAncestorContainer,
-    (element) => element.tagName === "A",
-    root
-  );
+  const existingAnchor = findLinkForRange(root, range);
   if (existingAnchor) {
     existingAnchor.setAttribute("href", url);
     existingAnchor.setAttribute("target", "_blank");
     existingAnchor.setAttribute("rel", "noopener noreferrer");
     // Only relabel from an explicit caption; a text selection keeps its content.
-    if (range.collapsed && text) existingAnchor.textContent = text;
-    const selection = getSelection();
-    if (selection) {
+    if (range.collapsed && text && text !== existingAnchor.textContent) {
+      existingAnchor.textContent = text;
+      // A changed caption replaces the old DOM point. Resume after the new
+      // link, just as insertion does, instead of selecting it for replacement.
+      const selection = getSelection();
       const newRange = document.createRange();
-      newRange.selectNodeContents(existingAnchor);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
+      newRange.setStartAfter(existingAnchor);
+      newRange.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(newRange);
     }
+    // URL-only edits leave the original caret or backward selection intact.
     return;
   }
 
@@ -1806,14 +1922,14 @@ export const insertImage = (
 
   // Insert a paragraph after the image for typing
   const para = document.createElement("p");
-  para.appendChild(document.createTextNode("\u200B")); // Zero-width space
+  para.appendChild(document.createElement('br'));
   wrapper.parentNode?.insertBefore(para, wrapper.nextSibling);
 
   // Position cursor in the new paragraph
   const selection = getSelection();
   if (selection && para.firstChild) {
     const newRange = document.createRange();
-    newRange.setStart(para.firstChild, 0);
+    newRange.setStart(para, 0);
     newRange.collapse(true);
     selection.removeAllRanges();
     selection.addRange(newRange);
@@ -1845,66 +1961,112 @@ const CLEARABLE_INLINE_TAGS = new Set([
   "span",
 ]);
 
-export const clearFormatting = (root: HTMLElement) => {
-  const range = getSelectionRange();
-  if (!range) return;
-  ensureRangeWithinRoot(range, root);
-  if (range.collapsed) return;
+/** Keep semantic wrappers and non-editable widgets when clearing character styles. */
+const canClearInlineElement = (element: HTMLElement): boolean =>
+  CLEARABLE_INLINE_TAGS.has(element.tagName.toLowerCase()) &&
+  !element.closest('[contenteditable="false"]') &&
+  !Array.from(element.attributes).some(attribute =>
+    !["style", "class"].includes(attribute.name)
+  );
 
-  // Strip inline formatting IN PLACE by unwrapping the formatting elements the
-  // selection touches — leaving block structure (paragraphs, headings, list
-  // items) intact. The previous implementation did range.toString() +
-  // deleteContents + insert one text node, which flattened a multi-block
-  // selection into a single line and merged separate paragraphs together.
-  const rangeTouches = (node: Node): boolean =>
-    typeof range.intersectsNode === "function"
-      ? range.intersectsNode(node)
-      : true;
+/** Split only the inline formatting around a boundary. The unselected side
+ * keeps a shallow clone of the original wrapper and all of its attributes. */
+export const isolateFormattingBoundary = (
+  marker: Comment,
+  root: HTMLElement,
+  side: "start" | "end",
+  matches: (element: HTMLElement) => boolean = canClearInlineElement
+) => {
+  let outer: HTMLElement | null = null;
+  let ancestor = marker.parentElement;
+  while (ancestor && ancestor !== root && !BLOCK_OR_CELL_TAGS.has(ancestor.tagName.toLowerCase())) {
+    if (matches(ancestor)) outer = ancestor;
+    ancestor = ancestor.parentElement;
+  }
+  if (!outer?.parentNode) return;
+  const doc = root.ownerDocument;
+  const outside = doc.createRange();
+  if (side === "end") {
+    outside.setStartAfter(marker);
+    outside.setEnd(outer, outer.childNodes.length);
+  } else {
+    outside.setStart(outer, 0);
+    outside.setEndBefore(marker);
+  }
+  const fragment = outside.extractContents();
+  const clone = outer.cloneNode(false) as HTMLElement;
+  clone.appendChild(fragment);
+  // Partial extraction clones ancestor IDs. Keep the original anchor once;
+  // fully moved descendants retain their IDs because they have left root.
+  const retainedIds = new Set(Array.from(root.querySelectorAll('[id]'), element => element.id));
+  for (const element of [clone, ...clone.querySelectorAll<HTMLElement>('[id]')]) {
+    if (element.id && retainedIds.has(element.id)) element.removeAttribute('id');
+  }
+  const hasContent = clone.textContent || clone.querySelector("img, br, hr, iframe, video, [contenteditable]");
+  if (side === "end") {
+    outer.after(marker);
+    if (hasContent) marker.after(clone);
+  } else {
+    outer.before(marker);
+    if (hasContent) marker.before(clone);
+  }
+};
 
-  const container: Element | null = isElement(range.commonAncestorContainer)
-    ? (range.commonAncestorContainer as Element)
-    : range.commonAncestorContainer.parentElement;
-  if (!container) return;
+export const clearFormatting = (root: HTMLElement): boolean => {
+  const originalRange = getSelectionRange();
+  if (!originalRange) return false;
+  ensureRangeWithinRoot(originalRange, root);
+  if (originalRange.collapsed || !rangeCapturesContent(originalRange)) return false;
+  const range = rangeForEditableFormatting(originalRange, root);
+  if (!range || !rangeCapturesContent(range)) return false;
 
-  const toUnwrap: HTMLElement[] = [];
+  const selection = getSelection();
+  if (!selection) return false;
+  const backwards = selection.anchorNode === originalRange.endContainer &&
+    selection.anchorOffset === originalRange.endOffset;
+  const before = root.innerHTML;
+  const emptyBefore = snapshotEmptyInlineHusks(root);
+  const doc = root.ownerDocument;
+  const start = doc.createComment("format-start");
+  const end = doc.createComment("format-end");
+  const endRange = range.cloneRange();
+  endRange.collapse(false);
+  endRange.insertNode(end);
+  const startRange = range.cloneRange();
+  startRange.collapse(true);
+  startRange.insertNode(start);
+  let bookmark: ReturnType<typeof captureSelectionBookmark> = null;
 
-  // Ancestors of the selection start/end may themselves be formatting elements
-  // that wrap (and extend beyond) the selection — e.g. the caret sits inside a
-  // <strong> that spans more than the selection.
-  const collectAncestors = (start: Node | null) => {
-    let el: Element | null = isElement(start as Node)
-      ? (start as Element)
-      : (start?.parentElement ?? null);
-    while (el && el !== root) {
-      if (
-        isElement(el) &&
-        CLEARABLE_INLINE_TAGS.has(el.tagName.toLowerCase()) &&
-        !toUnwrap.includes(el as HTMLElement)
-      ) {
-        toUnwrap.push(el as HTMLElement);
-      }
-      el = el.parentElement;
+  try {
+    // End first keeps both boundary markers attached when they share a wrapper.
+    isolateFormattingBoundary(end, root, "end");
+    isolateFormattingBoundary(start, root, "start");
+    const selected = doc.createRange();
+    selected.setStartAfter(start);
+    selected.setEndBefore(end);
+    const inline = Array.from(root.querySelectorAll<HTMLElement>(
+      Array.from(CLEARABLE_INLINE_TAGS).join(",")
+    )).filter(element => canClearInlineElement(element) && rangeTouchesElement(selected, element));
+    inline.forEach(unwrapElement);
+    removeNewEmptyInlineHusks(root, emptyBefore);
+
+    // Markers survive unwrapping and preserve the exact selected content.
+    const restored = doc.createRange();
+    restored.setStartAfter(start);
+    restored.setEndBefore(end);
+    if (backwards && selection.setBaseAndExtent) {
+      selection.setBaseAndExtent(restored.endContainer, restored.endOffset, restored.startContainer, restored.startOffset);
+    } else {
+      selection.removeAllRanges();
+      selection.addRange(restored);
     }
-  };
-  collectAncestors(range.startContainer);
-  collectAncestors(range.endContainer);
-
-  // Formatting elements nested inside the common ancestor that the selection
-  // actually intersects.
-  container
-    .querySelectorAll<HTMLElement>(Array.from(CLEARABLE_INLINE_TAGS).join(","))
-    .forEach((el) => {
-      if (rangeTouches(el) && !toUnwrap.includes(el)) toUnwrap.push(el);
-    });
-
-  // Unwrap each (order-independent: unwrapping moves children up, never removes
-  // descendants, and we re-check the parent still exists).
-  toUnwrap.forEach((el) => {
-    const parent = el.parentNode;
-    if (!parent) return;
-    while (el.firstChild) parent.insertBefore(el.firstChild, el);
-    parent.removeChild(el);
-  });
-
-  root.normalize();
+    bookmark = captureSelectionBookmark(root);
+  } finally {
+    end.remove();
+    start.remove();
+    // Removing markers shifts element offsets. Restore from their surviving
+    // neighbours instead of relying on the live Range's mutation adjustment.
+    bookmark?.restore();
+  }
+  return root.innerHTML !== before;
 };

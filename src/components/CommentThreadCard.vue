@@ -2,6 +2,7 @@
 <template>
   <div
     class="comment-thread-card"
+    :data-thread-id="thread.id"
     :class="{ 'comment-thread-card-expanded': isExpanded }"
   >
     <!-- Selected Text Quote -->
@@ -140,8 +141,9 @@
     <!-- Add Reply Button (always visible when not showing form) -->
     <button
       v-if="!showReplyForm"
+      ref="replyButtonRef"
       class="comment-add-reply-btn"
-      @click.stop="showReplyForm = true"
+      @click.stop="openReplyForm"
     >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path
@@ -163,9 +165,12 @@
       </div>
       <div class="comment-body">
         <CommentReplyForm
+          :initial-content="replyDraft"
+          :autofocus="focusReplyOnMount"
           :mention-search="mentionSearch"
+          @draft-change="emit('reply-draft', thread.id, $event)"
           @submit="handleReplySubmit"
-          @cancel="showReplyForm = false"
+          @cancel="closeReplyForm"
         />
       </div>
     </div>
@@ -239,7 +244,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import type {
   CommentThread,
   MentionSuggestion,
@@ -247,6 +252,7 @@ import type {
 import CommentReplyForm from "./CommentReplyForm.vue";
 
 interface Props {
+  replyDraft?: string;
   thread: CommentThread;
   isActive: boolean;
   isExpanded?: boolean;
@@ -257,6 +263,7 @@ interface Props {
 }
 
 interface Emits {
+  (e: "reply-draft", threadId: string, content: string | undefined): void;
   (e: "select", threadId: string): void;
   (e: "toggle", threadId: string): void;
   (e: "resolve", threadId: string): void;
@@ -266,6 +273,7 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  replyDraft: undefined,
   isExpanded: false,
   mentionSearch: undefined,
 });
@@ -273,9 +281,17 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 // State
-const showReplyForm = ref(false);
+const showReplyForm = ref(props.replyDraft !== undefined);
+const focusReplyOnMount = ref(props.replyDraft === undefined);
+const replyButtonRef = ref<HTMLButtonElement | null>(null);
 
 // Methods
+function openReplyForm() {
+  focusReplyOnMount.value = true;
+  showReplyForm.value = true;
+  emit("reply-draft", props.thread.id, props.replyDraft ?? "");
+}
+
 function handleToggle() {
   emit("toggle", props.thread.id);
 }
@@ -288,7 +304,13 @@ function handleDelete() {
 
 function handleReplySubmit(content: string, mentions: string[]) {
   emit("add-reply", props.thread.id, content, mentions);
+  closeReplyForm();
+}
+
+function closeReplyForm() {
+  emit("reply-draft", props.thread.id, undefined);
   showReplyForm.value = false;
+  nextTick(() => replyButtonRef.value?.focus());
 }
 
 function formatTime(date: Date): string {
@@ -481,6 +503,7 @@ function renderCommentContent(content: string): string {
 /* Comment Header */
 .comment-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 6px;
@@ -489,12 +512,14 @@ function renderCommentContent(content: string): string {
 
 .comment-meta {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
 .comment-author {
+  overflow-wrap: anywhere;
   font-size: 14px;
   font-weight: 700;
   color: var(--text-color, #111827);
@@ -508,19 +533,13 @@ function renderCommentContent(content: string): string {
 
 .comment-actions {
   display: flex;
+  flex-shrink: 0;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.comment-thread-card:hover .comment-actions,
-.comment-thread-card-expanded .comment-actions {
-  opacity: 1;
 }
 
 .comment-action-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: none;
   background: transparent;
   border-radius: 6px;
@@ -535,6 +554,18 @@ function renderCommentContent(content: string): string {
 .comment-action-btn:hover {
   background: var(--hover-bg, #f3f4f6);
   color: var(--text-color, #1f2937);
+}
+
+.comment-action-btn:focus-visible {
+  outline: 2px solid var(--toolbar-accent, #3b82f6);
+  outline-offset: 2px;
+}
+
+@media (any-pointer: coarse), (max-width: 640px) {
+  .comment-action-btn {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 .comment-action-delete:hover {

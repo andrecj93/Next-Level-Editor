@@ -9,13 +9,6 @@ import { test, expect, type Page } from "@playwright/test";
  * module graph, which is nothing like a real chunk fetched over HTTP. These
  * tests exercise that path where it actually has to work.
  */
-test.beforeEach(() => {
-  test.skip(
-    test.info().project.name === "mobile-safari",
-    "Insert-menu modals are a desktop surface"
-  );
-});
-
 const openCodeBlockModal = async (page: Page) => {
   await page.getByRole("button", { name: "Insert" }).first().click();
   await page

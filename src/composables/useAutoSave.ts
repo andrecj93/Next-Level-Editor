@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, getCurrentScope, onScopeDispose } from 'vue'
 
 export interface SaveVersion {
   content: string
@@ -45,12 +45,19 @@ export function useAutoSave(
   const lastError = ref<Error | null>(null)
   const saveCount = ref(0)
   const failedSaves = ref(0)
+  const isDirty = ref(false)
+  let revision = 0
+  let generation = 0
+  let disposed = false
+  let queuedSave: { content: string; revision: number } | null = null
+  let inFlight: Promise<void> | null = null
 
   // Computed properties
   const saveStatus = computed(() => {
     if (isSaving.value) return 'saving'
     if (hasConflict.value) return 'conflict'
     if (lastError.value) return 'error'
+    if (isDirty.value) return 'unsaved'
     if (lastSaved.value) return 'saved'
     return 'unsaved'
   })
@@ -91,6 +98,9 @@ export function useAutoSave(
    * @param content - Content to save
    */
   const triggerAutoSave = (content: string) => {
+    if (disposed) return
+    queuedSave = { content, revision: ++revision }
+    isDirty.value = true
     // Clear existing timer
     if (saveTimer.value) {
       clearTimeout(saveTimer.value)
@@ -98,7 +108,8 @@ export function useAutoSave(
 
     // Set new timer
     saveTimer.value = setTimeout(async () => {
-      await performSave(content)
+      saveTimer.value = null
+      await drainQueue()
     }, delay)
   }
 
@@ -109,17 +120,22 @@ export function useAutoSave(
   const markSaveFailed = () => {
     lastError.value = new Error('Save failed')
     failedSaves.value++
+    console.warn('[NextLevelEditor] Auto-save rejected', { version: currentVersion.value })
   }
 
   /**
    * Perform the actual save operation
    */
-  const performSave = async (content: string) => {
+  const performSave = async (request: { content: string; revision: number }) => {
+    const { content } = request
+    const saveGeneration = generation
     isSaving.value = true
     lastError.value = null
+    console.debug('[NextLevelEditor] Auto-save started', { version: currentVersion.value })
 
     try {
       const result = await callback(content, currentVersion.value)
+      if (disposed || saveGeneration !== generation) return
 
       if (result.success) {
         // Save successful
@@ -129,12 +145,15 @@ export function useAutoSave(
         saveCount.value++
         hasConflict.value = false
         conflictInfo.value = null
-      } else if (result.serverContent && result.serverVersion) {
+        isDirty.value = request.revision !== revision
+        console.debug('[NextLevelEditor] Auto-save completed', { version: currentVersion.value, pendingChanges: isDirty.value })
+      } else if (typeof result.serverContent === 'string' && typeof result.serverVersion === 'number') {
         // Conflict detected
         const conflict = detectConflict(content, result.serverContent, result.serverVersion)
 
         if (conflict) {
           hasConflict.value = true
+          console.warn('[NextLevelEditor] Auto-save conflict', { localVersion: currentVersion.value, serverVersion: result.serverVersion })
           conflictInfo.value = {
             localContent: content,
             serverContent: result.serverContent,
@@ -164,12 +183,36 @@ export function useAutoSave(
         markSaveFailed()
       }
     } catch (error) {
-      lastError.value = error as Error
+      if (disposed || saveGeneration !== generation) return
+      lastError.value = error instanceof Error ? error : new Error('Save failed')
       failedSaves.value++
-      console.error('Auto-save failed:', error)
+      // Host errors can contain document payloads or credentials. Keep the
+      // diagnostic useful without printing arbitrary host-provided messages.
+      console.error('[NextLevelEditor] Auto-save failed', { name: lastError.value.name })
     } finally {
       isSaving.value = false
     }
+  }
+
+  /** Serialize writes and coalesce queued edits. A slow request must never
+   * overwrite a newer save, nor report the current document as saved. */
+  const drainQueue = async (): Promise<void> => {
+    if (disposed || hasConflict.value) return
+    if (inFlight) {
+      await inFlight
+      if (!saveTimer.value) await drainQueue()
+      return
+    }
+    if (!queuedSave) return
+    const request = queuedSave
+    queuedSave = null
+    inFlight = performSave(request)
+    try {
+      await inFlight
+    } finally {
+      inFlight = null
+    }
+    if (!saveTimer.value && queuedSave && !lastError.value) await drainQueue()
   }
 
   /**
@@ -177,17 +220,21 @@ export function useAutoSave(
    * @param content - Content to save
    */
   const forceSave = async (content: string) => {
+    if (disposed) return
     if (saveTimer.value) {
       clearTimeout(saveTimer.value)
+      saveTimer.value = null
     }
-
-    await performSave(content)
+    queuedSave = { content, revision: ++revision }
+    isDirty.value = true
+    await drainQueue()
   }
 
   /**
    * Cancel pending auto-save
    */
   const cancelAutoSave = () => {
+    queuedSave = null
     if (saveTimer.value) {
       clearTimeout(saveTimer.value)
       saveTimer.value = null
@@ -205,10 +252,11 @@ export function useAutoSave(
 
     if (useLocal) {
       // Keep local changes and force save
-      currentVersion.value++
-      forceSave(conflictInfo.value.localContent)
+      const localContent = queuedSave?.content ?? conflictInfo.value.localContent
+      currentVersion.value = conflictInfo.value.serverVersion
       hasConflict.value = false
       conflictInfo.value = null
+      void forceSave(localContent)
       return null
     }
 
@@ -218,12 +266,16 @@ export function useAutoSave(
     // local content and the next debounced save silently overwrote the server
     // copy — the opposite of the user's choice, and a data-loss surprise.
     const serverContent = conflictInfo.value.serverContent
+    cancelAutoSave()
+    revision++
     currentVersion.value = conflictInfo.value.serverVersion || currentVersion.value + 1
     addToHistory(serverContent)
     lastSaved.value = new Date()
 
     hasConflict.value = false
     conflictInfo.value = null
+    lastError.value = null
+    isDirty.value = false
     return serverContent
   }
 
@@ -258,6 +310,9 @@ export function useAutoSave(
    * Clear all save history
    */
   const clearHistory = () => {
+    cancelAutoSave()
+    generation++
+    isDirty.value = false
     saveHistory.value = []
     currentVersion.value = 0
     lastSaved.value = null
@@ -268,9 +323,18 @@ export function useAutoSave(
     failedSaves.value = 0
   }
 
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      disposed = true
+      generation++
+      cancelAutoSave()
+    })
+  }
+
   return {
     // State
     isSaving,
+    isDirty,
     lastSaved,
     currentVersion,
     saveHistory,

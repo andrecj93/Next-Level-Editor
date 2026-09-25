@@ -112,6 +112,16 @@ const token = (p: PresetTokens, name: string, fallback?: string): string => {
 };
 
 describe("toolbar contrast contract (per preset x mode)", () => {
+  it("warm dark accent text clears hovered companion and selected menu surfaces", () => {
+    const warm = presets.find(p => p.name === "warm dark")!;
+    const ink = token(warm, "--toolbar-accent-ink");
+    expect(contrast(ink, token(warm, "--color-surface-overlay"))).toBeGreaterThanOrEqual(4.5);
+    const [r, g, b, alpha] = warm.tokens["--toolbar-hover"].match(/[\d.]+/g)!.map(Number);
+    const background = hex2rgb(token(warm, "--color-surface"));
+    const hovered = '#' + [r, g, b].map((channel, i) => Math.round(channel * alpha + background[i] * (1 - alpha)).toString(16).padStart(2, '0')).join('');
+    expect(contrast(ink, hovered)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it.each(presets)(
     "$name: Export hero ink on fill is >=4.5:1, hover lift included",
     (p) => {

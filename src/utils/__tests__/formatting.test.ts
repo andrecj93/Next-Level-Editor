@@ -431,6 +431,9 @@ describe('Formatting Tests', () => {
       expect(anchors[0].getAttribute('href')).toBe('https://new.com')
       expect(anchors[0].textContent).toBe('Hello')
       expect(root.querySelector('a a')).toBeNull()
+      expect(selection.isCollapsed).toBe(true)
+      expect(selection.anchorNode).toBe(anchorText)
+      expect(selection.anchorOffset).toBe(2)
     })
 
     it('updates an existing link in place when its text is selected', () => {
@@ -708,12 +711,12 @@ describe('Formatting Tests', () => {
 
       applyInlineStyle(root, 'strong')
 
-      // Caret at offset 0 leaves an empty before-wrapper and the whole word in
-      // the after-wrapper: <strong></strong><strong>Word</strong>.
+      // The next typed character belongs outside the remaining styled word.
+      // An empty before-wrapper would let native typing re-enter that style.
       const strongs = root.querySelectorAll('strong')
-      expect(strongs.length).toBe(2)
-      expect(strongs[0].textContent).toBe('')
-      expect(strongs[1].textContent).toBe('Word')
+      expect(strongs.length).toBe(1)
+      expect(strongs[0].textContent).toBe('Word')
+      expect(isInlineStyleActive(root, 'strong')).toBe(false)
     })
 
     it('preserves attributes on both halves when splitting at a caret', () => {
@@ -860,7 +863,7 @@ describe('Formatting Tests', () => {
       expect(headings).toEqual(['one', 'two', 'three'])
     })
 
-    it('wraps content in the tag when there is no block ancestor', () => {
+    it('formats the whole paragraph when a selected word has no block ancestor', () => {
       root.innerHTML = 'plain text'
       selectRange(root.firstChild!, 0, root.firstChild!, 5)
 
@@ -868,7 +871,7 @@ describe('Formatting Tests', () => {
 
       const h1 = root.querySelector('h1')!
       expect(h1).toBeTruthy()
-      expect(h1.textContent).toBe('plain')
+      expect(root.innerHTML).toBe('<h1>plain text</h1>')
     })
 
     it('converts a block back to the fallback tag when it already matches', () => {
@@ -1050,8 +1053,9 @@ describe('Formatting Tests', () => {
 
       const li = root.querySelector('li')!
       expect(li).toBeTruthy()
-      // Empty extracted contents -> zero-width placeholder.
-      expect(li.textContent).toBe('​')
+      // Empty blocks remain editable without invisible authored characters.
+      expect(li.textContent).toBe('')
+      expect(li.querySelector('br')).toBeTruthy()
     })
 
     it('returns early when there is no selection', () => {
@@ -1375,7 +1379,8 @@ describe('Formatting Tests', () => {
       expect(img.getAttribute('alt')).toBe('A picture')
       // A paragraph with a zero-width space is inserted after the wrapper.
       expect(wrapper.nextElementSibling!.tagName.toLowerCase()).toBe('p')
-      expect(wrapper.nextElementSibling!.textContent).toBe('​')
+      expect(wrapper.nextElementSibling!.textContent).toBe('')
+      expect(wrapper.nextElementSibling!.querySelector('br')).toBeTruthy()
     })
 
     it('insertImage throws when the selection is outside the root', () => {

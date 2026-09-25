@@ -131,6 +131,32 @@ describe("computeToolbarPosition", () => {
       expect(pos.top).toBe(FLIP_THRESHOLD - ABOVE_OFFSET);
     });
   });
+
+  describe("visible manuscript bounds", () => {
+    const bounds = { top: 170, bottom: 673, left: 20, right: 420 };
+
+    it("places controls below a line beside the main toolbar", () => {
+      const position = computeToolbarPosition({ ...base, bounds, toolbarHeight: 44,
+        rect: { top: 194, bottom: 214, left: 90, width: 60 } });
+      expect(position.below).toBe(true);
+      expect(position.top).toBe(222);
+      expect(position.left - base.toolbarWidth / 2).toBe(bounds.left + EDGE_MARGIN);
+    });
+
+    it("keeps controls above a line near the footer and away from a side panel", () => {
+      const position = computeToolbarPosition({ ...base, bounds, toolbarHeight: 44,
+        rect: { top: 640, bottom: 660, left: 380, width: 30 } });
+      expect(position.below).toBe(false);
+      expect(position.top + 44).toBeLessThan(640);
+      expect(position.left + base.toolbarWidth / 2).toBe(bounds.right - EDGE_MARGIN);
+    });
+
+    it("converts bounded placement to document coordinates after scrolling", () => {
+      const position = computeToolbarPosition({ ...base, bounds, toolbarHeight: 44, scrollY: 300,
+        rect: { top: 194, bottom: 214, left: 90, width: 60 } });
+      expect(position.top).toBe(522);
+    });
+  });
 });
 
 describe("FloatingToolbar (component)", () => {
@@ -156,13 +182,13 @@ describe("FloatingToolbar (component)", () => {
     } as DOMRect;
     vi.spyOn(window, "getSelection").mockReturnValue({
       rangeCount: 1,
-      getRangeAt: () => ({ getBoundingClientRect: () => domRect }),
+      getRangeAt: () => ({ getBoundingClientRect: () => domRect, getClientRects: () => [domRect] }),
     } as unknown as Selection);
   };
 
-  const showToolbar = async (rect: { top: number; bottom: number; left: number; width: number }) => {
+  const showToolbar = async (rect: { top: number; bottom: number; left: number; width: number }, boundary?: HTMLElement) => {
     mockSelection(rect);
-    wrapper = mount(FloatingToolbar, { props: { show: false, actions } });
+    wrapper = mount(FloatingToolbar, { props: { show: false, actions, boundary } });
     await wrapper.setProps({ show: true });
     // updatePosition runs on a 10ms setTimeout after show flips true.
     vi.advanceTimersByTime(20);
@@ -202,5 +228,19 @@ describe("FloatingToolbar (component)", () => {
     const el = await showToolbar({ top: 200, bottom: 220, left: 0, width: 20 });
     expect(el).not.toBeNull();
     expect(el!.style.left).toBe(`${ESTIMATED_WIDTH / 2 + EDGE_MARGIN}px`);
+  });
+
+  it("hides detached controls when the selected line is outside the paper", async () => {
+    const boundary = document.createElement('div');
+    boundary.getBoundingClientRect = () => new DOMRect(0, 170, 413, 400);
+    const el = await showToolbar({ top: 800, bottom: 820, left: 30, width: 60 }, boundary);
+    expect(el).toBeNull();
+  });
+
+  it("leaves the main toolbar in charge when a bubble would cover the selected line", async () => {
+    const boundary = document.createElement('div');
+    boundary.getBoundingClientRect = () => new DOMRect(0, 170, 413, 70);
+    const el = await showToolbar({ top: 194, bottom: 214, left: 30, width: 60 }, boundary);
+    expect(el).toBeNull();
   });
 });

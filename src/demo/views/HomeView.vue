@@ -22,9 +22,9 @@
         </h1>
 
         <p class="lede hero-lede">
-          A professional-grade WYSIWYG editor for Vue&nbsp;3 — slash commands, live comments,
-          template variables, one-click export and total theming. Bind one
-          <code>v-model</code> and ship a writing experience people actually enjoy.
+          A quiet place to find your next sentence. Write, pause, and find a few
+          thoughtful notes in the margins. Keep your voice, follow your chapters,
+          and reach for the tools when you need them. Built for Vue&nbsp;3.
         </p>
 
         <div class="hero-ctas">
@@ -47,22 +47,22 @@
     <!-- ===================== HERO LIVE EDITOR ====================== -->
     <section class="container demo-wrap">
       <RevealOnScroll>
-        <EditorSheet filename="MyDocument.vue" badge="live">
+        <EditorSheet filename="The way back" badge="live">
           <NextLevelEditor
             v-if="!compact"
             v-model="demoContent"
             theme-preset="warm"
+            writing-mode
             :show-writing-stats="true"
             width="100%"
-            height="380px"
+            height="480px"
           />
           <div v-else class="demo-static" v-html="demoContent" />
         </EditorSheet>
       </RevealOnScroll>
       <p class="demo-hint">
-        <Icon name="pen" :size="15" /> That's the real editor — select text, press
-        <kbd>/</kbd>, or open the
-        <button class="linklike" @click="$emit('navigate', 'playground')">full playground</button>.
+        <Icon name="pen" :size="15" /> Try a note in the margins, or
+        <button class="linklike" @click="$emit('navigate', 'playground')">start your own document</button>.
       </p>
     </section>
 
@@ -338,11 +338,11 @@ onUnmounted(() => {
 
 /* ---- Hero editor content ---- */
 const demoContent = ref(
-  `<h2>Edit me — I'm a real editor</h2>` +
-    `<p>Try <strong>bold</strong>, <em>italic</em>, or a <a href="#">link</a>. ` +
-    `Type <code>/</code> for slash commands, or select text for the floating toolbar.</p>` +
-    `<ul><li>Tables, images &amp; code blocks</li><li>Undo / redo, find &amp; replace</li><li>Light &amp; dark themes</li></ul>` +
-    `<blockquote>“Finally, an editor that just works.”</blockquote>`
+  `<h1>The way back</h1>` +
+    `<p>Mara returned to the harbor in order to find the house her father had left behind. ` +
+    `She carried a brass key and a question she had spent eleven years avoiding.</p>` +
+    `<p>The woman who opened the door was making soup. Of all the explanations Mara had imagined, none involved onions.</p>` +
+    `<p>“You’re early,” the woman said. “Come in. The third stair is a liar.”</p>`
 );
 
 /* ---- Per-demo seeded content ---- */
@@ -402,7 +402,7 @@ const exportOutput = computed(() =>
 const trust = ["No dependencies to wrangle", "TypeScript-first", "Fully themeable", "SSR-friendly"];
 
 const features: { icon: IconName; title: string; desc: string }[] = [
-  { icon: "chart", title: "Writing stats", desc: "Live word count, reading time, readability scoring and lightweight SEO hints." },
+  { icon: "pen", title: "A writing companion", desc: "Optional notes on repeated words, wordy phrases, and long sentences. English prose checks run on your device; every change stays your choice." },
   { icon: "palette", title: "Beautiful theming", desc: "A token-based design system with first-class light and dark modes out of the box." },
   { icon: "mobile", title: "Mobile ready", desc: "A dedicated touch toolbar, responsive layout and comfortable 44px targets." },
   { icon: "puzzle", title: "Plugin system", desc: "Register toolbar buttons, commands and slash commands through a clean plugin API." },
@@ -428,6 +428,7 @@ const content = ref('<h1>Hello world</h1>')
 <template>
   <NextLevelEditor
     v-model="content"
+    writing-mode
     :enable-comments="true"
     :enable-variables="true"
     :show-writing-stats="true"

@@ -2,6 +2,7 @@
  * Cross-browser clipboard utilities
  * Provides fallbacks for Safari iOS and Firefox compatibility
  */
+import { captureSelectionBookmark } from './selectionBookmark';
 
 /**
  * Copy text to clipboard with fallback
@@ -10,25 +11,26 @@
  * @param text - Text to copy
  * @returns Promise<boolean> - Success status
  */
-export async function copyToClipboard(text: string): Promise<boolean> {
+export async function copyToClipboard(text: string, canContinue: () => boolean = () => true): Promise<boolean> {
+  if (!canContinue()) return false;
   // Try modern Clipboard API first
   if (navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);
-      return true;
+      return canContinue();
     } catch (error) {
+      if (!canContinue()) return false;
       console.warn("Clipboard API failed, trying fallback:", error);
     }
   }
 
   // Fallback: Create temporary textarea (works in all browsers)
-  return copyWithTextarea(text);
+  return canContinue() && copyWithTextarea(text);
 }
 
 /**
  * Copy HTML content to clipboard
- * Uses ClipboardItem API when available (Chrome, Edge)
- * Falls back to text-only copy for other browsers
+ * Uses the ClipboardItem API when available, with a text-only fallback
  *
  * @param html - HTML string to copy
  * @param plainText - Plain text fallback
@@ -36,9 +38,11 @@ export async function copyToClipboard(text: string): Promise<boolean> {
  */
 export async function copyHtmlToClipboard(
   html: string,
-  plainText: string
+  plainText: string,
+  canContinue: () => boolean = () => true
 ): Promise<boolean> {
-  // Try ClipboardItem API for HTML (Chrome, Edge only)
+  if (!canContinue()) return false;
+  // Prefer rich copy when the browser exposes the API.
   if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
     try {
       const blob = new Blob([html], { type: "text/html" });
@@ -50,14 +54,15 @@ export async function copyHtmlToClipboard(
       });
 
       await navigator.clipboard.write([item]);
-      return true;
+      return canContinue();
     } catch (error) {
+      if (!canContinue()) return false;
       console.warn("HTML clipboard failed, trying text fallback:", error);
     }
   }
 
   // Fallback: Copy as plain text
-  return copyToClipboard(plainText);
+  return copyToClipboard(plainText, canContinue);
 }
 
 /**
@@ -89,12 +94,12 @@ export async function pasteFromClipboard(
 
 /**
  * Request clipboard read permission (required for programmatic paste)
- * Only works in Chrome/Edge. Firefox/Safari require paste event.
+ * Availability and permission prompts depend on the browser.
  *
  * @returns Promise<string | null> - Clipboard text or null
  */
 export async function readClipboard(): Promise<string | null> {
-  // Only works in Chrome/Edge when user grants permission
+  // Programmatic reads require browser permission or a user gesture.
   if (navigator.clipboard?.readText) {
     try {
       const text = await navigator.clipboard.readText();
@@ -108,6 +113,41 @@ export async function readClipboard(): Promise<string | null> {
   return null;
 }
 
+/** Read the first supported clipboard item without silently flattening HTML.
+ * The insertion owner must still sanitize HTML. A denied rich read is terminal:
+ * trying readText next can cause a second permission prompt for the same click.
+ */
+export async function readClipboardData(): Promise<DataTransfer | null> {
+  if (typeof navigator === "undefined" || typeof DataTransfer === "undefined") return null;
+  try {
+    const clipboard = navigator.clipboard;
+    const data = new DataTransfer();
+    if (clipboard?.read) {
+      const items = await clipboard.read();
+      for (const item of items) {
+        const types = item.types.filter(type => type === 'text/html' || type === 'text/plain' || type.startsWith('image/'));
+        if (!types.length) continue;
+        const entries = await Promise.all(types.map(async type => ({ type, blob: await item.getType(type) })));
+        for (const { type, blob } of entries) {
+          if (type.startsWith('image/')) data.items.add(new File([blob], 'clipboard-image', { type }));
+          else data.setData(type, await blob.text());
+        }
+        return data;
+      }
+      return data;
+    }
+    if (clipboard?.readText) {
+      data.setData('text/plain', await clipboard.readText());
+      return data;
+    }
+  } catch (error) {
+    console.warn('[NextLevelEditor] Clipboard read unavailable', {
+      reason: error instanceof Error ? error.name : 'ClipboardError',
+    });
+  }
+  return null;
+}
+
 /**
  * Check if clipboard API is available
  * @returns boolean - True if Clipboard API is supported
@@ -117,7 +157,7 @@ export function isClipboardApiSupported(): boolean {
 }
 
 /**
- * Check if clipboard read is available (Chrome/Edge only)
+ * Check if programmatic clipboard text reads are available
  * @returns boolean - True if readText is supported
  */
 export function isClipboardReadSupported(): boolean {
@@ -136,6 +176,11 @@ export function isClipboardReadSupported(): boolean {
  * @returns boolean - Success status
  */
 function copyWithTextarea(text: string): boolean {
+  const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const bookmark = captureSelectionBookmark(document.body);
+  const input = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement ? active : null;
+  const fieldSelection = input && input.selectionStart !== null && input.selectionEnd !== null
+    ? { start: input.selectionStart, end: input.selectionEnd, direction: input.selectionDirection ?? 'none' } : null;
   const textarea = document.createElement("textarea");
 
   // Styling to make it invisible but still focusable
@@ -170,13 +215,17 @@ function copyWithTextarea(text: string): boolean {
 
   let success = false;
   try {
-    // execCommand still works for copy (not for other commands)
+    // The legacy copy command reads the temporary field's selection.
     success = document.execCommand("copy");
   } catch (error) {
     console.error("Copy fallback failed:", error);
+  } finally {
+    textarea.remove();
+    if (active?.isConnected) active.focus({ preventScroll: true });
+    bookmark?.restore();
+    if (input?.isConnected && fieldSelection) input.setSelectionRange(fieldSelection.start, fieldSelection.end, fieldSelection.direction);
   }
 
-  textarea.remove();
   return success;
 }
 

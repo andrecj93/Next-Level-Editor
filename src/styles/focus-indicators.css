@@ -209,19 +209,22 @@
  * Skip to main content link
  * Hidden by default, visible on focus
  */
-/* The three skip links all sat at the same off-screen coordinates, so each
-   one obscured the next: axe measured only 7px of unobstructed width per
-   link and reported a WCAG 2.2 target-size (2.5.8) failure. Stacking the
-   hidden state in normal flow inside an off-screen container means every link
-   keeps its own full box, and the focused one still slides to the top-left
-   corner exactly as before. #R32-2 */
+/* Keep unfocused links clipped, but keyboard reachable. A fixed negative
+   offset can land on the host page when the editor sits farther down it. */
 .next-level-editor .skip-links {
   position: absolute;
-  top: -200px;
+  top: 0;
   left: 0;
   display: flex;
   flex-direction: column;
   z-index: 10000;
+}
+
+.next-level-editor .skip-links:not(:focus-within) {
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 .next-level-editor .skip-link {

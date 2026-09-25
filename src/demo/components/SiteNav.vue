@@ -1,12 +1,12 @@
 <template>
-  <header class="site-nav" :class="{ scrolled }">
+  <header class="site-nav" :class="{ scrolled, 'menu-open': menuOpen }">
     <div class="container container-wide nav-inner">
       <button class="brand" @click="$emit('navigate', 'home')">
         <span class="brand-mark" aria-hidden="true"><Icon name="pen" :size="19" :stroke-width="1.9" /></span>
         <span class="brand-name">Next&nbsp;Level<span class="brand-name-accent">Editor</span></span>
       </button>
 
-      <nav class="nav-links" :class="{ open: menuOpen }" aria-label="Primary">
+      <nav id="site-navigation" class="nav-links" :class="{ open: menuOpen }" aria-label="Primary" @keydown.esc="closeMenu">
         <button
           v-for="item in links"
           :key="item.id"
@@ -38,7 +38,7 @@
           <Icon :name="dark ? 'sun' : 'moon'" :size="19" />
         </button>
         <button class="btn btn-primary btn-sm try-btn" @click="go('playground')">Try it live</button>
-        <button class="icon-btn menu-toggle" aria-label="Toggle menu" @click="menuOpen = !menuOpen">
+        <button ref="menuButton" class="icon-btn menu-toggle" aria-label="Toggle menu" :aria-expanded="menuOpen" aria-controls="site-navigation" @click="menuOpen = !menuOpen" @keydown.esc="closeMenu">
           <Icon :name="menuOpen ? 'close' : 'menu'" :size="21" />
         </button>
       </div>
@@ -61,6 +61,11 @@ const links = [
 
 const scrolled = ref(false);
 const menuOpen = ref(false);
+const menuButton = ref<HTMLButtonElement | null>(null);
+const closeMenu = () => {
+  menuOpen.value = false;
+  menuButton.value?.focus();
+};
 const onScroll = () => {
   scrolled.value = window.scrollY > 8;
 };
@@ -85,15 +90,18 @@ const go = (id: string) => {
   transition: border-color 0.3s var(--ease), background 0.3s var(--ease), box-shadow 0.3s var(--ease);
 }
 .site-nav.scrolled { border-bottom-color: var(--border); box-shadow: 0 1px 0 var(--paper-edge), var(--shadow-sm); }
+/* The open navigation must receive taps above the editor's floating chrome.
+   Keep the normal header below fullscreen editing and all modal dialogs. */
+.site-nav.menu-open { z-index: 10020; }
 .nav-inner { height: var(--nav-h); display: flex; align-items: center; gap: 20px; }
 
-.brand { display: flex; align-items: center; gap: 11px; background: none; border: none; cursor: pointer; padding: 0; color: var(--ink); }
+.brand { display: flex; align-items: center; gap: 11px; min-width: 0; background: none; border: none; cursor: pointer; padding: 0; color: var(--ink); }
 .brand-mark {
-  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px;
+  display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px;
   background: var(--brand-gradient); color: #fff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 6px 16px -7px rgba(196, 57, 44, 0.75);
 }
-.brand-name { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; font-size: 18px; }
+.brand-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; font-size: 18px; }
 .brand-name-accent { color: var(--accent); font-style: italic; }
 
 .nav-links { display: flex; align-items: center; gap: 2px; margin-left: 10px; }
@@ -110,7 +118,7 @@ const go = (id: string) => {
   background: var(--accent); border-radius: 2px;
 }
 
-.nav-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.nav-actions { display: flex; flex-shrink: 0; align-items: center; gap: 8px; margin-left: auto; }
 .icon-btn {
   display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px;
   background: none; border: 1px solid transparent; color: var(--ink-soft); cursor: pointer;
@@ -122,6 +130,7 @@ const go = (id: string) => {
 @media (max-width: 820px) {
   .nav-links {
     position: absolute; top: var(--nav-h); left: 0; right: 0; flex-direction: column; align-items: stretch;
+    margin-left: 0;
     gap: 2px; padding: 12px; background: var(--bg); border-bottom: 1px solid var(--border);
     box-shadow: var(--shadow-md); transform: translateY(-8px); opacity: 0; visibility: hidden; pointer-events: none;
     transition: opacity 0.2s var(--ease), transform 0.2s var(--ease), visibility 0s linear 0.2s;
@@ -130,9 +139,14 @@ const go = (id: string) => {
     transform: translateY(0); opacity: 1; visibility: visible; pointer-events: all;
     transition: opacity 0.2s var(--ease), transform 0.2s var(--ease), visibility 0s;
   }
-  .nav-link { padding: 12px 14px; }
+  .nav-link { padding: 12px 14px; text-align: left; }
   .nav-link.active::after { left: 14px; right: auto; width: 18px; bottom: 8px; }
   .menu-toggle { display: grid; }
   .try-btn, .hide-sm { display: none; }
+}
+@media (max-width: 480px) {
+  .nav-inner { padding-inline: 14px; gap: 12px; }
+  .brand { gap: 8px; }
+  .brand-name { font-size: 16px; }
 }
 </style>

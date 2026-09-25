@@ -11,7 +11,7 @@ test.beforeEach(() => {
 
 test.describe("Advanced keyboard shortcuts", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/?empty=true");
+    await page.goto("/?writingMode=false&empty=true");
     await page.waitForSelector(".editor-content");
   });
 

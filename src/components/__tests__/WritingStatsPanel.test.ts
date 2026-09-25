@@ -62,6 +62,25 @@ const mountFull = () =>
   });
 
 describe("WritingStatsPanel tooltips", () => {
+  it('supports keyboard scrolling without sending navigation into the manuscript', async () => {
+    const wrapper = mountFull();
+    const details = wrapper.get<HTMLElement>('.stats-content');
+    Object.defineProperty(details.element, 'scrollHeight', { value: 1200 });
+    Object.defineProperty(details.element, 'clientHeight', { value: 300 });
+    await details.trigger('keydown', { key: 'End' });
+    expect(details.element.scrollTop).toBe(1200);
+    await details.trigger('keydown', { key: 'Home' });
+    expect(details.element.scrollTop).toBe(0);
+    await details.trigger('keydown', { key: 'PageDown' });
+    expect(details.element.scrollTop).toBe(260);
+    await details.trigger('keydown', { key: 'ArrowDown' });
+    expect(details.element.scrollTop).toBe(300);
+    await details.trigger('keydown', { key: 'ArrowUp' });
+    expect(details.element.scrollTop).toBe(260);
+    await details.trigger('keydown', { key: 'PageUp' });
+    expect(details.element.scrollTop).toBe(0);
+    wrapper.unmount();
+  });
   it("gives every stat label an explanatory tooltip", () => {
     const wrapper = mountFull();
     const labels = wrapper.findAll(".stat-label");

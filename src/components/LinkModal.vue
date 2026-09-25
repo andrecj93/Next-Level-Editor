@@ -13,7 +13,7 @@
       @click.stop
     >
       <div class="modal-header">
-        <h3 id="link-modal-title">Insert link</h3>
+        <h3 id="link-modal-title">{{ context?.editing ? 'Edit link' : 'Insert link' }}</h3>
         <button
           class="close-button"
           aria-label="Close"
@@ -32,19 +32,22 @@
             v-model="url"
             type="url"
             placeholder="https://example.com"
-            @keyup.enter="submit"
+            @keydown.enter="onEnter"
           >
         </div>
 
         <div class="input-group">
-          <label for="link-text">Text to display <span class="optional">(optional)</span></label>
+          <label for="link-text">{{ context?.selectionText ? 'Selected text' : 'Text to display' }} <span v-if="!context?.selectionText" class="optional">(optional)</span></label>
           <input
             id="link-text"
             v-model="text"
             type="text"
-            placeholder="Shown when no text is selected"
-            @keyup.enter="submit"
+            :readonly="Boolean(context?.selectionText)"
+            :aria-describedby="context?.selectionText ? 'link-selection-hint' : undefined"
+            placeholder="Use the URL as the link text"
+            @keydown.enter="onEnter"
           >
+          <p v-if="context?.selectionText" id="link-selection-hint" class="selection-hint">Your selected text and formatting will be kept.</p>
         </div>
       </div>
 
@@ -60,7 +63,7 @@
           :disabled="!isValid"
           @click="submit"
         >
-          Insert link
+          {{ context?.editing ? 'Save link' : 'Insert link' }}
         </button>
       </div>
     </div>
@@ -71,15 +74,18 @@
 import { ref, computed, watch } from "vue";
 import { useModalDialog } from "../composables/useModalDialog";
 
-const props = defineProps<{ isOpen: boolean }>();
+const props = defineProps<{
+  isOpen: boolean;
+  context?: { url: string; text: string; selectionText: string; editing: boolean };
+}>();
 
 const emit = defineEmits<{
   (e: "close"): void;
   (e: "insert", url: string, text: string): void;
 }>();
 
-const url = ref("");
-const text = ref("");
+const url = ref(props.context?.url ?? "");
+const text = ref(props.context?.text ?? "");
 const urlInput = ref<HTMLInputElement | null>(null);
 const modalContent = ref<HTMLElement | null>(null);
 
@@ -92,9 +98,17 @@ const submit = () => {
   const normalized = /^(https?:|mailto:|tel:|\/|#)/i.test(raw)
     ? raw
     : `https://${raw}`;
-  emit("insert", normalized, text.value.trim());
+  // An unchanged caption must not replace the existing link's inline marks.
+  const caption = props.context?.selectionText || text.value === props.context?.text ? "" : text.value.trim();
+  emit("insert", normalized, caption);
   // Self-close after a successful insert, like the other insert modals.
   close();
+};
+
+const onEnter = (event: KeyboardEvent) => {
+  if (event.isComposing || event.keyCode === 229) return;
+  event.preventDefault();
+  submit();
 };
 
 const reset = () => {
@@ -120,7 +134,10 @@ useModalDialog({
 watch(
   () => props.isOpen,
   (open) => {
-    if (open) reset();
+    if (open) {
+      url.value = props.context?.url ?? "";
+      text.value = props.context?.text ?? "";
+    }
   }
 );
 </script>
@@ -133,11 +150,17 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 8px;
+  box-sizing: border-box;
   z-index: 10050; /* above floating panels/FABs (9998-9999) */
   animation: link-modal-fade 0.18s ease-out;
 }
 
 .modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 16px);
+  overflow: hidden;
   background: var(--color-surface, var(--editor-bg, #fff));
   color: var(--color-text, #1f2937);
   border: 1px solid var(--color-border, #e5e7eb);
@@ -150,6 +173,7 @@ watch(
 }
 
 .modal-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -185,6 +209,9 @@ watch(
 }
 
 .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -219,6 +246,13 @@ watch(
   color: var(--color-text-secondary, #9ca3af);
 }
 
+.selection-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #6b7280);
+}
+
 .input-group input:focus {
   outline: none;
   border-color: var(--toolbar-accent, #3b82f6);
@@ -226,6 +260,7 @@ watch(
 }
 
 .modal-footer {
+  flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -267,6 +302,11 @@ watch(
 .insert-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-height: 400px) {
+  .modal-header, .modal-footer { padding: 10px 16px; }
+  .modal-body { padding: 12px 16px; gap: 12px; }
 }
 
 @keyframes link-modal-fade {

@@ -29,6 +29,9 @@ test.beforeEach(() => {
 
 /** Scan and fail with the offending selectors spelled out. */
 const expectNoViolations = async (page: Page, include?: string) => {
+  await page.evaluate(() => Promise.all(document.getAnimations()
+    .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+    .map((animation) => animation.finished.catch(() => undefined))));
   let builder = new AxeBuilder({ page }).withTags(TAGS);
   if (include) builder = builder.include(include);
   const { violations } = await builder.analyze();
@@ -39,7 +42,7 @@ const expectNoViolations = async (page: Page, include?: string) => {
         `${v.id} [${v.impact}] ${v.help}\n` +
         v.nodes
           .slice(0, 3)
-          .map((n) => `    - ${n.target.join(" ")}`)
+          .map((n) => `    - ${n.target.join(" ")}: ${n.failureSummary}`)
           .join("\n")
     )
     .join("\n");

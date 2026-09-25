@@ -34,6 +34,18 @@
           </div>
           <h3 class="comments-sidebar-title">Comments</h3>
           <button
+            v-if="activeTab === 'open'"
+            class="comments-fab"
+            type="button"
+            aria-label="Add new comment"
+            title="Add new comment"
+            @click="createNewComment"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
+          <button
             ref="closeButtonRef"
             class="comments-sidebar-close"
             aria-label="Close comments sidebar"
@@ -51,11 +63,14 @@
         </div>
 
         <!-- Tabs -->
-        <div class="comments-tabs" role="tablist" aria-label="Comment threads">
+        <div class="comments-tabs" role="tablist" aria-label="Comment threads" @keydown="handleTabKeydown">
           <button
+            :id="`${sidebarId}-open`"
             class="comments-tab"
             role="tab"
+            :aria-controls="`${sidebarId}-threads`"
             :aria-selected="activeTab === 'open'"
+            :tabindex="activeTab === 'open' ? 0 : -1"
             :class="{ active: activeTab === 'open' }"
             @click="activeTab = 'open'"
           >
@@ -63,9 +78,12 @@
             <span class="comments-tab-badge">{{ openThreads.length }}</span>
           </button>
           <button
+            :id="`${sidebarId}-resolved`"
             class="comments-tab"
             role="tab"
+            :aria-controls="`${sidebarId}-threads`"
             :aria-selected="activeTab === 'resolved'"
+            :tabindex="activeTab === 'resolved' ? 0 : -1"
             :class="{ active: activeTab === 'resolved' }"
             @click="activeTab = 'resolved'"
           >
@@ -76,7 +94,13 @@
       </div>
 
       <!-- Thread List -->
-      <div class="comments-thread-list">
+      <div
+        :id="`${sidebarId}-threads`"
+        class="comments-thread-list"
+        role="tabpanel"
+        :aria-labelledby="`${sidebarId}-${activeTab}`"
+        tabindex="0"
+      >
         <template v-if="currentThreads.length === 0">
           <div class="comments-empty-state">
             <div class="comments-empty-icon">
@@ -118,6 +142,7 @@
             v-for="thread in currentThreads"
             :key="thread.id"
             :thread="thread"
+            :reply-draft="replyDrafts.get(thread.id)"
             :is-active="activeThreadId === thread.id"
             :is-expanded="expandedThreads.has(thread.id)"
             :mention-search="mentionSearch"
@@ -127,27 +152,10 @@
             @reopen="reopenThread"
             @delete="deleteThread"
             @add-reply="addReply"
+            @reply-draft="updateReplyDraft"
           />
         </template>
       </div>
-
-      <!-- New Comment FAB -->
-      <button
-        v-if="activeTab === 'open'"
-        class="comments-fab"
-        aria-label="Add new comment"
-        title="Add new comment"
-        @click="createNewComment"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 5v14m-7-7h14"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-          />
-        </svg>
-      </button>
     </div>
   </div>
 </template>
@@ -159,6 +167,7 @@ import type {
   MentionSuggestion,
 } from "../composables/useComments";
 import CommentThreadCard from "./CommentThreadCard.vue";
+import { useStableId } from "../utils/useStableId";
 
 interface Props {
   threads: CommentThread[];
@@ -186,6 +195,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<Emits>();
+const sidebarId = `comments-${useStableId()}`;
 
 // The "Open comments" FAB unmounts itself on activation (its v-if includes
 // !showCommentsSidebar), so focus would fall to <body> the instant the sidebar
@@ -206,6 +216,19 @@ watch(
 // State
 const activeTab = ref<"open" | "resolved">("open");
 const expandedThreads = ref<Set<string>>(new Set());
+// Cards unmount when switching status tabs. Unsent prose belongs to the
+// discussion, and must survive that navigation without retaining hidden DOM.
+const replyDrafts = ref(new Map<string, string>());
+function updateReplyDraft(threadId: string, content: string | undefined) {
+  if (content === undefined) replyDrafts.value.delete(threadId);
+  else replyDrafts.value.set(threadId, content);
+}
+watch(() => props.threads.map(thread => thread.id), ids => {
+  const live = new Set(ids);
+  for (const id of replyDrafts.value.keys()) {
+    if (!live.has(id)) replyDrafts.value.delete(id);
+  }
+});
 
 // Computed
 const openThreads = computed(() =>
@@ -223,6 +246,18 @@ const currentThreads = computed(() =>
 // Methods
 function closeSidebar() {
   emit("close");
+}
+
+function handleTabKeydown(event: KeyboardEvent) {
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.key === 'Home') activeTab.value = 'open';
+  else if (event.key === 'End') activeTab.value = 'resolved';
+  else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    activeTab.value = activeTab.value === 'open' ? 'resolved' : 'open';
+  } else return;
+  event.preventDefault();
+  event.stopPropagation();
+  focusActiveTab();
 }
 
 function selectThread(threadId: string) {
@@ -245,10 +280,20 @@ function toggleThread(threadId: string) {
 
 function resolveThread(threadId: string) {
   emit("resolve-thread", threadId);
+  focusActiveTab();
 }
 
 function reopenThread(threadId: string) {
   emit("reopen-thread", threadId);
+  focusActiveTab();
+}
+
+// Resolving or reopening removes the focused card from the current list.
+// Keep the next keyboard action inside the panel instead of losing it to body.
+function focusActiveTab() {
+  nextTick(() => sidebarContentRef.value
+    ?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')
+    ?.focus());
 }
 
 function deleteThread(threadId: string) {
@@ -267,6 +312,21 @@ function addReply(threadId: string, content: string, mentions: string[]) {
 function createNewComment() {
   emit("create-comment");
 }
+
+/** Reveal the passage's discussion, even when its thread is already selected. */
+function revealThread(threadId: string) {
+  const thread = props.threads.find(item => item.id === threadId);
+  if (!thread) return;
+  activeTab.value = thread.status;
+  expandedThreads.value = new Set([...expandedThreads.value, threadId]);
+  nextTick(() => {
+    const cards = sidebarContentRef.value?.querySelectorAll<HTMLElement>('.comment-thread-card');
+    const card = cards && Array.from(cards).find(item => item.dataset.threadId === threadId);
+    card?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  });
+}
+
+defineExpose({ revealThread });
 </script>
 
 <style scoped>
@@ -307,6 +367,10 @@ function createNewComment() {
 
 .comments-sidebar-open .comments-sidebar-content {
   transform: translateX(0);
+}
+
+.comments-sidebar-content :deep(button) {
+  font-family: inherit;
 }
 
 /* Backdrop */
@@ -506,15 +570,13 @@ function createNewComment() {
   max-width: 280px;
 }
 
-/* FAB */
+/* Keep the new-comment action in the header, clear of the scrollable replies. */
 .comments-fab {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  width: 56px;
-  height: 56px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 16px;
+  border-radius: 8px;
   background: var(--toolbar-accent, #3b82f6);
   color: white;
   cursor: pointer;
@@ -598,11 +660,8 @@ function createNewComment() {
   }
 
   .comments-fab {
-    bottom: 16px;
-    right: 16px;
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
   }
 }
 </style>

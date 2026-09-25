@@ -27,10 +27,11 @@
         { active: action.isActive?.(), disabled: !visible || action.isDisabled?.() },
       ]"
       :data-tooltip="
-        visible
+        nativeTooltips ? undefined : visible
           ? action.tooltip
           : `${action.tooltip} (not available for current selection)`
       "
+      :title="nativeTooltips ? (action.tooltip || action.label) : undefined"
       :aria-label="action.label"
       :aria-pressed="action.isActive ? action.isActive() : undefined"
       :disabled="!visible || action.isDisabled?.()"
@@ -63,6 +64,8 @@ interface Props {
   items?: ToolbarAction[] | any[];
   /** Keep the static trigger label (see ToolbarDropdown.preserveLabel). */
   preserveLabel?: boolean;
+  /** Native hints do not enlarge a scrollable toolbar panel. */
+  nativeTooltips?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -72,6 +75,7 @@ withDefaults(defineProps<Props>(), {
   tooltip: "",
   items: () => [],
   preserveLabel: false,
+  nativeTooltips: false,
 });
 
 defineEmits<{

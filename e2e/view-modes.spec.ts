@@ -36,7 +36,7 @@ test.describe("View Modes", () => {
     } else {
       // Compact (phone default): the switch lives in the "⋯ More" menu as
       // labelled "<Mode> view" items.
-      await page.getByRole("button", { name: "More" }).first().click();
+      await page.getByRole("button", { name: "View", exact: true }).click();
       const menu = page.locator(".dropdown-menu");
       for (const mode of ["Editor", "Code", "Split", "Preview"]) {
         await expect(

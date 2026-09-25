@@ -10,14 +10,13 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: "**/device-matrix.spec.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  // One local retry: WebKit under parallel load occasionally misses an
-  // actionability window (tests that pass 100% in isolation). A retried pass
-  // is reported as "flaky" — the signal stays visible, the run stays green.
+  // Preserve retry traces for diagnosis, but do not qualify a flaky CI run.
+  failOnFlakyTests: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,
-  // Local WebKit contention is the flake source (CI runs 1 worker and never
-  // flakes; unbounded local runs used ~8). Four is the measured sweet spot.
+  // Limit browser contention locally; CI serializes each browser's scenarios.
   workers: process.env.CI ? 1 : 4,
   // `open: "never"`: the html reporter's default is open-on-failure, which
   // SERVES the report and blocks the process until a human closes it — a

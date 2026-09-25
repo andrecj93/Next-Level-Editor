@@ -5,14 +5,7 @@ import { test, expect, type Page } from '@playwright/test'
 // used to collapse the editor's selection to a caret at offset 0 — so a link
 // dropped in at the document start labelled with the raw URL instead of wrapping
 // the user's selection. performWithSelection now prefers the remembered range
-// when focus was pulled into the editor. Desktop-only (chromium), like the other
-// core-editing specs.
-test.beforeEach(() => {
-  test.skip(
-    test.info().project.name === 'mobile-safari',
-    'desktop editing flow; mobile has its own UI'
-  )
-})
+// when focus was pulled into the editor. Exercise the same flow on phones.
 
 const EDITOR = '.editor-content'
 

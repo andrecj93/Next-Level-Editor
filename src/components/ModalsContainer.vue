@@ -70,6 +70,7 @@
   <!-- Link Modal -->
   <LinkModal
     :is-open="showLinkModal"
+    :context="linkContext"
     @close="$emit('close-link-modal')"
     @insert="(url: string, text: string) => $emit('insert-link', url, text)"
   />
@@ -122,74 +123,13 @@
   <!-- Auto-save Indicator. Only the owning instance paints the chip (it is
        fixed to the viewport corner) — EXCEPT for a failure, which must always
        be visible: a silent save error is the bug #r20-2 closed. #R23-58 -->
-  <div
-    v-if="saveStatus === 'error' || (ownsFixedChrome && (isSaving || lastSaved))"
-    class="auto-save-indicator"
-    :class="{
-      'is-saving': isSaving,
-      'is-error': saveStatus === 'error',
-      'is-saved': saveStatus !== 'error' && !isSaving && lastSaved,
-    }"
-    role="status"
-    aria-live="polite"
-  >
-    <!-- Error wins even when a PRIOR save left lastSaved set, so a silent
-         failure never reads as 'Saved'. #r20-2 -->
-    <span v-if="saveStatus === 'error'" class="save-error">
-      <svg
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M12 8v5M12 16.5v.5M10.3 3.9 2.4 18a1.9 1.9 0 0 0 1.7 2.9h15.8a1.9 1.9 0 0 0 1.7-2.9L13.7 3.9a1.9 1.9 0 0 0-3.4 0Z"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-      Couldn't save changes
-    </span>
-    <span v-else-if="isSaving" class="saving">
-      <svg
-        class="asi-spinner"
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M21 12a9 9 0 1 1-6.219-8.56"
-          stroke="currentColor"
-          stroke-width="2.4"
-          stroke-linecap="round"
-        />
-      </svg>
-      Saving...
-    </span>
-    <span v-else-if="lastSaved" :key="lastSaved.getTime()" class="saved">
-      <svg
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M20 6 9 17l-5-5"
-          stroke="currentColor"
-          stroke-width="2.6"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-      Saved at {{ lastSaved.toLocaleTimeString() }}
-    </span>
-  </div>
+  <SaveStatus
+    v-if="!inlineSave"
+    :save-status="saveStatus" :owns-fixed-chrome="ownsFixedChrome"
+    :is-saving="isSaving" :last-saved="lastSaved"
+    :has-pending-changes="hasPendingChanges" :persistent-save="persistentSave"
+    @retry-save="$emit('retry-save')"
+  />
 
   <!-- Toast Notification -->
   <transition name="toast-fade">
@@ -200,6 +140,7 @@
 </template>
 
 <script setup lang="ts">
+import SaveStatus from "./SaveStatus.vue";
 import TableModal from "./TableModal.vue";
 import FindReplaceModal from "./FindReplaceModal.vue";
 import CodeBlockModal from "./CodeBlockModal.vue";
@@ -215,6 +156,7 @@ import HtmlCodeModal from "./HtmlCodeModal.vue";
 import CommandPalette from "./CommandPalette.vue";
 
 interface Props {
+  inlineSave?: boolean;
   /** Editor theme class ('theme-dark' | 'theme-light'), forwarded to the
       teleported modals so they can carry it on their own root (teleporting to
       <body> escapes the editor's theme scope). Optional so existing callers /
@@ -227,6 +169,7 @@ interface Props {
   showTablePropertiesModal: boolean;
   showEmojiPicker: boolean;
   showLinkModal: boolean;
+  linkContext?: { url: string; text: string; selectionText: string; editing: boolean };
   showImageUploadModal: boolean;
   showEmbedModal: boolean;
   showFileManagerModal: boolean;
@@ -249,8 +192,11 @@ interface Props {
   /** Auto-save lifecycle state; 'error' drives the failure indicator so a
    *  failed save never reads as "Saved". #r20-2 */
   saveStatus?: "saving" | "conflict" | "error" | "saved" | "unsaved";
+  hasPendingChanges?: boolean;
+  /** A v-model update is not evidence of durable storage. */
+  persistentSave?: boolean;
   toastMessage: string;
-  toastType: "success" | "error";
+  toastType: "success" | "error" | "info";
   /**
    * Whether THIS editor instance owns the page's viewport-fixed chrome (see
    * useFloatingChromeOwner). The auto-save chip is `position: fixed`, so on a
@@ -266,11 +212,15 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   ownsFixedChrome: true,
   theme: undefined,
+  linkContext: undefined,
   recentCommandIds: undefined,
   saveStatus: undefined,
+  hasPendingChanges: false,
+  persistentSave: true,
 });
 
 defineEmits<{
+  "retry-save": [];
   "close-table-modal": [];
   "insert-table": [data: any];
   "close-find-replace-modal": [];

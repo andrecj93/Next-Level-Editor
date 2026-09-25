@@ -11,8 +11,8 @@
  * preserved (extractContents, not toString()).
  */
 
-import { getBlockSlicesInRange } from './formatting'
-import { rangeCapturesContent } from './rangeContact'
+import { clearFormatting, getBlockSlicesInRange } from './formatting'
+import { rangeCapturesContent, rangeForEditableFormatting } from './rangeContact'
 
 const TRANSPARENT = new Set(['transparent', 'rgba(0, 0, 0, 0)', 'rgb(0, 0, 0, 0)'])
 
@@ -33,6 +33,30 @@ const elementAt = (node: Node): HTMLElement | null =>
   node.nodeType === Node.ELEMENT_NODE
     ? (node as HTMLElement)
     : node.parentElement
+
+/** A selection can start at the end of the preceding text node without
+ * selecting any of it. Sample the first character actually inside the range,
+ * including when the boundary is expressed as a parent/child offset. */
+const firstSelectedElement = (range: Range): HTMLElement | null => {
+  if (!range.collapsed) {
+    const doc = range.startContainer.ownerDocument ?? document
+    const walker = doc.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT)
+    walker.currentNode = range.startContainer
+    let node: Node | null = walker.currentNode
+    while (node) {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent?.length) {
+        const text = doc.createRange()
+        text.selectNodeContents(node)
+        if (range.compareBoundaryPoints(Range.START_TO_END, text) > 0
+          && range.compareBoundaryPoints(Range.END_TO_START, text) < 0) {
+          return elementAt(node)
+        }
+      }
+      node = walker.nextNode()
+    }
+  }
+  return elementAt(range.startContainer)
+}
 
 /**
  * Whether `el` sits inside one of `tags` — but never one ABOVE the editor
@@ -129,10 +153,13 @@ export function copyFormat(
   }
 
   const range = selection.getRangeAt(0)
+  if (root && (!root.contains(range.startContainer) || !root.contains(range.endContainer))) {
+    return null
+  }
   // Sample the ACTUAL formatted text at the selection's start, not the
   // commonAncestorContainer (which for a multi-run selection is a parent whose
   // computed style reflects none of the inner runs).
-  const startEl = elementAt(range.startContainer)
+  const startEl = firstSelectedElement(range)
   if (!startEl) {
     return null
   }
@@ -210,6 +237,8 @@ const buildStyleSpan = (fmt: CopiedFormat): HTMLElement | null => {
 /** Unwrap every descendant with `tag`, keeping its children (in place). */
 const unwrapTagIn = (root: ParentNode, tag: string): void => {
   root.querySelectorAll(tag).forEach((el) => {
+    if (el.closest('[contenteditable="false"]') ||
+      Array.from(el.attributes).some(attribute => !['style', 'class'].includes(attribute.name))) return
     const parent = el.parentNode
     if (!parent) return
     while (el.firstChild) parent.insertBefore(el.firstChild, el)
@@ -247,7 +276,7 @@ const wrapInlineNodes = (nodes: Node[], fmt: CopiedFormat): Node | null => {
     // style we are about to apply, so repainting doesn't stack them.
     const signature = styleSpan.getAttribute('style')
     fragment.querySelectorAll('span').forEach((span) => {
-      if (span.getAttribute('style') === signature) {
+      if (span.getAttribute('style') === signature && span.attributes.length === 1) {
         const parent = span.parentNode
         if (!parent) return
         while (span.firstChild) parent.insertBefore(span.firstChild, span)
@@ -328,8 +357,24 @@ export function pasteFormat(
   if (!copiedFormat || !selection || selection.rangeCount === 0) {
     return false
   }
-  const range = selection.getRangeAt(0)
-  if (range.collapsed || !hasAnyMark(copiedFormat)) {
+  let range = selection.getRangeAt(0)
+  if (range.collapsed || !rangeCapturesContent(range)) {
+    return false
+  }
+  const editorRoot = root ?? elementAt(range.commonAncestorContainer)
+    ?.closest<HTMLElement>('[contenteditable="true"], [contenteditable=""]')
+  if (editorRoot && (!editorRoot.contains(range.startContainer) || !editorRoot.contains(range.endContainer))) {
+    return false
+  }
+  const backwards = selection.anchorNode === range.endContainer && selection.anchorOffset === range.endOffset
+  // Match the source's character styles, including a plain source. Clearing
+  // just the selected characters keeps target links, widgets and block layout.
+  if (editorRoot) {
+    if (!rangeForEditableFormatting(range, editorRoot)) return false
+    clearFormatting(editorRoot)
+    if (!hasAnyMark(copiedFormat)) return true
+    range = selection.getRangeAt(0)
+  } else if (!hasAnyMark(copiedFormat)) {
     return false
   }
 
@@ -352,7 +397,7 @@ export function pasteFormat(
   // too, never silently skipped. Mutate BACK TO FRONT: slices can share a
   // container (a parent's runs around a sublist), and an earlier extraction
   // would shift the offsets later slices were built on. #r17-1
-  const slices = root ? getBlockSlicesInRange(range, root) : []
+  const slices = editorRoot ? getBlockSlicesInRange(range, editorRoot) : []
   if (slices.length === 0) {
     // Pure boundary-touch → no-op; bare inline content (or the legacy no-root
     // call) → the raw range.
@@ -369,8 +414,12 @@ export function pasteFormat(
     const newRange = document.createRange()
     newRange.setStartBefore(documentFirst)
     newRange.setEndAfter(documentLast)
-    selection.removeAllRanges()
-    selection.addRange(newRange)
+    if (backwards && selection.setBaseAndExtent) {
+      selection.setBaseAndExtent(newRange.endContainer, newRange.endOffset, newRange.startContainer, newRange.startOffset)
+    } else {
+      selection.removeAllRanges()
+      selection.addRange(newRange)
+    }
     return true
   }
   return false

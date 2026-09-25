@@ -1,5 +1,5 @@
 import { computed, watch, nextTick, type Ref, type ComputedRef } from "vue";
-import { getWordCount, getCharacterCount } from "../utils/commands";
+import { useDocumentStatistics } from "./useDocumentStatistics";
 import { useHtmlSanitizer } from "./useHtmlSanitizer";
 
 interface EditorComputedOptions {
@@ -31,7 +31,6 @@ export function useEditorComputed(options: EditorComputedOptions) {
     isApplyingHistory,
     applySanitizedContent,
     captureSnapshot,
-    triggerAutoSave,
   } = options;
 
   const { sanitizeHtml } = useHtmlSanitizer();
@@ -58,22 +57,6 @@ export function useEditorComputed(options: EditorComputedOptions) {
   });
 
   /**
-   * Computed word count from editor content
-   */
-  const wordCount: ComputedRef<number> = computed(() => {
-    const content = htmlContent.value || editorContent.value?.innerHTML || "";
-    return getWordCount(content);
-  });
-
-  /**
-   * Computed character count from editor content
-   */
-  const characterCount: ComputedRef<number> = computed(() => {
-    const content = htmlContent.value || editorContent.value?.innerHTML || "";
-    return getCharacterCount(content);
-  });
-
-  /**
    * Watch modelValue changes and update editor content
    */
   watch(
@@ -81,6 +64,10 @@ export function useEditorComputed(options: EditorComputedOptions) {
     (newValue) => {
       if (!editorContent.value) return;
       if (isApplyingHistory.value) return;
+
+      // A host's exact v-model echo needs no DOM reconciliation. Changed input
+      // still goes through the sanitized comparison and ingestion path below.
+      if (newValue === editorContent.value.innerHTML) return;
 
       // Compare sanitized versions to avoid unnecessary innerHTML updates that destroy cursor position
       const currentSanitized = sanitizeHtml(editorContent.value.innerHTML);
@@ -99,17 +86,22 @@ export function useEditorComputed(options: EditorComputedOptions) {
     { immediate: true }
   );
 
+  // Saving belongs to useEditorContent's edit paths. innerHTML is not reactive:
+  // watching it here only observed surface mount/recreation and incorrectly
+  // marked a restored document as edited (including restored comments).
+
   /**
-   * Watch for content changes and trigger auto-save
+   * Computed word count from editor content
    */
-  watch(
-    () => editorContent.value?.innerHTML,
-    (newContent) => {
-      if (newContent && !isApplyingHistory.value) {
-        triggerAutoSave(newContent);
-      }
-    }
-  );
+  // Subscribe after initial model reconciliation, so counting does not queue
+  // a render before the initial history guard is released.
+  const textStatistics = useDocumentStatistics(htmlContent, editorContent);
+  const wordCount: ComputedRef<number> = computed(() => textStatistics.value.wordCount);
+
+  /**
+   * Computed character count from editor content
+   */
+  const characterCount: ComputedRef<number> = computed(() => textStatistics.value.characterCount);
 
   return {
     themeClass,

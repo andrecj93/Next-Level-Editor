@@ -244,15 +244,23 @@
   z-index: 21;
 }
 
+:where(.command-menu) {
+  --toolbar-text: var(--color-text);
+  --toolbar-hover: var(--color-surface-overlay);
+  --toolbar-accent: var(--color-primary);
+}
+
 .command-menu {
-  position: absolute;
+  position: fixed;
   width: 280px;
-  background: var(--editor-bg);
-  border: 1px solid var(--editor-border);
+  max-width: calc(100vw - 16px);
+  background: var(--editor-bg, var(--color-surface));
+  border: 1px solid var(--editor-border, var(--color-border));
+  font-family: var(--font-sans);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  z-index: 50;
+  z-index: 10002;
   /* Height is capped inline by the position clamp; lay out header + list so
      the list scrolls internally instead of overflowing under fixed bars. */
   display: flex;
@@ -802,7 +810,22 @@
   background: var(--toolbar-bg);
   font-size: 12px;
   color: var(--toolbar-text);
-  opacity: 0.7;
+}
+
+/* A glyph keeps the saved PDF's checked state independent of SVG background
+   rendering and of the writer's light/dark appearance. */
+.editor-content.nle-pdf-snapshot ul.checklist li::before {
+  background: none;
+  border: 1.5px solid #475569;
+  transition: none;
+}
+.editor-content.nle-pdf-snapshot ul.checklist li[data-checked="true"]::before {
+  content: "\2713";
+  color: #20242a;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 15px;
+  text-align: center;
 }
 
 .word-count,
@@ -998,12 +1021,59 @@
 }
 
 .auto-save-indicator .saved {
-  color: var(--color-success);
+  /* Status text needs a darker ink than the success accent used for fills. */
+  color: var(--color-success-text, #047857);
+}
+
+.theme-dark .auto-save-indicator .saved {
+  color: var(--color-success-text, #75c5a4);
 }
 
 /* A failed auto-save must read unmistakably as a problem, not success. #r20-2 */
 .auto-save-indicator .save-error {
   color: var(--color-danger, #dc2626);
+}
+
+.next-level-editor.theme-dark,
+.nle-chrome.theme-dark {
+  color-scheme: dark;
+}
+
+/* Resolve legacy aliases on the actual themed surface, including portals.
+   Inheriting a :root alias freezes its var() to the default palette. */
+.next-level-editor,
+.nle-chrome {
+  --text-color: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-secondary);
+  --background-color: var(--editor-bg, var(--color-surface));
+  --background-alt: var(--color-surface-overlay);
+  --secondary-bg: var(--color-surface-overlay);
+  --border-color: var(--color-border);
+  --primary-color: var(--color-primary);
+  --primary-hover: var(--color-primary-hover);
+  --hover-bg: var(--color-surface-overlay);
+}
+
+.next-level-editor.theme-light,
+.nle-chrome.theme-light {
+  color-scheme: light;
+}
+
+.auto-save-indicator .save-retry {
+  border: 1px solid currentColor;
+  border-radius: var(--radius-md, 6px);
+  padding: 5px 10px;
+  min-height: 32px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.auto-save-indicator .save-retry:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }
 
 .auto-save-indicator svg {
@@ -1629,7 +1699,7 @@
 /* Rightmost dropdown — anchor its menu to the right so it never overflows. */
 .editor-toolbar-modern .export-section .dropdown-menu {
   left: auto;
-  right: 0;
+  right: calc(0px - var(--nle-menu-shift-x, 0px));
 }
 .editor-toolbar-modern .export-section .dropdown-trigger:hover:not(:disabled) {
   background: var(--toolbar-accent-soft, var(--toolbar-hover));
@@ -2155,8 +2225,8 @@
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  top: calc(100% + 4px + var(--nle-menu-shift-y, 0px));
+  left: var(--nle-menu-shift-x, 0px);
   background: var(--editor-bg);
   /* Menus stay surfaces, but soft ones: hairline edge, shadow does the work. */
   border: 1px solid var(--color-divider);
@@ -2540,13 +2610,13 @@
    below their trigger inside the panel's scroll box (see the overflow note
    above). Both out-specify the export section's right-anchor. */
 .nle-toolbar-shell[data-position="left"] .editor-toolbar-modern .dropdown-menu {
-  top: 0;
-  left: calc(100% + 4px);
+  top: var(--nle-menu-shift-y, 0px);
+  left: calc(100% + 4px + var(--nle-menu-shift-x, 0px));
   right: auto;
 }
 .nle-toolbar-shell[data-position="left"] .nle-toolbar-panel .dropdown-menu {
-  top: calc(100% + 4px);
-  left: 0;
+  top: calc(100% + 4px + var(--nle-menu-shift-y, 0px));
+  left: var(--nle-menu-shift-x, 0px);
   right: auto;
 }
 
@@ -2623,7 +2693,7 @@
   .editor-toolbar-modern
   .dropdown-menu {
   top: auto;
-  bottom: calc(100% + 4px);
+  bottom: calc(100% + 4px - var(--nle-menu-shift-y, 0px));
 }
 /* The open/close motion mirrors too: rise from the trigger, settle back. */
 .nle-toolbar-shell[data-position="bottom"] .dropdown-fade-enter-from {
@@ -2922,17 +2992,30 @@
 /* Toast Notification Styles */
 .toast-notification {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  text-align: center;
+  pointer-events: none;
   padding: 12px 22px;
   border-radius: var(--radius-full, 999px);
   font-size: 14px;
   font-weight: 500;
   box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.35),
     0 2px 6px rgba(15, 23, 42, 0.14);
-  z-index: 10000;
+  /* Above sidebars and the phone dock, below modal dialogs (10050). */
+  z-index: 10010;
   transition: all var(--transition-fast);
+}
+
+@media (max-width: 640px) {
+  .toast-notification {
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .toast-notification.success {
@@ -2942,6 +3025,11 @@
 
 .toast-notification.error {
   background: #b91c1c;
+  color: #ffffff;
+}
+
+.toast-notification.info {
+  background: #334155;
   color: #ffffff;
 }
 

@@ -80,16 +80,16 @@ describe("FindReplaceModal", () => {
       w.unmount();
     });
 
-    it("enables Previous/Next once a query is typed, even with no matches", async () => {
+    it("keeps navigation disabled when a query has no matches", async () => {
       const w = mountModal({ content: "hello world" });
       await w.get("#find-input").setValue("zzz"); // 0 matches
       await nextTick();
-      // navigation only needs findText
+      // There is nowhere to navigate when the query has no matches.
       expect((btn(w, BTN.PREVIOUS).element as HTMLButtonElement).disabled).toBe(
-        false
+        true
       );
       expect((btn(w, BTN.NEXT).element as HTMLButtonElement).disabled).toBe(
-        false
+        true
       );
       // replace still needs at least one match
       expect((btn(w, BTN.REPLACE).element as HTMLButtonElement).disabled).toBe(
@@ -116,9 +116,9 @@ describe("FindReplaceModal", () => {
   });
 
   describe("match counting / search-info", () => {
-    it("shows nothing in search-info while the find field is empty", () => {
+    it("shows search guidance while the find field is empty", () => {
       const w = mountModal({ content: "hello hello" });
-      expect(w.get(".search-info").text()).toBe("");
+      expect(w.get(".search-info").text()).toContain("Enter a word or phrase");
       w.unmount();
     });
 
@@ -186,7 +186,7 @@ describe("FindReplaceModal", () => {
 
       await w.get("#find-input").setValue("");
       await nextTick();
-      expect(w.get(".search-info").text()).toBe("");
+      expect(w.get(".search-info").text()).toContain("Enter a word or phrase");
       expect(w.find(".no-matches").exists()).toBe(false);
       w.unmount();
     });

@@ -22,6 +22,13 @@ export interface NextLevelEditorProps {
   showWritingStats?: boolean;
   /** Enable inline comment threads and @mentions. */
   enableComments?: boolean;
+  /**
+   * Serialized comment threads, including replies and dates (v-model:comment-threads).
+   * Persist this JSON alongside modelValue. Thread changes also trigger saveHandler,
+   * including replies that do not alter the document HTML. Use a new component key
+   * when switching documents so history and pending saves belong to one document.
+   */
+  commentThreads?: string;
   /** Enable `{{ variable }}` template tokens. */
   enableVariables?: boolean;
   /**
@@ -74,6 +81,16 @@ export interface NextLevelEditorProps {
    * widths; it does not pin the wide layout on small screens.
    */
   toolbarLayout?: "comfortable" | "compact";
+
+  /** Manuscript typography, a focused toolbar, chapter outline and private English writing notes. */
+  writingMode?: boolean;
+  /**
+   * Private kept-note JSON (v-model:kept-writing-notes). Persist alongside HTML
+   * to remember "Keep as is" after recovery. Decisions contain exact passage
+   * text and are discarded when that paragraph changes. Changes trigger
+   * saveHandler even when HTML is unchanged. Use a new key for another document.
+   */
+  keptWritingNotes?: string;
   /**
    * Cinematic adaptive chrome — what the main toolbar does while you WRITE.
    *
@@ -127,8 +144,9 @@ export interface NextLevelEditorProps {
    * Make the auto-save "Saved" signal assert REAL persistence. When provided,
    * each auto-save tick awaits this handler with the current HTML; resolve
    * `false` (or throw) to surface a failed save instead of a false "Saved"
-   * pulse. Without it, the signal means "the latest content has been emitted
-   * to your `v-model`" — the host owns persistence from there.
+   * pulse. Saves are serialized and intermediate queued edits are coalesced.
+   * Without it, the signal reads "Updated" for a `v-model` handoff; the host
+   * owns persistence. A failed save exposes a Retry action using the latest HTML.
    */
   saveHandler?: (content: string) => boolean | Promise<boolean>;
   /**
@@ -172,6 +190,10 @@ export interface NextLevelEditorProps {
 export interface NextLevelEditorEmits {
   /** Fired on every content change; the payload is the sanitized HTML string. */
   (e: "update:modelValue", value: string): void;
+  /** Fired when a thread, reply or resolution changes; excludes DOM references. */
+  (e: "update:commentThreads", value: string): void;
+  /** Fired when kept writing decisions change; persist privately with the HTML. */
+  (e: "update:keptWritingNotes", value: string): void;
   /** The editing surface gained focus. */
   (e: "focus"): void;
   /** The editing surface lost focus. */

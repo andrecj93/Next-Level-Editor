@@ -1,5 +1,6 @@
-import type { Ref } from "vue";
+import { getCurrentScope, onScopeDispose, type Ref } from "vue";
 import { smoothScrollIntoView } from "../utils/scroll";
+import { createFindHighlights } from '../utils/findHighlights';
 
 /**
  * Unicode-aware word character test for whole-word boundaries. ASCII `\b`
@@ -237,12 +238,60 @@ interface FindReplaceOptions {
   onContentReplaced?: () => void;
 }
 
+export interface FindRequest {
+  findText: string;
+  direction: "next" | "previous" | "current";
+  options?: { caseSensitive: boolean; wholeWord: boolean };
+  /** Inline search supplies context and reveals the exact range itself. */
+  preview?: boolean;
+  /** Recount while writing without changing the writer's selection. */
+  selectMatch?: boolean;
+}
+
+export interface FindResult {
+  current: number;
+  total: number;
+  range?: Range;
+  passage?: { before: string; match: string; after: string; heading: string };
+}
+
+export interface ReplaceRequest {
+  findText: string;
+  replaceText: string;
+  options: { caseSensitive: boolean; wholeWord: boolean };
+}
+
+function describeMatch(range: Range, root: HTMLElement): NonNullable<FindResult['passage']> {
+  const element = range.startContainer.nodeType === Node.ELEMENT_NODE
+    ? range.startContainer as HTMLElement : range.startContainer.parentElement;
+  const block = element?.closest('p,li,blockquote,h1,h2,h3,h4,h5,h6,td,th,pre,div') ?? root;
+  const before = range.cloneRange();
+  before.selectNodeContents(block);
+  before.setEnd(range.startContainer, range.startOffset);
+  const after = range.cloneRange();
+  after.selectNodeContents(block);
+  after.setStart(range.endContainer, range.endOffset);
+  const lead = before.toString();
+  const tail = after.toString();
+  const headings = Array.from(root.querySelectorAll('h1,h2,h3,h4,h5,h6'));
+  const preceding = headings.filter(candidate => candidate === element || candidate.contains(range.startContainer) ||
+    Boolean(candidate.compareDocumentPosition(range.startContainer) & Node.DOCUMENT_POSITION_FOLLOWING));
+  const heading = preceding[preceding.length - 1];
+  return {
+    before: lead.length > 56 ? `…${lead.slice(-56).replace(/^\S*\s/, '')}` : lead,
+    match: range.toString(),
+    after: tail.length > 56 ? `${tail.slice(0, 56).replace(/\s\S*$/, '')}…` : tail,
+    heading: heading?.textContent?.trim() ?? 'Matching passage',
+  };
+}
+
 /**
  * Composable for handling find and replace functionality
  * Provides search and replace operations within the editor
  */
 export function useFindReplace(options: FindReplaceOptions) {
   const { editorContent, captureSnapshot, onContentReplaced } = options;
+  const previewHighlights = createFindHighlights();
 
   const BLOCK_SELECTOR =
     "p, div, li, h1, h2, h3, h4, h5, h6, blockquote, td, th, pre";
@@ -339,12 +388,14 @@ export function useFindReplace(options: FindReplaceOptions) {
   };
 
   const clearPendingHighlight = () => {
+    previewHighlights.clear();
     if (pendingHighlight) {
       clearTimeout(pendingHighlight.timer);
       removeFlash(pendingHighlight.el);
       pendingHighlight = null;
     }
   };
+  if (getCurrentScope()) onScopeDispose(clearPendingHighlight);
 
   // Navigation cursor for the current (text, options) query. Resets whenever
   // the query or options change so the first Next lands on match #1.
@@ -377,11 +428,7 @@ export function useFindReplace(options: FindReplaceOptions) {
    * accurate "X of N". Replaces window.find, which searched the whole document
    * and ignored every option.
    */
-  const handleFind = (data: {
-    findText: string;
-    direction: "next" | "previous";
-    options?: { caseSensitive: boolean; wholeWord: boolean };
-  }): { current: number; total: number } => {
+  const handleFind = (data: FindRequest): FindResult => {
     if (!editorContent.value) return { current: 0, total: 0 };
 
     const opts = data.options ?? { caseSensitive: false, wholeWord: false };
@@ -403,8 +450,10 @@ export function useFindReplace(options: FindReplaceOptions) {
       // First navigation of a new query: Next → first match, Previous → last.
       index = data.direction === "previous" ? ranges.length - 1 : 0;
     } else {
-      const step = data.direction === "previous" ? -1 : 1;
-      index = (findCursor!.index + step + ranges.length) % ranges.length;
+      const step = data.direction === "current" ? 0 : data.direction === "previous" ? -1 : 1;
+      index = data.direction === 'current'
+        ? Math.min(Math.max(findCursor!.index, 0), ranges.length - 1)
+        : (findCursor!.index + step + ranges.length) % ranges.length;
     }
     findCursor = {
       text: data.findText,
@@ -414,9 +463,13 @@ export function useFindReplace(options: FindReplaceOptions) {
     };
 
     const range = ranges[index];
+    if (data.preview) {
+      clearPendingHighlight();
+      previewHighlights.update(editorContent.value, ranges, index);
+    }
     const selection =
       typeof window !== "undefined" ? window.getSelection() : null;
-    if (selection && typeof selection.removeAllRanges === "function") {
+    if (data.selectMatch !== false && selection && typeof selection.removeAllRanges === "function") {
       selection.removeAllRanges();
       selection.addRange(range);
     }
@@ -428,7 +481,7 @@ export function useFindReplace(options: FindReplaceOptions) {
     // Never flash the EDITOR ROOT itself: a bare-root match (text with no
     // block wrapper) resolves its parentElement to the editor, and flashing
     // that highlights the entire document. Scroll still works. #r15-19
-    if (element && element !== editorContent.value) {
+    if (!data.preview && data.selectMatch !== false && element && element !== editorContent.value) {
       smoothScrollIntoView(element, {
         behavior: "smooth",
         block: "center",
@@ -446,7 +499,8 @@ export function useFindReplace(options: FindReplaceOptions) {
       pendingHighlight = { el: highlightEl, timer };
     }
 
-    return { current: index + 1, total: ranges.length };
+    return { current: index + 1, total: ranges.length,
+      ...(data.preview ? { range, passage: describeMatch(range, editorContent.value) } : {}) };
   };
 
   /**

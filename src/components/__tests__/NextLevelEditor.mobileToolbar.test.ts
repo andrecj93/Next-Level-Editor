@@ -112,4 +112,36 @@ describe("NextLevelEditor - mobile toolbar ownership", () => {
     await nextTick();
     expect(visibleToolbars()).toBe(1);
   });
+
+  it("hides the fixed toolbar when its editor scrolls off screen", async () => {
+    const a = mountEditor();
+    wrappers.push(a);
+    let top = 100;
+    a.element.getBoundingClientRect = () => ({
+      top, bottom: top + 300, left: 0, right: 350, width: 350, height: 300,
+    } as DOMRect);
+    pointerdownOn(a.element);
+    await nextTick();
+    expect(visibleToolbars()).toBe(1);
+    top = -500;
+    document.dispatchEvent(new Event("scroll"));
+    await nextTick();
+    expect(visibleToolbars()).toBe(0);
+  });
+
+  it('does not insert a dock under a first tap on Comments or another footer action', async () => {
+    const editor = mount(NextLevelEditor, { props: { modelValue: '<p>Saved writing.</p>', writingMode: true, enableComments: true }, attachTo: document.body });
+    wrappers.push(editor);
+    await nextTick();
+    const footerButtons = editor.findAll('.writing-footer-actions button');
+    for (const button of footerButtons) {
+      pointerdownOn(button.element);
+      (button.element as HTMLButtonElement).focus();
+      await nextTick();
+      expect(visibleToolbars()).toBe(0);
+    }
+    await footerButtons.find(button => button.text() === 'Comments')!.trigger('click');
+    expect(editor.find('.comments-sidebar-open').exists()).toBe(true);
+    expect(visibleToolbars()).toBe(0);
+  });
 });
