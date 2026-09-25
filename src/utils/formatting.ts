@@ -1576,6 +1576,7 @@ export const indentListItem = (root: HTMLElement): boolean => {
   ).filter((li) => rangeTouchesElement(range, li));
   const targets = selectedItems.length > 0 ? selectedItems : [listItem];
 
+  const bookmark = captureSelectionBookmark(root);
   let indentedAny = false;
   for (const item of targets) {
     const prevSibling = item.previousElementSibling;
@@ -1600,15 +1601,9 @@ export const indentListItem = (root: HTMLElement): boolean => {
 
   if (!indentedAny) return false;
 
-  // Restore selection to the caret's item.
-  const selection = getSelection();
-  if (selection) {
-    const newRange = document.createRange();
-    newRange.selectNodeContents(listItem);
-    newRange.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-  }
+  // Reparenting an item moves live Range endpoints to its old parent. Keep
+  // the original DOM points and direction so drafting continues in place.
+  bookmark?.restore();
 
   return true;
 };
@@ -1668,6 +1663,7 @@ export const outdentListItem = (root: HTMLElement): boolean => {
   ).filter((li) => rangeTouchesElement(range, li));
   const movingItems = selectedItems.length > 0 ? selectedItems : [listItem];
   const lastMoving = movingItems[movingItems.length - 1];
+  const bookmark = captureSelectionBookmark(root);
 
   // Items that follow the outdented ones in the nested list must travel WITH
   // them, becoming children of the LAST one — otherwise they stay under the
@@ -1718,15 +1714,7 @@ export const outdentListItem = (root: HTMLElement): boolean => {
     parentList.remove();
   }
 
-  // Restore selection
-  const selection = getSelection();
-  if (selection) {
-    const newRange = document.createRange();
-    newRange.selectNodeContents(listItem);
-    newRange.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-  }
+  bookmark?.restore();
 
   return true;
 };

@@ -20,6 +20,13 @@ import { exerciseBlockShortcutContinuation } from './helpers/blockShortcutContin
 import { exerciseRemoveWritingHighlight } from './helpers/removeWritingHighlight';
 import { exerciseWritingColorState } from './helpers/writingColorState';
 import { exerciseLinkEditingPosition } from './helpers/linkEditingPosition';
+import { exerciseListIndentContinuation } from './helpers/listIndentContinuation';
+
+for (const [name, prefix] of [['bullet', '- '], ['numbered', '1. '], ['checklist', '[] ']]) {
+  test(`${name} indentation preserves continued drafting and selected text`, async ({ page }) => {
+    await exerciseListIndentContinuation(page, prefix);
+  });
+}
 
 test('editing a link preserves the writing position and selected phrase', async ({ page }) => {
   await exerciseLinkEditingPosition(page);

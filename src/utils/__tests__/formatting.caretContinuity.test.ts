@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { toggleBlock, toggleList } from '../formatting';
+import { indentListItem, outdentListItem, toggleBlock, toggleList } from '../formatting';
 
 describe('selection continuity when changing block styles', () => {
   let root: HTMLDivElement;
@@ -12,6 +12,48 @@ describe('selection continuity when changing block styles', () => {
     document.body.append(root);
   });
   afterEach(() => { selection().removeAllRanges(); root.remove(); });
+
+  describe.each(['ul', 'ol', 'ul class="checklist"'])('list indentation: %s', (list) => {
+    const tag = list.split(' ')[0];
+    it.each([0, 3, 7])('keeps a marked-text caret at offset %i through indent and outdent', (offset) => {
+      root.innerHTML = `<${list}><li>Coffee</li><li><em>Letters</em></li></${tag}>`;
+      const text = root.querySelector('em')!.firstChild!;
+      select(text, offset);
+      for (const action of [indentListItem, outdentListItem]) {
+        expect(action(root)).toBe(true);
+        expect(selection().isCollapsed).toBe(true);
+        expect(selection().anchorNode).toBe(text);
+        expect(selection().anchorOffset).toBe(offset);
+      }
+    });
+
+    it('retains a backward phrase selection spanning the moved items', () => {
+      root.innerHTML = `<${list}><li>Coffee</li><li>Letters</li><li>Notebook</li></${tag}>`;
+      const first = root.querySelectorAll('li')[1].firstChild!;
+      const last = root.querySelectorAll('li')[2].firstChild!;
+      selection().setBaseAndExtent(last, 4, first, 2);
+      for (const action of [indentListItem, outdentListItem]) {
+        expect(action(root)).toBe(true);
+        expect(selection().toString()).toBe('ttersNote');
+        expect(selection().anchorNode).toBe(last);
+        expect(selection().anchorOffset).toBe(4);
+        expect(selection().focusNode).toBe(first);
+        expect(selection().focusOffset).toBe(2);
+      }
+    });
+
+    it('retains the caret before an empty item line break', () => {
+      root.innerHTML = `<${list}><li>Coffee</li><li><br></li></${tag}>`;
+      const item = root.querySelectorAll('li')[1];
+      select(item, 0);
+      for (const action of [indentListItem, outdentListItem]) {
+        expect(action(root)).toBe(true);
+        expect(selection().isCollapsed).toBe(true);
+        expect(selection().anchorNode).toBe(item);
+        expect(selection().anchorOffset).toBe(0);
+      }
+    });
+  });
 
   it.each([0, 2, 15])('keeps a collapsed title caret at offset %i', (offset) => {
     root.innerHTML = '<h2>A Place to Wait</h2><p>Next paragraph.</p>';
