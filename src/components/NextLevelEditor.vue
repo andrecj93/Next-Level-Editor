@@ -335,11 +335,14 @@
         :has-history="history.length > 0"
         :history-size="history.length"
         :timeline-progress="timelineProgress"
-        @go-to-entry="jumpToHistory"
-        @go-back="undo"
-        @go-forward="redo"
-        @go-to-first="jumpToHistory(0)"
-        @go-to-latest="jumpToHistory(history.length - 1)"
+        :readonly="readonly"
+        show-close-button
+        @close="showHistoryTimeline = false"
+        @go-to-entry="navigateHistory($event)"
+        @go-back="navigateHistory(historyIndex - 1)"
+        @go-forward="navigateHistory(historyIndex + 1)"
+        @go-to-first="navigateHistory(0)"
+        @go-to-latest="navigateHistory(history.length - 1)"
         @clear="handleClearHistory"
         @export="handleExportHistory"
       />
@@ -1106,29 +1109,24 @@ const showHistoryTimeline = ref(false);
 // Focus follows the panel: the Tools menu item that opened it is destroyed when
 // the dropdown closes, so without this focus fell to <body> and the panel's own
 // controls were only reachable by Tab-ing from the top of the page. On close,
-// hand focus back to whatever had it before. #R23-26
+// resume the manuscript at its saved or newly restored editing position.
 const historyPanelRef = ref<HTMLElement | null>(null);
-let historyPanelReturnFocus: HTMLElement | null = null;
 
 watch(showHistoryTimeline, (open) => {
   if (open) {
-    const active = document.activeElement;
-    historyPanelReturnFocus =
-      active instanceof HTMLElement && active !== document.body ? active : null;
-    nextTick(() => historyPanelRef.value?.focus());
+    rememberSelectionBase();
+    nextTick(() => historyPanelRef.value?.querySelector<HTMLButtonElement>('.btn-close')?.focus({ preventScroll: true }));
+    console.debug('[NextLevelEditor] History opened');
     return;
   }
-  const target = historyPanelReturnFocus;
-  historyPanelReturnFocus = null;
-  // Only reclaim focus if the panel still holds it — if something else took
-  // focus meanwhile (a click elsewhere), leave it there.
+  // Closing from this editor resumes writing. A different editor or host
+  // control that has taken focus must keep it.
   const active = document.activeElement;
   const insidePanel = historyPanelRef.value?.contains(active as Node) ?? false;
-  if (!insidePanel && active && active !== document.body) return;
-  nextTick(() => {
-    if (target?.isConnected) target.focus();
-    else editorContent.value?.focus();
-  });
+  if (!insidePanel && active && active !== document.body && !rootEl.value?.contains(active)) return;
+  rememberSelectionBase();
+  nextTick(restoreEditorFocus);
+  console.debug('[NextLevelEditor] History closed');
 });
 const writingAssistant = props.showWritingStats ? useWritingAssistant() : null;
 
@@ -1555,6 +1553,22 @@ const timelineProgress = computed(() =>
     ? (historyIndex.value / (history.value.length - 1)) * 100
     : 100
 );
+
+function navigateHistory(index: number) {
+  if (props.readonly) return;
+  const active = document.activeElement as HTMLElement | null;
+  jumpToHistory(index);
+  // Restoration updates the DOM and caret. Retain that NEW writing position
+  // before returning focus to the timeline for consecutive keyboard browsing.
+  nextTick(() => {
+    rememberSelectionBase();
+    if (!active || !historyPanelRef.value?.contains(active)) return;
+    if (!active.matches(':disabled')) active.focus({ preventScroll: true });
+    else historyPanelRef.value.querySelector<HTMLButtonElement>('.nav-btn:not(:disabled), .btn-close')?.focus({ preventScroll: true });
+  });
+  announce(`Restored version ${index + 1}`);
+  console.debug('[NextLevelEditor] History version restored', { index });
+}
 
 // Download the full history as JSON (History Timeline "Export").
 function handleExportHistory() {
@@ -4169,8 +4183,10 @@ onUnmounted(() => {
   top: 140px;
   right: 32px;
   width: 360px;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
+  max-height: calc(100dvh - 160px - var(--nle-mobile-toolbar-clearance, 0px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   /* Open panels sit ABOVE the toolbar shell (9999): a bottom-anchored
      panel can reach into the sticky toolbar's zone, and its items must not
      lose clicks to the bar. FABs stay at 9998 (below the shell); dialog
@@ -4180,6 +4196,14 @@ onUnmounted(() => {
   box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
     0 0 0 1px rgba(0, 0, 0, 0.04);
   background: var(--editor-bg, #ffffff);
+}
+
+@media (max-width: 640px), (max-height: 600px) {
+  .history-timeline-panel {
+    top: auto;
+    bottom: calc(12px + var(--nle-mobile-toolbar-clearance, 0px));
+    max-height: min(70dvh, calc(100dvh - 24px - var(--nle-mobile-toolbar-clearance, 0px)));
+  }
 }
 
 /* FAB Transition */
@@ -4481,7 +4505,6 @@ onUnmounted(() => {
     left: 12px;
     right: 12px;
     width: auto;
-    max-height: calc(100vh - 160px - var(--nle-mobile-toolbar-clearance, 0px));
   }
 
   .variables-panel {

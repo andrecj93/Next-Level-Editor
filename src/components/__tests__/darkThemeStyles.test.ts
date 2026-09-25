@@ -39,8 +39,11 @@ describe.each(components)("%s dark theme styles", (name) => {
     expect(componentStyle(name)).not.toMatch(/@media[^{]*prefers-color-scheme/);
   });
 
-  it("keys dark styles to the editor's .theme-dark class", () => {
-    expect(componentStyle(name)).toMatch(/^\.theme-dark /m);
+  it("follows the editor theme through its class or inherited tokens", () => {
+    if (name === 'HistoryTimeline.vue') {
+      expect(componentStyle(name)).toContain('var(--color-surface, #ffffff)');
+      expect(componentStyle(name)).toContain('var(--color-text, #333)');
+    } else expect(componentStyle(name)).toMatch(/^\.theme-dark /m);
   });
 
   it("never wraps .theme-dark in :global()/:deep() (mis-compiles in scoped styles)", () => {
@@ -92,19 +95,19 @@ describe("converted dark rules keep the original visual values", () => {
   it("HistoryTimeline", () => {
     const css = componentStyle("HistoryTimeline.vue");
     expect(css).toMatch(
-      /^\.theme-dark \.history-timeline \{[^}]*background: var\(--bg-secondary-dark, #2a2a2a\)/m
+      /^\.history-timeline \{[^}]*background: var\(--color-surface, #ffffff\)/m
     );
     expect(css).toMatch(
-      /^\.theme-dark \.timeline-title \{[^}]*color: var\(--text-primary-dark, #f0f0f0\)/m
+      /^\.timeline-title \{[^}]*color: var\(--color-text, #333\)/m
     );
     expect(css).toMatch(
-      /^\.theme-dark \.btn-clear,\r?\n\.theme-dark \.btn-export \{[^}]*background: var\(--bg-primary-dark, #1e1e1e\)/m
+      /^\.btn-clear,\r?\n\.btn-export,\r?\n\.btn-close \{[^}]*background: var\(--color-background, #f9fafb\)/m
     );
     expect(css).toMatch(
-      /^\.theme-dark \.timeline-entry:hover \{[^}]*background: var\(--bg-hover-dark, #333\)/m
+      /^\.timeline-entry:hover \{[^}]*background: var\(--toolbar-hover, #f0f0f0\)/m
     );
     expect(css).toMatch(
-      /^\.theme-dark \.entry-preview \{[^}]*background: var\(--bg-primary-dark, #1e1e1e\)/m
+      /^\.entry-preview \{[^}]*background: var\(--color-background, #f9fafb\)/m
     );
   });
 

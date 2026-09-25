@@ -23,6 +23,11 @@ import { exerciseLinkEditingPosition } from './helpers/linkEditingPosition';
 import { exerciseListIndentContinuation } from './helpers/listIndentContinuation';
 import { exerciseCompanionPrompt } from './helpers/companionPrompt';
 import { exerciseWritingStatistics } from './helpers/writingStatistics';
+import { exerciseHistoryWriting } from './helpers/historyWriting';
+
+test('history supports comparing revisions and continuing the manuscript', async ({ page }) => {
+  await exerciseHistoryWriting(page);
+});
 
 test('writing statistics agrees with the manuscript and returns its selection', async ({ page }) => {
   await exerciseWritingStatistics(page);

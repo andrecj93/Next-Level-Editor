@@ -22,6 +22,14 @@
         >
           {{ exportButtonLabel }}
         </button>
+        <button
+          v-if="showCloseButton"
+          class="btn-close"
+          aria-label="Close history"
+          @click="emit('close')"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg>
+        </button>
       </div>
     </div>
 
@@ -41,36 +49,36 @@
     <!-- Timeline Navigation -->
     <div v-if="showNavigation && hasHistory" class="timeline-navigation">
       <button
-        :disabled="!canGoBack"
+        :disabled="readonly || !canGoBack"
         class="nav-btn"
         aria-label="Go to first"
         @click="handleGoToFirst"
       >
-        ⏮
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 5v14m13-14-7 7 7 7" /></svg>
       </button>
       <button
-        :disabled="!canGoBack"
+        :disabled="readonly || !canGoBack"
         class="nav-btn"
         aria-label="Go back"
         @click="handleGoBack"
       >
-        ◀
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
       </button>
       <button
-        :disabled="!canGoForward"
+        :disabled="readonly || !canGoForward"
         class="nav-btn"
         aria-label="Go forward"
         @click="handleGoForward"
       >
-        ▶
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
       </button>
       <button
-        :disabled="!canGoForward"
+        :disabled="readonly || !canGoForward"
         class="nav-btn"
         aria-label="Go to latest"
         @click="handleGoToLatest"
       >
-        ⏭
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 5v14M6 5l7 7-7 7" /></svg>
       </button>
     </div>
 
@@ -88,10 +96,11 @@
         role="button"
         tabindex="0"
         :aria-current="index === currentIndex ? 'true' : undefined"
+        :aria-disabled="readonly ? 'true' : undefined"
         :aria-label="`Restore ${entry.label || `Version ${index + 1}`}, ${formatTime(entry.timestamp)}`"
-        @click="handleEntryClick(index)"
-        @keydown.enter.prevent="handleEntryClick(index)"
-        @keydown.space.prevent="handleEntryClick(index)"
+        @click="handleEntryClick(index, $event)"
+        @keydown.enter.prevent="handleEntryClick(index, $event)"
+        @keydown.space.prevent="handleEntryClick(index, $event)"
       >
         <div class="entry-marker" />
         <div class="entry-content">
@@ -104,7 +113,7 @@
             </span>
           </div>
           <div
-            v-if="showPreview && index === currentIndex"
+            v-if="showPreview"
             class="entry-preview"
           >
             {{ truncateContent(entry.content) }}
@@ -121,9 +130,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, nextTick, watch } from "vue";
 import type { HistoryEntry } from "../composables/useHistoryTimeline";
-import { smoothScrollIntoView } from "../utils/scroll";
 
 interface Props {
   history: readonly HistoryEntry[];
@@ -140,6 +148,8 @@ interface Props {
   showPreview?: boolean;
   showClearButton?: boolean;
   showExportButton?: boolean;
+  showCloseButton?: boolean;
+  readonly?: boolean;
   clearButtonLabel?: string;
   exportButtonLabel?: string;
   emptyMessage?: string;
@@ -154,6 +164,8 @@ const props = withDefaults(defineProps<Props>(), {
   showPreview: true,
   showClearButton: true,
   showExportButton: true,
+  showCloseButton: false,
+  readonly: false,
   clearButtonLabel: "Clear",
   exportButtonLabel: "Export",
   emptyMessage: "No history available",
@@ -168,6 +180,7 @@ interface Emits {
   (e: "goToLatest"): void;
   (e: "clear"): void;
   (e: "export"): void;
+  (e: "close"): void;
 }
 
 const emit = defineEmits<Emits>();
@@ -175,31 +188,50 @@ const emit = defineEmits<Emits>();
 const entriesContainer = ref<HTMLElement | null>(null);
 
 // Event handlers
-const handleEntryClick = (index: number) => {
+const focusControl = (event?: Event) => {
+  // Safari pointer activation does not focus buttons. The parent needs this
+  // control as the return target after it restores the document's caret.
+  const control = event?.currentTarget;
+  if (control instanceof HTMLElement) control.focus({ preventScroll: true });
+};
+
+const handleEntryClick = (index: number, event?: Event) => {
+  if (props.readonly) return;
+  focusControl(event);
   emit("goToEntry", index);
 };
 
-const handleGoBack = () => {
+const handleGoBack = (event?: Event) => {
+  if (props.readonly) return;
+  focusControl(event);
   emit("goBack");
 };
 
-const handleGoForward = () => {
+const handleGoForward = (event?: Event) => {
+  if (props.readonly) return;
+  focusControl(event);
   emit("goForward");
 };
 
-const handleGoToFirst = () => {
+const handleGoToFirst = (event?: Event) => {
+  if (props.readonly) return;
+  focusControl(event);
   emit("goToFirst");
 };
 
-const handleGoToLatest = () => {
+const handleGoToLatest = (event?: Event) => {
+  if (props.readonly) return;
+  focusControl(event);
   emit("goToLatest");
 };
 
-const handleClear = () => {
+const handleClear = (event?: Event) => {
+  focusControl(event);
   emit("clear");
 };
 
-const handleExport = () => {
+const handleExport = (event?: Event) => {
+  focusControl(event);
   emit("export");
 };
 
@@ -232,33 +264,38 @@ const truncateContent = (content: string): string => {
   return content.substring(0, props.maxPreviewLength) + "...";
 };
 
-// Expose methods for parent component
-defineExpose({
-  scrollToEntry: (index: number) => {
-    if (!entriesContainer.value) return;
-    const entries = entriesContainer.value.querySelectorAll(".timeline-entry");
-    const entry = entries[index] as HTMLElement;
-    if (entry) {
-      smoothScrollIntoView(entry, { behavior: "smooth", block: "center" });
-    }
-  },
-});
+const scrollToEntry = (index: number) => {
+  const container = entriesContainer.value;
+  const entry = container?.querySelectorAll<HTMLElement>('.timeline-entry')[index];
+  if (!container || !entry) return;
+  const row = entry.getBoundingClientRect();
+  const list = container.getBoundingClientRect();
+  // Scroll only the version list; never displace the manuscript or host page.
+  container.scrollTop += row.top - list.top - Math.max(0, (container.clientHeight - row.height) / 2);
+};
+watch(() => [props.currentIndex, props.history.length], () => {
+  nextTick(() => scrollToEntry(props.currentIndex));
+}, { immediate: true, flush: 'post' });
+defineExpose({ scrollToEntry });
 </script>
 
 <style scoped>
 .history-timeline {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--bg-secondary, #f5f5f5);
+  gap: 8px;
+  padding: 12px;
+  min-height: 0;
+  color: var(--color-text, #333);
+  background: var(--color-surface, #ffffff);
   border-radius: 8px;
-  max-height: 600px;
+  max-height: inherit;
   overflow: hidden;
 }
 
 .timeline-header {
   display: flex;
+  flex-shrink: 0;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
@@ -266,31 +303,37 @@ defineExpose({
 
 .timeline-title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 15px;
+  line-height: 1.3;
+  min-width: 0;
   font-weight: 600;
-  color: var(--text-primary, #333);
+  color: var(--color-text, #333);
 }
 
 .timeline-actions {
   display: flex;
+  flex-shrink: 0;
   gap: 0.5rem;
 }
 
 .btn-clear,
-.btn-export {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  border: 1px solid var(--border-color, #ddd);
+.btn-export,
+.btn-close {
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 12px;
+  border: 1px solid var(--color-border, #ddd);
   border-radius: 4px;
-  background: var(--bg-primary, #fff);
-  color: var(--text-primary, #333);
+  background: var(--color-background, #f9fafb);
+  color: var(--color-text, #333);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: box-shadow 0.2s;
 }
 
 .btn-clear:hover,
 .btn-export:hover {
-  background: var(--bg-hover, #f0f0f0);
+  background: var(--toolbar-hover, #f0f0f0);
 }
 
 .timeline-progress-container {
@@ -302,42 +345,49 @@ defineExpose({
 .timeline-progress-bar {
   flex: 1;
   height: 8px;
-  background: var(--bg-tertiary, #e0e0e0);
+  background: var(--color-border, #e0e0e0);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .timeline-progress-fill {
   height: 100%;
-  background: var(--primary-color, #4caf50);
+  background: var(--toolbar-accent, #1d4ed8);
   transition: width 0.3s ease;
 }
 
 .timeline-progress-text {
   font-size: 0.875rem;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-secondary, #666);
   white-space: nowrap;
 }
 
 .timeline-navigation {
   display: flex;
+  flex-shrink: 0;
   gap: 0.5rem;
   justify-content: center;
 }
 
 .nav-btn {
-  padding: 0.5rem 1rem;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--color-text, #333);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1rem;
-  border: 1px solid var(--border-color, #ddd);
+  border: 1px solid var(--color-border, #ddd);
   border-radius: 4px;
-  background: var(--bg-primary, #fff);
+  background: var(--color-background, #f9fafb);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: box-shadow 0.2s;
 }
 
 .nav-btn:not(:disabled):hover {
-  background: var(--bg-hover, #f0f0f0);
-  transform: scale(1.05);
+  background: var(--toolbar-hover, #f0f0f0);
+
 }
 
 .nav-btn:disabled {
@@ -347,6 +397,8 @@ defineExpose({
 
 .timeline-entries {
   flex: 1;
+  min-height: 0;
+  overscroll-behavior: contain;
   overflow-y: auto;
   padding: 0.5rem;
 }
@@ -358,39 +410,35 @@ defineExpose({
   margin-bottom: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: box-shadow 0.2s;
   position: relative;
 }
 
 .timeline-entry:hover {
-  background: var(--bg-hover, #f0f0f0);
+  background: var(--toolbar-hover, #f0f0f0);
 }
 
 .timeline-entry.is-current {
-  background: var(--primary-light, #e8f5e9);
-  border-left: 3px solid var(--primary-color, #4caf50);
+  background: var(--toolbar-hover, #eff6ff);
+  border-left: 3px solid var(--toolbar-accent, #1d4ed8);
 }
 
-.timeline-entry.is-past {
-  opacity: 0.6;
-}
+.timeline-entry[aria-disabled="true"] { cursor: default; }
 
-.timeline-entry.is-future {
-  opacity: 0.4;
-}
+
 
 .entry-marker {
   width: 12px;
   height: 12px;
   margin-top: 0.25rem;
   border-radius: 50%;
-  background: var(--text-secondary, #999);
+  background: var(--color-text-secondary, #666);
   flex-shrink: 0;
 }
 
 .timeline-entry.is-current .entry-marker {
-  background: var(--primary-color, #4caf50);
-  box-shadow: 0 0 0 4px var(--primary-light, #e8f5e9);
+  background: var(--toolbar-accent, #1d4ed8);
+  box-shadow: 0 0 0 4px var(--toolbar-hover, #eff6ff);
 }
 
 .entry-content {
@@ -408,7 +456,7 @@ defineExpose({
 
 .entry-label {
   font-weight: 500;
-  color: var(--text-primary, #333);
+  color: var(--color-text, #333);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -416,26 +464,29 @@ defineExpose({
 
 .entry-time {
   font-size: 0.75rem;
-  color: var(--text-secondary, #999);
+  color: var(--color-text-secondary, #666);
   flex-shrink: 0;
 }
 
 .entry-preview {
   font-size: 0.875rem;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-secondary, #666);
   margin-top: 0.5rem;
   padding: 0.5rem;
-  background: var(--bg-primary, #fff);
+  background: var(--color-background, #f9fafb);
   border-radius: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
 }
 
 .timeline-empty {
   padding: 2rem;
   text-align: center;
-  color: var(--text-secondary, #999);
+  color: var(--color-text-secondary, #666);
 }
 
 .is-compact {
@@ -457,41 +508,12 @@ defineExpose({
   height: 8px;
 }
 
-/* Dark mode support — keyed to the editor's own theme class (.theme-dark on
-   the .next-level-editor root), not the OS prefers-color-scheme setting. */
-.theme-dark .history-timeline {
-  background: var(--bg-secondary-dark, #2a2a2a);
+.btn-close { display: inline-flex; align-items: center; justify-content: center; }
+.btn-close:hover { background: var(--toolbar-hover, #f0f0f0); }
+.timeline-entry:focus-visible, .history-timeline button:focus-visible {
+  outline: 2px solid var(--toolbar-accent, #1d4ed8); outline-offset: -2px;
 }
-
-.theme-dark .timeline-title {
-  color: var(--text-primary-dark, #f0f0f0);
-}
-
-.theme-dark .btn-clear,
-.theme-dark .btn-export {
-  background: var(--bg-primary-dark, #1e1e1e);
-  color: var(--text-primary-dark, #f0f0f0);
-  border-color: var(--border-color-dark, #444);
-}
-
-.theme-dark .btn-clear:hover,
-.theme-dark .btn-export:hover {
-  background: var(--bg-hover-dark, #333);
-}
-
-.theme-dark .timeline-progress-bar {
-  background: var(--bg-tertiary-dark, #444);
-}
-
-.theme-dark .timeline-entry:hover {
-  background: var(--bg-hover-dark, #333);
-}
-
-.theme-dark .entry-label {
-  color: var(--text-primary-dark, #f0f0f0);
-}
-
-.theme-dark .entry-preview {
-  background: var(--bg-primary-dark, #1e1e1e);
+@media (max-height: 480px) {
+  .timeline-progress-container { display: none; }
 }
 </style>

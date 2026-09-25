@@ -2,6 +2,29 @@ import { describe, expect, it } from 'vitest';
 import { useEditorHistory } from '../useEditorHistory';
 
 describe('history labels during manuscript typing', () => {
+  it('separates the title and prose in the initial version preview', () => {
+    const history = useEditorHistory();
+    history.captureSnapshot('<h1>The book</h1><p>The opening.</p>');
+    expect(history.history.value[0].preview).toBe('The book The opening.');
+  });
+  it('shows the passage at the editing position instead of a repeated book title', () => {
+    const history = useEditorHistory();
+    const opening = 'The Cartographer of Quiet Places. '.repeat(100);
+    const text = opening + 'She opened the letter again. This time, she knew what to say.';
+    history.captureSnapshot(`<p>${text}</p>`, { start: text.length, end: text.length }, 'typing', text);
+    expect(history.history.value[0].preview).toContain('letter again');
+    expect(history.history.value[0].preview).not.toContain('Cartographer');
+    expect(history.history.value[0].preview).toMatch(/^… \S/);
+    expect(history.history.value[0].html).toBe(`<p>${text}</p>`);
+  });
+
+  it('starts a preview on a whole word, including joined emoji', () => {
+    const history = useEditorHistory();
+    const text = 'Earlier words. ' + '👩‍💻 ' + 'a'.repeat(43);
+    history.captureSnapshot(`<p>${text}</p>`, { start: text.length, end: text.length }, undefined, text);
+    expect(history.history.value[0].preview).toContain('👩‍💻');
+    expect(history.history.value[0].preview).not.toContain('\uFFFD');
+  });
   it('keeps normalized labels and the full undo document when live text is supplied', () => {
     const history = useEditorHistory();
     const text = '  A room\n\tleft open.  ';

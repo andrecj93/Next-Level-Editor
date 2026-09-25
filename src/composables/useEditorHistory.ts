@@ -61,12 +61,29 @@ export function useEditorHistory() {
   /**
    * Build a preview text from HTML content
    */
-  const buildPreview = (html: string, plainText?: string): string => {
+  const buildPreview = (html: string, plainText?: string, caret?: number): string => {
     if (plainText === undefined) {
       const temp = document.createElement("div");
       temp.innerHTML = html;
+      if (caret === undefined) {
+        // The initial version has no editing position. Separate block text so
+        // its title and first paragraph do not appear as one fused word.
+        temp.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, br, td, th')
+          .forEach(block => block.before(document.createTextNode(' ')));
+      }
       plainText = temp.textContent || "";
     }
+    // Show the passage being revised, not the same opening of a long book in
+    // every row. Slice before normalization to keep capture work bounded.
+    let start = Math.max(0, Math.min(caret ?? 0, plainText.length) - 45);
+    if (start) {
+      const windowStart = Math.max(0, start - 60);
+      const boundary = /\s[^\s]*$/.exec(plainText.slice(windowStart, start));
+      // Begin at a whole word; never bisect an emoji or combining sequence.
+      start = boundary ? windowStart + boundary.index + 1 : 0;
+    }
+    const prefix = start > 0 ? '… ' : '';
+    if (start) plainText = plainText.slice(start);
     // A timeline label needs only its first 61 normalized characters. Do not
     // normalize a whole book on every key when the preview ends on line one.
     let text = "";
@@ -78,9 +95,9 @@ export function useEditorHistory() {
       space = false;
       if (text.length > 60) break;
     }
-    return text.length > 60
+    return prefix + (text.length > 60
       ? `${text.slice(0, 57)}...`
-      : text || "Empty content";
+      : text || "Empty content");
   };
 
   /**
@@ -112,7 +129,7 @@ export function useEditorHistory() {
       return;
     }
 
-    const preview = buildPreview(html, plainText);
+    const preview = buildPreview(html, plainText, selection?.end);
     const now = Date.now();
 
     // Continue the current keystroke burst: fold this capture into the tail
