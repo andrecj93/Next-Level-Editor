@@ -19,6 +19,11 @@ import { exerciseCompanionViewMemory } from './helpers/companionViewMemory';
 import { exerciseBlockShortcutContinuation } from './helpers/blockShortcutContinuation';
 import { exerciseRemoveWritingHighlight } from './helpers/removeWritingHighlight';
 import { exerciseWritingColorState } from './helpers/writingColorState';
+import { exerciseLinkEditingPosition } from './helpers/linkEditingPosition';
+
+test('editing a link preserves the writing position and selected phrase', async ({ page }) => {
+  await exerciseLinkEditingPosition(page);
+});
 
 test('writing colors follow the current passage and theme', async ({ page }) => {
   await exerciseWritingColorState(page);

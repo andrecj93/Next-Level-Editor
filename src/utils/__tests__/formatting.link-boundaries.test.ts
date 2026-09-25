@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { insertLink } from "../formatting";
+import { insertLink, findLinkForRange } from "../formatting";
 
 /**
  * Round-13 links cluster:
@@ -45,6 +45,63 @@ const anchorByHref = (r: HTMLElement, href: string) =>
   Array.from(r.querySelectorAll("a")).find(
     (a) => a.getAttribute("href") === href
   );
+
+describe('editing a link preserves the writing position', () => {
+  it.each(['previous-text-end', 'parent-start', 'whole-anchor'])('recognizes a link selected from %s', boundary => {
+    const r = setup('<p>See <a href="https://old.com"><em>harbor map</em></a> today.</p>');
+    const p = r.querySelector('p')!;
+    const anchor = r.querySelector('a')!;
+    const text = r.querySelector('em')!.firstChild!;
+    const range = document.createRange();
+    if (boundary === 'previous-text-end') range.setStart(p.firstChild!, 4);
+    else range.setStart(p, 1);
+    if (boundary === 'whole-anchor') range.setEnd(p, 2);
+    else range.setEnd(text, 6);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges(); selection.addRange(range);
+    expect(findLinkForRange(r, range)).toBe(anchor);
+    insertLink(r, 'https://new.com');
+    expect(r.querySelectorAll('a')).toHaveLength(1);
+    expect(anchor.getAttribute('href')).toBe('https://new.com');
+    expect(anchor.textContent).toBe('harbor map');
+    expect(selection.toString()).toBe(boundary === 'whole-anchor' ? 'harbor map' : 'harbor');
+  });
+
+  it('preserves a backward selection inside the caption', () => {
+    const r = setup('<p><a href="https://old.com"><em>harbor map</em></a></p>');
+    const text = r.querySelector('em')!.firstChild!;
+    const selection = window.getSelection()!;
+    selection.setBaseAndExtent(text, 6, text, 0);
+    insertLink(r, 'https://new.com');
+    expect(selection.toString()).toBe('harbor');
+    expect(selection.anchorNode).toBe(text);
+    expect(selection.anchorOffset).toBe(6);
+    expect(selection.focusOffset).toBe(0);
+    expect(r.querySelector('em')!.textContent).toBe('harbor map');
+  });
+
+  it('resumes after an explicitly replaced caption', () => {
+    const r = setup('<p><a href="https://old.com">harbor map</a> today.</p>');
+    const anchor = r.querySelector('a')!;
+    select(anchor.firstChild!, 3, anchor.firstChild!, 3);
+    insertLink(r, 'https://new.com', 'a new map');
+    const selection = window.getSelection()!;
+    expect(anchor.textContent).toBe('a new map');
+    expect(selection.isCollapsed).toBe(true);
+    expect(selection.anchorNode).toBe(anchor.parentNode);
+    expect(selection.anchorOffset).toBe(1);
+  });
+
+  it('keeps inline marks and caret when a supplied caption is unchanged', () => {
+    const r = setup('<p><a href="https://old.com"><em>harbor map</em></a></p>');
+    const text = r.querySelector('em')!.firstChild!;
+    select(text, 3, text, 3);
+    insertLink(r, 'https://new.com', 'harbor map');
+    expect(r.querySelector('em')!.textContent).toBe('harbor map');
+    expect(window.getSelection()!.anchorNode).toBe(text);
+    expect(window.getSelection()!.anchorOffset).toBe(3);
+  });
+});
 
 describe("insertLink never nests anchors on a straddling selection (#2)", () => {
   it("splits the old link and links only the selected slice", () => {

@@ -431,6 +431,9 @@ describe('Formatting Tests', () => {
       expect(anchors[0].getAttribute('href')).toBe('https://new.com')
       expect(anchors[0].textContent).toBe('Hello')
       expect(root.querySelector('a a')).toBeNull()
+      expect(selection.isCollapsed).toBe(true)
+      expect(selection.anchorNode).toBe(anchorText)
+      expect(selection.anchorOffset).toBe(2)
     })
 
     it('updates an existing link in place when its text is selected', () => {

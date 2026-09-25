@@ -1,5 +1,5 @@
 import { type Ref, nextTick, ref } from "vue";
-import { insertLink as insertLinkUtil } from "../utils/formatting";
+import { insertLink as insertLinkUtil, findLinkForRange } from "../utils/formatting";
 import {
   insertHorizontalRule,
   insertTable as insertTableUtil,
@@ -67,10 +67,7 @@ export function useInsertActions(options: InsertActionsOptions) {
       if (!selection?.rangeCount) return;
       const range = selection.getRangeAt(0);
       if (!root.contains(range.commonAncestorContainer)) return;
-      const container = range.commonAncestorContainer;
-      const element = container instanceof Element ? container : container.parentElement;
-      const anchor = element?.closest('a');
-      const link = anchor && root.contains(anchor) ? anchor : null;
+      const link = findLinkForRange(root, range);
       linkContext.value = {
         url: link?.getAttribute('href') ?? "",
         text: range.collapsed ? link?.textContent ?? "" : range.toString(),

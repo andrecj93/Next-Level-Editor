@@ -1798,6 +1798,37 @@ const linkSelection = (
   }
 };
 
+/** Resolve a single selected link, including equivalent browser boundary points. */
+export const findLinkForRange = (root: HTMLElement, range: Range): HTMLAnchorElement | null => {
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
+  const container = range.commonAncestorContainer;
+  const element = container.nodeType === Node.ELEMENT_NODE ? container as Element : container.parentElement;
+  const enclosing = element?.closest('a');
+  if (enclosing && root.contains(enclosing)) return enclosing;
+  if (range.collapsed || !element) return null;
+
+  // Safari can place the start at the end of the preceding text node even
+  // though every selected character belongs to the link. Do not mistake this
+  // for a new link, nor treat a genuinely straddling selection as an edit.
+  for (const anchor of element.querySelectorAll('a')) {
+    if (!rangeTouchesElement(range, anchor)) continue;
+    const contents = root.ownerDocument.createRange();
+    contents.selectNodeContents(anchor);
+    if (range.compareBoundaryPoints(Range.START_TO_START, contents) < 0) {
+      const before = range.cloneRange();
+      before.setEnd(contents.startContainer, contents.startOffset);
+      if (rangeCapturesContent(before)) continue;
+    }
+    if (range.compareBoundaryPoints(Range.END_TO_END, contents) > 0) {
+      const after = range.cloneRange();
+      after.setStart(contents.endContainer, contents.endOffset);
+      if (rangeCapturesContent(after)) continue;
+    }
+    return anchor;
+  }
+  return null;
+};
+
 export const insertLink = (root: HTMLElement, url: string, text = "") => {
   const range = getSelectionRange();
   if (!range) return;
@@ -1807,24 +1838,24 @@ export const insertLink = (root: HTMLElement, url: string, text = "") => {
   // (`<a href="old">He<a href="new">x</a>llo</a>`) — invalid DOM the browser
   // reparses into stray/duplicated links on the next round-trip, so the URL
   // could never actually be changed.
-  const existingAnchor = getClosestElement(
-    range.commonAncestorContainer,
-    (element) => element.tagName === "A",
-    root
-  );
+  const existingAnchor = findLinkForRange(root, range);
   if (existingAnchor) {
     existingAnchor.setAttribute("href", url);
     existingAnchor.setAttribute("target", "_blank");
     existingAnchor.setAttribute("rel", "noopener noreferrer");
     // Only relabel from an explicit caption; a text selection keeps its content.
-    if (range.collapsed && text) existingAnchor.textContent = text;
-    const selection = getSelection();
-    if (selection) {
+    if (range.collapsed && text && text !== existingAnchor.textContent) {
+      existingAnchor.textContent = text;
+      // A changed caption replaces the old DOM point. Resume after the new
+      // link, just as insertion does, instead of selecting it for replacement.
+      const selection = getSelection();
       const newRange = document.createRange();
-      newRange.selectNodeContents(existingAnchor);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
+      newRange.setStartAfter(existingAnchor);
+      newRange.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(newRange);
     }
+    // URL-only edits leave the original caret or backward selection intact.
     return;
   }
 
