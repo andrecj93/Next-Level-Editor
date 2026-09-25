@@ -23,9 +23,9 @@
       <ToolbarSection type="dropdown" label="Align" preserve-label tooltip="Text alignment" :items="alignmentDropdownItems" :visible="isToolbarSectionVisible('alignment')" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection type="dropdown" label="Size" preserve-label tooltip="Text size" :items="fontSizeDropdownItems" @remember-selection="$emit('remember-selection')" />
       <ToolbarSection type="buttons" native-tooltips :items="listActions" :visible="isToolbarSectionVisible('lists')" @remember-selection="$emit('remember-selection')" />
-      <label class="writing-color" @mousedown="$emit('remember-selection')">Text <input type="color" aria-label="Text color" :disabled="!isToolbarSectionVisible('colors')" :value="textColor || '#333333'" @input="$emit('text-color-change', ($event.target as HTMLInputElement).value)"></label>
-      <label class="writing-color" @mousedown="$emit('remember-selection')">Highlight <input type="color" aria-label="Highlight color" :disabled="!isToolbarSectionVisible('colors')" :value="backgroundColor === 'transparent' ? '#fff1a8' : backgroundColor" @input="$emit('background-color-change', ($event.target as HTMLInputElement).value)"></label>
-      <button type="button" class="writing-remove-highlight" aria-label="Remove highlight" title="Remove highlight, keeping other formatting" :disabled="!isToolbarSectionVisible('colors')" @mousedown.prevent="$emit('remember-selection')" @click="pickHighlightColor('transparent')">None</button>
+      <label class="writing-color" @mousedown="$emit('remember-selection')">Text <input type="color" aria-label="Text color" :disabled="!isToolbarSectionVisible('colors')" :value="writingTextColor" @input="pickTextColor(($event.target as HTMLInputElement).value)"></label>
+      <label class="writing-color" @mousedown="$emit('remember-selection')">Highlight <input type="color" aria-label="Highlight color" :disabled="!isToolbarSectionVisible('colors')" :value="writingHighlightColor" @input="pickHighlightColor(($event.target as HTMLInputElement).value)"></label>
+      <button type="button" class="writing-remove-highlight" aria-label="Remove highlight" title="Remove highlight, keeping other formatting" :aria-pressed="noHighlightActive" :disabled="!isToolbarSectionVisible('colors')" @mousedown.prevent="$emit('remember-selection')" @click="pickHighlightColor('transparent')">None</button>
       <ToolbarSection type="buttons" native-tooltips :items="toolActions.filter(item => item.id === 'clear-formatting')" @remember-selection="$emit('remember-selection')" />
       <button type="button" class="toolbar-btn-modern" aria-label="Close more formatting" @mousedown.prevent="$emit('remember-selection')" @click="closeWritingFormatting">×</button>
     </div>
@@ -1068,8 +1068,23 @@ const isTransparent = (value: string): boolean => {
 };
 
 const readSelectionColors = () => {
+  // Some engines expose the native color field as an editable text control.
+  // Its own selection must not reset the controlled value while the writer
+  // is choosing a color (which can also cancel the field's selected text).
+  if (document.activeElement instanceof HTMLInputElement && rootEl.value?.contains(document.activeElement)) return;
   const selection = window.getSelection?.();
-  const node = selection?.anchorNode ?? null;
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  let node = range?.startContainer ?? null;
+  // Formatting commands select their new wrapper with an element boundary.
+  // Read inside that wrapper, not the parent whose old color it overrides.
+  if (node?.nodeType === Node.ELEMENT_NODE && range) {
+    const next = node.childNodes[range.startOffset];
+    const previous = node.childNodes[range.startOffset - 1];
+    if (next || previous) {
+      node = next ?? previous;
+      while (next ? node.firstChild : node.lastChild) node = (next ? node.firstChild : node.lastChild)!;
+    }
+  }
   const start: Element | null =
     node instanceof Element ? node : node?.parentElement ?? null;
   const editableRoot = start?.closest(EDITABLE_SELECTOR) ?? null;
@@ -1097,11 +1112,11 @@ const readSelectionColors = () => {
   selectionHighlightColor.value = highlight;
 };
 
-// Track the selection only while the menu is open (the swatches don't render
-// otherwise). `immediate` covers a menu that is already open at mount.
+// Read the passage while either color surface is visible. The writing inputs
+// must not display the initial picker props after the caret moves elsewhere.
 watch(
-  () => props.showColorsDropdown,
-  (open) => {
+  [() => props.showColorsDropdown, () => props.writingMode && writingFormattingOpen.value],
+  ([colorsOpen, writingOpen]) => {
     // Runs immediately at setup, so it executes during SSR where there is no
     // document. The selection listeners are client-only anyway.
     if (typeof document === "undefined") return;
@@ -1109,9 +1124,11 @@ watch(
     // Capture phase: a ToolbarDropdown trigger's @click.stop cannot hide the
     // pointerdown from us, so opening another menu closes this panel. #R24-11
     document.removeEventListener("pointerdown", onColorsOutsidePointerdown, true);
-    if (open) {
+    if (colorsOpen || writingOpen) {
       readSelectionColors();
       document.addEventListener("selectionchange", readSelectionColors);
+    }
+    if (colorsOpen) {
       document.addEventListener("pointerdown", onColorsOutsidePointerdown, true);
       nextTick(clampColorsMenu);
     } else {
@@ -1120,6 +1137,10 @@ watch(
   },
   { immediate: true }
 );
+
+watch(() => props.theme, () => {
+  if (props.showColorsDropdown || (props.writingMode && writingFormattingOpen.value)) nextTick(readSelectionColors);
+});
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", onToolbarResize);
@@ -1158,6 +1179,15 @@ const pickHighlightColor = (color: string) => {
 const noHighlightActive = computed(() =>
   isTransparent(selectionHighlightColor.value)
 );
+
+const pickerHex = (value: string, fallback: string): string => {
+  const channels = parseColor(value);
+  return /^\d+,\d+,\d+$/.test(channels)
+    ? '#' + channels.split(',').map(channel => Math.min(255, Number(channel)).toString(16).padStart(2, '0')).join('')
+    : fallback;
+};
+const writingTextColor = computed(() => pickerHex(selectionTextColor.value, pickerHex(props.textColor, '#333333')));
+const writingHighlightColor = computed(() => pickerHex(selectionHighlightColor.value, pickerHex(props.backgroundColor, '#fff1a8')));
 
 /**
  * Normalize a CSS color to a comparable "r,g,b" key: presets are hex while

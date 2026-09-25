@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { nextTick } from "vue";
-import { mount, type VueWrapper } from "@vue/test-utils";
+import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import EditorToolbar from "../EditorToolbar.vue";
 
 /**
@@ -188,5 +188,71 @@ describe("EditorToolbar - Colors menu active swatches", () => {
 
     // Re-opening re-reads the (new) selection color fresh.
     expect(textSwatch(w, "#2563eb").classes()).toContain("active");
+  });
+
+  it('shows the passage colors in writing Style and follows a moved selection', async () => {
+    span.style.color = 'rgb(220, 38, 38)';
+    span.style.backgroundColor = 'rgb(253, 224, 71)';
+    selectInside(span);
+    const w = mountToolbar({ writingMode: true, showColorsDropdown: false });
+    await w.get('[aria-label="More formatting"]').trigger('click');
+    expect((w.get('[aria-label="Text color"]').element as HTMLInputElement).value).toBe('#dc2626');
+    expect((w.get('[aria-label="Highlight color"]').element as HTMLInputElement).value).toBe('#fde047');
+    expect(w.get('[aria-label="Remove highlight"]').attributes('aria-pressed')).toBe('false');
+    span.style.color = 'rgb(37, 99, 235)';
+    span.style.backgroundColor = '';
+    document.dispatchEvent(new Event('selectionchange'));
+    await nextTick();
+    expect((w.get('[aria-label="Text color"]').element as HTMLInputElement).value).toBe('#2563eb');
+    expect(w.get('[aria-label="Remove highlight"]').attributes('aria-pressed')).toBe('true');
+  });
+
+  it('reads a just-applied writing color even without a selectionchange event', async () => {
+    selectInside(span);
+    const w = mountToolbar({ writingMode: true, showColorsDropdown: false,
+      onTextColorChange: (color: string) => { span.style.color = color; } });
+    await w.get('[aria-label="More formatting"]').trigger('click');
+    await w.get('[aria-label="Text color"]').setValue('#2563eb');
+    await nextTick();
+    expect((w.get('[aria-label="Text color"]').element as HTMLInputElement).value).toBe('#2563eb');
+  });
+
+  it('refreshes writing colors after the theme changes', async () => {
+    span.style.color = 'rgb(236, 227, 212)';
+    selectInside(span);
+    const w = mountToolbar({ writingMode: true, showColorsDropdown: false, theme: 'dark' });
+    await w.get('[aria-label="More formatting"]').trigger('click');
+    expect((w.get('[aria-label="Text color"]').element as HTMLInputElement).value).toBe('#ece3d4');
+    span.style.color = 'rgb(46, 42, 36)';
+    await w.setProps({ theme: 'light' });
+    await flushPromises();
+    expect((w.get('[aria-label="Text color"]').element as HTMLInputElement).value).toBe('#2e2a24');
+  });
+
+  it('reads inside a selected wrapper instead of its differently colored parent', async () => {
+    span.style.color = '#dc2626';
+    span.innerHTML = '<span style="color:#16a34a">green words</span>';
+    const range = document.createRange();
+    range.selectNode(span.firstChild!);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    const w = mountToolbar({ writingMode: true, showColorsDropdown: false });
+    await w.get('[aria-label="More formatting"]').trigger('click');
+    expect((w.get('[aria-label="Text color"]').element as HTMLInputElement).value).toBe('#16a34a');
+  });
+
+  it('does not overwrite the color field while its own text is being selected', async () => {
+    span.style.color = '#dc2626';
+    selectInside(span);
+    const w = mountToolbar({ writingMode: true, showColorsDropdown: false });
+    document.body.appendChild(w.element);
+    await w.get('[aria-label="More formatting"]').trigger('click');
+    const input = w.get('[aria-label="Text color"]').element as HTMLInputElement;
+    input.focus();
+    window.getSelection()!.removeAllRanges();
+    document.dispatchEvent(new Event('selectionchange'));
+    await nextTick();
+    expect(input.value).toBe('#dc2626');
+    w.element.remove();
   });
 });

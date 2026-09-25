@@ -18,6 +18,11 @@ import { exerciseWordContextMenu } from './helpers/wordContextMenu';
 import { exerciseCompanionViewMemory } from './helpers/companionViewMemory';
 import { exerciseBlockShortcutContinuation } from './helpers/blockShortcutContinuation';
 import { exerciseRemoveWritingHighlight } from './helpers/removeWritingHighlight';
+import { exerciseWritingColorState } from './helpers/writingColorState';
+
+test('writing colors follow the current passage and theme', async ({ page }) => {
+  await exerciseWritingColorState(page);
+});
 
 test('remove highlight while retaining emphasis and the selected words', async ({ page }) => {
   await exerciseRemoveWritingHighlight(page);

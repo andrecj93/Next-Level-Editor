@@ -52,6 +52,7 @@
 .writing-color input { width: 26px; height: 26px; border: 0; padding: 0; cursor: pointer; background: transparent; }
 .writing-remove-highlight { min-width: 44px; min-height: 44px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; background: transparent; color: var(--text-color); font: inherit; font-size: 12px; cursor: pointer; }
 .writing-remove-highlight:hover:not(:disabled) { background: var(--background-alt); }
+.writing-remove-highlight[aria-pressed="true"] { border-color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--primary-color); }
 .writing-remove-highlight:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 .writing-remove-highlight:disabled { opacity: .45; cursor: not-allowed; }
 .writing-toolbar .toolbar-btn-modern:disabled { opacity: .3; }
