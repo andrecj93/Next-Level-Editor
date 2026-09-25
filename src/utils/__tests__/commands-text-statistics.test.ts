@@ -11,7 +11,7 @@ describe('manuscript text statistics', () => {
 
   it('excludes document chrome and executable/style text while decoding prose entities', () => {
     const html = '<script>one two</script><style>body{color:red}</style><svg><style>svg hidden text</style></svg><nav class="table-of-contents"><p>Copied heading</p></nav><div class="page-break">Page break</div><!-- comment --><p>Ol&aacute; &amp; caf&eacute;&nbsp;again</p>';
-    expect(getTextStatistics(html)).toEqual({ wordCount: 4, characterCount: 'Olá & café again'.length });
+    expect(getTextStatistics(html)).toEqual({ wordCount: 3, characterCount: 'Olá & café again'.length });
     expect(getTextStatistics('<p> \n<br> </p>')).toEqual({ wordCount: 0, characterCount: 0 });
   });
 
@@ -35,7 +35,7 @@ describe('manuscript text statistics', () => {
   it('preserves joiners used by prose and emoji when ignoring caret markers', () => {
     const text = 'می\u200cروم 👩\u200d💻';
     expect(getTextStatistics('<p>' + text + '</p>'))
-      .toEqual({ wordCount: 2, characterCount: text.length });
+      .toEqual({ wordCount: 1, characterCount: 7 });
   });
 
   it('can count the live document without disturbing its selected text or formatting nodes', () => {

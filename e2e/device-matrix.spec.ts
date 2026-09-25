@@ -22,6 +22,11 @@ import { exerciseWritingColorState } from './helpers/writingColorState';
 import { exerciseLinkEditingPosition } from './helpers/linkEditingPosition';
 import { exerciseListIndentContinuation } from './helpers/listIndentContinuation';
 import { exerciseCompanionPrompt } from './helpers/companionPrompt';
+import { exerciseWritingStatistics } from './helpers/writingStatistics';
+
+test('writing statistics agrees with the manuscript and returns its selection', async ({ page }) => {
+  await exerciseWritingStatistics(page);
+});
 
 test('companion prompts remain usable when returning to writing', async ({ page }) => {
   await exerciseCompanionPrompt(page);

@@ -451,7 +451,7 @@
       :word-analysis="writingAssistant.wordAnalysis.value"
       :issues="writingAssistant.issues.value"
       :seo="writingAssistant.seo.value"
-      @close="showWritingStatsPanel = false"
+      @close="closeWritingStatistics"
     />
 
     <!-- Comments Sidebar (opt-in feature) -->
@@ -550,7 +550,7 @@
             ? 'Hide writing statistics'
             : 'Show writing statistics'
         "
-        @click="showWritingStatsPanel = !showWritingStatsPanel"
+        @click="toggleWritingStatistics"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path
@@ -1082,8 +1082,23 @@ const { announce } = useAccessibility();
 const showWritingStatsPanel = ref(false);
 const writingToolActions = computed(() => props.showWritingStats ? [{
   id: 'writing-statistics', label: 'Writing statistics', tooltip: 'Readability, word analysis, and SEO',
-  onClick: () => { showWritingStatsPanel.value = !showWritingStatsPanel.value; },
+  onClick: toggleWritingStatistics,
 }] : []);
+
+function toggleWritingStatistics() {
+  if (showWritingStatsPanel.value) { closeWritingStatistics(); return; }
+  rememberSelectionBase();
+  showWritingStatsPanel.value = true;
+  nextTick(() => rootEl.value?.querySelector<HTMLButtonElement>('.writing-stats-panel .close-btn')?.focus({ preventScroll: true }));
+  console.debug('[NextLevelEditor] Writing statistics opened');
+}
+
+function closeWritingStatistics() {
+  rememberSelectionBase();
+  showWritingStatsPanel.value = false;
+  nextTick(restoreEditorFocus);
+  console.debug('[NextLevelEditor] Writing statistics closed');
+}
 
 // History Timeline panel visibility (toggled from the Tools dropdown). [#14]
 const showHistoryTimeline = ref(false);
@@ -3458,7 +3473,7 @@ function closeTopMostOverlay(): boolean {
   // explicit close button). The comments sidebar is intentionally NOT here:
   // it hosts reply inputs, and closing it on Escape mid-reply would be hostile.
   if (showWritingStatsPanel.value) {
-    showWritingStatsPanel.value = false;
+    closeWritingStatistics();
     return true;
   }
   if (showEmojiPicker.value) {

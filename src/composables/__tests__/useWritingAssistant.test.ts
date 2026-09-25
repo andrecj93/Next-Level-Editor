@@ -215,9 +215,8 @@ describe("useWritingAssistant", () => {
     it("counts characters including spaces vs excluding whitespace", () => {
       const { calculateStats } = useWritingAssistant();
       const s = calculateStats("a b\tc\nd");
-      // Newlines are structural block separators (emitted by extractPlainText),
-      // not visible characters, so they are excluded from the character count.
-      expect(s.characters).toBe(6); // a,space,b,tab,c,d
+      // Every whitespace run, including a block boundary, is one visible space.
+      expect(s.characters).toBe(7); // a space b space c space d
       expect(s.charactersNoSpaces).toBe(4); // a,b,c,d
     });
 

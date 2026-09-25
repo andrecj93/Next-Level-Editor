@@ -4,6 +4,7 @@
 
 import { splitBlockAtCaret, placeCaretInside } from "./blockInsertion";
 import { applyChecklistItemA11y } from "./checklist";
+import { countWords, countCharacters } from "./wordSegmentation";
 import {
   getBlockSlicesInRange,
   snapshotEmptyInlineHusks,
@@ -149,7 +150,7 @@ function htmlToPlainText(html: string, source?: Element): string {
     if (!source) temp.innerHTML = html;
     // Preserve block boundaries without creating thousands of temporary text
     // nodes on every keystroke in a manuscript. Inline marks stay within words.
-    const blocks = new Set(['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TR', 'TD', 'TH', 'BLOCKQUOTE', 'PRE', 'BR']);
+    const blocks = new Set(['P', 'DIV', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'MAIN', 'ASIDE', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TABLE', 'TR', 'TD', 'TH', 'BLOCKQUOTE', 'PRE', 'BR', 'FIGURE', 'HR']);
     const parts: string[] = [];
     const read = (node: Node): void => {
       if (node.nodeType === Node.TEXT_NODE) { parts.push(node.textContent || ''); return; }
@@ -198,11 +199,7 @@ export function getWordCount(html: string): number {
 /** Shared counts avoid parsing the same manuscript twice during a render. */
 export function getTextStatistics(html: string, source?: Element): { wordCount: number; characterCount: number } {
   const text = htmlToPlainText(html, source);
-  let wordCount = text ? 1 : 0;
-  // Whitespace is already normalized. Count boundaries without allocating a
-  // separate string for every word in the book.
-  for (let at = text.indexOf(' '); at !== -1; at = text.indexOf(' ', at + 1)) wordCount++;
-  return { wordCount, characterCount: text.length };
+  return { wordCount: countWords(text), characterCount: countCharacters(text) };
 }
 
 /**
@@ -211,7 +208,7 @@ export function getTextStatistics(html: string, source?: Element): { wordCount: 
  * @returns Character count with spaces
  */
 export function getCharacterCount(html: string): number {
-  return htmlToPlainText(html).length;
+  return countCharacters(htmlToPlainText(html));
 }
 
 /**
@@ -220,7 +217,7 @@ export function getCharacterCount(html: string): number {
  * @returns Character count without spaces
  */
 export function getCharacterCountWithoutSpaces(html: string): number {
-  return htmlToPlainText(html).replace(/\s/g, "").length;
+  return countCharacters(htmlToPlainText(html).replace(/\s/g, ""));
 }
 
 /** Imported inline marks may carry the size directly, without a span. */

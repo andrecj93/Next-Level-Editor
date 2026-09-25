@@ -2,6 +2,8 @@
   <div
     class="writing-stats-panel"
     :class="{ collapsed: isCollapsed }"
+    role="region"
+    aria-label="Writing statistics"
   >
     <!-- Header -->
     <div class="stats-header">
@@ -13,6 +15,7 @@
         <button
           class="collapse-btn"
           :aria-label="isCollapsed ? 'Expand panel' : 'Collapse panel'"
+          :aria-expanded="!isCollapsed"
           @click="isCollapsed = !isCollapsed"
         >
           {{ isCollapsed ? "▶" : "▼" }}
@@ -34,6 +37,10 @@
     <div
       v-if="!isCollapsed"
       class="stats-content"
+      role="region"
+      aria-label="Statistics details"
+      tabindex="0"
+      @keydown="scrollDetails"
     >
       <!-- Basic Stats -->
       <div
@@ -436,6 +443,21 @@ const emit = defineEmits<{ close: [] }>();
 
 const isCollapsed = ref(false);
 
+function scrollDetails(event: KeyboardEvent) {
+  if (event.target !== event.currentTarget || event.altKey || event.ctrlKey || event.metaKey) return;
+  const content = event.currentTarget as HTMLElement;
+  const page = Math.max(40, content.clientHeight - 40);
+  const targets: Record<string, number> = {
+    ArrowDown: content.scrollTop + 40, ArrowUp: content.scrollTop - 40,
+    PageDown: content.scrollTop + page, PageUp: content.scrollTop - page,
+    Home: 0, End: content.scrollHeight,
+  };
+  if (!(event.key in targets)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  content.scrollTop = targets[event.key];
+}
+
 /**
  * Get readability class based on Flesch Reading Ease score
  */
@@ -520,9 +542,12 @@ const getSEOClass = (score: number): string => {
   right: 32px;
   top: auto;
   width: 340px;
-  max-height: calc(100vh - 320px);
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  max-height: min(620px, calc(100dvh - 212px));
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text, #1f2937);
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 14px;
   box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.28),
     0 0 0 1px rgba(0, 0, 0, 0.04);
@@ -534,14 +559,15 @@ const getSEOClass = (score: number): string => {
 }
 
 .writing-stats-panel.collapsed {
-  width: 200px;
+  width: 340px;
 }
 
 .stats-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 16px;
+  padding: 8px 12px;
+  flex-shrink: 0;
   /* Flat surface + accent icon chip — no gradient (matches the toolbar). */
   background: var(--color-surface, #ffffff);
   color: var(--color-text, #111827);
@@ -563,8 +589,9 @@ const getSEOClass = (score: number): string => {
   justify-content: center;
   width: 28px;
   height: 28px;
+  flex-shrink: 0;
   border-radius: 8px;
-  background: rgba(59, 130, 246, 0.12);
+  background: var(--toolbar-hover, #eff6ff);
   color: var(--toolbar-accent, #3b82f6);
 }
 
@@ -572,6 +599,7 @@ const getSEOClass = (score: number): string => {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .collapse-btn,
@@ -579,8 +607,8 @@ const getSEOClass = (score: number): string => {
   background: transparent;
   border: none;
   color: var(--color-text-secondary, #6b7280);
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
@@ -594,6 +622,12 @@ const getSEOClass = (score: number): string => {
   font-size: 14px;
 }
 
+.collapse-btn:focus-visible,
+.close-btn:focus-visible {
+  outline: 2px solid var(--toolbar-accent, #3b82f6);
+  outline-offset: -3px;
+}
+
 .collapse-btn:hover,
 .close-btn:hover {
   background: var(--color-surface-overlay, #f3f4f6);
@@ -601,9 +635,15 @@ const getSEOClass = (score: number): string => {
 }
 
 .stats-content {
-  max-height: calc(100vh - 390px);
+  min-height: 0;
+  overscroll-behavior: contain;
   overflow-y: auto;
   padding: 16px;
+}
+
+.stats-content:focus-visible {
+  outline: 2px solid var(--toolbar-accent, #3b82f6);
+  outline-offset: -3px;
 }
 
 .stats-section {
@@ -640,13 +680,13 @@ const getSEOClass = (score: number): string => {
   flex-direction: column;
   gap: 4px;
   padding: 12px;
-  background: #f9fafb;
+  background: var(--color-background, #f9fafb);
   border-radius: 8px;
 }
 
 .stat-label {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #6b7280);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -664,7 +704,7 @@ const getSEOClass = (score: number): string => {
 .stat-value {
   font-size: 18px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--color-text, #1f2937);
 }
 
 /* Readability Scores */
@@ -724,7 +764,7 @@ const getSEOClass = (score: number): string => {
 .grade-box {
   flex: 1;
   padding: 16px;
-  background: #f3f4f6;
+  background: var(--color-background, #f3f4f6);
   border-radius: 8px;
   text-align: center;
   display: flex;
@@ -735,12 +775,12 @@ const getSEOClass = (score: number): string => {
 .grade-value {
   font-size: 36px;
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--toolbar-accent-ink, #1d4ed8);
 }
 
 .grade-label {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #6b7280);
   text-transform: uppercase;
   margin-top: 4px;
 }
@@ -755,17 +795,17 @@ const getSEOClass = (score: number): string => {
   display: flex;
   justify-content: space-between;
   padding: 8px 12px;
-  background: #f9fafb;
+  background: var(--color-background, #f9fafb);
   border-radius: 6px;
   font-size: 13px;
 }
 
 .detail-item span {
-  color: #6b7280;
+  color: var(--color-text-secondary, #6b7280);
 }
 
 .detail-item strong {
-  color: #1f2937;
+  color: var(--color-text, #1f2937);
 }
 
 /* Sentence Distribution */
@@ -831,7 +871,7 @@ const getSEOClass = (score: number): string => {
 
 .common-words-title {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #6b7280);
   margin-bottom: 8px;
 }
 
@@ -843,8 +883,8 @@ const getSEOClass = (score: number): string => {
 
 .word-tag {
   padding: 4px 10px;
-  background: #ede9fe;
-  color: #5b21b6;
+  background: var(--color-background, #f9fafb);
+  color: var(--toolbar-accent-ink, #1d4ed8);
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
@@ -857,7 +897,7 @@ const getSEOClass = (score: number): string => {
 
 /* Issues */
 .issues-section {
-  background: #fef2f2;
+  background: var(--color-background, #f9fafb);
   border-radius: 8px;
   padding: 12px;
 }
@@ -884,12 +924,12 @@ const getSEOClass = (score: number): string => {
 .issue-title {
   font-weight: 600;
   font-size: 13px;
-  color: #991b1b;
+  color: var(--toolbar-accent-ink, #1d4ed8);
 }
 
 .issue-hint {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #6b7280);
   margin-left: 24px;
 }
 
@@ -903,8 +943,8 @@ const getSEOClass = (score: number): string => {
 
 .repeated-word {
   padding: 3px 8px;
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--color-background, #f9fafb);
+  color: var(--toolbar-accent-ink, #1d4ed8);
   border-radius: 10px;
   font-size: 11px;
 }
@@ -912,14 +952,14 @@ const getSEOClass = (score: number): string => {
 .no-issues {
   text-align: center;
   padding: 16px;
-  color: #059669;
+  color: var(--color-text, #1f2937);
   font-weight: 500;
   font-size: 13px;
 }
 
 /* SEO */
 .seo-section {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  background: var(--color-background, #f9fafb);
   border-radius: 8px;
   padding: 12px;
 }
@@ -977,7 +1017,7 @@ const getSEOClass = (score: number): string => {
 }
 
 .percentage {
-  fill: #1f2937;
+  fill: var(--color-text, #1f2937);
   font-family: sans-serif;
   font-size: 0.5em;
   font-weight: 700;
@@ -987,7 +1027,7 @@ const getSEOClass = (score: number): string => {
 .seo-label {
   font-size: 12px;
   font-weight: 600;
-  color: #1e40af;
+  color: var(--toolbar-accent-ink, #1d4ed8);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1003,21 +1043,21 @@ const getSEOClass = (score: number): string => {
   display: flex;
   justify-content: space-between;
   padding: 8px 12px;
-  background: white;
+  background: var(--color-surface, #ffffff);
   border-radius: 6px;
   font-size: 12px;
 }
 
 .seo-item.success {
-  background: #d1fae5;
+  background: var(--color-background, #f9fafb);
 }
 
 .seo-item span {
-  color: #6b7280;
+  color: var(--color-text-secondary, #6b7280);
 }
 
 .seo-item strong {
-  color: #1f2937;
+  color: var(--color-text, #1f2937);
 }
 
 .keywords {
@@ -1026,7 +1066,7 @@ const getSEOClass = (score: number): string => {
 
 .keywords-title {
   font-size: 12px;
-  color: #1e40af;
+  color: var(--toolbar-accent-ink, #1d4ed8);
   margin-bottom: 8px;
   font-weight: 600;
 }
@@ -1039,117 +1079,12 @@ const getSEOClass = (score: number): string => {
 
 .keyword-tag {
   padding: 4px 10px;
-  background: white;
-  color: #1e40af;
+  background: var(--color-surface, #ffffff);
+  color: var(--toolbar-accent-ink, #1d4ed8);
   border-radius: 12px;
   font-size: 11px;
   font-weight: 500;
-  border: 1px solid #bfdbfe;
-}
-
-/* Dark mode — driven by the editor's own theme class (.theme-dark on the
-   .next-level-editor root), NOT the OS-level prefers-color-scheme, so the panel
-   always matches whatever theme the editor toggle is set to. */
-.theme-dark .writing-stats-panel {
-  background: #1f2937;
-  border-color: #374151;
-}
-
-.theme-dark .section-title {
-  color: #f3f4f6;
-}
-
-.theme-dark .stat-item {
-  background: #111827;
-}
-
-.theme-dark .stat-label {
-  color: #9ca3af;
-}
-
-.theme-dark .stat-value {
-  color: #f9fafb;
-}
-
-.theme-dark .grade-box {
-  background: #111827;
-}
-
-.theme-dark .detail-item {
-  background: #111827;
-}
-
-.theme-dark .detail-item span {
-  color: #9ca3af;
-}
-
-.theme-dark .detail-item strong {
-  color: #f9fafb;
-}
-
-.theme-dark .common-words-title {
-  color: #9ca3af;
-}
-
-.theme-dark .issues-section {
-  background: #7f1d1d;
-}
-
-.theme-dark .issue-hint {
-  color: #d1d5db;
-}
-
-.theme-dark .seo-section {
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-}
-
-.theme-dark .seo-label {
-  color: #bfdbfe;
-}
-
-.theme-dark .seo-item {
-  background: #1e293b;
-}
-
-.theme-dark .seo-item span {
-  color: #cbd5e1;
-}
-
-.theme-dark .seo-item strong {
-  color: #f9fafb;
-}
-
-.theme-dark .keyword-tag {
-  background: #1e293b;
-  border-color: #475569;
-  color: #bfdbfe;
-}
-
-/* Grade readability number: token-driven, tinted lighter in dark mode */
-.theme-dark .grade-value {
-  color: #93b4fc;
-}
-
-/* SEO donut number: dark charcoal fill is invisible on the deep-blue section */
-.theme-dark .percentage {
-  fill: var(--color-text);
-}
-
-/* Issue titles: dark-red on the dark-red issues section is unreadable */
-.theme-dark .issue-title {
-  color: #fca5a5;
-}
-
-/* Most-common word pills: pale lavender is washed out on the dark panel */
-.theme-dark .word-tag {
-  background: #312e4a;
-  color: #c4b5fd;
-}
-
-/* Repeated-word chips: light-pink disappears on the dark-red section */
-.theme-dark .repeated-word {
-  background: rgba(239, 68, 68, 0.18);
-  color: #fecaca;
+  border: 1px solid var(--color-border, #bfdbfe);
 }
 
 /* Scrollbar */
@@ -1158,17 +1093,17 @@ const getSEOClass = (score: number): string => {
 }
 
 .stats-content::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: var(--color-background, #f3f4f6);
   border-radius: 3px;
 }
 
 .stats-content::-webkit-scrollbar-thumb {
-  background: #9ca3af;
+  background: var(--color-text-secondary, #6b7280);
   border-radius: 3px;
 }
 
 .stats-content::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: var(--color-text-secondary, #6b7280);
 }
 
 /* On narrow screens the fixed 340px panel clips the viewport edge and its
@@ -1176,12 +1111,12 @@ const getSEOClass = (score: number): string => {
    sheet spanning the width with margins (mirrors the variables panel in
    NextLevelEditor.vue), lifted above the mobile toolbar via the clearance
    custom property MobileToolbar maintains on <html> (0 when hidden). */
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 600px) {
   .writing-stats-panel {
     left: 12px;
     right: 12px;
     width: auto;
-    max-height: 65vh;
+    max-height: 65dvh;
     bottom: calc(16px + var(--nle-mobile-toolbar-clearance, 0px));
   }
 
@@ -1192,7 +1127,7 @@ const getSEOClass = (score: number): string => {
   /* Keep the scroll area inside the 65vh sheet (its desktop cap of
      100vh - 390px can collapse to nothing on short viewports). */
   .stats-content {
-    max-height: calc(65vh - 56px);
+    max-height: calc(65dvh - 62px);
   }
 }
 </style>
