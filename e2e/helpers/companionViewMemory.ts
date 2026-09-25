@@ -12,11 +12,24 @@ export async function exerciseCompanionViewMemory(page: Page) {
   if (await opener.getAttribute('aria-expanded') !== 'true') await opener.click();
   const panel = page.getByRole('complementary', { name: 'Writing companion' });
   await panel.getByRole('button', { name: 'Outline', exact: true }).click();
+  const layout = await panel.evaluate(el => ({
+    fixed: getComputedStyle(el).position === 'fixed',
+    stacked: getComputedStyle(el.parentElement!).flexDirection === 'column',
+  }));
+  const oldHeight = await editor.evaluate(el => el.clientHeight);
   await panel.getByRole('button', { name: 'Second chapter', exact: true }).click();
   await expect(editor).toBeFocused();
-  // Compact navigation closes the panel to reveal the passage. On desktop,
-  // close it explicitly to make room for writing, then reopen the same aid.
-  if (await panel.isVisible()) await panel.getByRole('button', { name: 'Close writing companion', exact: true }).click();
+  // Both overlays and stacked outlines must return space to the manuscript.
+  // Do not close a still-visible compact panel in the test: that masked the bug.
+  if (layout.fixed || layout.stacked) {
+    await expect(panel).toHaveCount(0);
+    if (layout.stacked && !layout.fixed) {
+      await expect.poll(() => editor.evaluate(el => el.clientHeight)).toBeGreaterThan(oldHeight + 20);
+    }
+  } else {
+    await expect(panel).toBeVisible();
+    await panel.getByRole('button', { name: 'Close writing companion', exact: true }).click();
+  }
   await opener.click();
   await expect(panel.getByRole('button', { name: 'Outline', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(panel.getByRole('button', { name: 'Outline', exact: true })).toBeFocused();
@@ -36,5 +49,17 @@ export async function exerciseCompanionViewMemory(page: Page) {
   await expect(panel.getByRole('button', { name: /Writing notes/ })).toHaveAttribute('aria-pressed', 'true');
   await expect(panel.getByRole('button', { name: /Writing notes/ })).toBeFocused();
   await expect(panel.getByRole('navigation', { name: 'Document outline' })).toHaveCount(0);
+  await expect(editor).toHaveJSProperty('innerHTML', before);
+  await panel.getByRole('button', { name: /^Show passage in/ }).click();
+  if (layout.fixed || layout.stacked) await expect(panel).toHaveCount(0);
+  else await expect(panel).toBeVisible();
+  await expect(editor).toBeFocused();
+  await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('in order to');
+  await page.keyboard.type('to');
+  await expect(editor).toContainText('She returned to find the house.');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(editor).toHaveJSProperty('innerHTML', before);
+  await expect(page.locator('.auto-save-indicator')).toContainText('Saved');
+  await page.goto('/#playground');
   await expect(editor).toHaveJSProperty('innerHTML', before);
 }

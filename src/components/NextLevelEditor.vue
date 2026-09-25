@@ -1449,9 +1449,13 @@ const closeCompanion = () => {
   companionOpen.value = false;
   nextTick(restoreEditorFocus);
 };
-const revealWritingPassage = (root: HTMLElement) => {
+const revealWritingPassage = (root: HTMLElement, navigating = false) => {
   const panel = rootEl.value?.querySelector('.writing-companion');
-  if (panel && getComputedStyle(panel).position === 'fixed') {
+  // Explicit navigation hands the available space back to the manuscript.
+  // A stacked panel otherwise leaves a narrow editor with only a few lines.
+  // Applying a note may keep the stacked review open for the next suggestion.
+  const stacked = panel?.parentElement && getComputedStyle(panel.parentElement).flexDirection === 'column';
+  if (panel && (getComputedStyle(panel).position === 'fixed' || (navigating && stacked))) {
     companionOpen.value = false;
     console.debug('[NextLevelEditor] Writing companion collapsed', { reason: 'passage-revealed' });
     nextTick(() => keepSelectionVisible(root, 24));
@@ -1476,7 +1480,7 @@ const locateWritingNote = (note: WritingNote) => {
   selection?.addRange(range);
   const block = writingBlocks(root)[note.block];
   block?.element.scrollIntoView({ block: 'center', behavior: 'auto' });
-  revealWritingPassage(root);
+  revealWritingPassage(root, true);
   rememberSelectionBase();
   return true;
 };
@@ -1525,7 +1529,7 @@ const navigateWritingBlock = (index: number) => {
   selection?.removeAllRanges();
   selection?.addRange(range);
   block.scrollIntoView({ block: 'center', behavior: 'auto' });
-  revealWritingPassage(root);
+  revealWritingPassage(root, true);
   rememberSelectionBase();
 };
 
