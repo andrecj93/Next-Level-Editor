@@ -19,6 +19,7 @@ import {
 import { buildTableGrid } from "./tableGrid";
 import { createTypingPlaceholder } from './typingPlaceholder';
 import { captureSelectionBookmark } from './selectionBookmark';
+import { getCaretOffsets, setCaretOffsets } from './caretOffset';
 
 /**
  * Wrap a non-collapsed range's content in styled `<span>`s WITHOUT ever nesting
@@ -623,7 +624,8 @@ function removeHighlight(range: Range, root: HTMLElement) {
     el.style.removeProperty("padding");
     el.style.removeProperty("border-radius");
     el.style.removeProperty("color");
-    if (!el.getAttribute("style") && el.attributes.length === 0) {
+    if (!el.getAttribute("style")) el.removeAttribute('style');
+    if (el.attributes.length === 0) {
       const parent = el.parentNode;
       if (!parent) return;
       while (el.firstChild) parent.insertBefore(el.firstChild, el);
@@ -684,6 +686,7 @@ export function applyBackgroundColor(root: HTMLElement, color: string) {
   if (!selection || selection.rangeCount === 0) return;
 
   const range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
 
   // "None" swatch / transparent → remove the highlight instead of painting a
   // transparent span (which forced white, invisible text).
@@ -691,7 +694,29 @@ export function applyBackgroundColor(root: HTMLElement, color: string) {
     typeof color !== "string" ||
     HIGHLIGHT_CLEAR_VALUES.has(color.trim().toLowerCase())
   ) {
+    if (range.collapsed) {
+      const point = range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? range.startContainer as Element : range.startContainer.parentElement;
+      let highlighted = false;
+      for (let ancestor = point; ancestor && ancestor !== root; ancestor = ancestor.parentElement) {
+        if (ancestor instanceof HTMLElement && ancestor.tagName === 'SPAN' && ancestor.style.backgroundColor) highlighted = true;
+      }
+      if (!highlighted) return;
+      // Give future typing its own unhighlighted position without repainting
+      // the authored letters on either side of the caret.
+      const pending = point?.closest<HTMLElement>('[data-nle-typing-placeholder="true"]');
+      const placeholder = pending?.textContent === '\u200b' ? pending : createTypingPlaceholder(root.ownerDocument);
+      if (!placeholder.parentNode) range.insertNode(placeholder);
+      range.selectNode(placeholder);
+      removeHighlight(range, root);
+      selection.collapse(placeholder.firstChild, 1);
+      return;
+    }
+    // Splitting a highlighted run extracts its text, collapsing the live
+    // range. Keep the same words selected so the next revision replaces them.
+    const position = getCaretOffsets(root, true);
     removeHighlight(range, root);
+    setCaretOffsets(root, position);
     return;
   }
 

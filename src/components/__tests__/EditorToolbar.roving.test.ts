@@ -235,9 +235,12 @@ describe("EditorToolbar roving tabindex", () => {
     const close = wrapper.get('[aria-label="Close more formatting"]').element as HTMLElement;
     const text = wrapper.get('[aria-label="Text color"]').element as HTMLElement;
     const highlight = wrapper.get('[aria-label="Highlight color"]').element as HTMLElement;
+    const remove = wrapper.get('[aria-label="Remove highlight"]').element as HTMLButtonElement;
     close.focus();
 
     await wrapper.get('[aria-label="Close more formatting"]').trigger('keydown', { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(remove);
+    await wrapper.get('[aria-label="Remove highlight"]').trigger('keydown', { key: 'ArrowLeft' });
     expect(document.activeElement).toBe(highlight);
     await wrapper.get('[aria-label="Highlight color"]').trigger('keydown', { key: 'ArrowLeft' });
     expect(document.activeElement).toBe(text);
@@ -250,6 +253,8 @@ describe("EditorToolbar roving tabindex", () => {
     await wrapper.vm.$nextTick();
     expect(highlight.tabIndex).toBe(-1);
     expect(text.tabIndex).toBe(-1);
+    expect(remove.tabIndex).toBe(-1);
+    expect(remove.disabled).toBe(true);
     expect(document.activeElement).not.toBe(highlight);
   });
 

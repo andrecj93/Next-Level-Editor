@@ -17,6 +17,11 @@ import { exerciseFocusModeReturn, exerciseWritingBeforeFocusExit } from './helpe
 import { exerciseWordContextMenu } from './helpers/wordContextMenu';
 import { exerciseCompanionViewMemory } from './helpers/companionViewMemory';
 import { exerciseBlockShortcutContinuation } from './helpers/blockShortcutContinuation';
+import { exerciseRemoveWritingHighlight } from './helpers/removeWritingHighlight';
+
+test('remove highlight while retaining emphasis and the selected words', async ({ page }) => {
+  await exerciseRemoveWritingHighlight(page);
+});
 
 test('block shortcuts keep typing inside the new heading or list', async ({ page }) => {
   await exerciseBlockShortcutContinuation(page);
