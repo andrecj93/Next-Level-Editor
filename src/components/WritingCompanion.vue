@@ -15,9 +15,12 @@
     </div>
     <div ref="body" class="companion-body">
       <template v-if="tab === 'review'">
-        <p v-if="!visibleNotes.length" class="companion-intro">A second pair of eyes.<br><span>Your words, your decisions.</span></p>
-        <p v-if="!review.words" class="companion-empty">Start with a sentence. When you pause, I’ll point out a few places you might want to revisit.</p>
-        <p v-else-if="!visibleNotes.length" class="companion-empty">{{ review.notes.length ? 'You’ve considered every note. Keep your voice.' : 'No notes for now. Keep going — there’s room for your next thought.' }}</p>
+        <div v-if="!visibleNotes.length" class="writing-prompt">
+          <span class="companion-kicker">A nudge, if you need one</span>
+          <p aria-live="polite" aria-atomic="true">{{ prompts[promptIndex] }}</p>
+        </div>
+        <p v-if="!review.words" class="companion-empty review-status">Start with a sentence. When you pause, I’ll point out a few places you might want to revisit.</p>
+        <p v-else-if="!visibleNotes.length" class="companion-empty review-status">{{ review.notes.length ? 'You’ve considered every note. Keep your voice.' : 'No notes for now. Keep going — there’s room for your next thought.' }}</p>
         <article v-if="currentNote && currentContext" class="writing-note">
           <p class="note-location">{{ currentContext.location }}</p>
           <h3>{{ currentNote.title }}</h3>
@@ -25,11 +28,6 @@
           <p>{{ currentNote.detail }}</p>
         </article>
         <button v-if="keptCount" type="button" class="review-kept" @click="reviewKept">Review {{ keptCount }} kept {{ keptCount === 1 ? 'note' : 'notes' }}</button>
-        <div v-if="!visibleNotes.length" class="writing-prompt">
-          <span class="companion-kicker">A nudge, if you need one</span>
-          <p>{{ prompts[promptIndex] }}</p>
-          <button type="button" @click="promptIndex = (promptIndex + 1) % prompts.length">Another prompt <span aria-hidden="true">↻</span></button>
-        </div>
       </template>
       <template v-else>
         <p class="companion-intro">Find your way through.</p>
@@ -44,6 +42,10 @@
       <button v-else type="button" @click="$emit('locate', currentNote)">Go to sentence</button>
       <button type="button" :aria-label="`Dismiss note: ${currentNote.title}`" @click="dismiss(currentNote, $event)">Keep as is</button>
     </div>
+    <div v-else-if="tab === 'review'" class="note-actions prompt-actions">
+      <button type="button" @click="changePrompt">Another prompt <span aria-hidden="true">↻</span></button>
+      <button type="button" class="prompt-return" @click="$emit('close')">{{ readonly ? 'Back to document' : 'Back to writing' }}</button>
+    </div>
     <footer class="companion-footer">
       <span>{{ review.words.toLocaleString() }} words<span v-if="review.words"> · {{ review.readingMinutes }} min read</span></span>
       <small>Private, on-device checks · English prose</small>
@@ -54,8 +56,8 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { writingNoteContext, type WritingReview, type WritingNote } from '../utils/writingReview';
-const props = defineProps<{ review: WritingReview; dismissedNotes: ReadonlySet<string>; readonly?: boolean; startNoteId?: string; initialView?: 'review' | 'outline' }>();
-const emit = defineEmits<{ close: []; leave: []; locate: [note: WritingNote]; apply: [note: WritingNote]; dismiss: [note: WritingNote]; navigate: [block: number]; reviewKept: []; changeView: [view: 'review' | 'outline'] }>();
+const props = defineProps<{ review: WritingReview; dismissedNotes: ReadonlySet<string>; readonly?: boolean; startNoteId?: string; initialView?: 'review' | 'outline'; initialPromptIndex?: number }>();
+const emit = defineEmits<{ close: []; leave: []; locate: [note: WritingNote]; apply: [note: WritingNote]; dismiss: [note: WritingNote]; navigate: [block: number]; reviewKept: []; changeView: [view: 'review' | 'outline']; changePrompt: [index: number] }>();
 const panel = ref<HTMLElement | null>(null);
 const body = ref<HTMLElement | null>(null);
 const reviewButton = ref<HTMLButtonElement | null>(null);
@@ -136,13 +138,19 @@ const reviewKept = async () => {
   // The control disappears after the reset; continue at the restored passage.
   (panel.value?.querySelector<HTMLButtonElement>('.note-passage') ?? reviewButton.value)?.focus({ preventScroll: true });
 };
-const promptIndex = ref(0);
 const prompts = [
   'What is the one thing you want the reader to feel in the next paragraph?',
   'Try a concrete detail: a sound, a gesture, an object someone left behind.',
   'What changes here? Write the moment before it changes, then the moment after.',
   'Write the next sentence as if you were telling it to someone sitting beside you.',
 ];
+const promptIndex = ref(props.initialPromptIndex ?? 0);
+const changePrompt = async () => {
+  promptIndex.value = (promptIndex.value + 1) % prompts.length;
+  emit('changePrompt', promptIndex.value);
+  await nextTick();
+  scrollToNote();
+};
 </script>
 
 <style scoped>
@@ -178,22 +186,28 @@ button:hover { background: var(--hover-bg); }
 .note-actions button { padding: 6px; min-height: 36px; font-size: 12px; }
 .note-actions .note-apply { color: var(--toolbar-accent-ink, var(--primary-color)); font-weight: 600; }
 .note-actions button:disabled { opacity: .5; cursor: default; }
-.writing-prompt { border-top: 1px solid var(--border-color); padding-top: 24px; margin-top: 12px; }
+.writing-prompt { margin: 0; padding: 0; }
 .companion-kicker { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-secondary); }
-.writing-prompt p { font-family: Georgia, serif; font-size: 16px; }
-.writing-prompt button { color: var(--toolbar-accent-ink, var(--primary-color)); padding: 6px 0; font-size: 12px; }
+.writing-prompt p { font-family: Georgia, serif; font-size: 16px; margin: 8px 0 12px; }
+.prompt-actions button { min-height: 44px; }
+.prompt-actions .prompt-return { color: var(--toolbar-accent-ink, var(--primary-color)); margin-left: auto; font-weight: 600; }
 .companion-footer { display: grid; gap: 4px; padding: 14px 20px; border-top: 1px solid var(--border-color); font-size: 12px; }
 .companion-footer small { color: var(--text-secondary); font-size: 10px; }
 .writing-outline { display: grid; gap: 3px; }
 .writing-outline button { padding: 9px 12px; text-align: left; border-left: 2px solid var(--border-color); border-radius: 0; overflow-wrap: anywhere; }
 .writing-outline button:hover { border-color: var(--primary-color); }
-@media (max-width: 700px) { .writing-companion { width: 100%; flex: 0 0 max(45%, 264px); height: max(45%, 264px); max-height: calc(100% - 96px); border-left: 0; border-top: 1px solid var(--border-color); } .companion-header { padding-top: 8px; } .companion-intro, .writing-prompt, .companion-footer { display: none; } .companion-body { padding: 0 18px; } }
+@media (max-width: 700px) { .writing-companion { width: 100%; flex: 0 0 max(45%, 264px); height: max(45%, 264px); max-height: calc(100% - 96px); border-left: 0; border-top: 1px solid var(--border-color); } .companion-header { padding-top: 8px; } .companion-intro, .companion-footer { display: none; } .companion-body { padding: 0 18px; } .companion-empty { margin-bottom: 12px; } }
+@media (max-width: 700px), (max-height: 500px) {
+  .review-status, .writing-prompt .companion-kicker { display: none; }
+  .writing-prompt { border: 0; margin: 0; padding: 8px 0; }
+  .writing-prompt p { margin: 0; }
+}
 @media (max-height: 500px) {
   .writing-companion { position: fixed; inset: 8px 8px calc(8px + var(--nle-mobile-toolbar-clearance, 0px)); width: auto; height: auto; max-height: none; z-index: 10001; border: 1px solid var(--border-color); border-radius: 10px; box-shadow: var(--shadow-lg); }
   .companion-header { padding: 6px 14px; flex-shrink: 0; }
   .companion-tabs { padding-bottom: 6px; flex-shrink: 0; }
   .companion-body { padding: 0 18px; }
-  .companion-intro, .writing-prompt, .companion-footer { display: none; }
+  .companion-intro, .companion-footer { display: none; }
 }
 /* Available manuscript space matters more than the device name: a small
    portrait phone can have less room than a landscape tablet once tools and
@@ -203,6 +217,9 @@ button:hover { background: var(--hover-bg); }
   .companion-header { padding: 6px 14px; flex-shrink: 0; }
   .companion-tabs { padding-bottom: 6px; flex-shrink: 0; }
   .companion-body { padding: 0 18px; }
-  .companion-intro, .writing-prompt, .companion-footer { display: none; }
+  .companion-intro, .companion-footer { display: none; }
+  .review-status, .writing-prompt .companion-kicker { display: none; }
+  .writing-prompt { border: 0; margin: 0; padding: 8px 0; }
+  .writing-prompt p { margin: 0; }
 }
 </style>

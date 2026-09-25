@@ -31,6 +31,31 @@ function setup(count: number, afterDismiss?: () => void) {
 }
 
 describe('writing companion review and focus', () => {
+  it('remembers the chosen prompt and cycles without editing the document', async () => {
+    wrapper = mount(WritingCompanion, {
+      props: { review: reviewWriting(''), dismissedNotes: new Set<string>(), initialPromptIndex: 3 },
+    });
+    expect(wrapper.get('.writing-prompt p').text()).toContain('sitting beside you');
+    expect(wrapper.get('.writing-prompt p').attributes('aria-live')).toBe('polite');
+    const actions = wrapper.get('.prompt-actions');
+    expect(actions.element.closest('.companion-body')).toBeNull();
+    await actions.get('button').trigger('click');
+    expect(wrapper.get('.writing-prompt p').text()).toContain('reader to feel');
+    expect(wrapper.emitted('changePrompt')).toEqual([[0]]);
+    await wrapper.get('.prompt-return').trigger('click');
+    expect(wrapper.emitted('close')).toEqual([[]]);
+    expect(wrapper.emitted('apply')).toBeUndefined();
+  });
+
+  it('returns a read-only reader to the document without offering to write', async () => {
+    setup(0);
+    await wrapper.setProps({ readonly: true });
+    expect(wrapper.get('.prompt-return').text()).toBe('Back to document');
+    await wrapper.get('.prompt-return').trigger('click');
+    expect(wrapper.emitted('close')).toEqual([[]]);
+    expect(wrapper.emitted('apply')).toBeUndefined();
+  });
+
   it.each(['review', 'outline'] as const)('opens the remembered %s view and reports a deliberate change', async initialView => {
     wrapper = mount(WritingCompanion, {
       props: { review: reviewWriting('<h2>Chapter one</h2><p>A quiet beginning.</p>'), dismissedNotes: new Set<string>(), initialView },

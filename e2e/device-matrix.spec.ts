@@ -21,6 +21,11 @@ import { exerciseRemoveWritingHighlight } from './helpers/removeWritingHighlight
 import { exerciseWritingColorState } from './helpers/writingColorState';
 import { exerciseLinkEditingPosition } from './helpers/linkEditingPosition';
 import { exerciseListIndentContinuation } from './helpers/listIndentContinuation';
+import { exerciseCompanionPrompt } from './helpers/companionPrompt';
+
+test('companion prompts remain usable when returning to writing', async ({ page }) => {
+  await exerciseCompanionPrompt(page);
+});
 
 for (const [name, prefix] of [['bullet', '- '], ['numbered', '1. '], ['checklist', '[] ']]) {
   test(`${name} indentation preserves continued drafting and selected text`, async ({ page }) => {
@@ -1169,6 +1174,8 @@ test('expanded formatting includes colors in keyboard navigation without losing 
   await expect(toolbar.getByRole('button', { name: 'Close more formatting', exact: true })).toBeFocused();
   await page.keyboard.press('ArrowLeft');
   await expect(toolbar.getByRole('group', { name: 'More formatting options' }).getByRole('button', { name: 'Clear Formatting', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(toolbar.getByRole('button', { name: 'Remove highlight', exact: true })).toBeFocused();
   await page.keyboard.press('ArrowLeft');
   await expect(toolbar.getByLabel('Highlight color', { exact: true })).toBeFocused();
   await page.keyboard.press('ArrowLeft');

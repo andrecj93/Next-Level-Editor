@@ -1,7 +1,6 @@
 <template>
   <div
     ref="rootEl"
-    @focusin="rememberEditingSurface"
     :class="[
       'next-level-editor',
       themeClass,
@@ -25,6 +24,7 @@
         ? effectiveToolbarPosition
         : undefined
     "
+    @focusin="rememberEditingSurface"
   >
     <!-- Accessibility: Skip Links -->
     <SkipLinks
@@ -188,8 +188,10 @@
       :dismissed-notes="dismissedWritingNotes"
       :start-note-id="writingReviewStart"
       :initial-view="companionView"
+      :initial-prompt-index="companionPromptIndex"
       :readonly="readonly"
       @change-view="companionView = $event"
+      @change-prompt="companionPromptIndex = $event"
       @review-kept="reviewKeptWritingNotes"
       @close="closeCompanion"
       @leave="companionOpen = false"
@@ -1367,6 +1369,7 @@ const reviewKeptWritingNotes = () => {
 };
 const companionOpen = ref(false);
 const companionView = ref<'review' | 'outline'>('review');
+const companionPromptIndex = ref(0);
 const writingSearchRef = ref<InstanceType<typeof WritingSearch> | null>(null);
 const writingSearchInitiallyReplace = ref(false);
 const closeWritingSearch = (range?: Range) => {

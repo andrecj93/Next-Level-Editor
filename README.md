@@ -224,7 +224,7 @@ readable — click any section to open it.
 - **HTML Sanitization** - Every ingestion path (paste, import, `v-model`, HTML-source editing) goes through an explicit tag/attribute/style allowlist, with obfuscated-scheme and round-trip tamper tests. Adversarially audited in real Chromium against the classic and modern XSS/mXSS corpus — namespace confusion, the DOMPurify-2.0 `form`/`mglyph` bypass, 15 scheme-obfuscation variants, foster-parenting — with **no script execution produced**. Style values are bounded, not just property names, so stored content cannot paint a clickable overlay
 - **Accessibility** - axe-core WCAG 2.2 A/AA scan across 14 application states, **zero violations**, enforced in CI
 - **TypeScript Strict Mode** - Full type safety throughout the codebase
-- **5,122 Unit Checks** - Across 398 files after the library build, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run in the package build gate.
+- **5,124 Unit Checks** - Across 398 files after the library build, with enforced coverage thresholds (70% lines/functions/statements, 65% branches). Bundle-dependent checks also run in the package build gate.
 - **Browser Gates** - Playwright on Chromium and mobile WebKit, plus the same writing scenarios on 18 desktop, tablet, phone, landscape, and reflow profiles
 - **0 Known Vulnerabilities** - `npm audit` clean for production dependencies
 - **GitHub Actions CI/CD** - Unit, lint, type-check and E2E all gate the demo deploy and the npm publish
@@ -289,16 +289,16 @@ you pay to put an editor on screen is the "core" row:
 
 | What | Raw | Gzipped | When it loads |
 | --- | --- | --- | --- |
-| **Core (ES)** | 967.5 KB | **235.6 KB** | On import |
-| **CSS** | 261.1 KB | **42.1 KB** | On import |
+| **Core (ES)** | 967.9 KB | **235.8 KB** | On import |
+| **CSS** | 261.6 KB | **42.1 KB** | On import |
 | Syntax highlighting (Prism + 22 languages) | 86.0 KB | 25.1 KB | First code block |
 | Colour picker | 65.2 KB | 14.6 KB | First colour popup |
 | Word export | 165.1 KB | 39.7 KB | First `.docx` export |
 | PDF export (renderers + document helpers) | 822.0 KB | 203.7 KB | First PDF export |
-| **UMD** | 1,706.6 KB | 509.6 KB | On import (no splitting) |
+| **UMD** | 1,707.0 KB | 509.7 KB | On import (no splitting) |
 
 So a page that never opens a code block, never picks a colour and never
-exports pays **277.7 KB gzipped** for the library's JS + CSS. Vue is an external
+exports pays **277.9 KB gzipped** for the library's JS + CSS. Vue is an external
 peer dependency and is not included in these figures. The build also emits
 optional chunks for jsPDF's HTML/SVG helpers, outside the default export path.
 
